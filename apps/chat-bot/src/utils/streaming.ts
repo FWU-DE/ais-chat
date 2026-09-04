@@ -36,13 +36,31 @@ export function decodeChatStreamEvent(chunk: string): ChatStreamEvent | null {
 }
 
 /**
+ * Number of chunks that may sit unread in the stream before the consumer is treated as gone.
+ * A live client drains continuously, so a backlog this large means nobody is reading.
+ */
+const MAX_QUEUED_CHUNKS = 1000;
+
+/** Hard ceiling for a single generation, independent of whether the client is still listening. */
+const DEFAULT_MAX_DURATION_MS = 10 * 60 * 1000;
+
+/**
+ * Aborts a producer that has gone quiet, which would otherwise hold its upstream stream forever.
+ * Generous enough to cover a slow agent iteration that runs tools before emitting any text.
+ */
+const DEFAULT_IDLE_TIMEOUT_MS = 3 * 60 * 1000;
+
+/**
  * Creates a streamable text value for Server Actions.
  * Returns a controller to update/complete the stream and a ReadableStream to consume.
  *
- * `signal` aborts once the consumer disappears, so the producer can tear down its own
- * upstream work instead of generating into a stream nobody reads.
+ * `signal` aborts when the consumer disappears, the producer goes idle, or the maximum duration
+ * elapses, so the producer can tear down its own upstream work instead of leaking it.
  */
-export function createTextStream(): {
+export function createTextStream({
+  maxDurationMs = DEFAULT_MAX_DURATION_MS,
+  idleTimeoutMs = DEFAULT_IDLE_TIMEOUT_MS,
+}: { maxDurationMs?: number; idleTimeoutMs?: number } = {}): {
   stream: ReadableStream<string>;
   signal: AbortSignal;
   update: (text: string) => void;
@@ -50,25 +68,69 @@ export function createTextStream(): {
   error: (err: Error) => void;
 } {
   let controller: ReadableStreamDefaultController<string>;
-  let cancelledByConsumer = false;
+  let abandoned = false;
   const abortController = new AbortController();
 
-  const stream = new ReadableStream<string>({
-    start(c) {
-      controller = c;
+  const maxDurationTimer = setTimeout(
+    () => abandon('generation exceeded maximum duration'),
+    maxDurationMs,
+  );
+  let idleTimer: ReturnType<typeof setTimeout>;
+
+  function clearTimers() {
+    clearTimeout(maxDurationTimer);
+    clearTimeout(idleTimer);
+  }
+
+  function resetIdleTimer() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => abandon('producer stopped emitting text'), idleTimeoutMs);
+  }
+
+  function abandon(reason: string) {
+    if (abandoned) return;
+    abandoned = true;
+    clearTimers();
+    abortController.abort(new Error(reason));
+    try {
+      controller.close();
+    } catch {
+      // Already closed or errored
+    }
+  }
+
+  const stream = new ReadableStream<string>(
+    {
+      start(c) {
+        controller = c;
+      },
+      cancel() {
+        // Consumer canceled the stream (e.g., user reloaded or closed the tab)
+        abandon('consumer cancelled the stream');
+      },
     },
-    cancel() {
-      // Consumer canceled the stream (e.g., user reloaded or closed the tab)
-      cancelledByConsumer = true;
-      abortController.abort(new Error('consumer cancelled the stream'));
-    },
-  });
+    new CountQueuingStrategy({ highWaterMark: MAX_QUEUED_CHUNKS }),
+  );
+
+  resetIdleTimer();
 
   return {
     stream,
     signal: abortController.signal,
     update: (text: string) => {
-      if (cancelledByConsumer) return;
+      if (abandoned) return;
+
+      if (controller.desiredSize !== null && controller.desiredSize <= 0) {
+        logError(
+          'createTextStream.update: consumer stopped reading, abandoning stream',
+          new Error(`Queued chunk limit of ${MAX_QUEUED_CHUNKS} exceeded`),
+        );
+        abandon('consumer stopped reading');
+        return;
+      }
+
+      resetIdleTimer();
+
       try {
         controller.enqueue(text);
       } catch (err) {
@@ -76,7 +138,8 @@ export function createTextStream(): {
       }
     },
     done: () => {
-      if (cancelledByConsumer) return;
+      clearTimers();
+      if (abandoned) return;
       try {
         controller.close();
       } catch (err) {
@@ -84,7 +147,8 @@ export function createTextStream(): {
       }
     },
     error: (err: Error) => {
-      if (cancelledByConsumer) return;
+      clearTimers();
+      if (abandoned) return;
       try {
         controller.error(err);
       } catch (caughtErr) {
