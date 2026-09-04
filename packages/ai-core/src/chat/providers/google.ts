@@ -72,6 +72,7 @@ function buildGoogleGenerateContentParameters({
   temperature,
   tools,
   toolChoice,
+  abortSignal,
 }: Parameters<TextGenerationFn>[0]): GenerateContentParameters {
   const contents = messages
     .filter((message) => message.role !== 'system')
@@ -86,6 +87,7 @@ function buildGoogleGenerateContentParameters({
     ...(systemInstruction.length > 0 ? { systemInstruction } : {}),
     ...(maxTokens !== undefined ? { maxOutputTokens: maxTokens } : {}),
     ...(temperature !== undefined ? { temperature } : {}),
+    ...(abortSignal !== undefined ? { abortSignal } : {}),
     ...buildGoogleToolConfig(tools, toolChoice),
   };
 
@@ -333,6 +335,7 @@ export function constructGoogleAgenticStreamFn(model: AiModel): AgenticStreamFn 
     temperature,
     tools,
     toolChoice,
+    abortSignal,
   }) {
     try {
       const stream = await clientConfig.client.models.generateContentStream(
@@ -343,6 +346,7 @@ export function constructGoogleAgenticStreamFn(model: AiModel): AgenticStreamFn 
           temperature,
           tools,
           toolChoice,
+          abortSignal,
         }),
       );
 

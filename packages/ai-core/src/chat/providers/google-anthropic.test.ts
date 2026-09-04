@@ -652,6 +652,7 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
           }),
         ],
       }),
+      expect.anything(),
     );
 
     expect(events).toEqual([
@@ -735,6 +736,7 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
           },
         ],
       }),
+      expect.anything(),
     );
 
     expect(events).toEqual([{ type: 'text', delta: 'It is sunny' }]);
@@ -807,6 +809,7 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
           },
         ]),
       }),
+      expect.anything(),
     );
   });
 
@@ -867,6 +870,7 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
           },
         ]),
       }),
+      expect.anything(),
     );
   });
 

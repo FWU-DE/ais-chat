@@ -11,6 +11,7 @@ type OpenAICompatibleAgenticStreamArgs = {
   temperature?: number;
   tools?: ToolDefinition[];
   toolChoice?: 'auto' | 'none' | 'required';
+  abortSignal?: AbortSignal;
   getUsage?: (result: { content: string; toolCalls: ToolCall[] }) => TokenUsage;
   providerName: string;
   createOptions?: Parameters<OpenAI['responses']['create']>[1];
@@ -33,6 +34,7 @@ export async function* streamOpenAICompatibleAgenticResponse({
   temperature,
   tools,
   toolChoice,
+  abortSignal,
   getUsage,
   providerName,
   createOptions,
@@ -50,7 +52,7 @@ export async function* streamOpenAICompatibleAgenticResponse({
       tool_choice: toolChoice,
       ...additionalParameters,
     },
-    createOptions,
+    { ...createOptions, signal: abortSignal },
   );
 
   let content = '';

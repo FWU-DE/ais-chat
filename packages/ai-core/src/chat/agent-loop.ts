@@ -21,6 +21,8 @@ type RunAgentLoopParams = {
   messages: AiCoreMessage[];
   toolRegistry?: ToolRegistry;
   agentName: string;
+  /** Tears down the upstream provider stream when the client goes away or the generation times out. */
+  abortSignal?: AbortSignal;
   onTextChunk: (delta: string) => void;
   onComplete: (result: {
     fullText: string;
@@ -39,6 +41,7 @@ export function runAgentLoop({
   messages,
   toolRegistry,
   agentName,
+  abortSignal,
   onTextChunk,
   onComplete,
   onError,
@@ -68,6 +71,10 @@ export function runAgentLoop({
         },
         async (agentSpan) => {
           for (let iteration = 0; iteration < MAX_AGENTIC_ITERATIONS; iteration++) {
+            if (abortSignal?.aborted) {
+              break;
+            }
+
             const pendingToolCalls: ToolCall[] = [];
             const overBudgetToolCalls: ToolCall[] = [];
             let iterationText = '';
@@ -94,7 +101,9 @@ export function runAgentLoop({
                 };
                 totalPriceInCents += priceInCents;
               },
-              tools.length > 0 && !isLastIteration ? { tools, toolChoice: 'auto' } : undefined,
+              tools.length > 0 && !isLastIteration
+                ? { tools, toolChoice: 'auto', abortSignal }
+                : { abortSignal },
             );
 
             for await (const event of stream) {
@@ -181,7 +190,10 @@ export function runAgentLoop({
       );
 
       if (fullText.trim().length === 0) {
-        onError(new EmptyResponseError({ modelId: lastModelId }));
+        // An abort before any output is a teardown, not an empty-response failure.
+        if (!abortSignal?.aborted) {
+          onError(new EmptyResponseError({ modelId: lastModelId }));
+        }
         return;
       }
 
@@ -194,6 +206,10 @@ export function runAgentLoop({
         agentLoopMessages: loopMessages.slice(messages.length),
       });
     } catch (error) {
+      // An aborted generation is an expected teardown, not a failure to report.
+      if (abortSignal?.aborted) {
+        return;
+      }
       logError('Error during agent loop:', error);
       onError(error instanceof Error ? error : new Error('Unknown error'));
     }

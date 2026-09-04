@@ -113,6 +113,7 @@ export function constructOpenAIAgenticStreamFn(model: AiModel): AgenticStreamFn 
     temperature,
     tools,
     toolChoice,
+    abortSignal,
   }) {
     yield* streamOpenAICompatibleAgenticResponse({
       client,
@@ -122,6 +123,7 @@ export function constructOpenAIAgenticStreamFn(model: AiModel): AgenticStreamFn 
       temperature,
       tools,
       toolChoice,
+      abortSignal,
       providerName: 'OpenAI',
     });
   };

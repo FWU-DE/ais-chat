@@ -135,6 +135,7 @@ export function constructBifrostAgenticStreamFn(model: AiModel): AgenticStreamFn
     maxTokens,
     tools,
     toolChoice,
+    abortSignal,
     fallbackModels,
   }) {
     yield* streamOpenAICompatibleAgenticResponse({
@@ -144,6 +145,7 @@ export function constructBifrostAgenticStreamFn(model: AiModel): AgenticStreamFn
       maxTokens,
       tools,
       toolChoice,
+      abortSignal,
       providerName: 'Bifrost',
       additionalParameters: {
         ...(model.additionalParameters as Record<string, unknown>),

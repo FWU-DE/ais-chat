@@ -141,7 +141,7 @@ export async function sendLearningScenarioMessage({
     federalStateId: teacherUserAndContext.federalState.id,
   });
 
-  const { stream, update, done, error: streamError } = createTextStream();
+  const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
   const assistantMessageId = crypto.randomUUID();
 
   const allowWebTools = isWebSearchEnabledForEntity({
@@ -206,6 +206,7 @@ export async function sendLearningScenarioMessage({
     messages: convertToAiCoreMessages(systemPrompt, messagesWithImages),
     toolRegistry: tools.toolRegistry,
     agentName: resolveAgentNameForTracing({ learningScenarioId: learningScenario.id }),
+    abortSignal: generationSignal,
     onTextChunk: (delta) => {
       update(delta);
     },
