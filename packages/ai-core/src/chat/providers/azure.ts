@@ -92,7 +92,13 @@ export function constructAzureResponsesStreamFn(model: AiModel): TextStreamFn {
 export function constructAzureResponsesAgenticStreamFn(model: AiModel): AgenticStreamFn {
   const { client, deployment } = createAzureClient(model);
 
-  return async function* getAzureTextStream({ messages, maxTokens, tools, toolChoice }) {
+  return async function* getAzureTextStream({
+    messages,
+    maxTokens,
+    tools,
+    toolChoice,
+    abortSignal,
+  }) {
     yield* streamOpenAICompatibleAgenticResponse({
       client,
       messages,
@@ -100,6 +106,7 @@ export function constructAzureResponsesAgenticStreamFn(model: AiModel): AgenticS
       maxTokens,
       tools,
       toolChoice,
+      abortSignal,
       providerName: 'Azure OpenAI',
       createOptions: {
         path: `/openai/responses`,

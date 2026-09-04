@@ -417,7 +417,7 @@ export async function sendChatMessage({
       activeAssistant ?? { isWebSearchEnabled: true },
   });
 
-  const { stream, update, done, error: streamError } = createTextStream();
+  const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
 
   const tools = await buildTools({
     user,
@@ -592,6 +592,7 @@ export async function sendChatMessage({
     messages: convertToAiCoreMessages(systemPrompt, messagesWithImages),
     toolRegistry: tools.toolRegistry,
     agentName: resolveAgentNameForTracing({ characterId, learningScenarioId, assistantId }),
+    abortSignal: generationSignal,
     onTextChunk: (delta: string) => {
       update(delta);
     },

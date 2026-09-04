@@ -117,17 +117,21 @@ export function constructIonosAgenticStreamFn(model: AiModel): AgenticStreamFn {
     temperature,
     tools,
     toolChoice,
+    abortSignal,
   }) {
-    const stream = await client.chat.completions.create({
-      model: modelName,
-      messages: toOpenAIMessages(messages),
-      stream: true,
-      stream_options: { include_usage: true },
-      max_tokens: maxTokens,
-      temperature,
-      tools: toOpenAIChatTools(tools),
-      tool_choice: toolChoice,
-    });
+    const stream = await client.chat.completions.create(
+      {
+        model: modelName,
+        messages: toOpenAIMessages(messages),
+        stream: true,
+        stream_options: { include_usage: true },
+        max_tokens: maxTokens,
+        temperature,
+        tools: toOpenAIChatTools(tools),
+        tool_choice: toolChoice,
+      },
+      { signal: abortSignal },
+    );
 
     type ToolCallAccumulator = {
       id: string;

@@ -140,7 +140,7 @@ export function constructGoogleAnthropicAgenticStreamFn(model: AiModel): Agentic
     args: TextGenerationArgs,
   ): AsyncGenerator<StreamEvent> {
     try {
-      const { messages, maxTokens, model: modelName, tools, toolChoice } = args;
+      const { messages, maxTokens, model: modelName, tools, toolChoice, abortSignal } = args;
       const systemMessages = getSystemMessages(messages);
       const conversationMessages = groupToolResults(
         getNonSystemMessages(messages).map((msg) => mapMessageToAnthropicMessageParam(msg)),
@@ -156,7 +156,7 @@ export function constructGoogleAnthropicAgenticStreamFn(model: AiModel): Agentic
         tools: mapToolsToAnthropicTools(tools),
       };
 
-      const stream = client.messages.stream(messageParams);
+      const stream = client.messages.stream(messageParams, { signal: abortSignal });
 
       // Track whether text was streamed as deltas to avoid duplication from finalMessage
       let hasStreamedTextDeltas = false;
