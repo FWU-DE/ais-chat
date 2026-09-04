@@ -24,6 +24,9 @@ describe('agent-loop', () => {
     totalTokens: 30,
   };
 
+  // Lets the fire-and-forget loop settle so "callback was never called" assertions are reliable.
+  const flushAsync = () => new Promise((resolve) => setTimeout(resolve, 10));
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -582,6 +585,190 @@ describe('agent-loop', () => {
 
       expect(agentSpanCalls).toHaveLength(1);
       expect(toolSpanCalls).toHaveLength(2);
+    });
+  });
+
+  describe('abortSignal', () => {
+    it('forwards the signal to the stream with and without tools', async () => {
+      const messages: Message[] = [{ role: 'user', content: 'Test query' }];
+      const abortController = new AbortController();
+
+      mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+        yield { type: 'text', delta: 'Response.' } satisfies StreamEvent;
+        yield { type: 'finish', usage } satisfies StreamEvent;
+      });
+
+      const toolRegistry = {
+        test_tool: {
+          definition: { name: 'test_tool', description: 'Test', parameters: {} },
+          handler: async () => 'tool result',
+        },
+      };
+
+      const onComplete = vi.fn();
+
+      runAgentLoop({
+        modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+        apiKeyId: 'test-key',
+        messages,
+        toolRegistry,
+        agentName: 'Test Agent',
+        abortSignal: abortController.signal,
+        onTextChunk: vi.fn(),
+        onComplete,
+        onError: vi.fn(),
+      });
+
+      await vi.waitFor(() => {
+        expect(onComplete).toHaveBeenCalled();
+      });
+
+      expect(mockGenerateAgenticStreamWithBilling).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        'test-key',
+        expect.any(Function),
+        expect.objectContaining({ tools: expect.anything(), abortSignal: abortController.signal }),
+      );
+
+      mockGenerateAgenticStreamWithBilling.mockClear();
+      const onCompleteWithoutTools = vi.fn();
+
+      runAgentLoop({
+        modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+        apiKeyId: 'test-key',
+        messages,
+        agentName: 'Test Agent',
+        abortSignal: abortController.signal,
+        onTextChunk: vi.fn(),
+        onComplete: onCompleteWithoutTools,
+        onError: vi.fn(),
+      });
+
+      await vi.waitFor(() => {
+        expect(onCompleteWithoutTools).toHaveBeenCalled();
+      });
+
+      expect(mockGenerateAgenticStreamWithBilling).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        'test-key',
+        expect.any(Function),
+        { abortSignal: abortController.signal },
+      );
+    });
+
+    it('stops before the next iteration once aborted and keeps the partial text', async () => {
+      const messages: Message[] = [{ role: 'user', content: 'Test query' }];
+      const onTextChunk = vi.fn();
+      const onComplete = vi.fn();
+      const onError = vi.fn();
+      const abortController = new AbortController();
+
+      mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+        yield { type: 'text', delta: 'Partial answer.' } satisfies StreamEvent;
+        yield {
+          type: 'tool_call',
+          call: { id: 'call_123', name: 'test_tool', arguments: '{}' },
+        } satisfies StreamEvent;
+        yield { type: 'finish', usage } satisfies StreamEvent;
+      });
+
+      const toolRegistry = {
+        test_tool: {
+          definition: { name: 'test_tool', description: 'Test', parameters: {} },
+          handler: async () => {
+            abortController.abort();
+            return 'tool result';
+          },
+        },
+      };
+
+      runAgentLoop({
+        modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+        apiKeyId: 'test-key',
+        messages,
+        toolRegistry,
+        agentName: 'Test Agent',
+        abortSignal: abortController.signal,
+        onTextChunk,
+        onComplete,
+        onError,
+      });
+
+      await vi.waitFor(() => {
+        expect(onComplete).toHaveBeenCalled();
+      });
+
+      expect(onError).not.toHaveBeenCalled();
+      expect(mockGenerateAgenticStreamWithBilling).toHaveBeenCalledTimes(1);
+      expect(onComplete).toHaveBeenCalledWith(
+        expect.objectContaining({ fullText: 'Partial answer.' }),
+      );
+    });
+
+    it('does not report an EmptyResponseError when aborted before any text', async () => {
+      const messages: Message[] = [{ role: 'user', content: 'Test query' }];
+      const onComplete = vi.fn();
+      const onError = vi.fn();
+      const abortController = new AbortController();
+      abortController.abort();
+
+      mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+        yield { type: 'finish', usage } satisfies StreamEvent;
+      });
+
+      runAgentLoop({
+        modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+        apiKeyId: 'test-key',
+        messages,
+        agentName: 'Test Agent',
+        abortSignal: abortController.signal,
+        onTextChunk: vi.fn(),
+        onComplete,
+        onError,
+      });
+
+      await vi.waitFor(() => {
+        expect(mockStartSpan).toHaveBeenCalled();
+      });
+      await flushAsync();
+
+      expect(mockGenerateAgenticStreamWithBilling).not.toHaveBeenCalled();
+      expect(onError).not.toHaveBeenCalled();
+      expect(onComplete).not.toHaveBeenCalled();
+    });
+
+    it('swallows stream errors that are caused by the abort', async () => {
+      const messages: Message[] = [{ role: 'user', content: 'Test query' }];
+      const onComplete = vi.fn();
+      const onError = vi.fn();
+      const abortController = new AbortController();
+
+      mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+        yield { type: 'text', delta: 'Partial.' } satisfies StreamEvent;
+        abortController.abort();
+        throw new Error('The operation was aborted');
+      });
+
+      runAgentLoop({
+        modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+        apiKeyId: 'test-key',
+        messages,
+        agentName: 'Test Agent',
+        abortSignal: abortController.signal,
+        onTextChunk: vi.fn(),
+        onComplete,
+        onError,
+      });
+
+      await vi.waitFor(() => {
+        expect(abortController.signal.aborted).toBe(true);
+      });
+      await flushAsync();
+
+      expect(onError).not.toHaveBeenCalled();
+      expect(onComplete).not.toHaveBeenCalled();
     });
   });
 });

@@ -52,7 +52,7 @@ export async function* streamOpenAICompatibleAgenticResponse({
       tool_choice: toolChoice,
       ...additionalParameters,
     },
-    { ...createOptions, signal: abortSignal },
+    { ...createOptions, ...(abortSignal ? { signal: abortSignal } : {}) },
   );
 
   let content = '';
