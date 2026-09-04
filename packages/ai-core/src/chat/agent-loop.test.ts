@@ -739,7 +739,7 @@ describe('agent-loop', () => {
       expect(onComplete).not.toHaveBeenCalled();
     });
 
-    it('swallows stream errors that are caused by the abort', async () => {
+    it('keeps the partial text when the stream throws because of the abort', async () => {
       const messages: Message[] = [{ role: 'user', content: 'Test query' }];
       const onComplete = vi.fn();
       const onError = vi.fn();
@@ -749,6 +749,39 @@ describe('agent-loop', () => {
         yield { type: 'text', delta: 'Partial.' } satisfies StreamEvent;
         abortController.abort();
         throw new Error('The operation was aborted');
+      });
+
+      runAgentLoop({
+        modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+        apiKeyId: 'test-key',
+        messages,
+        agentName: 'Test Agent',
+        abortSignal: abortController.signal,
+        onTextChunk: vi.fn(),
+        onComplete,
+        onError,
+      });
+
+      await vi.waitFor(() => {
+        expect(onComplete).toHaveBeenCalled();
+      });
+
+      expect(onError).not.toHaveBeenCalled();
+      expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({ fullText: 'Partial.' }));
+    });
+
+    it('reports nothing when the stream throws after an abort without any text', async () => {
+      const messages: Message[] = [{ role: 'user', content: 'Test query' }];
+      const onComplete = vi.fn();
+      const onError = vi.fn();
+      const abortController = new AbortController();
+
+      mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+        abortController.abort();
+        if (abortController.signal.aborted) {
+          throw new Error('The operation was aborted');
+        }
+        yield { type: 'finish', usage } satisfies StreamEvent;
       });
 
       runAgentLoop({

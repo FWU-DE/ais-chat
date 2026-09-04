@@ -57,6 +57,16 @@ export function runAgentLoop({
     const loopMessages = [...messages];
     const tools = toolRegistry ? Object.values(toolRegistry).map((entry) => entry.definition) : [];
 
+    const complete = () =>
+      onComplete({
+        fullText,
+        usage: totalUsage,
+        priceInCents: totalPriceInCents,
+        modelId: lastModelId,
+        modelUsages,
+        agentLoopMessages: loopMessages.slice(messages.length),
+      });
+
     try {
       await Sentry.startSpan(
         {
@@ -106,23 +116,26 @@ export function runAgentLoop({
                 : { abortSignal },
             );
 
-            for await (const event of stream) {
-              if (event.type === 'text') {
-                iterationText += event.delta;
-                onTextChunk(event.delta);
-              } else if (event.type === 'tool_call') {
-                if (pendingToolCalls.length < MAX_TOOL_CALLS_PER_ITERATION) {
-                  // On last iteration, tools are disabled but model might still emit tool calls
-                  if (!isLastIteration) {
-                    pendingToolCalls.push(event.call);
+            try {
+              for await (const event of stream) {
+                if (event.type === 'text') {
+                  iterationText += event.delta;
+                  onTextChunk(event.delta);
+                } else if (event.type === 'tool_call') {
+                  if (pendingToolCalls.length < MAX_TOOL_CALLS_PER_ITERATION) {
+                    // On last iteration, tools are disabled but model might still emit tool calls
+                    if (!isLastIteration) {
+                      pendingToolCalls.push(event.call);
+                    }
+                  } else {
+                    overBudgetToolCalls.push(event.call);
                   }
-                } else {
-                  overBudgetToolCalls.push(event.call);
                 }
               }
+            } finally {
+              // An interrupted stream still produced text; keep it instead of discarding it.
+              fullText += iterationText;
             }
-
-            fullText += iterationText;
 
             if (pendingToolCalls.length === 0 && overBudgetToolCalls.length === 0) {
               break;
@@ -197,17 +210,15 @@ export function runAgentLoop({
         return;
       }
 
-      onComplete({
-        fullText,
-        usage: totalUsage,
-        priceInCents: totalPriceInCents,
-        modelId: lastModelId,
-        modelUsages,
-        agentLoopMessages: loopMessages.slice(messages.length),
-      });
+      complete();
     } catch (error) {
-      // An aborted generation is an expected teardown, not a failure to report.
+      // An aborted generation is an expected teardown, not a failure to report, but whatever
+      // was already generated must still reach the caller so it can be persisted.
       if (abortSignal?.aborted) {
+        logError('Agent loop aborted:', error);
+        if (fullText.trim().length > 0) {
+          complete();
+        }
         return;
       }
       logError('Error during agent loop:', error);
