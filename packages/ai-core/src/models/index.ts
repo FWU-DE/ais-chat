@@ -7,6 +7,7 @@ import {
 import { AiModel } from '../images/types';
 import type { AiModel as TextAiModel } from '../chat/types';
 import type { AiModel as EmbeddingAiModel } from '../embeddings/types';
+import type { AiModel as SafetyAiModel } from '../safety/types';
 
 export async function getImageModelById(modelId: string): Promise<AiModel> {
   const model = await dbGetModelById(modelId);
@@ -41,6 +42,17 @@ export async function getEmbeddingModelById(modelId: string): Promise<EmbeddingA
   return resolveRoutingModel(model);
 }
 
+export async function getSafetyModelById(modelId: string): Promise<SafetyAiModel> {
+  const model = await dbGetModelById(modelId);
+  if (!model) {
+    throw new InvalidModelError(`Model with id ${modelId} not found`);
+  }
+  if (model.priceMetadata.type !== 'safety') {
+    throw new InvalidModelError(`Model with id ${modelId} is not a safety model`);
+  }
+  return resolveRoutingModel(model);
+}
+
 export async function getTextModelByName(
   modelName: string,
   apiKeyId: string,
@@ -65,6 +77,20 @@ export async function getEmbeddingModelByName(
   }
   if (model.priceMetadata.type !== 'embedding') {
     throw new InvalidModelError(`Model ${modelName} is not an embedding model`);
+  }
+  return resolveRoutingModel(model);
+}
+
+export async function getSafetyModelByName(
+  modelName: string,
+  apiKeyId: string,
+): Promise<SafetyAiModel> {
+  const model = await dbGetModelByNameAndApiKeyId({ name: modelName, apiKeyId });
+  if (!model) {
+    throw new InvalidModelError(`No safety model with name ${modelName} found for this API key`);
+  }
+  if (model.priceMetadata.type !== 'safety') {
+    throw new InvalidModelError(`Model ${modelName} is not a safety model`);
   }
   return resolveRoutingModel(model);
 }

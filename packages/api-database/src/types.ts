@@ -32,6 +32,10 @@ export const llmModelPriceMetadataSchema = z.union([
     type: z.literal('embedding'),
     promptTokenPrice: z.number(),
   }),
+  z.object({
+    type: z.literal('safety'),
+    promptTokenPrice: z.number(),
+  }),
 ]);
 
 export type LlmModelPriceMetadata = z.infer<typeof llmModelPriceMetadataSchema>;
