@@ -33,20 +33,20 @@ export function HeaderMainMenuItem({
   mainMenuItemTestId,
 }: HeaderMainMenuItemProps) {
   const mainMenuItem = (
-    <span className="flex flex-row gap-1.5 items-center text-primary text-base font-medium flex-nowrap">
-      <span className="text-nowrap" data-testid={selectedMenuItemTestId}>
+    <span className="flex flex-row gap-1.5 items-center text-primary text-base font-medium min-w-0">
+      <span className="min-w-0 wrap-break-word line-clamp-2" data-testid={selectedMenuItemTestId}>
         {triggerLabel}
       </span>
       {isGreen && <GreenLeafIcon />}
       {isNew && <Badge text="NEU" />}
-      {isDropdownEnabled && <CaretDownIcon />}
+      {isDropdownEnabled && <CaretDownIcon className="shrink-0" />}
     </span>
   );
   const triggerButton = (
     <button
       type="button"
       disabled={!isDropdownEnabled}
-      className="outline-none focus-visible:rounded-lg focus-visible:ring-2 focus-visible:ring-ring/50"
+      className="outline-none focus-visible:rounded-lg focus-visible:ring-2 focus-visible:ring-ring/50 min-w-0 max-w-full"
       aria-label={triggerAriaLabel}
       data-testid={mainMenuItemTestId}
     >
@@ -55,7 +55,7 @@ export function HeaderMainMenuItem({
   );
 
   return (
-    <div className="flex flex-col gap-2 p-2">
+    <div className="flex flex-col gap-2 p-2 min-w-0 max-w-full">
       <span className="text-xs text-gray-600 hidden sm:block">{caption}</span>
       {isDropdownEnabled ? (
         <DropdownMenu>
