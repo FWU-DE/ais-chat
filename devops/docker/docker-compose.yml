@@ -154,7 +154,7 @@ services:
       start_period: 2s
 
   bifrost:
-    image: ghcr.io/maximhq/bifrost:v1.6.11
+    image: ghcr.io/maximhq/bifrost:v2.0.0
     restart: unless-stopped
     environment:
       BIFROST_ADMIN_USERNAME: admin
