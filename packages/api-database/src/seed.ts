@@ -1,4 +1,5 @@
 import { createApiKeyRecord, db } from './index';
+import { isDeepStrictEqual } from 'node:util';
 import {
   type ApiKeyInsertModel,
   apiKeyTable,
@@ -453,7 +454,7 @@ export async function seedDatabase() {
       const safetyProviderKeyMapping = safetyProviderKeyMappings.find(
         (mapping) =>
           mapping.provider === 'google' &&
-          stableStringify(mapping.settings) === stableStringify(llamaGuardModel.setting),
+          isDeepStrictEqual(mapping.settings, llamaGuardModel.setting),
       );
 
       if (safetyProviderKeyMapping === undefined) {
@@ -503,21 +504,6 @@ export async function seedDatabase() {
     console.error('Error seeding api database:', error);
     throw error;
   }
-}
-
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(',')}]`;
-  }
-
-  if (value && typeof value === 'object') {
-    return `{${Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, entry]) => `${JSON.stringify(key)}:${stableStringify(entry)}`)
-      .join(',')}}`;
-  }
-
-  return JSON.stringify(value);
 }
 
 try {
