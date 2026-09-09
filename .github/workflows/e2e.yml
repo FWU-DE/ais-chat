@@ -58,8 +58,7 @@ jobs:
 
       - name: Start e2e container dependencies
         run: |
-          docker compose -f devops/docker/docker-compose.local.yml up -d --build --wait \
-            postgres valkey keycloak rabbitmq crawl4ai xberg mock-llm bifrost
+          docker compose -f devops/docker/docker-compose.local.yml up -d --build --wait &
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
