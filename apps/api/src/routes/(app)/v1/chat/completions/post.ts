@@ -4,6 +4,7 @@ import { chatCompletion, chatCompletionStream } from '@/ai-core-adapter/chat';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions.js';
 import { z } from 'zod';
+import { dbGetModelsByApiKeyId } from '@ais-chat/api-database';
 
 // Define content part schemas for image and text
 const textContentPartSchema = z.object({
@@ -59,6 +60,13 @@ export async function handler(request: FastifyRequest, reply: FastifyReply): Pro
   }
 
   const body = requestParseResult.data;
+  const safetyModel = (await dbGetModelsByApiKeyId({ apiKeyId: apiKey.id })).find(
+    (model) => model.priceMetadata.type === 'safety',
+  );
+  if (!safetyModel) {
+    reply.status(500).send({ error: 'No safety model configured for this API key' });
+    return;
+  }
 
   if (body.stream) {
     try {
@@ -68,6 +76,7 @@ export async function handler(request: FastifyRequest, reply: FastifyReply): Pro
         apiKeyId: apiKey.id,
         maxTokens: body.max_tokens,
         temperature: body.temperature,
+        safetyModelName: safetyModel.name,
       });
 
       reply.raw.writeHead(200, {
@@ -117,6 +126,7 @@ export async function handler(request: FastifyRequest, reply: FastifyReply): Pro
         apiKeyId: apiKey.id,
         maxTokens: body.max_tokens,
         temperature: body.temperature,
+        safetyModelName: safetyModel.name,
       });
 
       reply.status(200).send(response);

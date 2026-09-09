@@ -11,6 +11,7 @@ const defaultModelNames: Record<StaticModelRole, string> = {
   'strong-auxiliary': 'gpt-5.5',
   'auxiliary-fallback': 'meta-llama/Llama-3.3-70B-Instruct',
   'default-image': 'imagen-4.0-generate-001',
+  safety: 'meta-llama/Llama-Guard-4-12B',
 };
 
 export async function initializeStaticModelConfigurations() {
@@ -23,8 +24,14 @@ export async function initializeStaticModelConfigurations() {
       Object.entries(defaultModelNames).map(([role, modelName]) => {
         const model =
           models.find((candidate) => candidate.name === modelName) ??
-          (role === 'default-image' ? firstImageModel : firstTextModel);
-        if (!model) throw new Error(`No model available to configure ${role}`);
+          (role === 'default-image'
+            ? firstImageModel
+            : role === 'safety'
+              ? models.find((candidate) => candidate.priceMetadata.type === 'safety')
+              : firstTextModel);
+        if (!model) {
+          throw new Error(`No model available to configure ${role}`);
+        }
         return [role, model.id];
       }),
     );

@@ -47,8 +47,8 @@ export async function updateStaticModelConfiguration(input: unknown) {
       throw new InvalidArgumentError(`Configured model is not available: ${role}`);
     }
 
-    const requiresImageModel = role === 'default-image';
-    if ((model.priceMetadata.type === 'image') !== requiresImageModel) {
+    const expectedType = role === 'default-image' ? 'image' : role === 'safety' ? 'safety' : 'text';
+    if (model.priceMetadata.type !== expectedType) {
       throw new InvalidArgumentError(`Configured model type is invalid: ${role}`);
     }
   }
@@ -68,7 +68,9 @@ export async function findStaticModelByRoleAndFederalStateId({
   federalStateId: string;
 }) {
   const configuration = await getStaticModelsConfiguration();
-  if (!configuration) return undefined;
+  if (!configuration) {
+    return undefined;
+  }
   return dbFindModelByIdAndFederalStateId({
     modelId: configuration[role],
     federalStateId,
@@ -78,6 +80,16 @@ export async function findStaticModelByRoleAndFederalStateId({
 export async function findStaticModelByRole(role: StaticModelRole) {
   const configuration = await getStaticModelsConfiguration();
   return configuration ? dbGetLlmModelById({ modelId: configuration[role] }) : undefined;
+}
+
+/** Resolves the globally configured safety model. */
+export async function getSafetyModel() {
+  const model = await findStaticModelByRole('safety');
+  if (!model || model.isDeleted || model.priceMetadata.type !== 'safety') {
+    throw new Error('No globally configured safety model found');
+  }
+
+  return model;
 }
 
 /** Resolves the configured default chat model with a compatible text-model fallback. */
@@ -107,6 +119,8 @@ export async function getDefaultModelNameByFederalStateId(
   models: LlmModelSelectModel[],
 ) {
   const model = await getDefaultModel({ federalStateId, models });
-  if (!model) throw new Error(`No default text model found for federal state ${federalStateId}`);
+  if (!model) {
+    throw new Error(`No default text model found for federal state ${federalStateId}`);
+  }
   return model.name;
 }

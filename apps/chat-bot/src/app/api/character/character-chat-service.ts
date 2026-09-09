@@ -3,7 +3,7 @@ import { NotFoundError } from '@shared/error';
 import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
 import { getUserAndContextByUserId } from '@/auth/utils';
 import { checkProductAccess } from '@/utils/vidis/access';
-import { getModelAndApiKeyWithResult } from '../utils/utils';
+import { getModelAndApiKeyWithResult, getSafetyModel } from '../utils/utils';
 import { getChatModelSelection } from '../utils/model-circuit-breaker';
 import {
   dbGetCharacterByIdAndInviteCode,
@@ -88,6 +88,7 @@ export async function sendCharacterMessage({
     model: definedModel,
     federalStateId: teacherUserAndContext.federalState.id,
   });
+  const safetyModel = await getSafetyModel();
   const generationModelId = modelSelection.modelIds[0];
 
   // Check expiry
@@ -198,6 +199,7 @@ export async function sendCharacterMessage({
   runAgentLoop({
     modelSelection,
     apiKeyId,
+    safetyModelName: safetyModel.name,
     messages: convertToAiCoreMessages(systemPrompt, messagesWithImages),
     toolRegistry: tools.toolRegistry,
     agentName: resolveAgentNameForTracing({ characterId: character.id }),

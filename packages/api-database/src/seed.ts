@@ -4,13 +4,15 @@ import {
   apiKeyTable,
   type LlmInsertModel,
   llmModelApiKeyMappingTable,
+  llmModelProviderKeyMappingTable,
   llmModelTable,
+  llmProviderKeyTable,
   type OrganizationInsertModel,
   organizationTable,
   type ProjectInsertModel,
   projectTable,
 } from './schema';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
 import {
   normalizeSeedModelsForBifrost,
   seedProviderKeysForModels,
@@ -34,6 +36,12 @@ const gpt5miniApiKey = process.env.LLM_GPT5MINI_API_KEY ?? 'API_KEY_PLACEHOLDER'
 const gpt5miniBaseUrl = process.env.LLM_GPT5MINI_BASE_URL ?? 'PLACEHOLDER_BASE_URL';
 const mockLlmApiKey = process.env.LLM_MOCK_API_KEY ?? 'API_KEY_PLACEHOLDER';
 const mockLlmBaseUrl = process.env.LLM_MOCK_BASE_URL ?? 'http://mock-llm:6556';
+const seedEnv = process.env as Record<string, string | undefined>;
+const googleProjectId = seedEnv.LLM_GOOGLE_PROJECT_ID;
+const googleLocation = seedEnv.LLM_GOOGLE_LOCATION;
+const googleAuthCredentials = seedEnv.LLM_GOOGLE_AUTH_CREDENTIALS;
+const llamaGuardEndpointId = seedEnv.LLM_LLAMA_GUARD_ENDPOINT_ID;
+const llamaGuardEndpointHost = seedEnv.LLM_LLAMA_GUARD_ENDPOINT_HOST;
 
 // Mock LLM: OpenAI Responses-compatible server used as the default model in e2e tests.
 // Echoes prompts or drives deterministic tool calls — no real API calls.
@@ -59,7 +67,7 @@ const mockLlm: LlmInsertModel = {
 // All prices are rough estimates, probably outdated and just for mocking purposes
 // Static ids are used to ensure that the models are not created again
 // the ids are taken from the staging/production database for interoperability to be able to connect to local AIS.chat api or staging
-const DEFAULT_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
+const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
   // Mock LLMs
   {
     ...mockLlm,
@@ -217,6 +225,45 @@ const DEFAULT_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
   },
 ]);
 
+const llamaGuardModel: LlmInsertModel | undefined =
+  googleProjectId !== undefined &&
+  googleProjectId.trim().length > 0 &&
+  googleLocation !== undefined &&
+  googleLocation.trim().length > 0 &&
+  googleAuthCredentials !== undefined &&
+  googleAuthCredentials.trim().length > 0 &&
+  llamaGuardEndpointId !== undefined &&
+  llamaGuardEndpointId.trim().length > 0 &&
+  llamaGuardEndpointHost !== undefined &&
+  llamaGuardEndpointHost.trim().length > 0
+    ? {
+        id: '08e5d73f-e582-44fe-a6e0-75350f8b1617',
+        organizationId: ORGANIZATION_ID,
+        provider: 'google',
+        name: 'meta-llama/Llama-Guard-4-12B',
+        displayName: 'Llama Guard',
+        description: 'Llama Guard safety model for conversation moderation',
+        setting: {
+          provider: 'google',
+          projectId: googleProjectId,
+          location: googleLocation,
+          ...(googleAuthCredentials === undefined
+            ? {}
+            : { authCredentials: googleAuthCredentials }),
+        },
+        priceMetadata: {
+          type: 'safety',
+          promptTokenPrice: 0,
+        },
+        additionalParameters: {
+          endpointId: llamaGuardEndpointId,
+          endpointHost: llamaGuardEndpointHost,
+        },
+      }
+    : undefined;
+
+const DEFAULT_MODELS: LlmInsertModel[] = [...BIFROST_MODELS];
+
 export async function seedDatabase() {
   console.log('Starting api database seeding...');
 
@@ -334,7 +381,106 @@ export async function seedDatabase() {
         .onConflictDoNothing();
     }
 
-    await seedProviderKeysForModels(DEFAULT_MODELS);
+    if (llamaGuardModel !== undefined) {
+      await db
+        .insert(llmModelTable)
+        .values({
+          ...llamaGuardModel,
+          provider: 'google',
+          setting: llamaGuardModel.setting,
+          useBifrost: false,
+        })
+        .onConflictDoUpdate({
+          target: llmModelTable.id,
+          set: {
+            provider: 'google',
+            name: llamaGuardModel.name,
+            displayName: llamaGuardModel.displayName,
+            description: llamaGuardModel.description,
+            setting: llamaGuardModel.setting,
+            priceMetadata: llamaGuardModel.priceMetadata,
+            additionalParameters: llamaGuardModel.additionalParameters,
+            isNew: llamaGuardModel.isNew,
+            isDeleted: llamaGuardModel.isDeleted,
+            useBifrost: false,
+          },
+        });
+
+      const seedProjectApiKeys = await db
+        .select({ id: apiKeyTable.id })
+        .from(apiKeyTable)
+        .innerJoin(projectTable, eq(apiKeyTable.projectId, projectTable.id))
+        .where(
+          and(
+            eq(apiKeyTable.projectId, PROJECT_ID),
+            eq(projectTable.organizationId, ORGANIZATION_ID),
+            ne(apiKeyTable.state, 'deleted'),
+          ),
+        );
+
+      await db
+        .delete(llmModelApiKeyMappingTable)
+        .where(eq(llmModelApiKeyMappingTable.llmModelId, llamaGuardModel.id!));
+
+      if (seedProjectApiKeys.length > 0) {
+        await db.insert(llmModelApiKeyMappingTable).values(
+          seedProjectApiKeys.map(({ id }) => ({
+            llmModelId: llamaGuardModel.id!,
+            apiKeyId: id,
+          })),
+        );
+      }
+    }
+
+    const seedModels =
+      llamaGuardModel === undefined ? DEFAULT_MODELS : [...DEFAULT_MODELS, llamaGuardModel];
+    await seedProviderKeysForModels(seedModels);
+
+    if (llamaGuardModel !== undefined) {
+      const safetyProviderKeyMappings = await db
+        .select({
+          providerKeyId: llmModelProviderKeyMappingTable.providerKeyId,
+          provider: llmProviderKeyTable.provider,
+          settings: llmProviderKeyTable.settings,
+          isEnabled: llmProviderKeyTable.isEnabled,
+        })
+        .from(llmModelProviderKeyMappingTable)
+        .innerJoin(
+          llmProviderKeyTable,
+          eq(llmModelProviderKeyMappingTable.providerKeyId, llmProviderKeyTable.id),
+        )
+        .where(eq(llmModelProviderKeyMappingTable.llmModelId, llamaGuardModel.id!));
+      const safetyProviderKeyMapping = safetyProviderKeyMappings.find(
+        (mapping) =>
+          mapping.provider === 'google' &&
+          JSON.stringify(mapping.settings) === JSON.stringify(llamaGuardModel.setting),
+      );
+
+      if (safetyProviderKeyMapping === undefined) {
+        throw new Error('Failed to seed the enabled Google provider key for Llama Guard');
+      }
+
+      await db
+        .update(llmProviderKeyTable)
+        .set({ isEnabled: true })
+        .where(eq(llmProviderKeyTable.id, safetyProviderKeyMapping.providerKeyId));
+
+      for (const mapping of safetyProviderKeyMappings) {
+        if (mapping.providerKeyId === safetyProviderKeyMapping.providerKeyId) {
+          continue;
+        }
+
+        await db
+          .delete(llmModelProviderKeyMappingTable)
+          .where(
+            and(
+              eq(llmModelProviderKeyMappingTable.llmModelId, llamaGuardModel.id!),
+              eq(llmModelProviderKeyMappingTable.providerKeyId, mapping.providerKeyId),
+            ),
+          );
+      }
+    }
+
     await syncSeedModelsToBifrost();
 
     // Print API key in a format parseable by CI (e.g. DE_TEST_API_KEY=sk_...)
@@ -351,7 +497,7 @@ export async function seedDatabase() {
 
     return {
       apiKey,
-      models: DEFAULT_MODELS,
+      models: seedModels,
     };
   } catch (error) {
     console.error('Error seeding api database:', error);

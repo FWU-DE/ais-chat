@@ -1,5 +1,6 @@
 import type { LlmModel } from '@ais-chat/api-database';
 import { GoogleGenAI } from '@google/genai';
+import { GoogleAuth, type GoogleAuthOptions } from 'google-auth-library';
 import { ProviderConfigurationError } from './errors';
 import { instrumentGoogleGenAIClient } from '@sentry/core';
 
@@ -17,6 +18,42 @@ const googleClientCache = new Map<string, GoogleClientConfig>();
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function getGoogleAuthOptions(
+  settings: Extract<LlmModel['setting'], { provider: 'google' }>,
+): GoogleAuthOptions {
+  const authCredentials = settings.authCredentials;
+  if (authCredentials === undefined) {
+    throw new ProviderConfigurationError('Google requires inline credentials');
+  }
+
+  if (typeof authCredentials !== 'string') {
+    return { credentials: authCredentials, scopes: [GOOGLE_CLOUD_PLATFORM_SCOPE] };
+  }
+
+  try {
+    const credentials = JSON.parse(authCredentials) as unknown;
+    if (!isRecord(credentials)) {
+      throw new ProviderConfigurationError('Google credentials must be a JSON object');
+    }
+
+    return { credentials, scopes: [GOOGLE_CLOUD_PLATFORM_SCOPE] };
+  } catch (error) {
+    if (error instanceof ProviderConfigurationError) {
+      throw error;
+    }
+
+    throw new ProviderConfigurationError('Google credentials must be valid JSON');
+  }
+}
+
+export function createGoogleAuth(model: LlmModel): GoogleAuth {
+  if (model.setting.provider !== 'google') {
+    throw new ProviderConfigurationError('Invalid model configuration for Google');
+  }
+
+  return new GoogleAuth(getGoogleAuthOptions(model.setting));
 }
 
 export function createGoogleClient(model: LlmModel): GoogleClientConfig {
@@ -38,9 +75,7 @@ export function createGoogleClient(model: LlmModel): GoogleClientConfig {
       project: projectId,
       location,
       apiVersion: GOOGLE_API_VERSION,
-      googleAuthOptions: {
-        scopes: [GOOGLE_CLOUD_PLATFORM_SCOPE],
-      },
+      googleAuthOptions: getGoogleAuthOptions(model.setting),
     }),
   );
 

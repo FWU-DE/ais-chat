@@ -1,6 +1,9 @@
-import type { AiModel } from '../types';
+import type { AiModel, SafetyMessage } from '../types';
 import { constructGoogleSafetyCheckFn } from './google';
 
-export async function checkSafety(model: AiModel, text: string) {
-  return constructGoogleSafetyCheckFn(model)({ model: model.name, text });
+export async function checkSafety(model: AiModel, messages: SafetyMessage[]) {
+  return constructGoogleSafetyCheckFn(model)({
+    model: model.name,
+    messages,
+  });
 }

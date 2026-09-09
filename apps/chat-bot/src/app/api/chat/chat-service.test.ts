@@ -41,6 +41,7 @@ const mocks = vi.hoisted(() => ({
   constructChatSystemPromptMock: vi.fn(),
   getModelAndApiKeyWithResultMock: vi.fn(),
   getAuxiliaryModelMock: vi.fn(),
+  getSafetyModelMock: vi.fn(),
   getChatModelSelectionMock: vi.fn(),
   determineImageAttachmentTypeForModelMock: vi.fn(),
   dbGetConversationAndMessagesMock: vi.fn(),
@@ -94,6 +95,7 @@ vi.mock('@shared/users/usage', () => ({
 vi.mock('../utils/utils', () => ({
   getModelAndApiKeyWithResult: mocks.getModelAndApiKeyWithResultMock,
   getAuxiliaryModel: mocks.getAuxiliaryModelMock,
+  getSafetyModel: mocks.getSafetyModelMock,
 }));
 
 vi.mock('../utils/model-circuit-breaker', () => ({
@@ -192,6 +194,13 @@ const auxiliaryModel = {
   supportedImageFormats: [],
 };
 
+const safetyModel = {
+  id: 'model-safety',
+  name: 'Safety model',
+  provider: 'mock-provider',
+  supportedImageFormats: [],
+};
+
 const conversation = {
   id: 'conversation-1',
   name: 'Existing conversation',
@@ -264,6 +273,7 @@ beforeEach(() => {
     },
   );
   mocks.getAuxiliaryModelMock.mockResolvedValue(auxiliaryModel);
+  mocks.getSafetyModelMock.mockResolvedValue(safetyModel);
   mocks.getChatModelSelectionMock.mockImplementation(
     async ({ model }: { model: typeof mainModel }) => ({
       modelIds: [model.id],

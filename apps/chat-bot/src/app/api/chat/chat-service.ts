@@ -5,7 +5,7 @@ import {
   runAgentLoop,
 } from '@ais-chat/ai-core';
 import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
-import { getModelAndApiKeyWithResult, getAuxiliaryModel } from '../utils/utils';
+import { getModelAndApiKeyWithResult, getAuxiliaryModel, getSafetyModel } from '../utils/utils';
 import { getChatModelSelection } from '../utils/model-circuit-breaker';
 import {
   dbGetConversationAndMessages,
@@ -225,6 +225,7 @@ export async function sendChatMessage({
     model: definedModel,
     federalStateId: user.federalState.id,
   });
+  const safetyModel = await getSafetyModel();
 
   // Get auxiliary model for title generation
   const auxiliaryModel = await getAuxiliaryModel(user.federalState.id);
@@ -589,6 +590,7 @@ export async function sendChatMessage({
   runAgentLoop({
     modelSelection,
     apiKeyId,
+    safetyModelName: safetyModel.name,
     messages: convertToAiCoreMessages(systemPrompt, messagesWithImages),
     toolRegistry: tools.toolRegistry,
     agentName: resolveAgentNameForTracing({ characterId, learningScenarioId, assistantId }),

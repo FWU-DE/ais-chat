@@ -1,13 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { runAgentLoop } from './agent-loop';
 import type { Message, TokenUsage, StreamEvent } from './types';
+import { InvalidModelError, ProviderConfigurationError } from '../errors';
 
 // Mock the generateAgenticStreamWithBilling import
 const mockGenerateAgenticStreamWithBilling = vi.fn();
+const mockCheckTextSafety = vi.fn();
 
 vi.mock('./agentic-stream', () => ({
   generateAgenticStreamWithBilling: (...args: unknown[]) =>
     mockGenerateAgenticStreamWithBilling(...args),
+}));
+
+vi.mock('../safety', () => ({
+  checkTextSafety: (...args: unknown[]) => mockCheckTextSafety(...args),
+  checkInputSafety: async (...args: unknown[]) => {
+    const result = await mockCheckTextSafety(...args);
+    if (result.safe) {
+      return;
+    }
+
+    throw new (class extends Error {
+      name = 'ResponsibleAIError';
+    })('Input was blocked by the safety model');
+  },
 }));
 
 // Mock Sentry to verify spans are created
@@ -29,6 +45,131 @@ describe('agent-loop', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCheckTextSafety.mockResolvedValue({ safe: true });
+  });
+
+  it('checks the supplied safety model once with user and assistant context, excluding system and tool messages', async () => {
+    const image = {
+      type: 'image' as const,
+      contentType: 'image/png',
+      url: 'data:image/png;base64,abc',
+    };
+    const messages: Message[] = [
+      { role: 'system', content: 'System instruction' },
+      { role: 'user', content: 'Look at this', attachments: [image] },
+      { role: 'assistant', content: 'I see it' },
+      { role: 'tool', content: 'Tool result' },
+    ];
+    mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+      yield { type: 'text', delta: 'Done' } satisfies StreamEvent;
+      yield { type: 'finish', usage } satisfies StreamEvent;
+    });
+
+    runAgentLoop({
+      modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+      apiKeyId: 'test-key',
+      safetyModelName: 'safety-model',
+      messages,
+      agentName: 'Test Agent',
+      onTextChunk: vi.fn(),
+      onComplete: vi.fn(),
+      onError: vi.fn(),
+    });
+
+    await vi.waitFor(() => expect(mockCheckTextSafety).toHaveBeenCalledTimes(1));
+    expect(mockCheckTextSafety).toHaveBeenCalledWith(
+      'safety-model',
+      [
+        { role: 'user', content: 'Look at this', images: [image] },
+        { role: 'assistant', content: 'I see it', images: undefined },
+      ],
+      'test-key',
+    );
+  });
+
+  it('checks safety once before multiple tool iterations', async () => {
+    let streamCallCount = 0;
+    mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+      streamCallCount += 1;
+      if (streamCallCount === 1) {
+        yield {
+          type: 'tool_call',
+          call: { id: 'call-1', name: 'test_tool', arguments: '{}' },
+        } satisfies StreamEvent;
+      } else {
+        yield { type: 'text', delta: 'Done' } satisfies StreamEvent;
+      }
+      yield { type: 'finish', usage } satisfies StreamEvent;
+    });
+
+    runAgentLoop({
+      modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+      apiKeyId: 'test-key',
+      messages: [{ role: 'user', content: 'Test query' }],
+      safetyModelName: 'safety-model',
+      toolRegistry: {
+        test_tool: {
+          definition: { name: 'test_tool', description: 'Test', parameters: {} },
+          handler: async () => 'tool result',
+        },
+      },
+      agentName: 'Test Agent',
+      onTextChunk: vi.fn(),
+      onComplete: vi.fn(),
+      onError: vi.fn(),
+    });
+
+    await vi.waitFor(() => expect(streamCallCount).toBe(2));
+    expect(mockCheckTextSafety).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a ResponsibleAIError for unsafe classifications', async () => {
+    mockCheckTextSafety.mockResolvedValue({ safe: false, categories: ['S1'] });
+    const onError = vi.fn();
+
+    runAgentLoop({
+      modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+      apiKeyId: 'test-key',
+      messages: [{ role: 'user', content: 'Test query' }],
+      safetyModelName: 'safety-model',
+      agentName: 'Test Agent',
+      onTextChunk: vi.fn(),
+      onComplete: vi.fn(),
+      onError,
+    });
+
+    await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'ResponsibleAIError',
+        message: 'Input was blocked by the safety model',
+      }),
+    );
+    expect(mockCheckTextSafety).toHaveBeenCalledTimes(1);
+    expect(mockGenerateAgenticStreamWithBilling).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [new InvalidModelError('Safety model is inaccessible')],
+    [new ProviderConfigurationError('Safety provider is misconfigured')],
+  ])('preserves known safety errors without generating a response', async (error) => {
+    mockCheckTextSafety.mockRejectedValue(error);
+    const onError = vi.fn();
+
+    runAgentLoop({
+      modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+      apiKeyId: 'test-key',
+      messages: [{ role: 'user', content: 'Test query' }],
+      safetyModelName: 'safety-model',
+      agentName: 'Test Agent',
+      onTextChunk: vi.fn(),
+      onComplete: vi.fn(),
+      onError,
+    });
+
+    await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+    expect(onError).toHaveBeenCalledWith(error);
+    expect(mockGenerateAgenticStreamWithBilling).not.toHaveBeenCalled();
   });
 
   it('inserts double newlines between iterations when both produce text', async () => {
@@ -588,7 +729,7 @@ describe('agent-loop', () => {
     });
   });
 
-  describe('abortSignal', () => {
+  describe('generation abortSignal', () => {
     it('forwards the signal to the stream with and without tools', async () => {
       const messages: Message[] = [{ role: 'user', content: 'Test query' }];
       const abortController = new AbortController();
