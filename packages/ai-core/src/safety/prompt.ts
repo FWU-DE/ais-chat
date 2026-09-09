@@ -32,5 +32,11 @@ ${conversation}
 
 <END CONVERSATION>
 
+Return exactly one of these formats and nothing else:
+- safe
+- unsafe S1
+- unsafe S1 S2
+
+Use unsafe followed by every violated category code. If no category is violated, return safe.
 Provide your safety assessment for the above content.`;
 }
