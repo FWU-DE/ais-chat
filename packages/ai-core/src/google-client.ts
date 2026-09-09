@@ -22,10 +22,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function getGoogleAuthOptions(
   settings: Extract<LlmModel['setting'], { provider: 'google' }>,
+  requireCredentials = false,
 ): GoogleAuthOptions {
   const authCredentials = settings.authCredentials;
   if (authCredentials === undefined) {
-    throw new ProviderConfigurationError('Google requires inline credentials');
+    if (requireCredentials) {
+      throw new ProviderConfigurationError('Google requires inline credentials');
+    }
+
+    return { scopes: [GOOGLE_CLOUD_PLATFORM_SCOPE] };
   }
 
   if (typeof authCredentials !== 'string') {
@@ -53,7 +58,7 @@ export function createGoogleAuth(model: LlmModel): GoogleAuth {
     throw new ProviderConfigurationError('Invalid model configuration for Google');
   }
 
-  return new GoogleAuth(getGoogleAuthOptions(model.setting));
+  return new GoogleAuth(getGoogleAuthOptions(model.setting, true));
 }
 
 export function createGoogleClient(model: LlmModel): GoogleClientConfig {

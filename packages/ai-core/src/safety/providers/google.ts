@@ -24,17 +24,17 @@ function parseSafetyResult(payload: unknown, modelId: string): SafetyResult {
     throw new EmptyResponseError({ modelId, message: 'Empty safety response' });
   }
 
-  const [classification, categories = ''] = result.data.predictions.choices[0].message.content
+  const [classification, ...categories] = result.data.predictions.choices[0].message.content
     .trim()
     .toUpperCase()
-    .split(/\s+/, 2);
+    .split(/\s+/);
 
   if (classification === 'SAFE') {
     return { safe: true };
   }
 
   const parsedCategories = categories
-    .split(',')
+    .flatMap((category) => category.split(','))
     .filter((category) => /^S(?:[1-9]|1[0-4])$/.test(category));
   if (classification === 'UNSAFE' && parsedCategories.length > 0) {
     return { safe: false, categories: parsedCategories };
