@@ -490,6 +490,47 @@ export async function sendChatMessage({
   const assistantMessageId = crypto.randomUUID();
   const assistantMessageOrderNumber = userMessageOrderNumber + 1;
 
+  async function persistUsage({
+    usage,
+    priceInCents,
+    modelUsages,
+  }: {
+    usage: TokenUsage;
+    priceInCents: number;
+    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+  }) {
+    if (modelUsages.length === 0) {
+      return;
+    }
+
+    // Agentic requests can invoke several models across iterations. Persist each usage
+    // entry separately so pricing and reporting stay associated with the serving model.
+    await Promise.all(
+      modelUsages.map((modelUsage) =>
+        dbInsertConversationUsage({
+          conversationId: activeConversation.id,
+          userId: user.id,
+          modelId: modelUsage.modelId,
+          completionTokens: modelUsage.usage.completionTokens,
+          promptTokens: modelUsage.usage.promptTokens,
+          costsInCent: modelUsage.priceInCents,
+        }),
+      ),
+    );
+
+    await sendRabbitmqEvent(
+      constructNewMessageEvent({
+        user,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        costsInCent: priceInCents,
+        provider: definedModel.provider,
+        anonymous: false,
+        conversation: activeConversation,
+      }),
+    );
+  }
+
   async function persistAssistantMessage({
     fullText,
     usage,
@@ -544,34 +585,7 @@ export async function sendChatMessage({
       });
     }
 
-    const { promptTokens, completionTokens } = usage;
-
-    // Agentic requests can invoke several models across iterations. Persist each usage
-    // entry separately so pricing and reporting stay associated with the serving model.
-    await Promise.all(
-      modelUsages.map((modelUsage) =>
-        dbInsertConversationUsage({
-          conversationId: activeConversation.id,
-          userId: user.id,
-          modelId: modelUsage.modelId,
-          completionTokens: modelUsage.usage.completionTokens,
-          promptTokens: modelUsage.usage.promptTokens,
-          costsInCent: modelUsage.priceInCents,
-        }),
-      ),
-    );
-
-    await sendRabbitmqEvent(
-      constructNewMessageEvent({
-        user,
-        promptTokens,
-        completionTokens,
-        costsInCent: priceInCents,
-        provider: definedModel.provider,
-        anonymous: false,
-        conversation: activeConversation,
-      }),
-    );
+    await persistUsage({ usage, priceInCents, modelUsages });
   }
 
   async function persistEmptyAssistantMessage() {
@@ -611,8 +625,9 @@ export async function sendChatMessage({
         streamError(error instanceof Error ? error : new Error('Unknown error'));
       }
     },
-    onError: async (error: Error) => {
+    onError: async (error: Error, billedUsage) => {
       await persistEmptyAssistantMessage();
+      await persistUsage(billedUsage);
 
       streamError(error);
     },

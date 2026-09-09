@@ -1,3 +1,4 @@
+import { metrics } from '@opentelemetry/api';
 import { billTextGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
 import { generateAgenticStream } from './providers';
 import { hasAccessToModel } from '../api-keys/model-access';
@@ -5,6 +6,12 @@ import { AiGenerationError, InvalidModelError } from '../errors';
 import { getTextModelById } from '../models';
 import { getUsedModelId } from './model-selection';
 import type { TokenUsage, GenerationOptions, StreamEvent, Message, ModelSelection } from './types';
+
+const estimatedUsageCounter = metrics
+  .getMeter('ais-chat.billing', '0.0.1')
+  .createCounter('estimated_token_usage', {
+    description: 'Generations billed with locally estimated token usage instead of provider data',
+  });
 
 /**
  * Generates streaming agentic output using the specified model and messages, with access control and billing.
@@ -68,6 +75,14 @@ export async function* generateAgenticStreamWithBilling(
         const usedModelId = getUsedModelId(selection, event.modelId);
         const billingModel =
           [model, ...fallbackModels].find((candidate) => candidate.id === usedModelId) ?? model;
+
+        if (event.usage.estimated) {
+          estimatedUsageCounter.add(1, {
+            'gen_ai.request.model': billingModel.name,
+            'gen_ai.provider.name': billingModel.provider,
+          });
+        }
+
         const priceInCents = await billTextGenerationUsageToApiKey(
           apiKeyId,
           billingModel,

@@ -1,6 +1,6 @@
 import { getEncoding, type Tiktoken } from 'js-tiktoken';
 import type OpenAI from 'openai';
-import type { Message, ToolDefinition } from './types';
+import type { Message, TokenUsage, ToolDefinition } from './types';
 
 /**
  * Converts internal Message format to OpenAI ChatCompletionMessageParam format.
@@ -221,5 +221,29 @@ export function calculateCompletionUsage({
     prompt_tokens: promptTokens,
     completion_tokens: completionTokens,
     total_tokens: promptTokens + completionTokens,
+  };
+}
+
+/**
+ * Usage for a generation that ended before the provider reported real numbers, e.g. an abort.
+ * The prompt was already consumed upstream, so the cost is estimated rather than dropped.
+ */
+export function estimateTokenUsage({
+  messages,
+  text,
+}: {
+  messages: Message[];
+  text: string;
+}): TokenUsage {
+  const usage = calculateCompletionUsage({
+    messages,
+    modelMessage: { role: 'assistant', content: text },
+  });
+
+  return {
+    promptTokens: usage.prompt_tokens,
+    completionTokens: usage.completion_tokens,
+    totalTokens: usage.total_tokens,
+    estimated: true,
   };
 }
