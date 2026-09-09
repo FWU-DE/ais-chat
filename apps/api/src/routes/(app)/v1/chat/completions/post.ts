@@ -63,11 +63,6 @@ export async function handler(request: FastifyRequest, reply: FastifyReply): Pro
   const safetyModel = (await dbGetModelsByApiKeyId({ apiKeyId: apiKey.id })).find(
     (model) => model.priceMetadata.type === 'safety',
   );
-  if (!safetyModel) {
-    reply.status(500).send({ error: 'No safety model configured for this API key' });
-    return;
-  }
-
   if (body.stream) {
     try {
       const stream = await chatCompletionStream({
@@ -76,7 +71,7 @@ export async function handler(request: FastifyRequest, reply: FastifyReply): Pro
         apiKeyId: apiKey.id,
         maxTokens: body.max_tokens,
         temperature: body.temperature,
-        safetyModelName: safetyModel.name,
+        safetyModelName: safetyModel?.name,
       });
 
       reply.raw.writeHead(200, {
@@ -126,7 +121,7 @@ export async function handler(request: FastifyRequest, reply: FastifyReply): Pro
         apiKeyId: apiKey.id,
         maxTokens: body.max_tokens,
         temperature: body.temperature,
-        safetyModelName: safetyModel.name,
+        safetyModelName: safetyModel?.name,
       });
 
       reply.status(200).send(response);

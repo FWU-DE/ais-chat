@@ -114,9 +114,9 @@ describe('getSafetyModel', () => {
     await expect(getSafetyModel()).resolves.toBe(safetyModel);
   });
 
-  it('throws when no safety model is available', async () => {
+  it('returns undefined when no safety model is available', async () => {
     dbGetLlmModelById.mockResolvedValue(undefined);
 
-    await expect(getSafetyModel()).rejects.toThrow('No globally configured safety model found');
+    await expect(getSafetyModel()).resolves.toBeUndefined();
   });
 });

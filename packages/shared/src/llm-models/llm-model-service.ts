@@ -71,22 +71,28 @@ export async function findStaticModelByRoleAndFederalStateId({
   if (!configuration) {
     return undefined;
   }
+  const modelId = configuration[role];
+  if (!modelId) {
+    return undefined;
+  }
+
   return dbFindModelByIdAndFederalStateId({
-    modelId: configuration[role],
+    modelId,
     federalStateId,
   });
 }
 
 export async function findStaticModelByRole(role: StaticModelRole) {
   const configuration = await getStaticModelsConfiguration();
-  return configuration ? dbGetLlmModelById({ modelId: configuration[role] }) : undefined;
+  const modelId = configuration?.[role];
+  return modelId ? dbGetLlmModelById({ modelId }) : undefined;
 }
 
 /** Resolves the globally configured safety model. */
 export async function getSafetyModel() {
   const model = await findStaticModelByRole('safety');
   if (!model || model.isDeleted || model.priceMetadata.type !== 'safety') {
-    throw new Error('No globally configured safety model found');
+    return undefined;
   }
 
   return model;

@@ -46,7 +46,9 @@ export default function StaticModelConfigurationView({ models, configuration }: 
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isComplete = roles.every((role) => selected[role.role] !== undefined);
+  const isComplete = roles
+    .filter((role) => role.role !== 'safety')
+    .every((role) => selected[role.role] !== undefined);
 
   async function save() {
     setIsSubmitting(true);

@@ -590,7 +590,7 @@ export async function sendChatMessage({
   runAgentLoop({
     modelSelection,
     apiKeyId,
-    safetyModelName: safetyModel.name,
+    safetyModelName: safetyModel?.name,
     messages: convertToAiCoreMessages(systemPrompt, messagesWithImages),
     toolRegistry: tools.toolRegistry,
     agentName: resolveAgentNameForTracing({ characterId, learningScenarioId, assistantId }),

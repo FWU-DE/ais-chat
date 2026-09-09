@@ -204,7 +204,7 @@ export async function sendLearningScenarioMessage({
   runAgentLoop({
     modelSelection,
     apiKeyId,
-    safetyModelName: safetyModel.name,
+    safetyModelName: safetyModel?.name,
     messages: convertToAiCoreMessages(systemPrompt, messagesWithImages),
     toolRegistry: tools.toolRegistry,
     agentName: resolveAgentNameForTracing({ learningScenarioId: learningScenario.id }),

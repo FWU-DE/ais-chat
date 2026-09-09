@@ -723,7 +723,7 @@ export const staticModelsConfigurationSchema = z.object({
   'strong-auxiliary': z.string().uuid(),
   'auxiliary-fallback': z.string().uuid(),
   'default-image': z.string().uuid(),
-  safety: z.string().uuid(),
+  safety: z.string().uuid().optional(),
 });
 export type StaticModelsConfiguration = z.infer<typeof staticModelsConfigurationSchema>;
 
