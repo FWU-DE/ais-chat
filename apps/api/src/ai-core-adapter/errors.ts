@@ -44,15 +44,6 @@ export function handleAiCoreError(reply: FastifyReply, error: unknown): boolean 
 
   if (AiGenerationError.is(error)) {
     reply.log.error(error, 'AI generation error');
-
-    // Check for quota exceeded message (thrown as AiGenerationError in billing checks)
-    if (error.message.includes('exceeded its monthly quota')) {
-      reply.status(429).send({
-        error: 'You have reached the price limit',
-      });
-      return true;
-    }
-
     reply.status(500).send({
       error: 'An error occurred',
       details: error.message,

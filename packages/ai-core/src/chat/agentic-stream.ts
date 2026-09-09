@@ -1,7 +1,7 @@
 import { billTextGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
 import { generateAgenticStream } from './providers';
 import { hasAccessToModel } from '../api-keys/model-access';
-import { AiGenerationError, InvalidModelError } from '../errors';
+import { InvalidModelError, normalizeAiGenerationError, RateLimitExceededError } from '../errors';
 import { getTextModelById } from '../models';
 import { getUsedModelId } from './model-selection';
 import type { TokenUsage, GenerationOptions, StreamEvent, Message, ModelSelection } from './types';
@@ -44,7 +44,7 @@ export async function* generateAgenticStreamWithBilling(
   }
 
   if (isOverQuota) {
-    throw new AiGenerationError(`API key has exceeded its monthly quota`);
+    throw new RateLimitExceededError(`API key has exceeded its monthly quota`);
   }
 
   try {
@@ -79,11 +79,6 @@ export async function* generateAgenticStreamWithBilling(
       }
     }
   } catch (error) {
-    if (!(error instanceof AiGenerationError)) {
-      throw new AiGenerationError(
-        `Agentic stream failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-    throw error;
+    throw normalizeAiGenerationError(error, 'Agentic stream failed');
   }
 }

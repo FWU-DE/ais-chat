@@ -5,10 +5,10 @@ import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
 import { LlmModelSelectModel } from '@shared/db/schema';
 import { ImageStyle } from '@shared/utils/chat';
-import { ResponsibleAIError } from '@ais-chat/ai-core/errors';
 import { generateImageAction } from '@/app/(authed)/(chat-bot)/image-generation/actions';
 import { navigateWithoutRefresh } from '@/utils/navigation/router';
 import { ImageAspectRatioPreset } from './image-generation-types';
+import { getErrorMessageByType } from '@/error/get-error-message-by-type';
 
 interface UseImageGenerationArgs {
   initialConversationId?: string;
@@ -39,6 +39,7 @@ export function useImageGeneration({
   aspectRatio,
 }: UseImageGenerationArgs): UseImageGenerationResult {
   const t = useTranslations('image-generation');
+  const tCommon = useTranslations('common');
   const queryClient = useQueryClient();
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -89,10 +90,11 @@ export function useImageGeneration({
             imageFileId: result.value.fileId,
           };
         }
-      } else if (ResponsibleAIError.is(result.error)) {
-        setErrorMessage(t('responsible-ai-error'));
       } else {
-        setErrorMessage(t('generation-error'));
+        const messageKey = getErrorMessageByType(result.error);
+        setErrorMessage(
+          messageKey === 'generic-error' ? t('generation-error') : tCommon(messageKey),
+        );
       }
     } catch {
       setErrorMessage(t('generation-error'));

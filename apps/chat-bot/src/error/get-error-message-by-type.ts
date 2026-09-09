@@ -2,6 +2,9 @@ import { isKnownAiGenerationError, type KnownAiGenerationError } from '@ais-chat
 
 type ErrorMessageTranslationKey =
   | 'rate-limit-error'
+  | 'provider-rate-limit-error'
+  | 'responsible-ai-error'
+  | 'invalid-model-error'
   | 'chat-expired-error'
   | 'empty-response-error'
   | 'not-found-error'
@@ -11,6 +14,9 @@ const aiErrorNameToMessageKeyMap = {
   TokenPointsExceededError: 'rate-limit-error',
   EmptyResponseError: 'empty-response-error',
   SharedChatExpiredError: 'chat-expired-error',
+  ResponsibleAIError: 'responsible-ai-error',
+  RateLimitExceededError: 'provider-rate-limit-error',
+  InvalidModelError: 'invalid-model-error',
 } as const satisfies Partial<Record<KnownAiGenerationError['name'], ErrorMessageTranslationKey>>;
 
 function isMappedAiErrorName(name: string): name is keyof typeof aiErrorNameToMessageKeyMap {

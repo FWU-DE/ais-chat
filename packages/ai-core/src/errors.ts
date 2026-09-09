@@ -141,6 +141,84 @@ export class SharedChatExpiredError extends AiGenerationError {
   }
 }
 
+const RESPONSIBLE_AI_ERROR_CODES = new Set([
+  'content_policy_violation',
+  'moderation_blocked',
+  'responsibleaipolicyviolation',
+]);
+
+const INVALID_MODEL_ERROR_CODES = new Set(['invalid_model', 'model_not_found']);
+
+function getProviderErrorDetails(error: unknown): {
+  code?: string;
+  message: string;
+  status?: number;
+} {
+  const record =
+    error && typeof error === 'object' ? (error as Record<string, unknown>) : undefined;
+  const nestedError =
+    record?.error && typeof record.error === 'object'
+      ? (record.error as Record<string, unknown>)
+      : undefined;
+
+  const code = [record?.code, nestedError?.code].find(
+    (value): value is string => typeof value === 'string',
+  );
+  const status = [record?.status, nestedError?.status].find(
+    (value): value is number => typeof value === 'number',
+  );
+  const message =
+    error instanceof Error
+      ? error.message
+      : ([record?.message, nestedError?.message].find(
+          (value): value is string => typeof value === 'string',
+        ) ?? String(error));
+
+  return { code, message, status };
+}
+
+// TODO TD-1484: Check if this can be simplified once all models are routed through bifrost
+// CAVE: Bifrost errors also might not have the exact same structure for all errors
+export function normalizeAiGenerationError(error: unknown, context: string): AiGenerationError {
+  if (error instanceof AiGenerationError && error.name !== 'AiGenerationError') {
+    return error;
+  }
+
+  const { code, message, status } = getProviderErrorDetails(error);
+  const normalizedCode = code?.toLowerCase();
+  const normalizedMessage = message.toLowerCase();
+
+  if (
+    status === 429 ||
+    normalizedCode === 'rate_limit_exceeded' ||
+    /\b429\b/.test(normalizedMessage) ||
+    normalizedMessage.includes('rate limit') ||
+    normalizedMessage.includes('too many requests')
+  ) {
+    return new RateLimitExceededError(message);
+  }
+
+  if (
+    (normalizedCode !== undefined && RESPONSIBLE_AI_ERROR_CODES.has(normalizedCode)) ||
+    normalizedMessage.includes('request was rejected by the safety system') ||
+    normalizedMessage.includes('content policy violation')
+  ) {
+    return new ResponsibleAIError(message);
+  }
+
+  if (
+    (normalizedCode !== undefined && INVALID_MODEL_ERROR_CODES.has(normalizedCode)) ||
+    normalizedMessage.includes('model not found') ||
+    normalizedMessage.includes('model does not exist')
+  ) {
+    return new InvalidModelError(message);
+  }
+
+  return error instanceof AiGenerationError
+    ? error
+    : new AiGenerationError(`${context}: ${message}`);
+}
+
 type AiGenerationErrorType<T extends AiGenerationError = AiGenerationError> = {
   is: (error: unknown) => error is T;
 };

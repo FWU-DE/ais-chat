@@ -9,6 +9,7 @@ import {
   SharedChatExpiredError,
   EmptyResponseError,
   isKnownAiGenerationError,
+  normalizeAiGenerationError,
 } from './errors';
 
 describe('AiGenerationError', () => {
@@ -164,5 +165,25 @@ describe('isKnownAiGenerationError', () => {
     expect(isKnownAiGenerationError(null)).toBe(false);
     expect(isKnownAiGenerationError(undefined)).toBe(false);
     expect(isKnownAiGenerationError({ name: 'SomeOtherError' })).toBe(false);
+  });
+});
+
+describe('normalizeAiGenerationError', () => {
+  it.each([
+    [{ status: 429, message: 'Too many requests' }, RateLimitExceededError],
+    [
+      { status: 400, message: 'Your request was rejected by the safety system' },
+      ResponsibleAIError,
+    ],
+    [{ code: 'model_not_found', message: 'Unknown deployment' }, InvalidModelError],
+  ])('classifies provider errors', (providerError, ErrorType) => {
+    expect(normalizeAiGenerationError(providerError, 'Generation failed')).toBeInstanceOf(
+      ErrorType,
+    );
+  });
+
+  it('preserves existing typed errors', () => {
+    const error = new ResponsibleAIError('Policy violation');
+    expect(normalizeAiGenerationError(error, 'Generation failed')).toBe(error);
   });
 });
