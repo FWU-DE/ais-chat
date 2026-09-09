@@ -116,10 +116,16 @@ services:
 
   mock-llm:
     build:
-      context: ./mock-llm
+      context: ../..
+      dockerfile: services/mock-llm/Dockerfile
     restart: unless-stopped
     ports:
-      - '6556:6556'
+      - '127.0.0.1:6556:6556'
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
 
   # RustFS - S3-compatible object storage
   rustfs:
