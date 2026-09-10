@@ -98,7 +98,6 @@ export async function sendLearningScenarioMessage({
     model: definedModel,
     federalStateId: teacherUserAndContext.federalState.id,
   });
-  const generationModelId = modelSelection.modelIds[0];
 
   // Check expiry
   if (sharedChatHasExpired(learningScenario)) {
@@ -222,7 +221,7 @@ export async function sendLearningScenarioMessage({
     // entry separately so pricing and reporting stay associated with the serving model.
     for (const modelUsage of modelUsages) {
       await dbUpdateTokenUsageBySharedLearningScenarioId({
-        modelId: modelUsage.modelId ?? generationModelId,
+        modelId: modelUsage.modelId,
         completionTokens: modelUsage.usage.completionTokens,
         promptTokens: modelUsage.usage.promptTokens,
         learningScenarioId: learningScenario.id,

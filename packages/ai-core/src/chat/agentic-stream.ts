@@ -76,18 +76,18 @@ export async function* generateAgenticStreamWithBilling(
         const billingModel =
           [model, ...fallbackModels].find((candidate) => candidate.id === usedModelId) ?? model;
 
+        const priceInCents = await billTextGenerationUsageToApiKey(
+          apiKeyId,
+          billingModel,
+          event.usage,
+        );
+
         if (event.usage.estimated) {
           estimatedUsageCounter.add(1, {
             'gen_ai.request.model': billingModel.name,
             'gen_ai.provider.name': billingModel.provider,
           });
         }
-
-        const priceInCents = await billTextGenerationUsageToApiKey(
-          apiKeyId,
-          billingModel,
-          event.usage,
-        );
         if (onComplete) {
           await onComplete({ usage: event.usage, priceInCents, modelId: usedModelId });
         }
