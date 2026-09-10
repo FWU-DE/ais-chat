@@ -26,6 +26,7 @@
     },
     "virtual_keys": [
       {
+        "allow_all_providers": true,
         "id": "vk-all",
         "is_active": true,
         "name": "access to all providers",
