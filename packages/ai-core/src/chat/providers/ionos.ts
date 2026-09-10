@@ -9,12 +9,7 @@ import type {
   TokenUsage,
 } from '../types';
 import { ProviderConfigurationError } from '../../errors';
-import {
-  calculateCompletionUsage,
-  estimateTokenUsage,
-  toOpenAIChatTools,
-  toOpenAIMessages,
-} from '../utils';
+import { estimateTokenUsage, toOpenAIChatTools, toOpenAIMessages } from '../utils';
 
 function createIonosClient(model: AiModel): OpenAI {
   if (model.setting.provider !== 'ionos') {
@@ -59,19 +54,12 @@ export function constructIonosTextStreamFn(model: AiModel): TextStreamFn {
       }
     }
 
-    // Calculate the token usage manually as IONOS does not return it
     // TODO: Add token count for image inputs
     // See: https://platform.openai.com/docs/guides/images-vision?api-mode=responses&format=file
-    const calculatedUsage = calculateCompletionUsage({
+    const usage = estimateTokenUsage({
       messages,
-      modelMessage: { role: 'assistant', content },
+      text: content,
     });
-
-    const usage: TokenUsage = {
-      completionTokens: calculatedUsage.completion_tokens,
-      promptTokens: calculatedUsage.prompt_tokens,
-      totalTokens: calculatedUsage.total_tokens,
-    };
 
     if (onComplete) {
       await onComplete(usage);
@@ -102,19 +90,14 @@ export function constructIonosTextGenerationFn(model: AiModel): TextGenerationFn
 
     const text = response.choices[0]?.message?.content ?? '';
 
-    // Calculate the token usage manually as IONOS does not return it reliably
-    const calculatedUsage = calculateCompletionUsage({
+    const usage = estimateTokenUsage({
       messages,
-      modelMessage: { role: 'assistant', content: text },
+      text,
     });
 
     return {
       text,
-      usage: {
-        completionTokens: calculatedUsage.completion_tokens,
-        promptTokens: calculatedUsage.prompt_tokens,
-        totalTokens: calculatedUsage.total_tokens,
-      },
+      usage,
     };
   };
 }
@@ -226,16 +209,10 @@ export function constructIonosAgenticStreamFn(model: AiModel): AgenticStreamFn {
         ),
       ].join('');
 
-      const calculatedUsage = calculateCompletionUsage({
+      usage = estimateTokenUsage({
         messages,
-        modelMessage: { role: 'assistant', content: completionContent },
+        text: completionContent,
       });
-
-      usage = {
-        completionTokens: calculatedUsage.completion_tokens,
-        promptTokens: calculatedUsage.prompt_tokens,
-        totalTokens: calculatedUsage.total_tokens,
-      };
     }
 
     for (const toolCall of resolvedToolCalls) {
