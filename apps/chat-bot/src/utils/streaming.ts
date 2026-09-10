@@ -25,9 +25,10 @@ export function decodeChatStreamEvent(chunk: string): ChatStreamEvent | null {
   try {
     const event = JSON.parse(chunk.slice(STREAM_EVENT_PREFIX.length)) as ChatStreamEvent;
 
-    if (event.type === 'web_search_results' && Array.isArray(event.webSearchResults)) {
+    if (event.type !== 'web_search_results') {
       return null;
     }
+
     return event;
   } catch {
     return null;

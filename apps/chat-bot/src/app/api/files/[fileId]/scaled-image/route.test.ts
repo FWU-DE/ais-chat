@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
+import { NotFoundError } from '@shared/error';
 
 vi.mock('@/auth/utils', () => ({
   getUser: vi.fn(),
@@ -65,5 +66,13 @@ describe('GET /api/files/[fileId]/scaled-image', () => {
 
     expect(response.status).toBe(403);
     expect(createScaledImage).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 when createScaledImage reports the file is not an image', async () => {
+    vi.mocked(createScaledImage).mockRejectedValue(new NotFoundError('File is not an image'));
+
+    const response = await GET(buildRequest('?width=100&height=200'), { params });
+
+    expect(response.status).toBe(404);
   });
 });
