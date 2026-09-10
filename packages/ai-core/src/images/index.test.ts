@@ -21,16 +21,22 @@ vi.mock('../models', () => ({
   getImageModelById: vi.fn(),
 }));
 
+vi.mock('../safety', () => ({
+  checkInputSafety: vi.fn(),
+}));
+
 import { generateImage } from './providers';
 import { billImageGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
 import { hasAccessToModel } from '../api-keys/model-access';
 import { getImageModelById } from '../models';
+import { checkInputSafety } from '../safety';
 
 const mockGenerateImage = vi.mocked(generateImage);
 const mockBillImageGenerationUsageToApiKey = vi.mocked(billImageGenerationUsageToApiKey);
 const mockIsApiKeyOverQuota = vi.mocked(isApiKeyOverQuota);
 const mockHasAccessToModel = vi.mocked(hasAccessToModel);
 const mockGetImageModelById = vi.mocked(getImageModelById);
+const mockCheckInputSafety = vi.mocked(checkInputSafety);
 
 describe('generateImageWithBilling', () => {
   const mockModel: AiModel = {
@@ -79,6 +85,52 @@ describe('generateImageWithBilling', () => {
       ...mockImageResponse,
       priceInCents: 50,
     });
+  });
+
+  it('checks the prompt and input images before generation', async () => {
+    mockGetImageModelById.mockResolvedValue(mockModel);
+    mockHasAccessToModel.mockResolvedValue(true);
+    mockIsApiKeyOverQuota.mockResolvedValue(false);
+    mockGenerateImage.mockResolvedValue(mockImageResponse);
+    mockBillImageGenerationUsageToApiKey.mockResolvedValue(50);
+
+    const inputImage = {
+      data: Buffer.from('image-data'),
+      mimeType: 'image/png',
+      filename: 'input.png',
+    };
+
+    await generateImageWithBilling(
+      'model-123',
+      'test prompt',
+      'api-key-123',
+      {
+        size: '1024x1024',
+        inputImages: [inputImage],
+      },
+      'safety-model',
+    );
+
+    expect(mockCheckInputSafety).toHaveBeenCalledWith(
+      'safety-model',
+      [
+        {
+          role: 'user',
+          content: 'test prompt',
+          images: [
+            {
+              type: 'image',
+              contentType: 'image/png',
+              url: `data:image/png;base64,${inputImage.data.toString('base64')}`,
+            },
+          ],
+        },
+      ],
+      'api-key-123',
+    );
+    expect(mockCheckInputSafety.mock.invocationCallOrder[0]).toBeLessThan(
+      mockGenerateImage.mock.invocationCallOrder[0]!,
+    );
   });
 
   it('should throw InvalidModelError when API key does not have access', async () => {
