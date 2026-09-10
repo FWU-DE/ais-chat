@@ -3,6 +3,7 @@ packages:
   - 'packages/*'
   - 'services/*'
 engineStrict: true
+injectWorkspacePackages: true
 allowBuilds:
   '@google/genai': true
   '@parcel/watcher': true

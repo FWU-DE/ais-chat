@@ -14,7 +14,7 @@ COPY packages/typescript-config/package.json packages/typescript-config/base.jso
 RUN corepack enable && corepack prepare \
   && pnpm install --filter @ais-chat/calculator-service... --frozen-lockfile --prefer-offline \
   && pnpm --filter @ais-chat/calculator-service build \
-  && pnpm deploy --filter @ais-chat/calculator-service --prod --legacy /prod \
+  && pnpm deploy --filter @ais-chat/calculator-service --prod /prod \
   && cp -r services/calculator/dist /prod/dist
 
 FROM node:24.20.0-alpine AS runtime

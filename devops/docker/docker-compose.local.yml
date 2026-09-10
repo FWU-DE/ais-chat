@@ -116,8 +116,8 @@ services:
 
   mock-llm:
     build:
-      context: ../..
-      dockerfile: services/mock-llm/Dockerfile
+      context: ../../services/mock-llm
+      dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - '6556:6556'
