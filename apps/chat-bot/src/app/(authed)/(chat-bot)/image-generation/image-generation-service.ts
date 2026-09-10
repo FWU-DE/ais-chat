@@ -28,6 +28,7 @@ import {
 import { dbDeleteConversationByIdAndUserId } from '@shared/db/functions/conversation';
 import { NotFoundError } from '@shared/error';
 import { getAvailableImageModelsForFederalState } from '@shared/image-generation/image-generation-service';
+import { getSafetyModel } from '@/app/api/utils/utils';
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
 import { ImageGenerationRequestOptions } from '@ais-chat/ai-core/images/types';
 import { ImageGenerationOptions } from '@/components/image-generation/image-generation-types';
@@ -341,11 +342,13 @@ export async function generateImage({
   }
 
   try {
+    const safetyModel = await getSafetyModel();
     const result = await generateImageWithBilling(
       definedModel.id,
       prompt.trim(),
       federalStateObject.apiKeyId,
       options,
+      safetyModel?.name,
     );
 
     const costsInCent = result.priceInCents;
