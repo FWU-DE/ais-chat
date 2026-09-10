@@ -34,4 +34,14 @@ describe('createScaledImage', () => {
     );
     expect(getFileFromS3).not.toHaveBeenCalled();
   });
+
+  it('accepts a file whose type is a MIME type and proceeds to fetch it', async () => {
+    vi.mocked(dbGetFilesInIds).mockResolvedValue([{ id: 'file-1', type: 'image/png' }] as never);
+    vi.mocked(getFileFromS3).mockRejectedValue(new Error('s3-reached'));
+
+    await expect(createScaledImage({ fileId: 'file-1', width: 100, height: 100 })).rejects.toThrow(
+      's3-reached',
+    );
+    expect(getFileFromS3).toHaveBeenCalledWith('message_attachments/file-1');
+  });
 });
