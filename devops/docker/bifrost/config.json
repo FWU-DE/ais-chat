@@ -1,6 +1,6 @@
 {
   "$schema": "https://www.getbifrost.ai/schema",
-  "source_of_truth": "config.json",
+  "source_of_truth": "split",
   "client": {
     "compat": {
       "convert_chat_to_responses": true,
