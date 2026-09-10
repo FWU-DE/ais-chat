@@ -1,6 +1,8 @@
 import {
+  ApiKeyQuotaExceededError,
   EmptyResponseError,
   InvalidModelError,
+  ProviderRateLimitExceededError,
   RateLimitExceededError,
   ResponsibleAIError,
   SharedChatExpiredError,
@@ -19,6 +21,12 @@ describe('getErrorMessageByType', () => {
     );
     expect(getErrorMessageByType(new ResponsibleAIError('Policy violation'))).toBe(
       'responsible-ai-error',
+    );
+    expect(getErrorMessageByType(new ApiKeyQuotaExceededError('Quota exceeded'))).toBe(
+      'api-key-quota-error',
+    );
+    expect(getErrorMessageByType(new ProviderRateLimitExceededError('Rate limit'))).toBe(
+      'provider-rate-limit-error',
     );
     expect(getErrorMessageByType(new RateLimitExceededError('Rate limit'))).toBe(
       'provider-rate-limit-error',

@@ -1,7 +1,8 @@
 import {
   AiGenerationError,
+  ApiKeyQuotaExceededError,
   InvalidModelError,
-  RateLimitExceededError,
+  ProviderRateLimitExceededError,
   ResponsibleAIError,
   ProviderConfigurationError,
 } from '@ais-chat/ai-core/errors';
@@ -19,9 +20,16 @@ export function handleAiCoreError(reply: FastifyReply, error: unknown): boolean 
     return true;
   }
 
-  if (RateLimitExceededError.is(error)) {
+  if (ApiKeyQuotaExceededError.is(error)) {
     reply.status(429).send({
       error: 'You have reached the price limit',
+    });
+    return true;
+  }
+
+  if (ProviderRateLimitExceededError.is(error)) {
+    reply.status(429).send({
+      error: 'The provider is currently rate limited. Please try again later.',
     });
     return true;
   }

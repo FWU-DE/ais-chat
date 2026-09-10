@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   AiGenerationError,
+  ApiKeyQuotaExceededError,
   ResponsibleAIError,
+  ProviderRateLimitExceededError,
   RateLimitExceededError,
   InvalidModelError,
   ProviderConfigurationError,
@@ -57,6 +59,20 @@ describe('RateLimitExceededError', () => {
     const error = new RateLimitExceededError('Test');
     expect(RateLimitExceededError.is(error)).toBe(true);
     expect(RateLimitExceededError.is(new AiGenerationError('Test'))).toBe(false);
+  });
+});
+
+describe('rate-limit subtypes', () => {
+  it('identifies API-key quota errors as rate-limit errors', () => {
+    const error = new ApiKeyQuotaExceededError('API key quota exceeded');
+    expect(ApiKeyQuotaExceededError.is(error)).toBe(true);
+    expect(RateLimitExceededError.is(error)).toBe(true);
+  });
+
+  it('identifies provider throttling errors as rate-limit errors', () => {
+    const error = new ProviderRateLimitExceededError('Too many requests');
+    expect(ProviderRateLimitExceededError.is(error)).toBe(true);
+    expect(RateLimitExceededError.is(error)).toBe(true);
   });
 });
 
@@ -152,6 +168,8 @@ describe('isKnownAiGenerationError', () => {
     expect(isKnownAiGenerationError(new AiGenerationError('Test'))).toBe(true);
     expect(isKnownAiGenerationError(new ResponsibleAIError('Test'))).toBe(true);
     expect(isKnownAiGenerationError(new RateLimitExceededError('Test'))).toBe(true);
+    expect(isKnownAiGenerationError(new ApiKeyQuotaExceededError('Test'))).toBe(true);
+    expect(isKnownAiGenerationError(new ProviderRateLimitExceededError('Test'))).toBe(true);
     expect(isKnownAiGenerationError(new InvalidModelError('Test'))).toBe(true);
     expect(isKnownAiGenerationError(new ProviderConfigurationError('Test'))).toBe(true);
     expect(isKnownAiGenerationError(new TokenPointsExceededError('Test'))).toBe(true);
@@ -170,7 +188,7 @@ describe('isKnownAiGenerationError', () => {
 
 describe('normalizeAiGenerationError', () => {
   it.each([
-    [{ status: 429, message: 'Too many requests' }, RateLimitExceededError],
+    [{ status: 429, message: 'Too many requests' }, ProviderRateLimitExceededError],
     [
       { status: 400, message: 'Your request was rejected by the safety system' },
       ResponsibleAIError,
@@ -185,5 +203,15 @@ describe('normalizeAiGenerationError', () => {
   it('preserves existing typed errors', () => {
     const error = new ResponsibleAIError('Policy violation');
     expect(normalizeAiGenerationError(error, 'Generation failed')).toBe(error);
+  });
+
+  it('removes a provider request ID from responsible AI errors', () => {
+    const error = normalizeAiGenerationError(
+      new Error('Your request was rejected by the safety system. Request ID: secret'),
+      'Generation failed',
+    );
+
+    expect(error).toBeInstanceOf(ResponsibleAIError);
+    expect(error.message).toBe('Your request was rejected by the safety system');
   });
 });

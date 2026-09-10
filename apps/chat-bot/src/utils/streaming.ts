@@ -8,15 +8,10 @@ import { logError } from '@shared/logging';
 
 const STREAM_EVENT_PREFIX = '\u001e';
 
-export type ChatStreamEvent =
-  | {
-      type: 'web_search_results';
-      webSearchResults: WebSearchResult[];
-    }
-  | {
-      type: 'error';
-      error: { name: string; message: string };
-    };
+export type ChatStreamEvent = {
+  type: 'web_search_results';
+  webSearchResults: WebSearchResult[];
+};
 
 export function encodeChatStreamEvent(event: ChatStreamEvent): string {
   return `${STREAM_EVENT_PREFIX}${JSON.stringify(event)}`;
@@ -31,18 +26,9 @@ export function decodeChatStreamEvent(chunk: string): ChatStreamEvent | null {
     const event = JSON.parse(chunk.slice(STREAM_EVENT_PREFIX.length)) as ChatStreamEvent;
 
     if (event.type === 'web_search_results' && Array.isArray(event.webSearchResults)) {
-      return event;
+      return null;
     }
-
-    if (
-      event.type === 'error' &&
-      typeof event.error?.name === 'string' &&
-      typeof event.error.message === 'string'
-    ) {
-      return event;
-    }
-
-    return null;
+    return event;
   } catch {
     return null;
   }
@@ -166,13 +152,7 @@ export function createTextStream({
       finished = true;
       if (abandoned) return;
       try {
-        controller.enqueue(
-          encodeChatStreamEvent({
-            type: 'error',
-            error: { name: err.name, message: err.message },
-          }),
-        );
-        controller.close();
+        controller.error(err);
       } catch (caughtErr) {
         logError(
           'createTextStream.error: failed to signal error on stream; it may already be closed',

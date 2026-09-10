@@ -67,7 +67,46 @@ export class RateLimitExceededError extends AiGenerationError {
 
   static is(error: unknown): error is RateLimitExceededError {
     if (error && typeof error === 'object') {
-      return 'name' in error && error.name === 'RateLimitExceededError';
+      return (
+        'name' in error &&
+        (error.name === 'RateLimitExceededError' ||
+          error.name === 'ApiKeyQuotaExceededError' ||
+          error.name === 'ProviderRateLimitExceededError')
+      );
+    }
+    return false;
+  }
+}
+
+/**
+ * Error thrown when the AIS API key's configured quota is exhausted.
+ */
+export class ApiKeyQuotaExceededError extends RateLimitExceededError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ApiKeyQuotaExceededError';
+  }
+
+  static is(error: unknown): error is ApiKeyQuotaExceededError {
+    if (error && typeof error === 'object') {
+      return 'name' in error && error.name === 'ApiKeyQuotaExceededError';
+    }
+    return false;
+  }
+}
+
+/**
+ * Error thrown when an upstream provider temporarily rejects requests due to a rate limit.
+ */
+export class ProviderRateLimitExceededError extends RateLimitExceededError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ProviderRateLimitExceededError';
+  }
+
+  static is(error: unknown): error is ProviderRateLimitExceededError {
+    if (error && typeof error === 'object') {
+      return 'name' in error && error.name === 'ProviderRateLimitExceededError';
     }
     return false;
   }
@@ -177,6 +216,10 @@ function getProviderErrorDetails(error: unknown): {
   return { code, message, status };
 }
 
+function stripProviderRequestId(message: string): string {
+  return message.replace(/\s*(?:[.,;]\s*)?request[ _-]?id\s*[:=]\s*\S+\s*$/i, '');
+}
+
 // TODO TD-1484: Check if this can be simplified once all models are routed through bifrost
 // CAVE: Bifrost errors also might not have the exact same structure for all errors
 export function normalizeAiGenerationError(error: unknown, context: string): AiGenerationError {
@@ -195,7 +238,7 @@ export function normalizeAiGenerationError(error: unknown, context: string): AiG
     normalizedMessage.includes('rate limit') ||
     normalizedMessage.includes('too many requests')
   ) {
-    return new RateLimitExceededError(message);
+    return new ProviderRateLimitExceededError(message);
   }
 
   if (
@@ -203,7 +246,7 @@ export function normalizeAiGenerationError(error: unknown, context: string): AiG
     normalizedMessage.includes('request was rejected by the safety system') ||
     normalizedMessage.includes('content policy violation')
   ) {
-    return new ResponsibleAIError(message);
+    return new ResponsibleAIError(stripProviderRequestId(message));
   }
 
   if (
@@ -228,6 +271,8 @@ export const aiGenerationErrorTypes = [
   EmptyResponseError,
   ResponsibleAIError,
   RateLimitExceededError,
+  ApiKeyQuotaExceededError,
+  ProviderRateLimitExceededError,
   InvalidModelError,
   ProviderConfigurationError,
   TokenPointsExceededError,

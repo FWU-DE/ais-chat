@@ -40,6 +40,7 @@
     "regenerate-message": "Antwort erneut generieren",
     "image-load-failed": "Bild konnte nicht geladen werden",
     "rate-limit-error": "Das bereitgestellte Tokenvolumen wurde aufgebraucht.",
+    "api-key-quota-error": "Das bereitgestellte Kontingent des Bundeslandes wurde aufgebraucht.",
     "provider-rate-limit-error": "Das Modell ist derzeit ausgelastet. Bitte versuche es später erneut.",
     "responsible-ai-error": "Die Anfrage wurde aus Sicherheitsgründen abgelehnt.",
     "invalid-model-error": "Das ausgewählte Modell ist nicht verfügbar.",

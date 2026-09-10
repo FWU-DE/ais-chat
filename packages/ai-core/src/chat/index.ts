@@ -1,7 +1,7 @@
 import { billTextGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
 import { generateText, generateTextStream } from './providers';
 import { hasAccessToModel } from '../api-keys/model-access';
-import { InvalidModelError, normalizeAiGenerationError, RateLimitExceededError } from '../errors';
+import { ApiKeyQuotaExceededError, InvalidModelError, normalizeAiGenerationError } from '../errors';
 import { getTextModelById, getTextModelByName } from '../models';
 import { getUsedModelId, normalizeModelSelection } from './model-selection';
 import type { Message, TokenUsage, GenerationOptions, ModelSelection } from './types';
@@ -62,7 +62,7 @@ export async function generateTextWithBilling(
   }
 
   if (isOverQuota) {
-    throw new RateLimitExceededError(`API key has exceeded its monthly quota`);
+    throw new ApiKeyQuotaExceededError(`API key has exceeded its monthly quota`);
   }
 
   try {
@@ -127,7 +127,7 @@ export async function* generateTextStreamWithBilling(
   }
 
   if (isOverQuota) {
-    throw new RateLimitExceededError(`API key has exceeded its monthly quota`);
+    throw new ApiKeyQuotaExceededError(`API key has exceeded its monthly quota`);
   }
 
   try {

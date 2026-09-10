@@ -184,10 +184,6 @@ export function useAisChat({
               continue;
             }
 
-            if (streamEvent?.type === 'error') {
-              throw deserializeError(streamEvent.error);
-            }
-
             ensureAssistantMessage();
             setMessages((prev) => {
               const updated = [...prev];

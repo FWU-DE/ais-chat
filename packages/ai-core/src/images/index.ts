@@ -1,7 +1,7 @@
 import { billImageGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
 import { generateImage } from './providers';
 import { hasAccessToModel } from '../api-keys/model-access';
-import { InvalidModelError, normalizeAiGenerationError, RateLimitExceededError } from '../errors';
+import { ApiKeyQuotaExceededError, InvalidModelError, normalizeAiGenerationError } from '../errors';
 import { getImageModelById, getImageModelByName } from '../models';
 import { ImageGenerationRequestOptions } from './types';
 
@@ -37,7 +37,7 @@ export async function generateImageWithBilling(
   }
 
   if (isOverQuota) {
-    throw new RateLimitExceededError(`API key has exceeded its monthly quota`);
+    throw new ApiKeyQuotaExceededError(`API key has exceeded its monthly quota`);
   }
 
   try {
