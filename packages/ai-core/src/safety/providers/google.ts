@@ -8,36 +8,46 @@ import type { AiModel, SafetyCheckFn, SafetyImage, SafetyResult } from '../types
 const MAX_IMAGES = 4;
 const MAX_IMAGE_URL_LENGTH = 10 * 1024 * 1024;
 
+const choiceSchema = z.object({
+  message: z.object({ content: z.string() }),
+});
+
 const responseSchema = z.object({
-  predictions: z.object({
-    choices: z.array(
-      z.object({
-        message: z.object({ content: z.string() }),
-      }),
-    ),
-  }),
+  predictions: z.union([
+    z.object({ choices: z.array(choiceSchema) }),
+    z.array(z.string()),
+    z.array(z.object({ choices: z.array(choiceSchema) })),
+  ]),
 });
 
 function parseSafetyResult(payload: unknown, modelId: string): SafetyResult {
   const result = responseSchema.safeParse(payload);
-  if (!result.success || !result.data.predictions.choices[0]?.message.content) {
+  if (!result.success) {
     throw new EmptyResponseError({ modelId, message: 'Empty safety response' });
   }
 
-  const [classification, ...categories] = result.data.predictions.choices[0].message.content
-    .trim()
-    .toUpperCase()
-    .split(/\s+/);
+  const prediction = Array.isArray(result.data.predictions)
+    ? result.data.predictions[0]
+    : result.data.predictions;
+  const content =
+    typeof prediction === 'string' ? prediction : prediction?.choices[0]?.message.content;
+  if (!content) {
+    throw new EmptyResponseError({ modelId, message: 'Empty safety response' });
+  }
+
+  const [classification, ...categories] = content.trim().toUpperCase().split(/\s+/);
 
   if (classification === 'SAFE') {
     return { safe: true };
   }
 
-  const parsedCategories = categories
-    .flatMap((category) => category.split(','))
-    .filter((category) => /^S(?:[1-9]|1[0-4])$/.test(category));
-  if (classification === 'UNSAFE' && parsedCategories.length > 0) {
-    return { safe: false, categories: parsedCategories };
+  if (classification === 'UNSAFE') {
+    return {
+      safe: false,
+      categories: categories
+        .flatMap((category) => category.split(','))
+        .filter((category) => /^S(?:[1-9]|1[0-4])$/.test(category)),
+    };
   }
 
   throw new AiGenerationError('Google safety model returned an invalid classification');

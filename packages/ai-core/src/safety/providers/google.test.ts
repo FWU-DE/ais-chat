@@ -327,7 +327,6 @@ describe('constructGoogleSafetyCheckFn', () => {
       'empty content',
       JSON.stringify({ predictions: [{ choices: [{ message: { content: '' } }] }] }),
     ],
-    ['invalid classification', JSON.stringify({ predictions: ['UNSAFE'] })],
   ])('fails open for %s responses', async (_description, responseBody) => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(responseBody, { status: 200 })));
 
@@ -339,6 +338,24 @@ describe('constructGoogleSafetyCheckFn', () => {
     ).resolves.toEqual({ safe: true });
 
     expect(captureExceptionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns unsafe when the provider omits categories', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify({ predictions: ['UNSAFE'] }), { status: 200 }),
+        ),
+    );
+
+    await expect(
+      constructGoogleSafetyCheckFn(createGoogleSafetyModel())({
+        model: 'google-safety-model',
+        messages: [{ role: 'user', content: 'test' }],
+      }),
+    ).resolves.toEqual({ safe: false, categories: [] });
   });
 
   it.each([
