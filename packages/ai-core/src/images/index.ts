@@ -4,6 +4,7 @@ import { hasAccessToModel } from '../api-keys/model-access';
 import { AiGenerationError, InvalidModelError } from '../errors';
 import { getImageModelById, getImageModelByName } from '../models';
 import { ImageGenerationRequestOptions } from './types';
+import { checkInputSafety } from '../safety';
 
 /**
  * Generates an image using the specified model and prompt, with access control and billing.
@@ -23,6 +24,7 @@ export async function generateImageWithBilling(
   prompt: string,
   apiKeyId: string,
   options?: ImageGenerationRequestOptions,
+  safetyModelName?: string,
 ) {
   const model = await getImageModelById(modelId);
 
@@ -41,6 +43,24 @@ export async function generateImageWithBilling(
   }
 
   try {
+    if (safetyModelName) {
+      await checkInputSafety(
+        safetyModelName,
+        [
+          {
+            role: 'user',
+            content: prompt,
+            images: (options?.inputImages ?? []).map((image) => ({
+              type: 'image' as const,
+              contentType: image.mimeType,
+              url: `data:${image.mimeType};base64,${image.data.toString('base64')}`,
+            })),
+          },
+        ],
+        apiKeyId,
+      );
+    }
+
     const imageResponse = await generateImage(model, prompt, options);
 
     const priceInCents = await billImageGenerationUsageToApiKey(
@@ -78,8 +98,15 @@ export async function generateImageByNameWithBilling(
   prompt: string,
   apiKeyId: string,
   options?: ImageGenerationRequestOptions,
+  safetyModelName?: string,
 ) {
   const model = await getImageModelByName(modelName, apiKeyId);
-  const result = await generateImageWithBilling(model.id, prompt, apiKeyId, options);
+  const result = await generateImageWithBilling(
+    model.id,
+    prompt,
+    apiKeyId,
+    options,
+    safetyModelName,
+  );
   return { ...result, model };
 }
