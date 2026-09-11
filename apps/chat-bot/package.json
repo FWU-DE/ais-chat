@@ -110,7 +110,7 @@
     "@types/react-dom": "19.2.7",
     "@types/react-syntax-highlighter": "15.5.13",
     "@vitejs/plugin-react": "6.1.1",
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "5.0.0",
     "esbuild": "0.28.2",
     "eslint": "10.8.1",
     "k6": "0.0.0",
@@ -122,6 +122,6 @@
     "tailwindcss-animate": "1.0.7",
     "tsx": "4.23.13",
     "typescript": "6.0.3",
-    "vitest": "4.1.11"
+    "vitest": "5.0.0"
   }
 }
