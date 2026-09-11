@@ -53,6 +53,10 @@ export const llmModelPriceMetadataSchema = z.union([
     type: z.literal('embedding'),
     promptTokenPrice: z.number(),
   }),
+  z.object({
+    type: z.literal('safety'),
+    promptTokenPrice: z.number(),
+  }),
 ]);
 
 export type LlmModelPriceMetadata = z.infer<typeof llmModelPriceMetadataSchema>;
@@ -709,6 +713,7 @@ export const staticModelRoleSchema = z.enum([
   'strong-auxiliary',
   'auxiliary-fallback',
   'default-image',
+  'safety',
 ]);
 export type StaticModelRole = z.infer<typeof staticModelRoleSchema>;
 export const staticModelsConfigurationSchema = z.object({
@@ -718,6 +723,7 @@ export const staticModelsConfigurationSchema = z.object({
   'strong-auxiliary': z.string().uuid(),
   'auxiliary-fallback': z.string().uuid(),
   'default-image': z.string().uuid(),
+  safety: z.string().uuid().optional(),
 });
 export type StaticModelsConfiguration = z.infer<typeof staticModelsConfigurationSchema>;
 

@@ -10,6 +10,7 @@ import { getFirstTextModel } from '@shared/llm-models/llm-model-utils';
 import {
   findStaticModelByRoleAndFederalStateId,
   getDefaultModel,
+  getSafetyModel,
 } from '@shared/llm-models/llm-model-service';
 import { logError } from '@shared/logging';
 import { isValidPositiveNumber } from '@shared/utils/number';
@@ -169,6 +170,8 @@ export async function getAuxiliaryModel(federalStateId: string): Promise<LlmMode
 
   return auxiliaryModel;
 }
+
+export { getSafetyModel };
 
 /**
  * Get a strong auxiliary model for the federal state for more complex tasks like language determination.

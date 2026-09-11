@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   sharedChatHasExpiredMock: vi.fn(),
   userHasReachedTokenPointsLimitMock: vi.fn(),
   getModelAndApiKeyWithResultMock: vi.fn(),
+  getSafetyModelMock: vi.fn(),
   getChatModelSelectionMock: vi.fn(),
   dbGetCharacterByIdAndInviteCodeMock: vi.fn(),
   dbUpdateTokenUsageByCharacterChatIdMock: vi.fn(),
@@ -56,6 +57,7 @@ vi.mock('@shared/users/usage', () => ({
 
 vi.mock('../utils/utils', () => ({
   getModelAndApiKeyWithResult: mocks.getModelAndApiKeyWithResultMock,
+  getSafetyModel: mocks.getSafetyModelMock,
 }));
 
 vi.mock('../utils/model-circuit-breaker', () => ({
@@ -131,6 +133,13 @@ const model = {
   supportedImageFormats: [],
 };
 
+const safetyModel = {
+  id: 'safety-model-1',
+  name: 'Safety model',
+  provider: 'mock-provider',
+  supportedImageFormats: [],
+};
+
 const character = {
   id: 'character-1',
   name: 'Character',
@@ -180,6 +189,7 @@ beforeEach(() => {
   mocks.getUserAndContextByUserIdMock.mockResolvedValue(teacherUserAndContext);
   mocks.checkProductAccessMock.mockReturnValue({ hasAccess: true });
   mocks.getModelAndApiKeyWithResultMock.mockResolvedValue([null, { model, apiKeyId: 'api-key-1' }]);
+  mocks.getSafetyModelMock.mockResolvedValue(safetyModel);
   mocks.getChatModelSelectionMock.mockResolvedValue({
     modelIds: [model.id],
     modelName: model.name,
