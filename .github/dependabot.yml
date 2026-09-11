@@ -12,7 +12,8 @@ updates:
       - '/apps/admin'
       - '/apps/api'
       - '/apps/chat-bot'
-      - '/devops/docker/mock-llm'
+      - '/services/calculator'
+      - '/services/mock-llm'
     labels: ['dependencies']
     schedule:
       interval: 'weekly'
