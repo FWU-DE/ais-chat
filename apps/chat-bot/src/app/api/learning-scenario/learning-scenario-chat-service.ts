@@ -6,6 +6,7 @@ import {
 } from '@ais-chat/ai-core';
 import { NotFoundError } from '@shared/error';
 import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
+import { createAiActivityStream } from '../chat/ai-activity-stream';
 import { getUserAndContextByUserId } from '@/auth/utils';
 import { checkProductAccess } from '@/utils/vidis/access';
 import { getModelAndApiKeyWithResult } from '../utils/utils';
@@ -146,6 +147,7 @@ export async function sendLearningScenarioMessage({
   });
 
   const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
+  const aiActivity = createAiActivityStream(update);
   const assistantMessageId = crypto.randomUUID();
 
   const allowWebTools = isWebSearchEnabledForEntity({
@@ -253,7 +255,10 @@ export async function sendLearningScenarioMessage({
     onTextChunk: (delta) => {
       update(delta);
     },
+    onToolCalls: aiActivity.onToolCalls,
+    onToolResult: aiActivity.onToolResult,
     onComplete: async ({ usage, priceInCents, modelUsages }) => {
+      aiActivity.finish();
       await persistUsage({ usage, priceInCents, modelUsages });
 
       done();

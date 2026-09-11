@@ -23,6 +23,7 @@ const persistedChatMessageSchema = chatMessageSchema
     id: true,
     role: true,
     content: true,
+    activitySteps: true,
   })
   .extend({
     files: z.array(persistedSharedFileSchema).default([]),

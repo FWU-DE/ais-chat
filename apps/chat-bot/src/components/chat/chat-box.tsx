@@ -12,12 +12,7 @@ import { isImageFile } from '@/utils/files/generic';
 import { type UIMessage, type ChatStatus } from '@/types/chat';
 import { ReactNode } from 'react';
 import { WebSource } from '@shared/db/types';
-import {
-  WebSearchSourcesButton,
-  WebSearchSourcesDialog,
-  WebSearchSourcesPanel,
-  useWebSearchSourcesDisclosure,
-} from './sources/web-search-sources';
+import { AiActivityDialog, AiActivityPanel } from './activity/ai-activity';
 import DownloadConversationMessageButton from './download-conversation-message-button';
 import { utils } from '@shared/utils';
 import DisplayFileAttachment from './display-file-attachment';
@@ -38,7 +33,7 @@ export function ChatBox({
   conversationId,
   characterName,
   status,
-  showWebSourcesInDialog = false,
+  showActivityInDialog = false,
 }: {
   assistantIcon?: ReactNode;
   children: UIMessage;
@@ -52,16 +47,10 @@ export function ChatBox({
   conversationId?: string;
   characterName?: string;
   status: ChatStatus;
-  showWebSourcesInDialog?: boolean;
+  showActivityInDialog?: boolean;
 }) {
   const tCommon = useTranslations('common');
   const { isAtLeast } = useBreakpoints();
-  const {
-    isOpen: isAssistantSourcesOpen,
-    panelRef,
-    openOrScrollIntoView,
-    toggleOpen,
-  } = useWebSearchSourcesDisclosure();
 
   const userClassName =
     children.role === 'user'
@@ -83,8 +72,7 @@ export function ChatBox({
   const parsedUrls =
     children.role === 'user' ? (utils.url.parseHyperlinks(children.content) ?? []) : [];
   const userWebSources = children.role === 'user' ? [...(webSources ?? [])] : [];
-  const assistantWebSearchSources =
-    children.role === 'assistant' ? (children.webSearchResults ?? []) : [];
+  const activitySteps = children.role === 'assistant' ? (children.activitySteps ?? []) : [];
 
   for (const url of parsedUrls) {
     if (userWebSources.find((source) => source.link === url) === undefined) {
@@ -136,19 +124,13 @@ export function ChatBox({
       </div>
     ) : null;
 
-  const maybeAssistantWebSearchSources =
-    assistantWebSearchSources.length > 0 && !showWebSourcesInDialog ? (
-      <WebSearchSourcesPanel
-        sources={assistantWebSearchSources}
-        isOpen={isAssistantSourcesOpen}
-        onToggle={toggleOpen}
-        panelId={`assistant-web-sources-${children.id}`}
-        panelRef={panelRef}
-      />
+  const maybeAiActivity =
+    activitySteps.length > 0 && !showActivityInDialog ? (
+      <AiActivityPanel steps={activitySteps} panelId={`assistant-ai-activity-${children.id}`} />
     ) : null;
 
   const margin =
-    allFiles !== undefined || userWebSources.length > 0 || maybeAssistantWebSearchSources !== null
+    allFiles !== undefined || userWebSources.length > 0 || maybeAiActivity !== null
       ? 'm-0 mt-4'
       : 'm-4';
 
@@ -175,15 +157,9 @@ export function ChatBox({
             <ReloadIcon className="w-5 h-5" />
           </div>
         </button>
-        {assistantWebSearchSources.length > 0 &&
-          (showWebSourcesInDialog ? (
-            <WebSearchSourcesDialog sources={assistantWebSearchSources} />
-          ) : (
-            <WebSearchSourcesButton
-              panelId={`assistant-web-sources-${children.id}`}
-              onClick={openOrScrollIntoView}
-            />
-          ))}
+        {activitySteps.length > 0 && showActivityInDialog && (
+          <AiActivityDialog steps={activitySteps} />
+        )}
       </div>
     ) : null;
 
@@ -201,7 +177,7 @@ export function ChatBox({
                 children.role === 'assistant' && 'w-full min-w-0',
               )}
             >
-              {maybeAssistantWebSearchSources}
+              {maybeAiActivity}
               {messageContent}
               {maybeShowMessageIcons}
             </div>
