@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   deleteFileFromS3: vi.fn(),
   fetchInputImages: vi.fn(),
   generateImageWithBilling: vi.fn(),
+  getSafetyModel: vi.fn(),
   getReadOnlySignedUrl: vi.fn(),
   getAvailableImageModelsForFederalState: vi.fn(),
   getUser: vi.fn(),
@@ -58,6 +59,7 @@ vi.mock('@/auth/utils', () => ({
   getUser: mocks.getUser,
   userHasCompletedTraining: mocks.userHasCompletedTraining,
 }));
+vi.mock('@/app/api/utils/utils', () => ({ getSafetyModel: mocks.getSafetyModel }));
 vi.mock('@/utils/vidis/access', () => ({ checkProductAccess: mocks.checkProductAccess }));
 vi.mock('@shared/db/functions/federal-state', () => ({
   dbGetFederalStateWithDecryptedApiKeyWithResult:
@@ -123,6 +125,7 @@ function prepareExistingConversation() {
     data: [Buffer.from('image').toString('base64')],
     priceInCents: 1,
   });
+  mocks.getSafetyModel.mockResolvedValue(undefined);
   mocks.dbInsertChatContent
     .mockResolvedValueOnce({ id: 'new-user-message' })
     .mockResolvedValueOnce({ id: 'new-assistant-message' });
