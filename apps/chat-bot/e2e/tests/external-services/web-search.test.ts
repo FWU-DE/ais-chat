@@ -17,7 +17,7 @@ test.fixme(
   async ({ page }) => {
     await page.goto('/');
 
-    const websearchToggle = page.getByRole('button', { name: 'Internetquellen', exact: true });
+    const websearchToggle = page.getByRole('button', { name: 'KI-Aktivität', exact: true });
 
     // send a message that does not require web search
     await sendMessage(page, 'Hallo');

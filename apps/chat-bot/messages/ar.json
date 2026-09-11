@@ -47,9 +47,20 @@
       }
     }
   },
-  "websearch": {
-    "results": {
-      "title": "مصادر من الإنترنت"
+  "ai-activity": {
+    "title": "نشاط الذكاء الاصطناعي",
+    "toggle": "إظهار/إخفاء نشاط الذكاء الاصطناعي",
+    "show": "إظهار نشاط الذكاء الاصطناعي",
+    "open-source": "فتح المصدر: {source}",
+    "steps": {
+      "analysis": "تحليل",
+      "done": "تم",
+      "web_search": "بحث في الإنترنت",
+      "web_scraper": "تمت قراءة صفحة ويب",
+      "retrieve_text_chunks": "تمت قراءة مقاطع ذات صلة من الملفات",
+      "retrieve_entire_file": "تمت قراءة الملف",
+      "mundo_search": "البحث في Mundo",
+      "math_calculate": "تم إجراء الحساب"
     }
   }
 }

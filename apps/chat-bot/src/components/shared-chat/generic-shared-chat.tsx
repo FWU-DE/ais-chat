@@ -88,11 +88,10 @@ export type SharedChatViewProps = {
   assistantIcon?: ReactNode;
   uploadFileFn?: (file: File, sharedSessionId: string) => Promise<{ fileId: string }>;
   /**
-   * When true, web search results are shown in a modal dialog
-   * triggered from the message icons row instead of the inline panel above
-   * the message.
+   * When true, the AI activity is shown in a modal dialog triggered from the
+   * message icons row instead of the inline panel above the message.
    */
-  showWebSourcesInDialog?: boolean;
+  showActivityInDialog?: boolean;
 };
 
 /**
@@ -114,7 +113,7 @@ export default function GenericSharedChat({
   enableFloatingText = false,
   assistantIcon,
   uploadFileFn,
-  showWebSourcesInDialog,
+  showActivityInDialog,
 }: SharedChatViewProps) {
   const tCommon = useTranslations('common');
   const tCustomChat = useTranslations('custom-chat.shared');
@@ -266,6 +265,7 @@ export default function GenericSharedChat({
         id: message.id,
         role: message.role,
         content: message.content,
+        activitySteps: message.activitySteps,
         files: pendingFileMapping.get(message.id) ?? [],
       })),
     });
@@ -365,7 +365,8 @@ export default function GenericSharedChat({
                 assistantIcon={assistantIcon}
                 containerClassName="flex flex-col gap-4"
                 pendingFileMapping={pendingFileMapping}
-                showWebSourcesInDialog={showWebSourcesInDialog}
+                activitySteps={chat.activitySteps}
+                showActivityInDialog={showActivityInDialog}
               />
             )}
             {/* If there is a TokenPointsExceededError or SharedChatExpiredError we show a dialog instead */}

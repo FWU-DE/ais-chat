@@ -47,9 +47,20 @@
       }
     }
   },
-  "websearch": {
-    "results": {
-      "title": "Web sources"
+  "ai-activity": {
+    "title": "AI activity",
+    "toggle": "Show/hide AI activity",
+    "show": "Show AI activity",
+    "open-source": "Open source: {source}",
+    "steps": {
+      "analysis": "Analysis",
+      "done": "Done",
+      "web_search": "Web search",
+      "web_scraper": "Web page read",
+      "retrieve_text_chunks": "Relevant file excerpts read",
+      "retrieve_entire_file": "File read",
+      "mundo_search": "Searched Mundo",
+      "math_calculate": "Calculation performed"
     }
   }
 }

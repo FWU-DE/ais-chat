@@ -131,14 +131,24 @@
     "action": {
       "delete": "Link entfernen"
     },
-    "results": {
-      "title": "Internetquellen",
-      "show": "Internetquellen einblenden",
-      "toggle": "Internetquellen ein-/ausblenden",
-      "open-source": "Quelle öffnen: {source}"
-    },
     "toasts": {
       "error-loading-page": "Verarbeitung des Links fehlgeschlagen"
+    }
+  },
+  "ai-activity": {
+    "title": "KI-Aktivität",
+    "toggle": "KI-Aktivität ein-/ausblenden",
+    "show": "KI-Aktivität anzeigen",
+    "open-source": "Quelle öffnen: {source}",
+    "steps": {
+      "analysis": "Analyse",
+      "done": "Fertig",
+      "web_search": "Websuche",
+      "web_scraper": "Webseite gelesen",
+      "retrieve_text_chunks": "Relevante Dateiausschnitte gelesen",
+      "retrieve_entire_file": "Datei gelesen",
+      "mundo_search": "Mundo durchsucht",
+      "math_calculate": "Berechnung durchgeführt"
     }
   },
   "file-interaction": {
