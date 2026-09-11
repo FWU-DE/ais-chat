@@ -263,7 +263,7 @@ export function determineImageAttachmentTypeForModel(model: LlmModelSelectModel)
   if (imageAttachmentEnv.imageAttachmentMode === 'base64') {
     return 'base64';
   }
-  if (model.provider === 'google') {
+  if (model.provider === 'google' && model.supportedImageFormats?.length) {
     return 'base64';
   }
   // we do not have settings on the LlmModelSelectModel to determine if the model needs image data,
