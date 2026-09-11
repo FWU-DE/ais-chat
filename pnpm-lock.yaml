@@ -40,7 +40,7 @@ importers:
         version: link:../../packages/api-database
       '@ais-chat/shared':
         specifier: workspace:*
-        version: link:../../packages/shared
+        version: file:packages/shared(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(@playwright/test@1.63.0)(@types/node@24.13.3)(@types/pg@8.23.1)(@vercel/functions@2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28))
       '@ais-chat/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -61,7 +61,7 @@ importers:
         version: 2.1.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@sentry/nextjs':
         specifier: 10.73.0
-        version: 10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28))
+        version: 10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.222.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28))
       '@t3-oss/env-nextjs':
         specifier: 0.13.11
         version: 0.13.11(typescript@6.0.3)(zod@4.5.4)
@@ -107,7 +107,7 @@ importers:
     devDependencies:
       '@ais-chat/eslint-config':
         specifier: workspace:*
-        version: link:../../packages/eslint-config
+        version: file:packages/eslint-config(@types/eslint@9.6.1)(eslint@10.8.1(jiti@2.7.0))(turbo@2.10.12)(typescript@6.0.3)
       '@ais-chat/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
@@ -246,7 +246,7 @@ importers:
     devDependencies:
       '@ais-chat/eslint-config':
         specifier: workspace:*
-        version: link:../../packages/eslint-config
+        version: file:packages/eslint-config(@types/eslint@9.6.1)(eslint@10.8.1(jiti@2.7.0))(turbo@2.10.12)(typescript@6.0.3)
       '@ais-chat/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
@@ -285,10 +285,10 @@ importers:
     dependencies:
       '@ais-chat/ai-core':
         specifier: workspace:*
-        version: link:../../packages/ai-core
+        version: file:packages/ai-core(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(@types/pg@8.23.1)(typescript@6.0.3)(ws@8.21.0)
       '@ais-chat/shared':
         specifier: workspace:*
-        version: link:../../packages/shared
+        version: file:packages/shared(@aws-sdk/credential-provider-node@3.972.82)(@babel/core@7.29.7)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(@playwright/test@1.63.0)(@smithy/signature-v4@5.7.3)(@types/node@24.13.3)(@types/pg@8.23.1)(@vercel/functions@2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76))(ioredis@6.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28)(sharp@0.35.4(@types/node@24.13.3)))(ws@8.21.0)
       '@ais-chat/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -333,7 +333,7 @@ importers:
         version: 1.2.16(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@sentry/nextjs':
         specifier: 10.73.0
-        version: 10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28)(sharp@0.35.4(@types/node@24.13.3)))
+        version: 10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.222.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28)(sharp@0.35.4(@types/node@24.13.3)))
       '@t3-oss/env-nextjs':
         specifier: 0.13.11
         version: 0.13.11(typescript@6.0.3)(zod@4.5.4)
@@ -466,7 +466,7 @@ importers:
     devDependencies:
       '@ais-chat/eslint-config':
         specifier: workspace:*
-        version: link:../../packages/eslint-config
+        version: file:packages/eslint-config(@types/eslint@9.6.1)(eslint@10.8.1(jiti@2.7.0))(turbo@2.10.12)(typescript@6.0.3)
       '@ais-chat/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
@@ -596,7 +596,7 @@ importers:
     devDependencies:
       '@ais-chat/eslint-config':
         specifier: workspace:*
-        version: link:../eslint-config
+        version: file:packages/eslint-config(@types/eslint@9.6.1)(eslint@10.8.1(jiti@2.7.0))(turbo@2.10.12)(typescript@6.0.3)
       '@ais-chat/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
@@ -654,7 +654,7 @@ importers:
     devDependencies:
       '@ais-chat/eslint-config':
         specifier: workspace:*
-        version: link:../eslint-config
+        version: file:packages/eslint-config(@types/eslint@9.6.1)(eslint@10.8.1(jiti@2.7.0))(turbo@2.10.12)(typescript@6.0.3)
       '@ais-chat/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
@@ -799,7 +799,7 @@ importers:
         version: 8.23.0
       unstorage:
         specifier: 1.17.5
-        version: 1.17.5(@vercel/functions@2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76))
+        version: 1.17.5(@vercel/functions@2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76))(ioredis@6.0.0)
       uuid:
         specifier: 14.0.2
         version: 14.0.2
@@ -812,7 +812,7 @@ importers:
     devDependencies:
       '@ais-chat/eslint-config':
         specifier: workspace:*
-        version: link:../eslint-config
+        version: file:packages/eslint-config(@types/eslint@9.6.1)(eslint@10.8.1(jiti@2.7.0))(turbo@2.10.12)(typescript@6.0.3)
       '@ais-chat/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
@@ -852,7 +852,7 @@ importers:
     devDependencies:
       '@ais-chat/eslint-config':
         specifier: workspace:*
-        version: link:../eslint-config
+        version: file:packages/eslint-config(@types/eslint@9.6.1)(eslint@10.8.1(jiti@2.7.0))(turbo@2.10.12)(typescript@6.0.3)
       '@ais-chat/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
@@ -909,7 +909,7 @@ importers:
     devDependencies:
       '@ais-chat/eslint-config':
         specifier: workspace:*
-        version: link:../eslint-config
+        version: file:packages/eslint-config(@types/eslint@9.6.1)(eslint@10.8.1(jiti@2.7.0))(turbo@2.10.12)(typescript@6.0.3)
       '@ais-chat/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
@@ -962,8 +962,8 @@ importers:
   services/calculator:
     dependencies:
       execa:
-        specifier: 9.6.1
-        version: 9.6.1
+        specifier: 10.0.1
+        version: 10.0.1
       fastify:
         specifier: 5.12.3
         version: 5.12.3
@@ -988,6 +988,23 @@ packages:
 
   '@adraffy/ens-normalize@1.11.1':
     resolution: {integrity: sha512-nhCBV3quEgesuf7c7KYfperqSS14T8bYuvJ8PcLJp6znkZpFc0AuW4qBtr8eKVyPPe/8RSr7sglCWPU5eaxwKQ==}
+
+  '@ais-chat/ai-core@file:packages/ai-core':
+    resolution: {directory: packages/ai-core, type: directory}
+
+  '@ais-chat/api-database@file:packages/api-database':
+    resolution: {directory: packages/api-database, type: directory}
+
+  '@ais-chat/eslint-config@file:packages/eslint-config':
+    resolution: {directory: packages/eslint-config, type: directory}
+    peerDependencies:
+      eslint: '>=10'
+
+  '@ais-chat/shared-core@file:packages/shared-core':
+    resolution: {directory: packages/shared-core, type: directory}
+
+  '@ais-chat/shared@file:packages/shared':
+    resolution: {directory: packages/shared, type: directory}
 
   '@alloc/quick-lru@5.3.0':
     resolution: {integrity: sha512-U4+70Pc5ZS9osnCBCE5Jha/ciHM+Yp+CNMNC/7HvYbNRk1Ldd+f7qO65W5qfhu/TCv+/ozljlXXe9Nj8419DMA==}
@@ -6594,6 +6611,10 @@ packages:
     resolution: {integrity: sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==}
     engines: {node: '>=0.12'}
 
+  entities@8.0.0:
+    resolution: {integrity: sha512-zwfzJecQ/Uej6tusMqwAqU/6KL2XaB2VZ2Jg54Je6ahNBGNH6Ek6g3jjNCF0fG9EWQKGZNddNjU5F1ZQn/sBnA==}
+    engines: {node: '>=20.19.0'}
+
   entities@8.1.0:
     resolution: {integrity: sha512-kxL7msIffSuh9aaFAMD7rxAIuTRMAHMeBtgHW2yUdWw732ZNh4MehkF2gdjvtdmikkaIP9bFDDJOPlsvm7avrA==}
     engines: {node: '>=20.19.0'}
@@ -6891,9 +6912,9 @@ packages:
     resolution: {integrity: sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==}
     engines: {node: '>=0.8.x'}
 
-  execa@9.6.1:
-    resolution: {integrity: sha512-9Be3ZoN4LmYR90tUoVu2te2BsbzHfhJyfEiAVfz7N5/zv+jduIfLrV2xdQXOHbaD6KgpGdO9PRPM1Y4Q9QkPkA==}
-    engines: {node: ^18.19.0 || >=20.5.0}
+  execa@10.0.1:
+    resolution: {integrity: sha512-ge98qjkRK4IB7tL7Ju/6qmm5LHoH1eEMt5FNZrz3f4UIYhF28lggX20z3FaX1sgc67msLEn0N0BscOs29iuwyw==}
+    engines: {node: '>=22'}
 
   expect-type@1.4.0:
     resolution: {integrity: sha512-KfYbmpRm0VbLjEvVa9yGwCi9GI34xvi7A/HXYWQO65CSD2u3MczUJSuwXKFIxlGsgBQizV9q5J9NHj4VG0n+pA==}
@@ -8426,6 +8447,10 @@ packages:
   object.values@1.2.1:
     resolution: {integrity: sha512-gXah6aZrcUxjWg2zR2MwouP2eHlCBzdV4pygudehaKXSGW4v2AsRQUK+lwwXhii6KFZcunEnmSUoYp5CXibxtA==}
     engines: {node: '>= 0.4'}
+
+  obug@2.1.4:
+    resolution: {integrity: sha512-4a+OsYv9UktOJKE+l1A4OufDgdRF9PifWj+tJnHURo/P+WOxpG4GzUFL9qCalmWauao6ogiG+QvnCovwPoyAWA==}
+    engines: {node: '>=12.20.0'}
 
   obug@2.2.1:
     resolution: {integrity: sha512-XrsrhT5sybtKI6wakr2SPOlGZWWYbUXZ7a0jT8/QOeAPau+1X/bSegNe5YR75oJmEZQbKningirmGOEJCIk61Q==}
@@ -10039,6 +10064,11 @@ packages:
     resolution: {integrity: sha512-K4jVyjnBdgvc86Y6BkaLZEN933SwYOuBFkdmBu9ZfkcAbdVbpITnDmjvZ/aQjRXQrv5EPkTnD1s39GiiqbngCw==}
     engines: {node: '>= 0.4'}
 
+  which-command@0.1.0:
+    resolution: {integrity: sha512-XZyoF5/5hZtXitIwzrU4NKK+Wtbb9aB9CezUEw2Q0wlYK8NUYQxC1rRXgNueYLtBAJwXIb+/tFVk4dozciNJMA==}
+    engines: {node: '>=22'}
+    hasBin: true
+
   which-typed-array@1.1.22:
     resolution: {integrity: sha512-fvO4ExWMFsqyhG3AiPAObMuY1lxaqgYcxbc49CNdWDDECOJNgQyvsOWVwbZc+qf3rzRtxojBK+CMEv0Ld5CYpw==}
     engines: {node: '>= 0.4'}
@@ -10169,6 +10199,394 @@ packages:
 snapshots:
 
   '@adraffy/ens-normalize@1.11.1': {}
+
+  '@ais-chat/ai-core@file:packages/ai-core(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(@types/pg@8.23.1)(typescript@6.0.3)(ws@8.21.0)':
+    dependencies:
+      '@ais-chat/api-database': file:packages/api-database(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(typescript@6.0.3)
+      '@anthropic-ai/sdk': 0.124.0(zod@4.5.4)
+      '@anthropic-ai/vertex-sdk': 0.19.7(zod@4.5.4)
+      '@google/genai': 2.21.0
+      '@opentelemetry/api': 1.9.1
+      '@sentry/core': 10.73.0
+      google-auth-library: 10.9.1
+      js-tiktoken: 1.0.21
+      openai: 7.10.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.0)(zod@4.5.4)
+      openaiv4: openai@4.104.0(ws@8.21.0)(zod@4.5.4)
+      zod: 4.5.4
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@aws-sdk/credential-provider-node'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@modelcontextprotocol/sdk'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@smithy/hash-node'
+      - '@smithy/signature-v4'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - arktype
+      - better-sqlite3
+      - bufferutil
+      - bun-types
+      - encoding
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg-native
+      - postgres
+      - prisma
+      - sql.js
+      - sqlite3
+      - supports-color
+      - typescript
+      - undici
+      - utf-8-validate
+      - valibot
+      - ws
+
+  '@ais-chat/ai-core@file:packages/ai-core(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(@types/pg@8.23.1)(typescript@6.0.3)(ws@8.21.3)':
+    dependencies:
+      '@ais-chat/api-database': file:packages/api-database(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(typescript@6.0.3)
+      '@anthropic-ai/sdk': 0.124.0(zod@4.5.4)
+      '@anthropic-ai/vertex-sdk': 0.19.7(zod@4.5.4)
+      '@google/genai': 2.21.0
+      '@opentelemetry/api': 1.9.1
+      '@sentry/core': 10.73.0
+      google-auth-library: 10.9.1
+      js-tiktoken: 1.0.21
+      openai: 7.10.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.5.4)
+      openaiv4: openai@4.104.0(ws@8.21.3)(zod@4.5.4)
+      zod: 4.5.4
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@aws-sdk/credential-provider-node'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@modelcontextprotocol/sdk'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@smithy/hash-node'
+      - '@smithy/signature-v4'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - arktype
+      - better-sqlite3
+      - bufferutil
+      - bun-types
+      - encoding
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg-native
+      - postgres
+      - prisma
+      - sql.js
+      - sqlite3
+      - supports-color
+      - typescript
+      - undici
+      - utf-8-validate
+      - valibot
+      - ws
+
+  '@ais-chat/api-database@file:packages/api-database(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(typescript@6.0.3)':
+    dependencies:
+      '@t3-oss/env-core': 0.13.11(typescript@6.0.3)(zod@4.5.4)
+      bcryptjs: 3.0.3
+      drizzle-orm: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(pg@8.23.0)
+      drizzle-zod: 0.8.3(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(pg@8.23.0))(zod@4.5.4)
+      nanoid: 6.0.1
+      pg: 8.23.0
+      zod: 4.5.4
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - arktype
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg-native
+      - postgres
+      - prisma
+      - sql.js
+      - sqlite3
+      - typescript
+      - valibot
+
+  '@ais-chat/eslint-config@file:packages/eslint-config(@types/eslint@9.6.1)(eslint@10.8.1(jiti@2.7.0))(turbo@2.10.12)(typescript@6.0.3)':
+    dependencies:
+      '@eslint/compat': 2.1.1(eslint@10.8.1(jiti@2.7.0))
+      '@eslint/js': 10.0.1(eslint@10.8.1(jiti@2.7.0))
+      eslint: 10.8.1(jiti@2.7.0)
+      eslint-config-next: 16.3.4(@typescript-eslint/parser@8.69.0(eslint@10.8.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.8.1(jiti@2.7.0))(typescript@6.0.3)
+      eslint-config-prettier: 10.1.8(eslint@10.8.1(jiti@2.7.0))
+      eslint-config-turbo: 2.10.12(eslint@10.8.1(jiti@2.7.0))(turbo@2.10.12)
+      eslint-plugin-jsx-a11y: 6.10.2(eslint@10.8.1(jiti@2.7.0))
+      eslint-plugin-package-json: 1.8.0(eslint@10.8.1(jiti@2.7.0))
+      eslint-plugin-prettier: 5.5.6(@types/eslint@9.6.1)(eslint-config-prettier@10.1.8(eslint@10.8.1(jiti@2.7.0)))(eslint@10.8.1(jiti@2.7.0))(prettier@3.9.6)
+      prettier: 3.9.6
+      typescript-eslint: 8.69.0(eslint@10.8.1(jiti@2.7.0))(typescript@6.0.3)
+    transitivePeerDependencies:
+      - '@eslint/json'
+      - '@types/eslint'
+      - '@typescript-eslint/parser'
+      - eslint-import-resolver-webpack
+      - eslint-plugin-import-x
+      - supports-color
+      - turbo
+      - typescript
+
+  '@ais-chat/shared-core@file:packages/shared-core':
+    dependencies:
+      '@sentry/core': 10.73.0
+
+  '@ais-chat/shared@file:packages/shared(@aws-sdk/credential-provider-node@3.972.82)(@babel/core@7.29.7)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(@playwright/test@1.63.0)(@smithy/signature-v4@5.7.3)(@types/node@24.13.3)(@types/pg@8.23.1)(@vercel/functions@2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76))(ioredis@6.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28)(sharp@0.35.4(@types/node@24.13.3)))(ws@8.21.0)':
+    dependencies:
+      '@ais-chat/ai-core': file:packages/ai-core(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(@types/pg@8.23.1)(typescript@6.0.3)(ws@8.21.0)
+      '@ais-chat/shared-core': file:packages/shared-core
+      '@aws-sdk/client-s3': 3.1127.0
+      '@aws-sdk/s3-request-presigner': 3.1127.0
+      '@dotenvx/dotenvx': 2.23.0
+      '@opentelemetry/api': 1.9.1
+      '@opentelemetry/auto-instrumentations-node': 0.80.0(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))
+      '@opentelemetry/exporter-metrics-otlp-http': 0.222.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/exporter-trace-otlp-http': 0.222.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources': 2.11.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-metrics': 2.11.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-node': 0.222.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-trace-node': 2.11.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/semantic-conventions': 1.43.0
+      '@sentry/nextjs': 10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.222.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28)(sharp@0.35.4(@types/node@24.13.3)))
+      '@sentry/opentelemetry': 10.73.0(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))
+      '@t3-oss/env-core': 0.13.11(typescript@6.0.3)(zod@4.5.4)
+      drizzle-kit: 0.31.10
+      drizzle-orm: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(pg@8.23.0)
+      drizzle-zod: 0.8.3(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(pg@8.23.0))(zod@4.5.4)
+      linkup-sdk: 3.6.0(viem@2.56.3(typescript@6.0.3)(zod@4.5.4))
+      nanoid: 6.0.1
+      next: 16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      pg: 8.23.0
+      unstorage: 1.17.5(@vercel/functions@2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76))(ioredis@6.0.0)
+      uuid: 14.0.2
+      viem: 2.56.3(typescript@6.0.3)(zod@4.5.4)
+      zod: 4.5.4
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@aws-sdk/credential-provider-node'
+      - '@azure/app-configuration'
+      - '@azure/cosmos'
+      - '@azure/data-tables'
+      - '@azure/identity'
+      - '@azure/keyvault-secrets'
+      - '@azure/storage-blob'
+      - '@babel/core'
+      - '@capacitor/preferences'
+      - '@cloudflare/workers-types'
+      - '@deno/kv'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@modelcontextprotocol/sdk'
+      - '@neondatabase/serverless'
+      - '@netlify/blobs'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/core'
+      - '@opentelemetry/sdk-trace-base'
+      - '@planetscale/database'
+      - '@playwright/test'
+      - '@prisma/client'
+      - '@smithy/hash-node'
+      - '@smithy/signature-v4'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/node'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/blob'
+      - '@vercel/functions'
+      - '@vercel/kv'
+      - '@vercel/postgres'
+      - '@x402/evm'
+      - '@xata.io/client'
+      - arktype
+      - aws4fetch
+      - babel-plugin-macros
+      - babel-plugin-react-compiler
+      - better-sqlite3
+      - bufferutil
+      - bun-types
+      - db0
+      - debug
+      - encoding
+      - expo-sqlite
+      - gel
+      - idb-keyval
+      - ioredis
+      - knex
+      - kysely
+      - mysql2
+      - pg-native
+      - postgres
+      - prisma
+      - react
+      - react-dom
+      - sass
+      - sql.js
+      - sqlite3
+      - supports-color
+      - typescript
+      - undici
+      - uploadthing
+      - utf-8-validate
+      - valibot
+      - webpack
+      - ws
+
+  '@ais-chat/shared@file:packages/shared(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(@playwright/test@1.63.0)(@types/node@24.13.3)(@types/pg@8.23.1)(@vercel/functions@2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28))':
+    dependencies:
+      '@ais-chat/ai-core': file:packages/ai-core(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(@types/pg@8.23.1)(typescript@6.0.3)(ws@8.21.3)
+      '@ais-chat/shared-core': file:packages/shared-core
+      '@aws-sdk/client-s3': 3.1127.0
+      '@aws-sdk/s3-request-presigner': 3.1127.0
+      '@dotenvx/dotenvx': 2.23.0
+      '@opentelemetry/api': 1.9.1
+      '@opentelemetry/auto-instrumentations-node': 0.80.0(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))
+      '@opentelemetry/exporter-metrics-otlp-http': 0.222.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/exporter-trace-otlp-http': 0.222.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources': 2.11.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-metrics': 2.11.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-node': 0.222.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-trace-node': 2.11.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/semantic-conventions': 1.43.0
+      '@sentry/nextjs': 10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.222.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28))
+      '@sentry/opentelemetry': 10.73.0(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))
+      '@t3-oss/env-core': 0.13.11(typescript@6.0.3)(zod@4.5.4)
+      drizzle-kit: 0.31.10
+      drizzle-orm: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(pg@8.23.0)
+      drizzle-zod: 0.8.3(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(pg@8.23.0))(zod@4.5.4)
+      linkup-sdk: 3.6.0(viem@2.56.3(typescript@6.0.3)(zod@4.5.4))
+      nanoid: 6.0.1
+      next: 16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      pg: 8.23.0
+      unstorage: 1.17.5(@vercel/functions@2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76))(ioredis@6.0.0)
+      uuid: 14.0.2
+      viem: 2.56.3(typescript@6.0.3)(zod@4.5.4)
+      zod: 4.5.4
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@aws-sdk/credential-provider-node'
+      - '@azure/app-configuration'
+      - '@azure/cosmos'
+      - '@azure/data-tables'
+      - '@azure/identity'
+      - '@azure/keyvault-secrets'
+      - '@azure/storage-blob'
+      - '@babel/core'
+      - '@capacitor/preferences'
+      - '@cloudflare/workers-types'
+      - '@deno/kv'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@modelcontextprotocol/sdk'
+      - '@neondatabase/serverless'
+      - '@netlify/blobs'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/core'
+      - '@opentelemetry/sdk-trace-base'
+      - '@planetscale/database'
+      - '@playwright/test'
+      - '@prisma/client'
+      - '@smithy/hash-node'
+      - '@smithy/signature-v4'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/node'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/blob'
+      - '@vercel/functions'
+      - '@vercel/kv'
+      - '@vercel/postgres'
+      - '@x402/evm'
+      - '@xata.io/client'
+      - arktype
+      - aws4fetch
+      - babel-plugin-macros
+      - babel-plugin-react-compiler
+      - better-sqlite3
+      - bufferutil
+      - bun-types
+      - db0
+      - debug
+      - encoding
+      - expo-sqlite
+      - gel
+      - idb-keyval
+      - ioredis
+      - knex
+      - kysely
+      - mysql2
+      - pg-native
+      - postgres
+      - prisma
+      - react
+      - react-dom
+      - sass
+      - sql.js
+      - sqlite3
+      - supports-color
+      - typescript
+      - undici
+      - uploadthing
+      - utf-8-validate
+      - valibot
+      - webpack
+      - ws
 
   '@alloc/quick-lru@5.3.0': {}
 
@@ -13959,33 +14377,7 @@ snapshots:
     dependencies:
       '@sentry/core': 10.73.0
 
-  '@sentry/nextjs@10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.222.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.3.4(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.25))':
-    dependencies:
-      '@opentelemetry/api': 1.9.1
-      '@rollup/plugin-commonjs': 28.0.1(rollup@4.63.1)
-      '@sentry/browser-utils': 10.73.0
-      '@sentry/bundler-plugin-core': 5.3.0
-      '@sentry/conventions': 0.16.0
-      '@sentry/core': 10.73.0
-      '@sentry/node': 10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.222.0(@opentelemetry/api@1.9.1))
-      '@sentry/opentelemetry': 10.73.0(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))
-      '@sentry/react': 10.73.0(react@19.2.8)
-      '@sentry/server-utils': 10.73.0
-      '@sentry/vercel-edge': 10.73.0
-      '@sentry/webpack-plugin': 5.4.0(rollup@4.63.1)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.25))
-      next: 16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      rollup: 4.63.1
-      stacktrace-parser: 0.1.11
-    transitivePeerDependencies:
-      - '@opentelemetry/core'
-      - '@opentelemetry/exporter-trace-otlp-http'
-      - '@opentelemetry/sdk-trace-base'
-      - encoding
-      - react
-      - supports-color
-      - webpack
-
-  '@sentry/nextjs@10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28)(sharp@0.35.4(@types/node@24.13.3)))':
+  '@sentry/nextjs@10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.222.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28)(sharp@0.35.4(@types/node@24.13.3)))':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@rollup/plugin-commonjs': 28.0.1(rollup@4.63.1)
@@ -14011,7 +14403,7 @@ snapshots:
       - supports-color
       - webpack
 
-  '@sentry/nextjs@10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28))':
+  '@sentry/nextjs@10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.222.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28))':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@rollup/plugin-commonjs': 28.0.1(rollup@4.63.1)
@@ -14025,6 +14417,32 @@ snapshots:
       '@sentry/server-utils': 10.73.0
       '@sentry/vercel-edge': 10.73.0
       '@sentry/webpack-plugin': 5.4.0(rollup@4.63.1)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28))
+      next: 16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      rollup: 4.63.1
+      stacktrace-parser: 0.1.11
+    transitivePeerDependencies:
+      - '@opentelemetry/core'
+      - '@opentelemetry/exporter-trace-otlp-http'
+      - '@opentelemetry/sdk-trace-base'
+      - encoding
+      - react
+      - supports-color
+      - webpack
+
+  '@sentry/nextjs@10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.222.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))(next@16.3.4(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.25))':
+    dependencies:
+      '@opentelemetry/api': 1.9.1
+      '@rollup/plugin-commonjs': 28.0.1(rollup@4.63.1)
+      '@sentry/browser-utils': 10.73.0
+      '@sentry/bundler-plugin-core': 5.3.0
+      '@sentry/conventions': 0.16.0
+      '@sentry/core': 10.73.0
+      '@sentry/node': 10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.222.0(@opentelemetry/api@1.9.1))
+      '@sentry/opentelemetry': 10.73.0(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.11.0(@opentelemetry/api@1.9.1))
+      '@sentry/react': 10.73.0(react@19.2.8)
+      '@sentry/server-utils': 10.73.0
+      '@sentry/vercel-edge': 10.73.0
+      '@sentry/webpack-plugin': 5.4.0(rollup@4.63.1)(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.25))
       next: 16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       rollup: 4.63.1
       stacktrace-parser: 0.1.11
@@ -14903,7 +15321,7 @@ snapshots:
       istanbul-lib-report: 3.0.1
       istanbul-reports: 3.2.0
       magicast: 0.5.4
-      obug: 2.2.1
+      obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
       vitest: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.0))
@@ -15815,6 +16233,8 @@ snapshots:
 
   entities@7.0.1: {}
 
+  entities@8.0.0: {}
+
   entities@8.1.0: {}
 
   error-ex@1.3.4:
@@ -16337,10 +16757,9 @@ snapshots:
 
   events@3.3.0: {}
 
-  execa@9.6.1:
+  execa@10.0.1:
     dependencies:
       '@sindresorhus/merge-streams': 4.0.0
-      cross-spawn: 7.0.6
       figures: 6.1.0
       get-stream: 9.0.1
       human-signals: 8.0.1
@@ -16350,6 +16769,7 @@ snapshots:
       pretty-ms: 9.3.1
       signal-exit: 4.1.0
       strip-final-newline: 4.0.0
+      which-command: 0.1.0
       yoctocolors: 2.2.0
 
   expect-type@1.4.0: {}
@@ -18167,6 +18587,8 @@ snapshots:
       define-properties: 1.2.1
       es-object-atoms: 1.1.2
 
+  obug@2.1.4: {}
+
   obug@2.2.1: {}
 
   ofetch@1.5.1:
@@ -18184,6 +18606,21 @@ snapshots:
   onetime@5.1.2:
     dependencies:
       mimic-fn: 2.1.0
+
+  openai@4.104.0(ws@8.21.0)(zod@4.5.4):
+    dependencies:
+      '@types/node': 18.19.130
+      '@types/node-fetch': 2.6.13
+      abort-controller: 3.0.0
+      agentkeepalive: 4.6.0
+      form-data-encoder: 1.7.2
+      formdata-node: 4.4.1
+      node-fetch: 2.7.0
+    optionalDependencies:
+      ws: 8.21.0
+      zod: 4.5.4
+    transitivePeerDependencies:
+      - encoding
 
   openai@4.104.0(ws@8.21.3)(zod@4.5.4):
     dependencies:
@@ -18206,7 +18643,6 @@ snapshots:
       '@smithy/signature-v4': 5.7.3
       ws: 8.21.0
       zod: 4.5.4
-    optional: true
 
   openai@7.10.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.5.4):
     optionalDependencies:
@@ -18326,7 +18762,7 @@ snapshots:
 
   parse5@8.0.1:
     dependencies:
-      entities: 8.1.0
+      entities: 8.0.0
 
   path-exists@4.0.0: {}
 
@@ -19715,7 +20151,7 @@ snapshots:
       '@unrs/resolver-binding-win32-ia32-msvc': 1.12.2
       '@unrs/resolver-binding-win32-x64-msvc': 1.12.2
 
-  unstorage@1.17.5(@vercel/functions@2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76)):
+  unstorage@1.17.5(@vercel/functions@2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76))(ioredis@6.0.0):
     dependencies:
       anymatch: 3.1.3
       chokidar: 5.0.0
@@ -19727,6 +20163,7 @@ snapshots:
       ufo: 1.6.4
     optionalDependencies:
       '@vercel/functions': 2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76)
+      ioredis: 6.0.0
 
   update-browserslist-db@1.3.2(browserslist@4.28.9):
     dependencies:
@@ -20176,6 +20613,8 @@ snapshots:
       is-set: 2.0.3
       is-weakmap: 2.0.2
       is-weakset: 2.0.4
+
+  which-command@0.1.0: {}
 
   which-typed-array@1.1.22:
     dependencies:
