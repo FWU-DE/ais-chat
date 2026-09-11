@@ -1,4 +1,4 @@
-FROM node:24.20.0-alpine AS service-builder
+FROM node:24.21.0-alpine AS service-builder
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -17,7 +17,7 @@ RUN corepack enable && corepack prepare \
   && pnpm deploy --filter @ais-chat/calculator-service --prod /prod \
   && cp -r services/calculator/dist /prod/dist
 
-FROM node:24.20.0-alpine AS runtime
+FROM node:24.21.0-alpine AS runtime
 
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \

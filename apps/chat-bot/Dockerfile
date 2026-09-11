@@ -7,27 +7,31 @@ ARG APP_VERSION
 ARG CI=true
 
 # Alpine image
-FROM node:24.20.0-alpine AS base
+FROM node:24.21.0-alpine AS base
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV TURBO_TELEMETRY_DISABLED=1
 
+FROM base AS builder-base
+ENV PNPM_STORE_DIR=/pnpm/store
+
 # Prune projects
-FROM base AS pruner
+FROM builder-base AS pruner
 WORKDIR /app
 
 COPY . .
 
 # setup pnpm and pnpm install in order to install turbo in the correct version
 RUN corepack enable && corepack prepare
-RUN pnpm install --frozen-lockfile --dev
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --filter . --frozen-lockfile --dev --prefer-offline
 
-ARG CI=true
+ARG CI
 RUN CI=${CI} \
     pnpm turbo prune ais-chat-app --docker
 
 # Build the project
-FROM base AS builder
+FROM builder-base AS builder
 WORKDIR /app
 
 # Git is required for sentry
@@ -40,7 +44,8 @@ COPY --from=pruner /app/out/json/ .
 
 # First install the dependencies (as they change less often)
 RUN corepack enable && corepack prepare
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prefer-offline
 
 # Copy source code of isolated subworkspace
 COPY --from=pruner /app/out/full/ .
@@ -48,7 +53,7 @@ COPY --from=pruner /app/out/full/ .
 # Copy git history, required for sentry to determine release name
 COPY .git ./.git
 
-ARG CI=true
+ARG CI
 ARG APP_VERSION
 
 RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN \
