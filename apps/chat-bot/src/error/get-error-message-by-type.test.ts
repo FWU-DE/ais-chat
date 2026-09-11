@@ -3,7 +3,6 @@ import {
   EmptyResponseError,
   InvalidModelError,
   ProviderRateLimitExceededError,
-  RateLimitExceededError,
   ResponsibleAIError,
   SharedChatExpiredError,
   TokenPointsExceededError,
@@ -26,9 +25,6 @@ describe('getErrorMessageByType', () => {
       'api-key-quota-error',
     );
     expect(getErrorMessageByType(new ProviderRateLimitExceededError('Rate limit'))).toBe(
-      'provider-rate-limit-error',
-    );
-    expect(getErrorMessageByType(new RateLimitExceededError('Rate limit'))).toBe(
       'provider-rate-limit-error',
     );
     expect(getErrorMessageByType(new InvalidModelError('Invalid model'))).toBe(

@@ -48,16 +48,16 @@ describe('ResponsibleAIError', () => {
 });
 
 describe('RateLimitExceededError', () => {
-  it('should create an error with the correct name and message', () => {
-    const error = new RateLimitExceededError('Too many requests');
-    expect(error.name).toBe('RateLimitExceededError');
+  it('should create a subclass error with the correct name and message', () => {
+    const error = new ProviderRateLimitExceededError('Too many requests');
+    expect(error.name).toBe('ProviderRateLimitExceededError');
     expect(error.message).toBe('Too many requests');
+    expect(error).toBeInstanceOf(RateLimitExceededError);
     expect(error).toBeInstanceOf(AiGenerationError);
   });
 
   it('should correctly identify RateLimitExceededError instances', () => {
-    const error = new RateLimitExceededError('Test');
-    expect(RateLimitExceededError.is(error)).toBe(true);
+    expect(RateLimitExceededError.is(new ProviderRateLimitExceededError('Test'))).toBe(true);
     expect(RateLimitExceededError.is(new AiGenerationError('Test'))).toBe(false);
   });
 });
@@ -167,7 +167,6 @@ describe('isKnownAiGenerationError', () => {
   it('should return true for known AI generation errors', () => {
     expect(isKnownAiGenerationError(new AiGenerationError('Test'))).toBe(true);
     expect(isKnownAiGenerationError(new ResponsibleAIError('Test'))).toBe(true);
-    expect(isKnownAiGenerationError(new RateLimitExceededError('Test'))).toBe(true);
     expect(isKnownAiGenerationError(new ApiKeyQuotaExceededError('Test'))).toBe(true);
     expect(isKnownAiGenerationError(new ProviderRateLimitExceededError('Test'))).toBe(true);
     expect(isKnownAiGenerationError(new InvalidModelError('Test'))).toBe(true);
@@ -203,15 +202,5 @@ describe('normalizeAiGenerationError', () => {
   it('preserves existing typed errors', () => {
     const error = new ResponsibleAIError('Policy violation');
     expect(normalizeAiGenerationError(error, 'Generation failed')).toBe(error);
-  });
-
-  it('removes a provider request ID from responsible AI errors', () => {
-    const error = normalizeAiGenerationError(
-      new Error('Your request was rejected by the safety system. Request ID: secret'),
-      'Generation failed',
-    );
-
-    expect(error).toBeInstanceOf(ResponsibleAIError);
-    expect(error.message).toBe('Your request was rejected by the safety system');
   });
 });

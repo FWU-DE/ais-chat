@@ -57,9 +57,9 @@ export class ResponsibleAIError extends AiGenerationError {
 }
 
 /**
- * Error thrown when the API rate limit is exceeded.
+ * Base class for rate limit errors. Throw one of its subclasses instead.
  */
-export class RateLimitExceededError extends AiGenerationError {
+export abstract class RateLimitExceededError extends AiGenerationError {
   constructor(message: string) {
     super(message);
     this.name = 'RateLimitExceededError';
@@ -216,10 +216,6 @@ function getProviderErrorDetails(error: unknown): {
   return { code, message, status };
 }
 
-function stripProviderRequestId(message: string): string {
-  return message.replace(/\s*(?:[.,;]\s*)?request[ _-]?id\s*[:=]\s*\S+\s*$/i, '');
-}
-
 // TODO TD-1484: Check if this can be simplified once all models are routed through bifrost
 // CAVE: Bifrost errors also might not have the exact same structure for all errors
 export function normalizeAiGenerationError(error: unknown, context: string): AiGenerationError {
@@ -246,7 +242,7 @@ export function normalizeAiGenerationError(error: unknown, context: string): AiG
     normalizedMessage.includes('request was rejected by the safety system') ||
     normalizedMessage.includes('content policy violation')
   ) {
-    return new ResponsibleAIError(stripProviderRequestId(message));
+    return new ResponsibleAIError(message);
   }
 
   if (
