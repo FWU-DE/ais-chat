@@ -26,7 +26,7 @@
     "@google/genai": "2.21.0",
     "@opentelemetry/api": "1.9.1",
     "@sentry/core": "10.73.0",
-    "google-auth-library": "10.9.1",
+    "google-auth-library": "11.0.2",
     "js-tiktoken": "1.0.21",
     "openai": "7.10.0",
     "openaiv4": "npm:openai@4.104.0",
