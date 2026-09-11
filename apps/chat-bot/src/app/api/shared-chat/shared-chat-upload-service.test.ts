@@ -44,7 +44,7 @@ vi.mock('@shared/files/fileService', () => ({
   uploadMessageAttachment: mocks.uploadMessageAttachmentMock,
 }));
 
-vi.mock('@ais-chat/shared/random/randomService', () => ({
+vi.mock('@shared/random/randomService', () => ({
   cnanoid: mocks.cnanoidMock,
 }));
 
