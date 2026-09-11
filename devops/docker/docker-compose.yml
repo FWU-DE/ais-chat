@@ -115,7 +115,7 @@ services:
 
   # Xberg text extraction service
   xberg:
-    image: ghcr.io/xberg-io/xberg:1.0.14-core
+    image: ghcr.io/xberg-io/xberg:1.1.5-core
     restart: unless-stopped
     environment:
       XBERG_MAX_UPLOAD_SIZE_MB: '50'
