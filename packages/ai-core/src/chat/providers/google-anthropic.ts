@@ -27,7 +27,7 @@ import {
   ToolDefinition,
 } from '../types';
 import { AnthropicVertex, ClientOptions } from '@anthropic-ai/vertex-sdk';
-import { AiGenerationError, RateLimitExceededError } from '../../errors';
+import { AiGenerationError, ProviderRateLimitExceededError } from '../../errors';
 import { ParsedMessage } from '@anthropic-ai/sdk';
 import { instrumentAnthropicAiClient } from '@sentry/core';
 import { estimateTokenUsage, isAbortError } from '../utils';
@@ -337,7 +337,7 @@ function handleError(error: unknown) {
   }
   // Special handling of RateLimitError
   if (error && typeof error === 'object' && 'status' in error && error['status'] === 429) {
-    throw new RateLimitExceededError('Rate limit reached for Google Anthropic API');
+    throw new ProviderRateLimitExceededError('Rate limit reached for Google Anthropic API');
   }
   // Try to get status code from error object to be more specific
   if (error && typeof error === 'object' && 'status' in error) {
