@@ -47,6 +47,7 @@ describe('generateImageWithBilling', () => {
       type: 'image',
       pricePerImageInCent: 50,
     },
+    safetyFilterEnabled: true,
   } as AiModel;
 
   const mockImageResponse = {
@@ -131,6 +132,44 @@ describe('generateImageWithBilling', () => {
     expect(mockCheckInputSafety.mock.invocationCallOrder[0]).toBeLessThan(
       mockGenerateImage.mock.invocationCallOrder[0]!,
     );
+  });
+
+  it('runs the safety pre-check by default when a safety model is supplied', async () => {
+    mockGetImageModelById.mockResolvedValue(mockModel);
+    mockHasAccessToModel.mockResolvedValue(true);
+    mockIsApiKeyOverQuota.mockResolvedValue(false);
+    mockGenerateImage.mockResolvedValue(mockImageResponse);
+    mockBillImageGenerationUsageToApiKey.mockResolvedValue(50);
+
+    await generateImageWithBilling(
+      'model-123',
+      'test prompt',
+      'api-key-123',
+      undefined,
+      'safety-model',
+    );
+
+    expect(mockCheckInputSafety).toHaveBeenCalled();
+  });
+
+  it('skips the safety pre-check for a model with safety filtering disabled', async () => {
+    mockGetImageModelById.mockResolvedValue(mockModel);
+    mockHasAccessToModel.mockResolvedValue(true);
+    mockIsApiKeyOverQuota.mockResolvedValue(false);
+    mockGenerateImage.mockResolvedValue(mockImageResponse);
+    mockBillImageGenerationUsageToApiKey.mockResolvedValue(50);
+    mockGetImageModelById.mockResolvedValue({ ...mockModel, safetyFilterEnabled: false });
+
+    await generateImageWithBilling(
+      'model-123',
+      'test prompt',
+      'api-key-123',
+      undefined,
+      'safety-model',
+    );
+
+    expect(mockCheckInputSafety).not.toHaveBeenCalled();
+    expect(mockGenerateImage).toHaveBeenCalled();
   });
 
   it('should throw InvalidModelError when API key does not have access', async () => {

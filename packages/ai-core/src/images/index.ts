@@ -43,7 +43,7 @@ export async function generateImageWithBilling(
   }
 
   try {
-    if (safetyModelName) {
+    if (safetyModelName && model.safetyFilterEnabled !== false) {
       await checkInputSafety(
         safetyModelName,
         [

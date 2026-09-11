@@ -42,6 +42,7 @@ const llmFormSchema = z.object({
   isNew: z.boolean().default(false),
   isDeleted: z.boolean().default(false),
   useBifrost: z.boolean().default(true),
+  safetyFilterEnabled: z.boolean().default(true),
   providerKeys: z.array(
     z.object({
       providerKeyId: z.string(),
@@ -94,6 +95,7 @@ export function LargeLanguageModelDetailView({
           isNew: model.isNew,
           isDeleted: model.isDeleted,
           useBifrost: model.useBifrost,
+          safetyFilterEnabled: model.safetyFilterEnabled,
           providerKeys: providerKeys.map((providerKey) => ({
             providerKeyId: providerKey.id,
             selected: assignments.has(providerKey.id),
@@ -114,6 +116,7 @@ export function LargeLanguageModelDetailView({
           isNew: false,
           isDeleted: false,
           useBifrost: true,
+          safetyFilterEnabled: true,
           providerKeys: providerKeys.map((providerKey) => ({
             providerKeyId: providerKey.id,
             selected: false,
@@ -257,6 +260,13 @@ export function LargeLanguageModelDetailView({
             name="useBifrost"
             label="Bifrost verwenden"
             description="Bifrost ermöglicht mehrere Provider-Keys und automatische Provider-Auswahl. Für direkte Provider-Aufrufe muss genau ein aktivierter Provider-Key zugewiesen sein."
+            control={control}
+          />
+
+          <FormFieldCheckbox
+            name="safetyFilterEnabled"
+            label="Sicherheitsprüfung aktivieren"
+            description="Führt vor der Antwort die konfigurierte Sicherheitsmodell-Prüfung durch. Provider-eigene Sicherheitsfunktionen werden dadurch nicht verändert."
             control={control}
           />
 

@@ -18,6 +18,7 @@ const baseModel: LlmModel = {
   isNew: false,
   isDeleted: false,
   useBifrost: true,
+  safetyFilterEnabled: true,
 };
 
 describe('obscureModels', () => {
