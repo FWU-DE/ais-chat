@@ -125,7 +125,10 @@ describe('agent-loop', () => {
     });
 
     expect(onComplete).not.toHaveBeenCalled();
-    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ name: 'EmptyResponseError' }));
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'EmptyResponseError' }),
+      expect.objectContaining({ modelUsages: [] }),
+    );
   });
 
   it('does not insert separator on first iteration', async () => {
@@ -848,6 +851,117 @@ describe('agent-loop', () => {
 
       expect(onError).not.toHaveBeenCalled();
       expect(onComplete).not.toHaveBeenCalled();
+    });
+
+    it('reports billed usage when the abort leaves usage but no text', async () => {
+      const messages: Message[] = [{ role: 'user', content: 'Test query' }];
+      const onComplete = vi.fn();
+      const onError = vi.fn();
+      const abortController = new AbortController();
+
+      mockGenerateAgenticStreamWithBilling.mockImplementation(async function* (
+        _selection: unknown,
+        _messages: unknown,
+        _apiKeyId: unknown,
+        onUsage: (result: {
+          usage: TokenUsage;
+          priceInCents: number;
+          modelId: string;
+        }) => Promise<void>,
+      ) {
+        yield { type: 'finish', usage } satisfies StreamEvent;
+        await onUsage({ usage, priceInCents: 7, modelId: 'test-model' });
+        abortController.abort();
+      });
+
+      runAgentLoop({
+        modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+        apiKeyId: 'test-key',
+        messages,
+        agentName: 'Test Agent',
+        abortSignal: abortController.signal,
+        onTextChunk: vi.fn(),
+        onComplete,
+        onError,
+      });
+
+      await vi.waitFor(() => {
+        expect(onComplete).toHaveBeenCalled();
+      });
+
+      expect(onError).not.toHaveBeenCalled();
+      expect(onComplete).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fullText: '',
+          priceInCents: 7,
+          modelUsages: [{ modelId: 'test-model', usage, priceInCents: 7 }],
+        }),
+      );
+    });
+  });
+
+  describe('usage on failure', () => {
+    it('passes already billed usage to onError', async () => {
+      const messages: Message[] = [{ role: 'user', content: 'Test query' }];
+      const onComplete = vi.fn();
+      const onError = vi.fn();
+
+      let callCount = 0;
+      mockGenerateAgenticStreamWithBilling.mockImplementation(async function* (
+        _selection: unknown,
+        _messages: unknown,
+        _apiKeyId: unknown,
+        onUsage: (result: {
+          usage: TokenUsage;
+          priceInCents: number;
+          modelId: string;
+        }) => Promise<void>,
+      ) {
+        callCount++;
+        if (callCount === 1) {
+          yield { type: 'text', delta: 'First iteration.' } satisfies StreamEvent;
+          yield {
+            type: 'tool_call',
+            call: { id: 'call_1', name: 'test_tool', arguments: '{}' },
+          } satisfies StreamEvent;
+          yield { type: 'finish', usage } satisfies StreamEvent;
+          await onUsage({ usage, priceInCents: 3, modelId: 'test-model' });
+          return;
+        }
+
+        throw new Error('provider exploded');
+      });
+
+      const toolRegistry = {
+        test_tool: {
+          definition: { name: 'test_tool', description: 'Test', parameters: {} },
+          handler: async () => 'tool result',
+        },
+      };
+
+      runAgentLoop({
+        modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+        apiKeyId: 'test-key',
+        messages,
+        toolRegistry,
+        agentName: 'Test Agent',
+        onTextChunk: vi.fn(),
+        onComplete,
+        onError,
+      });
+
+      await vi.waitFor(() => {
+        expect(onError).toHaveBeenCalled();
+      });
+
+      expect(onComplete).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          priceInCents: 3,
+          modelUsages: [{ modelId: 'test-model', usage, priceInCents: 3 }],
+        }),
+      );
     });
   });
 });

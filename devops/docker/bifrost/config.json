@@ -1,6 +1,6 @@
 {
   "$schema": "https://www.getbifrost.ai/schema",
-  "source_of_truth": "config.json",
+  "source_of_truth": "split",
   "framework": {
     "pricing": {
       "mcp_library_sync_interval": 0,
@@ -26,6 +26,7 @@
     },
     "virtual_keys": [
       {
+        "allow_all_providers": true,
         "id": "vk-all",
         "is_active": true,
         "name": "access to all providers",

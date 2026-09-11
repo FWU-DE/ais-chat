@@ -30,6 +30,7 @@ import { AnthropicVertex, ClientOptions } from '@anthropic-ai/vertex-sdk';
 import { AiGenerationError, ProviderRateLimitExceededError } from '../../errors';
 import { ParsedMessage } from '@anthropic-ai/sdk';
 import { instrumentAnthropicAiClient } from '@sentry/core';
+import { estimateTokenUsage, isAbortError } from '../utils';
 
 /* used by apps/api when called with stream === false or as auxiliary model in chat-bot */
 export function constructGoogleAnthropicTextGenerationFn(model: AiModel): TextGenerationFn {
@@ -140,8 +141,12 @@ export function constructGoogleAnthropicAgenticStreamFn(model: AiModel): Agentic
   return async function* generateAgenticStream(
     args: TextGenerationArgs,
   ): AsyncGenerator<StreamEvent> {
+    const { messages, maxTokens, model: modelName, tools, toolChoice, abortSignal } = args;
+    let streamedText = '';
+    // Usage reported while streaming, so an abort still has real numbers to bill.
+    let streamedUsage: TokenUsage | undefined;
+
     try {
-      const { messages, maxTokens, model: modelName, tools, toolChoice, abortSignal } = args;
       const systemMessages = getSystemMessages(messages);
       const conversationMessages = groupToolResults(
         getNonSystemMessages(messages).map((msg) => mapMessageToAnthropicMessageParam(msg)),
@@ -166,7 +171,19 @@ export function constructGoogleAnthropicAgenticStreamFn(model: AiModel): Agentic
       for await (const event of stream) {
         if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
           hasStreamedTextDeltas = true;
+          streamedText += event.delta.text;
           yield { type: 'text', delta: event.delta.text };
+        } else if (event.type === 'message_start') {
+          streamedUsage = buildTokenUsage(event.message.usage);
+        } else if (event.type === 'message_delta') {
+          // message_delta carries the cumulative output token count for the response so far.
+          const promptTokens = streamedUsage?.promptTokens ?? 0;
+          const completionTokens = event.usage.output_tokens;
+          streamedUsage = {
+            promptTokens,
+            completionTokens,
+            totalTokens: promptTokens + completionTokens,
+          };
         } else if (event.type === 'message_stop') {
           const message: ParsedMessage<null> = await stream.finalMessage();
           const { content, usage, stop_reason } = message;
@@ -203,6 +220,15 @@ export function constructGoogleAnthropicAgenticStreamFn(model: AiModel): Agentic
         }
       }
     } catch (error) {
+      if (isAbortError(error, abortSignal)) {
+        // Partial tool calls are unusable, but the prompt was consumed upstream and still costs money.
+        yield {
+          type: 'finish',
+          usage: streamedUsage ?? estimateTokenUsage({ messages, text: streamedText }),
+        };
+        return;
+      }
+
       handleError(error);
     }
   };

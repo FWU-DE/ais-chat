@@ -1,4 +1,9 @@
-import { TokenPointsExceededError, SharedChatExpiredError, runAgentLoop } from '@ais-chat/ai-core';
+import {
+  TokenPointsExceededError,
+  SharedChatExpiredError,
+  runAgentLoop,
+  type TokenUsage,
+} from '@ais-chat/ai-core';
 import { NotFoundError } from '@shared/error';
 import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
 import { getUserAndContextByUserId } from '@/auth/utils';
@@ -88,7 +93,6 @@ export async function sendCharacterMessage({
     model: definedModel,
     federalStateId: teacherUserAndContext.federalState.id,
   });
-  const generationModelId = modelSelection.modelIds[0];
 
   // Check expiry
   if (sharedChatHasExpired(character)) {
@@ -195,6 +199,45 @@ export async function sendCharacterMessage({
     imageAttachmentType,
   );
 
+  const persistUsage = async ({
+    usage,
+    priceInCents,
+    modelUsages,
+  }: {
+    usage: TokenUsage;
+    priceInCents: number;
+    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+  }) => {
+    if (modelUsages.length === 0) {
+      return;
+    }
+
+    // Agentic requests can invoke several models across iterations. Persist each usage
+    // entry separately so pricing and reporting stay associated with the serving model.
+    for (const modelUsage of modelUsages) {
+      await dbUpdateTokenUsageByCharacterChatId({
+        modelId: modelUsage.modelId,
+        completionTokens: modelUsage.usage.completionTokens,
+        promptTokens: modelUsage.usage.promptTokens,
+        characterId: character.id,
+        userId: teacherUserAndContext.id,
+        costsInCent: modelUsage.priceInCents,
+      });
+    }
+
+    await sendRabbitmqEvent(
+      constructNewMessageEvent({
+        user: teacherUserAndContext,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        costsInCent: priceInCents,
+        provider: definedModel.provider,
+        anonymous: true,
+        character,
+      }),
+    );
+  };
+
   runAgentLoop({
     modelSelection,
     apiKeyId,
@@ -206,38 +249,19 @@ export async function sendCharacterMessage({
       update(delta);
     },
     onComplete: async ({ usage, priceInCents, modelUsages }) => {
-      const { promptTokens, completionTokens } = usage;
-
-      // Agentic requests can invoke several models across iterations. Persist each usage
-      // entry separately so pricing and reporting stay associated with the serving model.
-      for (const modelUsage of modelUsages) {
-        await dbUpdateTokenUsageByCharacterChatId({
-          modelId: modelUsage.modelId ?? generationModelId,
-          completionTokens: modelUsage.usage.completionTokens,
-          promptTokens: modelUsage.usage.promptTokens,
-          characterId: character.id,
-          userId: teacherUserAndContext.id,
-          costsInCent: modelUsage.priceInCents,
-        });
-      }
-
-      await sendRabbitmqEvent(
-        constructNewMessageEvent({
-          user: teacherUserAndContext,
-          promptTokens,
-          completionTokens,
-          costsInCent: priceInCents,
-          provider: definedModel.provider,
-          anonymous: true,
-          character,
-        }),
-      );
+      await persistUsage({ usage, priceInCents, modelUsages });
 
       done();
     },
-    onError: (error) => {
+    onError: async (error, billedUsage) => {
       logError('Error during character chat streaming:', error);
-      streamError(error);
+      try {
+        await persistUsage(billedUsage);
+      } catch (persistenceError) {
+        logError('Error persisting failed character chat usage:', persistenceError);
+      } finally {
+        streamError(error);
+      }
     },
   });
 

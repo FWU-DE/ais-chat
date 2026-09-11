@@ -27,7 +27,7 @@ import type {
 } from '../types';
 import { AiGenerationError, ResponsibleAIError } from '../../errors';
 import { createGoogleClient, formatGoogleError } from '../../google-client';
-import { calculateCompletionUsage } from '../utils';
+import { estimateTokenUsage, isAbortError } from '../utils';
 import {
   constructGoogleAnthropicAgenticStreamFn,
   constructGoogleAnthropicTextGenerationFn,
@@ -210,16 +210,7 @@ function toTokenUsage({
     };
   }
 
-  const calculatedUsage = calculateCompletionUsage({
-    messages,
-    modelMessage: { role: 'assistant', content: text },
-  });
-
-  return {
-    promptTokens: calculatedUsage.prompt_tokens,
-    completionTokens: calculatedUsage.completion_tokens,
-    totalTokens: calculatedUsage.total_tokens,
-  };
+  return estimateTokenUsage({ messages, text });
 }
 
 export function constructGoogleTextStreamFn(model: AiModel): TextStreamFn {
@@ -340,6 +331,10 @@ export function constructGoogleAgenticStreamFn(model: AiModel): AgenticStreamFn 
     toolChoice,
     abortSignal,
   }) {
+    let text = '';
+    // Gemini reports cumulative usage on every chunk, so the last one survives an abort.
+    let usage: TokenUsage | undefined;
+
     try {
       const stream = await clientConfig.client.models.generateContentStream(
         buildGoogleGenerateContentParameters({
@@ -353,8 +348,6 @@ export function constructGoogleAgenticStreamFn(model: AiModel): AgenticStreamFn 
         }),
       );
 
-      let text = '';
-      let usage: TokenUsage | undefined;
       let functionCalls: NonNullable<GenerateContentResponse['functionCalls']> | undefined;
 
       for await (const chunk of stream) {
@@ -405,6 +398,12 @@ export function constructGoogleAgenticStreamFn(model: AiModel): AgenticStreamFn 
     } catch (error) {
       if (error instanceof ResponsibleAIError || error instanceof AiGenerationError) {
         throw error;
+      }
+
+      if (isAbortError(error, abortSignal)) {
+        // Partial tool calls are unusable, but the prompt was consumed upstream and still costs money.
+        yield { type: 'finish', usage: usage ?? estimateTokenUsage({ messages, text }) };
+        return;
       }
 
       throw new AiGenerationError(formatGoogleError('Google Vertex AI Agentic stream', error));

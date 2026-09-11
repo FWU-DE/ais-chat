@@ -40,7 +40,18 @@ type RunAgentLoopParams = {
     modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
     agentLoopMessages: AiCoreMessage[];
   }) => void;
-  onError: (error: Error) => void;
+  /**
+   * Receives whatever was billed before the failure, so a partially completed generation is
+   * still accounted for.
+   */
+  onError: (
+    error: Error,
+    billedUsage: {
+      usage: TokenUsage;
+      priceInCents: number;
+      modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+    },
+  ) => void;
 };
 
 export function runAgentLoop({
@@ -73,6 +84,13 @@ export function runAgentLoop({
         modelId: lastModelId,
         modelUsages,
         agentLoopMessages: loopMessages.slice(messages.length),
+      });
+
+    const fail = (error: Error) =>
+      onError(error, {
+        usage: totalUsage,
+        priceInCents: totalPriceInCents,
+        modelUsages,
       });
 
     try {
@@ -118,6 +136,9 @@ export function runAgentLoop({
                   totalTokens: totalUsage.totalTokens + usage.totalTokens,
                 };
                 totalPriceInCents += priceInCents;
+                if (usage.estimated) {
+                  agentSpan.setAttribute('gen_ai.usage.estimated', true);
+                }
               },
               tools.length > 0 && !isLastIteration
                 ? { tools, toolChoice: 'auto', abortSignal }
@@ -225,23 +246,28 @@ export function runAgentLoop({
       if (fullText.trim().length === 0) {
         // An abort before any output is a teardown, not an empty-response failure.
         if (!abortSignal?.aborted) {
-          onError(new EmptyResponseError({ modelId: lastModelId }));
+          fail(new EmptyResponseError({ modelId: lastModelId }));
+          return;
         }
-        return;
+
+        // Nothing was generated and nothing was billed, so there is nothing to report.
+        if (modelUsages.length === 0) {
+          return;
+        }
       }
 
       complete();
     } catch (error) {
       // An aborted generation is an expected teardown, not a failure to report, but whatever
-      // was already generated must still reach the caller so it can be persisted.
+      // was already generated must still reach the caller so it can be persisted and billed.
       if (abortSignal?.aborted) {
-        if (fullText.trim().length > 0) {
+        if (fullText.trim().length > 0 || modelUsages.length > 0) {
           complete();
         }
         return;
       }
       logError('Error during agent loop:', error);
-      onError(error instanceof Error ? error : new Error('Unknown error'));
+      fail(error instanceof Error ? error : new Error('Unknown error'));
     }
   })();
 }
