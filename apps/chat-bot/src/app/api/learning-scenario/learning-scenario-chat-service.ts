@@ -1,4 +1,9 @@
-import { TokenPointsExceededError, SharedChatExpiredError, runAgentLoop } from '@ais-chat/ai-core';
+import {
+  TokenPointsExceededError,
+  SharedChatExpiredError,
+  runAgentLoop,
+  type TokenUsage,
+} from '@ais-chat/ai-core';
 import { NotFoundError } from '@shared/error';
 import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
 import { getUserAndContextByUserId } from '@/auth/utils';
@@ -93,7 +98,6 @@ export async function sendLearningScenarioMessage({
     model: definedModel,
     federalStateId: teacherUserAndContext.federalState.id,
   });
-  const generationModelId = modelSelection.modelIds[0];
 
   // Check expiry
   if (sharedChatHasExpired(learningScenario)) {
@@ -200,6 +204,45 @@ export async function sendLearningScenarioMessage({
     imageAttachmentType,
   );
 
+  const persistUsage = async ({
+    usage,
+    priceInCents,
+    modelUsages,
+  }: {
+    usage: TokenUsage;
+    priceInCents: number;
+    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+  }) => {
+    if (modelUsages.length === 0) {
+      return;
+    }
+
+    // Agentic requests can invoke several models across iterations. Persist each usage
+    // entry separately so pricing and reporting stay associated with the serving model.
+    for (const modelUsage of modelUsages) {
+      await dbUpdateTokenUsageBySharedLearningScenarioId({
+        modelId: modelUsage.modelId,
+        completionTokens: modelUsage.usage.completionTokens,
+        promptTokens: modelUsage.usage.promptTokens,
+        learningScenarioId: learningScenario.id,
+        userId: teacherUserAndContext.id,
+        costsInCent: modelUsage.priceInCents,
+      });
+    }
+
+    await sendRabbitmqEvent(
+      constructNewMessageEvent({
+        user: teacherUserAndContext,
+        provider: definedModel.provider,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        costsInCent: priceInCents,
+        anonymous: true,
+        sharedChat: learningScenario,
+      }),
+    );
+  };
+
   runAgentLoop({
     modelSelection,
     apiKeyId,
@@ -211,38 +254,19 @@ export async function sendLearningScenarioMessage({
       update(delta);
     },
     onComplete: async ({ usage, priceInCents, modelUsages }) => {
-      const { promptTokens, completionTokens } = usage;
-
-      // Agentic requests can invoke several models across iterations. Persist each usage
-      // entry separately so pricing and reporting stay associated with the serving model.
-      for (const modelUsage of modelUsages) {
-        await dbUpdateTokenUsageBySharedLearningScenarioId({
-          modelId: modelUsage.modelId ?? generationModelId,
-          completionTokens: modelUsage.usage.completionTokens,
-          promptTokens: modelUsage.usage.promptTokens,
-          learningScenarioId: learningScenario.id,
-          userId: teacherUserAndContext.id,
-          costsInCent: modelUsage.priceInCents,
-        });
-      }
-
-      await sendRabbitmqEvent(
-        constructNewMessageEvent({
-          user: teacherUserAndContext,
-          provider: definedModel.provider,
-          promptTokens,
-          completionTokens,
-          costsInCent: priceInCents,
-          anonymous: true,
-          sharedChat: learningScenario,
-        }),
-      );
+      await persistUsage({ usage, priceInCents, modelUsages });
 
       done();
     },
-    onError: (error) => {
+    onError: async (error, billedUsage) => {
       logError('Error during shared chat streaming:', error);
-      streamError(error);
+      try {
+        await persistUsage(billedUsage);
+      } catch (persistenceError) {
+        logError('Error persisting failed shared chat usage:', persistenceError);
+      } finally {
+        streamError(error);
+      }
     },
   });
 

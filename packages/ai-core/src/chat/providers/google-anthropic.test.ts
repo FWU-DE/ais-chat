@@ -1042,4 +1042,73 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
       },
     ]);
   });
+
+  it('should report the usage seen so far when the stream is aborted', async () => {
+    const model = createGoogleAnthropicModel();
+    const abortController = new AbortController();
+
+    streamMock.mockReturnValue({
+      [Symbol.asyncIterator]: async function* () {
+        yield { type: 'message_start', message: { usage: { input_tokens: 42, output_tokens: 0 } } };
+        yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Partial' } };
+        yield { type: 'message_delta', usage: { output_tokens: 7 } };
+        abortController.abort();
+        throw Object.assign(new Error('Request was aborted.'), { name: 'AbortError' });
+      },
+      finalMessage: finalMessageMock,
+    });
+
+    const generateAgenticStream = constructGoogleAnthropicAgenticStreamFn(model);
+    const events = [];
+
+    for await (const event of generateAgenticStream({
+      messages: [{ role: 'user', content: 'test' }],
+      model: 'anthropic/claude',
+      abortSignal: abortController.signal,
+    })) {
+      events.push(event);
+    }
+
+    expect(events).toEqual([
+      { type: 'text', delta: 'Partial' },
+      {
+        type: 'finish',
+        usage: {
+          promptTokens: 42,
+          completionTokens: 7,
+          totalTokens: 49,
+        },
+      },
+    ]);
+  });
+
+  it('should estimate usage when the stream is aborted before any usage was reported', async () => {
+    const model = createGoogleAnthropicModel();
+    const abortController = new AbortController();
+
+    streamMock.mockReturnValue({
+      [Symbol.asyncIterator]: async function* () {
+        yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Partial' } };
+        abortController.abort();
+        throw Object.assign(new Error('Request was aborted.'), { name: 'AbortError' });
+      },
+      finalMessage: finalMessageMock,
+    });
+
+    const generateAgenticStream = constructGoogleAnthropicAgenticStreamFn(model);
+    const events = [];
+
+    for await (const event of generateAgenticStream({
+      messages: [{ role: 'user', content: 'test' }],
+      model: 'anthropic/claude',
+      abortSignal: abortController.signal,
+    })) {
+      events.push(event);
+    }
+
+    const finish = events[1];
+    expect(finish?.type).toBe('finish');
+    expect(finish?.type === 'finish' && finish.usage.estimated).toBe(true);
+    expect(finish?.type === 'finish' && finish.usage.promptTokens).toBeGreaterThan(0);
+  });
 });
