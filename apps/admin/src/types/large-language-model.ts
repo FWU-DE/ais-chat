@@ -14,6 +14,7 @@ export type LargeLanguageModel = {
   isNew: boolean;
   isDeleted: boolean;
   useBifrost: boolean;
+  safetyFilterEnabled: boolean;
 };
 
 export type CreateLargeLanguageModel = {
@@ -27,6 +28,7 @@ export type CreateLargeLanguageModel = {
   isNew: boolean;
   isDeleted: boolean;
   useBifrost: boolean;
+  safetyFilterEnabled: boolean;
   providerKeys: Array<{ providerKeyId: string; upstreamModelName: string }>;
 };
 
@@ -41,5 +43,6 @@ export type UpdateLargeLanguageModel = {
   isNew: boolean;
   isDeleted: boolean;
   useBifrost: boolean;
+  safetyFilterEnabled: boolean;
   providerKeys: Array<{ providerKeyId: string; upstreamModelName: string }>;
 };
