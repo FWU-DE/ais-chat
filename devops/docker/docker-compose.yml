@@ -115,7 +115,7 @@ services:
 
   # Xberg text extraction service
   xberg:
-    image: ghcr.io/xberg-io/xberg:1.0.14-core
+    image: ghcr.io/xberg-io/xberg:1.1.5-core
     restart: unless-stopped
     environment:
       XBERG_MAX_UPLOAD_SIZE_MB: '50'
@@ -154,7 +154,7 @@ services:
       start_period: 2s
 
   bifrost:
-    image: ghcr.io/maximhq/bifrost:v2.0.0
+    image: ghcr.io/maximhq/bifrost:v2.1.1
     restart: unless-stopped
     environment:
       BIFROST_ADMIN_USERNAME: admin

@@ -9,7 +9,7 @@ import type {
   TokenUsage,
 } from '../types';
 import { ProviderConfigurationError } from '../../errors';
-import { calculateCompletionUsage, toOpenAIChatTools, toOpenAIMessages } from '../utils';
+import { estimateTokenUsage, isAbortError, toOpenAIChatTools, toOpenAIMessages } from '../utils';
 
 function createIonosClient(model: AiModel): OpenAI {
   if (model.setting.provider !== 'ionos') {
@@ -54,19 +54,12 @@ export function constructIonosTextStreamFn(model: AiModel): TextStreamFn {
       }
     }
 
-    // Calculate the token usage manually as IONOS does not return it
     // TODO: Add token count for image inputs
     // See: https://platform.openai.com/docs/guides/images-vision?api-mode=responses&format=file
-    const calculatedUsage = calculateCompletionUsage({
+    const usage = estimateTokenUsage({
       messages,
-      modelMessage: { role: 'assistant', content },
+      text: content,
     });
-
-    const usage: TokenUsage = {
-      completionTokens: calculatedUsage.completion_tokens,
-      promptTokens: calculatedUsage.prompt_tokens,
-      totalTokens: calculatedUsage.total_tokens,
-    };
 
     if (onComplete) {
       await onComplete(usage);
@@ -97,19 +90,14 @@ export function constructIonosTextGenerationFn(model: AiModel): TextGenerationFn
 
     const text = response.choices[0]?.message?.content ?? '';
 
-    // Calculate the token usage manually as IONOS does not return it reliably
-    const calculatedUsage = calculateCompletionUsage({
+    const usage = estimateTokenUsage({
       messages,
-      modelMessage: { role: 'assistant', content: text },
+      text,
     });
 
     return {
       text,
-      usage: {
-        completionTokens: calculatedUsage.completion_tokens,
-        promptTokens: calculatedUsage.prompt_tokens,
-        totalTokens: calculatedUsage.total_tokens,
-      },
+      usage,
     };
   };
 }
@@ -150,48 +138,58 @@ export function constructIonosAgenticStreamFn(model: AiModel): AgenticStreamFn {
     let usage: TokenUsage | undefined;
     const toolCalls = new Map<number, ToolCallAccumulator>();
 
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta;
-      const chunkContent = delta?.content;
+    try {
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta;
+        const chunkContent = delta?.content;
 
-      if (chunkContent) {
-        content += chunkContent;
-        yield { type: 'text', delta: chunkContent };
-      }
-
-      if (chunk.usage) {
-        usage = {
-          completionTokens: chunk.usage.completion_tokens,
-          promptTokens: chunk.usage.prompt_tokens,
-          totalTokens: chunk.usage.total_tokens,
-        };
-      }
-
-      if (!delta?.tool_calls) {
-        continue;
-      }
-
-      for (const toolCallDelta of delta.tool_calls) {
-        const existingToolCall = toolCalls.get(toolCallDelta.index) ?? {
-          id: '',
-          name: '',
-          arguments: '',
-        };
-
-        if (toolCallDelta.id) {
-          existingToolCall.id = toolCallDelta.id;
+        if (chunkContent) {
+          content += chunkContent;
+          yield { type: 'text', delta: chunkContent };
         }
 
-        if (toolCallDelta.function?.name) {
-          existingToolCall.name = toolCallDelta.function.name;
+        if (chunk.usage) {
+          usage = {
+            completionTokens: chunk.usage.completion_tokens,
+            promptTokens: chunk.usage.prompt_tokens,
+            totalTokens: chunk.usage.total_tokens,
+          };
         }
 
-        if (toolCallDelta.function?.arguments) {
-          existingToolCall.arguments += toolCallDelta.function.arguments;
+        if (!delta?.tool_calls) {
+          continue;
         }
 
-        toolCalls.set(toolCallDelta.index, existingToolCall);
+        for (const toolCallDelta of delta.tool_calls) {
+          const existingToolCall = toolCalls.get(toolCallDelta.index) ?? {
+            id: '',
+            name: '',
+            arguments: '',
+          };
+
+          if (toolCallDelta.id) {
+            existingToolCall.id = toolCallDelta.id;
+          }
+
+          if (toolCallDelta.function?.name) {
+            existingToolCall.name = toolCallDelta.function.name;
+          }
+
+          if (toolCallDelta.function?.arguments) {
+            existingToolCall.arguments += toolCallDelta.function.arguments;
+          }
+
+          toolCalls.set(toolCallDelta.index, existingToolCall);
+        }
       }
+    } catch (error) {
+      if (!isAbortError(error, abortSignal)) {
+        throw error;
+      }
+
+      // Partial tool calls are unusable, but the prompt was consumed upstream and still costs money.
+      yield { type: 'finish', usage: usage ?? estimateTokenUsage({ messages, text: content }) };
+      return;
     }
 
     const resolvedToolCalls: ToolCall[] = [...toolCalls.entries()]
@@ -211,16 +209,10 @@ export function constructIonosAgenticStreamFn(model: AiModel): AgenticStreamFn {
         ),
       ].join('');
 
-      const calculatedUsage = calculateCompletionUsage({
+      usage = estimateTokenUsage({
         messages,
-        modelMessage: { role: 'assistant', content: completionContent },
+        text: completionContent,
       });
-
-      usage = {
-        completionTokens: calculatedUsage.completion_tokens,
-        promptTokens: calculatedUsage.prompt_tokens,
-        totalTokens: calculatedUsage.total_tokens,
-      };
     }
 
     for (const toolCall of resolvedToolCalls) {

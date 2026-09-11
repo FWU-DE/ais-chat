@@ -100,7 +100,7 @@ services:
       start_period: 40s
 
   xberg:
-    image: ghcr.io/xberg-io/xberg:1.0.14-core
+    image: ghcr.io/xberg-io/xberg:1.1.5-core
     environment:
       XBERG_MAX_UPLOAD_SIZE_MB: '50'
     ports:
@@ -116,7 +116,8 @@ services:
 
   mock-llm:
     build:
-      context: ./mock-llm
+      context: ../../services/mock-llm
+      dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - '6556:6556'
@@ -155,7 +156,7 @@ services:
         condition: service_healthy
 
   bifrost:
-    image: ghcr.io/maximhq/bifrost:v2.0.0
+    image: ghcr.io/maximhq/bifrost:v2.1.1
     restart: unless-stopped
     environment:
       BIFROST_ADMIN_USERNAME: admin
