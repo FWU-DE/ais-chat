@@ -626,10 +626,14 @@ export async function sendChatMessage({
       }
     },
     onError: async (error: Error, billedUsage) => {
-      await persistEmptyAssistantMessage();
-      await persistUsage(billedUsage);
-
-      streamError(error);
+      try {
+        await persistEmptyAssistantMessage();
+        await persistUsage(billedUsage);
+      } catch (persistenceError) {
+        logError('Error persisting failed agent loop usage:', persistenceError);
+      } finally {
+        streamError(error);
+      }
     },
   });
 

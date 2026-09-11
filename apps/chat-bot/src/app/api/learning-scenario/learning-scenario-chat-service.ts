@@ -260,9 +260,13 @@ export async function sendLearningScenarioMessage({
     },
     onError: async (error, billedUsage) => {
       logError('Error during shared chat streaming:', error);
-      await persistUsage(billedUsage);
-
-      streamError(error);
+      try {
+        await persistUsage(billedUsage);
+      } catch (persistenceError) {
+        logError('Error persisting failed shared chat usage:', persistenceError);
+      } finally {
+        streamError(error);
+      }
     },
   });
 

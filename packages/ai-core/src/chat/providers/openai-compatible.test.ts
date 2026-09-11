@@ -72,7 +72,7 @@ describe('streamOpenAICompatibleAgenticResponse', () => {
           [Symbol.asyncIterator]: async function* () {
             yield { type: 'response.output_text.delta', delta: 'Partial answer' };
             abortController.abort();
-            throw new Error('Request was aborted.');
+            throw Object.assign(new Error('Request was aborted.'), { name: 'AbortError' });
           },
         }),
       },
@@ -126,5 +126,30 @@ describe('streamOpenAICompatibleAgenticResponse', () => {
     };
 
     await expect(drain()).rejects.toThrow('upstream exploded');
+  });
+
+  it('rethrows unrelated stream errors when the signal was aborted', async () => {
+    const abortController = new AbortController();
+    const client = {
+      responses: {
+        create: vi.fn().mockResolvedValue({
+          [Symbol.asyncIterator]: async function* () {
+            yield* [];
+            abortController.abort();
+            throw new Error('upstream exploded');
+          },
+        }),
+      },
+    } as unknown as OpenAI;
+
+    const generator = streamOpenAICompatibleAgenticResponse({
+      client,
+      messages: [{ role: 'user', content: 'Hi' }],
+      modelName: 'test-model',
+      providerName: 'Test',
+      abortSignal: abortController.signal,
+    });
+
+    await expect(generator.next()).rejects.toThrow('upstream exploded');
   });
 });

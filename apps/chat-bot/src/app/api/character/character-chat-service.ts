@@ -255,9 +255,13 @@ export async function sendCharacterMessage({
     },
     onError: async (error, billedUsage) => {
       logError('Error during character chat streaming:', error);
-      await persistUsage(billedUsage);
-
-      streamError(error);
+      try {
+        await persistUsage(billedUsage);
+      } catch (persistenceError) {
+        logError('Error persisting failed character chat usage:', persistenceError);
+      } finally {
+        streamError(error);
+      }
     },
   });
 

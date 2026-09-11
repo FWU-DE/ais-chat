@@ -1,7 +1,7 @@
 import type OpenAI from 'openai';
 import type { Message, StreamEvent, TokenUsage, ToolCall, ToolDefinition } from '../types';
 import { AiGenerationError } from '../../errors';
-import { estimateTokenUsage, toOpenAIResponsesInput, toOpenAITools } from '../utils';
+import { estimateTokenUsage, isAbortError, toOpenAIResponsesInput, toOpenAITools } from '../utils';
 
 type OpenAICompatibleAgenticStreamArgs = {
   client: OpenAI;
@@ -119,7 +119,7 @@ export async function* streamOpenAICompatibleAgenticResponse({
       }
     }
   } catch (error) {
-    if (!abortSignal?.aborted) {
+    if (!isAbortError(error, abortSignal)) {
       throw error;
     }
 

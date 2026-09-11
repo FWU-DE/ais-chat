@@ -247,3 +247,25 @@ export function estimateTokenUsage({
     estimated: true,
   };
 }
+
+/**
+ * Returns true only for provider errors caused by the supplied abort signal.
+ */
+export function isAbortError(error: unknown, signal?: AbortSignal): boolean {
+  if (!signal?.aborted) {
+    return false;
+  }
+
+  if (error === signal.reason) {
+    return true;
+  }
+
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const errorCode = 'code' in error ? error.code : undefined;
+  return (
+    error.name === 'AbortError' || error.name === 'APIUserAbortError' || errorCode === 'ABORT_ERR'
+  );
+}

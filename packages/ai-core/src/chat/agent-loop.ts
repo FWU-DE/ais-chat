@@ -136,6 +136,9 @@ export function runAgentLoop({
                   totalTokens: totalUsage.totalTokens + usage.totalTokens,
                 };
                 totalPriceInCents += priceInCents;
+                if (usage.estimated) {
+                  agentSpan.setAttribute('gen_ai.usage.estimated', true);
+                }
               },
               tools.length > 0 && !isLastIteration
                 ? { tools, toolChoice: 'auto', abortSignal }

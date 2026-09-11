@@ -1053,7 +1053,7 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
         yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Partial' } };
         yield { type: 'message_delta', usage: { output_tokens: 7 } };
         abortController.abort();
-        throw new Error('Request was aborted.');
+        throw Object.assign(new Error('Request was aborted.'), { name: 'AbortError' });
       },
       finalMessage: finalMessageMock,
     });
@@ -1090,7 +1090,7 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
       [Symbol.asyncIterator]: async function* () {
         yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Partial' } };
         abortController.abort();
-        throw new Error('Request was aborted.');
+        throw Object.assign(new Error('Request was aborted.'), { name: 'AbortError' });
       },
       finalMessage: finalMessageMock,
     });

@@ -27,7 +27,7 @@ import type {
 } from '../types';
 import { AiGenerationError, ResponsibleAIError } from '../../errors';
 import { createGoogleClient, formatGoogleError } from '../../google-client';
-import { estimateTokenUsage } from '../utils';
+import { estimateTokenUsage, isAbortError } from '../utils';
 import {
   constructGoogleAnthropicAgenticStreamFn,
   constructGoogleAnthropicTextGenerationFn,
@@ -400,7 +400,7 @@ export function constructGoogleAgenticStreamFn(model: AiModel): AgenticStreamFn 
         throw error;
       }
 
-      if (abortSignal?.aborted) {
+      if (isAbortError(error, abortSignal)) {
         // Partial tool calls are unusable, but the prompt was consumed upstream and still costs money.
         yield { type: 'finish', usage: usage ?? estimateTokenUsage({ messages, text }) };
         return;

@@ -9,7 +9,7 @@ import type {
   TokenUsage,
 } from '../types';
 import { ProviderConfigurationError } from '../../errors';
-import { estimateTokenUsage, toOpenAIChatTools, toOpenAIMessages } from '../utils';
+import { estimateTokenUsage, isAbortError, toOpenAIChatTools, toOpenAIMessages } from '../utils';
 
 function createIonosClient(model: AiModel): OpenAI {
   if (model.setting.provider !== 'ionos') {
@@ -183,7 +183,7 @@ export function constructIonosAgenticStreamFn(model: AiModel): AgenticStreamFn {
         }
       }
     } catch (error) {
-      if (!abortSignal?.aborted) {
+      if (!isAbortError(error, abortSignal)) {
         throw error;
       }
 

@@ -30,7 +30,7 @@ import { AnthropicVertex, ClientOptions } from '@anthropic-ai/vertex-sdk';
 import { AiGenerationError, RateLimitExceededError } from '../../errors';
 import { ParsedMessage } from '@anthropic-ai/sdk';
 import { instrumentAnthropicAiClient } from '@sentry/core';
-import { estimateTokenUsage } from '../utils';
+import { estimateTokenUsage, isAbortError } from '../utils';
 
 /* used by apps/api when called with stream === false or as auxiliary model in chat-bot */
 export function constructGoogleAnthropicTextGenerationFn(model: AiModel): TextGenerationFn {
@@ -220,7 +220,7 @@ export function constructGoogleAnthropicAgenticStreamFn(model: AiModel): Agentic
         }
       }
     } catch (error) {
-      if (abortSignal?.aborted) {
+      if (isAbortError(error, abortSignal)) {
         // Partial tool calls are unusable, but the prompt was consumed upstream and still costs money.
         yield {
           type: 'finish',
