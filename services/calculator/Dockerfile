@@ -11,7 +11,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY services/calculator/package.json services/calculator/tsconfig.json services/calculator/tsconfig.build.json ./services/calculator/
 COPY services/calculator/src ./services/calculator/src
 COPY packages/typescript-config/package.json packages/typescript-config/base.json ./packages/typescript-config/
-# Injection is disabled in pnpm-workspace.yaml, so use the compatible deploy mode.
+# Deploy creates the standalone production tree; without injected workspace packages,
+# pnpm's default deploy implementation is incompatible, so use the legacy mode.
 RUN corepack enable && corepack prepare \
   && pnpm install --filter @ais-chat/calculator-service... --frozen-lockfile --prefer-offline \
   && pnpm --filter @ais-chat/calculator-service build \
