@@ -13,6 +13,7 @@ import {
   dbGetConversationMessages,
 } from '@shared/db/functions/chat';
 import { dbGetCharacterById } from '@shared/db/functions/character';
+import { dbGetRelatedFiles } from '@shared/db/functions/files';
 import { ConversationModel } from '@shared/db/types';
 
 vi.mock('../db/functions/chat', () => ({
@@ -25,12 +26,17 @@ vi.mock('@shared/db/functions/character', () => ({
   dbGetCharacterById: vi.fn(),
 }));
 
+vi.mock('@shared/db/functions/files', () => ({
+  dbGetRelatedFiles: vi.fn(),
+}));
+
 describe('conversation-service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (
       dbGetConversationMessageById as MockedFunction<typeof dbGetConversationMessageById>
     ).mockResolvedValue(undefined);
+    (dbGetRelatedFiles as MockedFunction<typeof dbGetRelatedFiles>).mockResolvedValue(new Map());
   });
 
   describe('getConversation', () => {

@@ -9,8 +9,10 @@ import { Button } from '@ui/components/button';
 import { BoxArrowDownIcon } from '@phosphor-icons/react';
 import { downloadFileFromBlob, extractFilenameFromResponse } from '@/utils/files/blob-download';
 
+export type SharedConversationMessage = Message & { files?: { id: string }[] };
+
 type DownloadConversationButtonProps = {
-  conversationMessages: Message[];
+  conversationMessages: SharedConversationMessage[];
   className?: React.ComponentProps<'button'>['className'];
   disabled: boolean;
   primaryButton?: boolean;
@@ -18,13 +20,15 @@ type DownloadConversationButtonProps = {
   characterName?: string;
   showText?: boolean;
   inviteCode: string;
+  sharedSessionId?: string;
 };
 
 type DownloadSharedConversationParams = {
-  conversationMessages: Message[];
+  conversationMessages: SharedConversationMessage[];
   sharedConversationName?: string;
   characterName?: string;
   inviteCode: string;
+  sharedSessionId?: string;
 };
 
 export async function fetchSharedConversationDownload({
@@ -32,6 +36,7 @@ export async function fetchSharedConversationDownload({
   sharedConversationName,
   characterName,
   inviteCode,
+  sharedSessionId,
 }: DownloadSharedConversationParams) {
   const response = await fetch(`/api/download-conversation/shared`, {
     method: 'POST',
@@ -43,6 +48,7 @@ export async function fetchSharedConversationDownload({
       characterName,
       sharedConversationName,
       inviteCode,
+      sharedSessionId,
     }),
   });
 
@@ -66,6 +72,7 @@ export default function DownloadSharedConversationButton({
   characterName,
   showText = true,
   inviteCode,
+  sharedSessionId,
 }: DownloadConversationButtonProps) {
   const [isLoading, setIsLoading] = React.useState(false);
   const isMountedRef = React.useRef(true);
@@ -96,6 +103,7 @@ export default function DownloadSharedConversationButton({
         sharedConversationName,
         characterName,
         inviteCode,
+        sharedSessionId,
       });
 
       downloadFileFromBlob(blob, fileName);

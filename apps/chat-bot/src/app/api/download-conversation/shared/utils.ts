@@ -7,17 +7,21 @@ import {
   AlignmentType,
   convertInchesToTwip,
 } from 'docx';
+import { type FileModel } from '@shared/db/schema';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
 import { logError } from '@shared/logging';
 import { markdownToDocx } from '../markdown';
 import { type ChatMessage as Message } from '@/types/chat';
+import { getImageParagraphsForMessage } from '../utils';
 
 export async function generateSharedConversationDocxFiles({
   conversationMessages,
   userFullName,
+  fileMapping,
 }: {
   conversationMessages: Message[];
   userFullName: string;
+  fileMapping: Map<string, FileModel[]>;
 }): Promise<
   | {
       buffer: ArrayBuffer;
@@ -27,9 +31,10 @@ export async function generateSharedConversationDocxFiles({
 > {
   try {
     const conversationMetadata = getConversationMetadata();
-    const messageParagraphs = getConversationMessages({
+    const messageParagraphs = await getConversationMessages({
       messages: conversationMessages,
       userFullName,
+      fileMapping,
     });
 
     const doc = buildDocxDocument({ conversationMetadata, messageParagraphs });
@@ -63,23 +68,28 @@ type SectionType = Paragraph | Table;
 function getConversationMessages({
   messages,
   userFullName,
+  fileMapping,
 }: {
   messages: Message[];
   userFullName: string;
-}): SectionType[] {
-  return messages.flatMap((message) => [
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: `${message.role === 'user' ? userFullName : 'AIS.chat'}:`,
-          bold: true,
-          size: 22,
-        }),
-      ],
-    }),
-    ...markdownToDocx(message.content),
-    new Paragraph({}),
-  ]);
+  fileMapping: Map<string, FileModel[]>;
+}): Promise<SectionType[]> {
+  return Promise.all(
+    messages.map(async (message) => [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `${message.role === 'user' ? userFullName : 'AIS.chat'}:`,
+            bold: true,
+            size: 22,
+          }),
+        ],
+      }),
+      ...markdownToDocx(message.content),
+      ...(await getImageParagraphsForMessage({ messageId: message.id, fileMapping })),
+      new Paragraph({}),
+    ]),
+  ).then((messageSections) => messageSections.flat());
 }
 
 function buildDocxDocument({

@@ -5,6 +5,7 @@ import {
   dbGetConversations,
   dbUpdateConversationTitle,
 } from '@shared/db/functions/chat';
+import { dbGetRelatedFiles } from '@shared/db/functions/files';
 import {
   dbDeleteConversationByIdAndUserId,
   dbDoesInviteCodeExist,
@@ -114,6 +115,7 @@ export async function getConversationAndMessagesForExport({
 }) {
   const conversation = await getConversation({ conversationId, userId });
   let messages = await getConversationMessages({ conversationId, userId });
+  const fileMapping = await dbGetRelatedFiles(conversationId);
 
   if (conversation.characterId) {
     const character = await dbGetCharacterById({
@@ -133,6 +135,7 @@ export async function getConversationAndMessagesForExport({
   return {
     conversation,
     messages: messages.filter((message) => !isToolRelatedMessage(message)),
+    fileMapping,
   };
 }
 
@@ -160,9 +163,12 @@ export async function getConversationMessageForExport({
     throw new NotFoundError('Conversation message not found');
   }
 
+  const fileMapping = await dbGetRelatedFiles(conversationId);
+
   return {
     conversation,
     message,
+    fileMapping,
   };
 }
 
