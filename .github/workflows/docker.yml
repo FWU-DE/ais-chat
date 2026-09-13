@@ -6,10 +6,15 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      build_all_images:
+        description: 'Build all images, ignoring turbo-ignore change detection'
+        type: boolean
+        default: false
 
 concurrency:
-  group: docker-build-main
-  cancel-in-progress: true
+  group: ${{ github.event_name == 'workflow_dispatch' && github.run_id || 'docker-build-main' }}
+  cancel-in-progress: false
 
 permissions:
   artifact-metadata: write
@@ -34,21 +39,25 @@ jobs:
       matrix:
         include:
           - image_name: ais-chat-api
+            package_name: ais-chat-api
             dockerfile: apps/api/Dockerfile
             image_ref: ghcr.io/fwu-de/ais-chat-api
             sentry_project: ${{ vars.SENTRY_PROJECT_API }}
             server_actions_secret: ''
           - image_name: ais-chat-app
+            package_name: ais-chat-app
             dockerfile: apps/chat-bot/Dockerfile
             image_ref: ghcr.io/fwu-de/ais-chat-app
             sentry_project: ${{ vars.SENTRY_PROJECT_DIALOG }}
             server_actions_secret: NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_APP
           - image_name: ais-chat-admin
+            package_name: ais-chat-admin
             dockerfile: apps/admin/Dockerfile
             image_ref: ghcr.io/fwu-de/ais-chat-admin
             sentry_project: ${{ vars.SENTRY_PROJECT_ADMIN }}
             server_actions_secret: NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_ADMIN
           - image_name: ais-chat-calculator
+            package_name: '@ais-chat/calculator-service'
             dockerfile: services/calculator/Dockerfile
             image_ref: ghcr.io/fwu-de/ais-chat-calculator
             sentry_project: ''
@@ -57,6 +66,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -68,7 +79,42 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Determine last built commit for image
+        id: last-built
+        run: |
+          revision=$(docker buildx imagetools inspect "${{ matrix.image_ref }}:latest" \
+            --format '{{ index .Image.Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)
+          if [ -n "$revision" ] && [ "$revision" != "<no value>" ] && git cat-file -e "${revision}^{commit}" 2>/dev/null; then
+            echo "sha=$revision" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=HEAD^" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check if shared build pipeline changed
+        id: pipeline-changed
+        # These files aren't tracked by turbo (outside any workspace package),
+        # so a change here must force a rebuild of every image regardless of
+        # turbo-ignore's per-package result.
+        run: |
+          if git diff --quiet "${{ steps.last-built.outputs.sha }}" -- .github/workflows/docker.yml .dockerignore; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check if build is needed
+        id: turbo-ignore
+        run: |
+          if [ "${{ inputs.build_all_images }}" = "true" ] || [ "${{ steps.pipeline-changed.outputs.changed }}" = "true" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          elif npx turbo-ignore "${{ matrix.package_name }}" --fallback="${{ steps.last-built.outputs.sha }}"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: ${{ env.is_dry_run == 'true' && 'Build (no push)' || 'Build and push' }}
+        if: steps.turbo-ignore.outputs.skip == 'false'
         id: docker-build
         uses: docker/build-push-action@v7
         env:
@@ -89,6 +135,8 @@ jobs:
           build-args: |
             CI=${CI}
             APP_VERSION=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
           tags: |
             ${{ matrix.image_ref }}:latest
             ${{ matrix.image_ref }}:${{ github.sha }}
@@ -98,7 +146,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Generate artifact attestation
-        if: env.is_dry_run != 'true'
+        if: steps.turbo-ignore.outputs.skip == 'false' && env.is_dry_run != 'true'
         uses: actions/attest@v4.2.2
         with:
           subject-name: ${{ matrix.image_ref }}
