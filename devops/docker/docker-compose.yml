@@ -26,11 +26,6 @@ services:
     depends_on:
       fix-keycloak-volume-ownership:
         condition: service_completed_successfully
-    # Application containers use keycloak's network namespace; this gives them
-    # access to calculator without giving calculator an egress-capable network.
-    networks:
-      - default
-      - calculator-isolated
 
   # Fix keycloak volume permissions (runs with uid 1000)
   fix-keycloak-volume-ownership:
@@ -168,12 +163,8 @@ services:
 
   # Sandboxed arithmetic service backed by libqalculate.
   calculator:
-    build:
-      context: ../..
-      dockerfile: services/calculator/Dockerfile
+    image: ghcr.io/fwu-de/ais-chat-calculator:latest
     restart: unless-stopped
-    ports:
-      - '127.0.0.1:8081:8080'
     expose:
       - '8080'
     read_only: true
@@ -183,8 +174,6 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    networks:
-      - calculator-isolated
     deploy:
       resources:
         limits:
@@ -307,6 +296,7 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: ''
 
       # Logging
+      LOG_TO_STDOUT: true
       NEXT_PUBLIC_SENTRY_LOG_LEVEL: debug
     network_mode: service:keycloak
     depends_on:
@@ -362,7 +352,15 @@ services:
       BIFROST_ADMIN_USERNAME: admin
       BIFROST_ADMIN_PASSWORD: admin
 
+      # S3 Object Storage for file uploads
+      OTC_SECRET_ACCESS_KEY: RustFS-Admin-123456
+      OTC_ACCESS_KEY_ID: rustfsadmin
+      OTC_S3_HOSTNAME: http://rustfs:9000
+      OTC_S3_REGION: eu-de
+      OTC_BUCKET_NAME: ais-chat
+
       # Monitoring (optional, leave empty to disable)
+      LOG_TO_STDOUT: true
       NEXT_PUBLIC_SENTRY_LOG_LEVEL: info
     network_mode: service:keycloak
     depends_on:
@@ -428,7 +426,3 @@ volumes:
   bifrost_data:
   rustfs_data:
   xberg_cache:
-
-networks:
-  calculator-isolated:
-    internal: true
