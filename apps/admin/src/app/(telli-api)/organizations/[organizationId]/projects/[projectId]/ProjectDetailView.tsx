@@ -1,7 +1,7 @@
 'use client';
 
 import { startTransition, useCallback, useEffect, useState } from 'react';
-import { getApiKeysAction, getProjectByIdAction } from '../actions';
+import { getApiKeysAction, getProjectByIdAction, deleteProjectAction } from '../actions';
 import { Project } from '@/types/project';
 import { ApiKey } from '@/types/api-key';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/components/card';
@@ -14,10 +14,13 @@ import {
   TableRow,
 } from '@ui/components/table';
 import { Button } from '@ui/components/button';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ROUTES } from '@/consts/routes';
 import { Search } from 'lucide-react';
+import { TrashSimpleIcon } from '@phosphor-icons/react';
 
 export type ProjectDetailViewProps = {
   organizationId: string;
@@ -26,6 +29,8 @@ export type ProjectDetailViewProps = {
 
 export default function ProjectDetailView(props: ProjectDetailViewProps) {
   const { organizationId, projectId } = props;
+  const router = useRouter();
+  const { dialogProps: deleteDialogProps, confirm: confirmDelete } = useConfirmAlertDialog();
   const [project, setProject] = useState<Project | null>(null);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,6 +76,16 @@ export default function ProjectDetailView(props: ProjectDetailViewProps) {
     });
   }, [organizationId, projectId, loadProject, loadApiKeys]);
 
+  async function handleDeleteProject() {
+    const result = await deleteProjectAction(organizationId, projectId);
+    if (result.success) {
+      toast.success('Projekt erfolgreich gelöscht');
+      router.push(ROUTES.api.projects(organizationId));
+    } else {
+      toast.error(result.error.message);
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -112,8 +127,19 @@ export default function ProjectDetailView(props: ProjectDetailViewProps) {
       {/* Project Details */}
       <Card>
         <CardHeader>
-          <CardTitle>Projektdetails</CardTitle>
-          <CardDescription>Informationen zum Projekt {project.name}</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Projektdetails</CardTitle>
+              <CardDescription>Informationen zum Projekt {project.name}</CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => confirmDelete(handleDeleteProject)}
+            >
+              <TrashSimpleIcon /> Löschen
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -179,7 +205,7 @@ export default function ProjectDetailView(props: ProjectDetailViewProps) {
                       {apiKey.expiresAt ? new Date(apiKey.expiresAt).toLocaleString() : '-'}
                     </TableCell>
                     <TableCell>
-                      <div className="flex space-x-2">
+                      <div className="flex items-center space-x-2">
                         <Link
                           href={ROUTES.api.apiKeyModelMappings(
                             organizationId,
@@ -201,6 +227,13 @@ export default function ProjectDetailView(props: ProjectDetailViewProps) {
           )}
         </CardContent>
       </Card>
+      <ConfirmAlertDialog
+        title="Projekt löschen"
+        description="Möchten Sie dieses Projekt wirklich löschen? Alle zugehörigen API-Schlüssel werden ebenfalls entfernt."
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        {...deleteDialogProps}
+      />
     </div>
   );
 }

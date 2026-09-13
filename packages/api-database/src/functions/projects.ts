@@ -1,6 +1,6 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '../db';
-import { apiKeyTable, projectTable } from '../schema';
+import { apiKeyTable, llmModelApiKeyMappingTable, projectTable } from '../schema';
 import type { ApiKeyModel, ProjectModel, ProjectInsertModel } from '../schema';
 
 export async function dbGetAllProjects() {
@@ -82,4 +82,31 @@ export async function dbUpdateProject(project: Omit<ProjectModel, 'createdAt'>) 
     )
     .returning();
   return projectUpdated[0];
+}
+
+export async function dbDeleteProject(organizationId: string, projectId: string): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const [project] = await tx
+      .select({ id: projectTable.id })
+      .from(projectTable)
+      .where(and(eq(projectTable.id, projectId), eq(projectTable.organizationId, organizationId)))
+      .limit(1);
+    if (!project) return false;
+
+    const apiKeys = await tx
+      .select({ id: apiKeyTable.id })
+      .from(apiKeyTable)
+      .where(eq(apiKeyTable.projectId, projectId));
+    const apiKeyIds = apiKeys.map((apiKey) => apiKey.id);
+
+    if (apiKeyIds.length > 0) {
+      await tx
+        .delete(llmModelApiKeyMappingTable)
+        .where(inArray(llmModelApiKeyMappingTable.apiKeyId, apiKeyIds));
+      await tx.delete(apiKeyTable).where(inArray(apiKeyTable.id, apiKeyIds));
+    }
+
+    await tx.delete(projectTable).where(eq(projectTable.id, projectId));
+    return true;
+  });
 }
