@@ -29,15 +29,15 @@ This guide helps you run AIS.chat using pre-built Docker images with minimal con
    - Create S3 bucket in RustFS
 
 3. **Access the applications:**
-   - **Chat-bot app**: http://localhost:3000
-   - **Admin app**: http://localhost:3001
+   - **Chat-bot app**: http://localhost:3000 (credentials: `teacher` / `password`)
+   - **Admin app**: http://localhost:3001 (credentials: `admin` / `password` or `editor` / `password`)
    - **API**: http://localhost:3002
    - **Keycloak**: http://localhost:8080 (credentials: `admin` / `admin`)
    - **RustFS Console**: http://localhost:9001 (S3-compatible storage, credentials: `rustfsadmin` / `RustFS-Admin-123456`)
 
 4. **Configure the application using ais-chat-admin:**
    - Navigate to the admin app at http://localhost:3001
-   - Login with teacher credentials (username: `teacher`, password: `password`)
+   - Login with admin credentials (username: `admin`, password: `password`)
    - In `ais-chat-api` section:
      - Create your LLM models
      - Create Projects (i.e., federal states) and assign the models to them.
@@ -49,7 +49,7 @@ This guide helps you run AIS.chat using pre-built Docker images with minimal con
 
 5. **Login with default credentials:**
 
-   Use any of the predefined users from the Keycloak realm configuration:
+   Open the chat-bot app at http://localhost:3000 and log in with any of the predefined users from the Keycloak realm configuration:
    - Username: `teacher` / Password: `password` (teacher)
    - See [ais-chat-local-realm.json](devops/docker/keycloak/ais-chat-local-realm.json) for all available users
 

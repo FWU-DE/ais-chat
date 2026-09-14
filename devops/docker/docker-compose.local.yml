@@ -185,8 +185,6 @@ services:
       - '127.0.0.1:8081:8080'
     expose:
       - '8080'
-    networks:
-      - default
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=64m

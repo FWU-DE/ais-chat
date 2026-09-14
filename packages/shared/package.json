@@ -60,12 +60,12 @@
     "@ais-chat/typescript-config": "workspace:*",
     "@types/node": "24.13.3",
     "@types/pg": "8.23.1",
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "5.0.0",
     "eslint": "10.8.1",
     "prettier": "3.9.6",
     "prettier-eslint": "17.1.2",
     "tsx": "4.23.13",
     "typescript": "6.0.3",
-    "vitest": "4.1.11"
+    "vitest": "5.0.0"
   }
 }
