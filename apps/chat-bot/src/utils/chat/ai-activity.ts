@@ -65,8 +65,17 @@ export function toLinks(entries: unknown): AiActivityLink[] | undefined {
 export function createAiActivityCollector(toolRegistry: Record<string, ToolRegistration>) {
   const steps: AiActivityStep[] = [];
   const stepsById = new Map<string, AiActivityToolStep>();
+  let hasToolActivity = false;
 
   return {
+    start(): boolean {
+      if (steps.length > 0) {
+        return false;
+      }
+
+      steps.push({ kind: 'analysis' });
+      return true;
+    },
     addToolCalls(toolCalls: ToolCall[]): boolean {
       const toolSteps = toolCalls.flatMap((toolCall) => {
         const activity = toolRegistry[toolCall.name]?.activity;
@@ -77,7 +86,11 @@ export function createAiActivityCollector(toolRegistry: Record<string, ToolRegis
         return false;
       }
 
-      steps.push({ kind: 'analysis' }, ...toolSteps);
+      hasToolActivity = true;
+      if (steps.at(-1)?.kind !== 'analysis') {
+        steps.push({ kind: 'analysis' });
+      }
+      steps.push(...toolSteps);
 
       for (const step of toolSteps) {
         stepsById.set(step.id, step);
@@ -104,6 +117,11 @@ export function createAiActivityCollector(toolRegistry: Record<string, ToolRegis
       return true;
     },
     finish(): boolean {
+      if (!hasToolActivity) {
+        steps.length = 0;
+        return false;
+      }
+
       if (steps.length === 0) {
         return false;
       }
