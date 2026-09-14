@@ -99,19 +99,19 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
         </div>
 
         {links.length > 0 && (
-          <ul className="max-h-44 overflow-y-auto rounded-xl border border-[#e7e7e7] bg-white p-1">
+          <ul className="max-h-44 overflow-y-auto rounded-xl border border-border bg-background-2 p-1">
             {links.map((link, index) => (
               <li key={`${link.url}-${index}`}>
                 <a
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 hover:bg-secondary/20"
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 hover:bg-background-2"
                   title={link.title}
                   aria-label={t('open-source', { source: link.title })}
                 >
                   <span className="min-w-0 flex-1 truncate text-sm text-black">{link.title}</span>
-                  <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                  <span className="shrink-0 rounded-full border border-primary/15 bg-primary/8 px-2 py-0.5 text-[13px] font-medium leading-5.75 text-primary">
                     {getLinkDomain(link.url)}
                   </span>
                 </a>

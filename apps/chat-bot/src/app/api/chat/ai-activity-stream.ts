@@ -13,6 +13,9 @@ export function createAiActivityStream(
 ) {
   const collector = createAiActivityCollector(toolRegistry);
 
+  collector.start();
+  update(encodeChatStreamEvent({ type: 'ai_activity', steps: collector.getSteps() }));
+
   function publish() {
     update(encodeChatStreamEvent({ type: 'ai_activity', steps: collector.getSteps() }));
   }
