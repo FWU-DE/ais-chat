@@ -34,6 +34,10 @@ jobs:
        github.event.workflow_run.head_branch == 'main')
     env:
       is_dry_run: ${{ github.event_name == 'workflow_dispatch' }}
+      # Triggered by workflow_run after "Build" (checks.yml) finishes, to build
+      # the same commit it just validated. Bare `github.sha` would instead
+      # resolve to main's current tip, which may have moved on since.
+      resolved_sha: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
 
     strategy:
       matrix:
@@ -67,6 +71,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.resolved_sha }}
           fetch-depth: 0
 
       - name: Setup Docker Buildx
@@ -134,12 +139,12 @@ jobs:
             NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
           build-args: |
             CI=${CI}
-            APP_VERSION=${{ github.sha }}
+            APP_VERSION=${{ env.resolved_sha }}
           labels: |
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ env.resolved_sha }}
           tags: |
             ${{ matrix.image_ref }}:latest
-            ${{ matrix.image_ref }}:${{ github.sha }}
+            ${{ matrix.image_ref }}:${{ env.resolved_sha }}
           push: ${{ env.is_dry_run != 'true' }}
           provenance: mode=max
           cache-from: type=gha
