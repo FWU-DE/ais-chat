@@ -133,6 +133,34 @@ describe('generateImageWithBilling', () => {
     );
   });
 
+  it('blocks input images that exceed the safety model limit', async () => {
+    mockGetImageModelById.mockResolvedValue(mockModel);
+    mockHasAccessToModel.mockResolvedValue(true);
+    mockIsApiKeyOverQuota.mockResolvedValue(false);
+
+    await expect(
+      generateImageWithBilling(
+        'model-123',
+        'test prompt',
+        'api-key-123',
+        {
+          size: '1024x1024',
+          inputImages: [
+            {
+              data: Buffer.alloc(8 * 1024 * 1024),
+              mimeType: 'image/png',
+              filename: 'large.png',
+            },
+          ],
+        },
+        'safety-model',
+      ),
+    ).rejects.toThrow(ResponsibleAIError);
+
+    expect(mockCheckInputSafety).not.toHaveBeenCalled();
+    expect(mockGenerateImage).not.toHaveBeenCalled();
+  });
+
   it('should throw InvalidModelError when API key does not have access', async () => {
     mockGetImageModelById.mockResolvedValue(mockModel);
     mockHasAccessToModel.mockResolvedValue(false);
