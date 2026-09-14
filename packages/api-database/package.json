@@ -17,8 +17,8 @@
     "db:generate": "dotenv -e ../../apps/api/.env.local -- drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",
     "db:migrate:local": "dotenv -e ../../apps/api/.env.local -- drizzle-kit migrate --config=./drizzle.config.ts",
-    "db:seed": "dotenv -e ../../apps/api/.env.local -- tsx src/seed.ts",
-    "db:seed:from-stage": "dotenv -e ../../apps/api/.env.local -- tsx src/seed-from-stage.ts",
+    "db:seed": "dotenv -e ../../apps/api/.env.development -e ../../apps/api/.env.local -- tsx src/seed.ts",
+    "db:seed:from-stage": "dotenv -e ../../apps/api/.env.development -e ../../apps/api/.env.local -- tsx src/seed-from-stage.ts",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -39,12 +39,12 @@
     "@ais-chat/typescript-config": "workspace:*",
     "@types/node": "24.13.3",
     "@types/pg": "8.23.1",
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "5.0.0",
     "dotenv-cli": "11.0.0",
     "drizzle-kit": "0.31.10",
     "eslint": "10.8.1",
     "tsx": "4.23.13",
     "typescript": "6.0.3",
-    "vitest": "4.1.11"
+    "vitest": "5.0.0"
   }
 }

@@ -57,9 +57,9 @@ export class ResponsibleAIError extends AiGenerationError {
 }
 
 /**
- * Error thrown when the API rate limit is exceeded.
+ * Base class for rate limit errors. Throw one of its subclasses instead.
  */
-export class RateLimitExceededError extends AiGenerationError {
+export abstract class RateLimitExceededError extends AiGenerationError {
   constructor(message: string) {
     super(message);
     this.name = 'RateLimitExceededError';
@@ -67,7 +67,46 @@ export class RateLimitExceededError extends AiGenerationError {
 
   static is(error: unknown): error is RateLimitExceededError {
     if (error && typeof error === 'object') {
-      return 'name' in error && error.name === 'RateLimitExceededError';
+      return (
+        'name' in error &&
+        (error.name === 'RateLimitExceededError' ||
+          error.name === 'ApiKeyQuotaExceededError' ||
+          error.name === 'ProviderRateLimitExceededError')
+      );
+    }
+    return false;
+  }
+}
+
+/**
+ * Error thrown when the AIS API key's configured quota is exhausted.
+ */
+export class ApiKeyQuotaExceededError extends RateLimitExceededError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ApiKeyQuotaExceededError';
+  }
+
+  static is(error: unknown): error is ApiKeyQuotaExceededError {
+    if (error && typeof error === 'object') {
+      return 'name' in error && error.name === 'ApiKeyQuotaExceededError';
+    }
+    return false;
+  }
+}
+
+/**
+ * Error thrown when an upstream provider temporarily rejects requests due to a rate limit.
+ */
+export class ProviderRateLimitExceededError extends RateLimitExceededError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ProviderRateLimitExceededError';
+  }
+
+  static is(error: unknown): error is ProviderRateLimitExceededError {
+    if (error && typeof error === 'object') {
+      return 'name' in error && error.name === 'ProviderRateLimitExceededError';
     }
     return false;
   }
@@ -141,6 +180,84 @@ export class SharedChatExpiredError extends AiGenerationError {
   }
 }
 
+const RESPONSIBLE_AI_ERROR_CODES = new Set([
+  'content_policy_violation',
+  'moderation_blocked',
+  'responsibleaipolicyviolation',
+]);
+
+const INVALID_MODEL_ERROR_CODES = new Set(['invalid_model', 'model_not_found']);
+
+function getProviderErrorDetails(error: unknown): {
+  code?: string;
+  message: string;
+  status?: number;
+} {
+  const record =
+    error && typeof error === 'object' ? (error as Record<string, unknown>) : undefined;
+  const nestedError =
+    record?.error && typeof record.error === 'object'
+      ? (record.error as Record<string, unknown>)
+      : undefined;
+
+  const code = [record?.code, nestedError?.code].find(
+    (value): value is string => typeof value === 'string',
+  );
+  const status = [record?.status, nestedError?.status].find(
+    (value): value is number => typeof value === 'number',
+  );
+  const message =
+    error instanceof Error
+      ? error.message
+      : ([record?.message, nestedError?.message].find(
+          (value): value is string => typeof value === 'string',
+        ) ?? String(error));
+
+  return { code, message, status };
+}
+
+// TODO TD-1484: Check if this can be simplified once all models are routed through bifrost
+// CAVE: Bifrost errors also might not have the exact same structure for all errors
+export function normalizeAiGenerationError(error: unknown, context: string): AiGenerationError {
+  if (error instanceof AiGenerationError && error.name !== 'AiGenerationError') {
+    return error;
+  }
+
+  const { code, message, status } = getProviderErrorDetails(error);
+  const normalizedCode = code?.toLowerCase();
+  const normalizedMessage = message.toLowerCase();
+
+  if (
+    status === 429 ||
+    normalizedCode === 'rate_limit_exceeded' ||
+    /\b429\b/.test(normalizedMessage) ||
+    normalizedMessage.includes('rate limit') ||
+    normalizedMessage.includes('too many requests')
+  ) {
+    return new ProviderRateLimitExceededError(message);
+  }
+
+  if (
+    (normalizedCode !== undefined && RESPONSIBLE_AI_ERROR_CODES.has(normalizedCode)) ||
+    normalizedMessage.includes('request was rejected by the safety system') ||
+    normalizedMessage.includes('content policy violation')
+  ) {
+    return new ResponsibleAIError(message);
+  }
+
+  if (
+    (normalizedCode !== undefined && INVALID_MODEL_ERROR_CODES.has(normalizedCode)) ||
+    normalizedMessage.includes('model not found') ||
+    normalizedMessage.includes('model does not exist')
+  ) {
+    return new InvalidModelError(message);
+  }
+
+  return error instanceof AiGenerationError
+    ? error
+    : new AiGenerationError(`${context}: ${message}`);
+}
+
 type AiGenerationErrorType<T extends AiGenerationError = AiGenerationError> = {
   is: (error: unknown) => error is T;
 };
@@ -150,6 +267,8 @@ export const aiGenerationErrorTypes = [
   EmptyResponseError,
   ResponsibleAIError,
   RateLimitExceededError,
+  ApiKeyQuotaExceededError,
+  ProviderRateLimitExceededError,
   InvalidModelError,
   ProviderConfigurationError,
   TokenPointsExceededError,

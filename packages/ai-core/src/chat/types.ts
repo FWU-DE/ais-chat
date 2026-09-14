@@ -82,6 +82,8 @@ export type TokenUsage = {
   completionTokens: number;
   promptTokens: number;
   totalTokens: number;
+  /** Set when the provider never reported usage and the numbers were derived locally. */
+  estimated?: boolean;
 };
 
 export type ModelSelection = {

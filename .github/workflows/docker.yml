@@ -5,6 +5,7 @@ on:
     workflows: ['Build'] # must match the name from `checks.yml`
     types: [completed]
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: docker-build-main
@@ -19,12 +20,15 @@ permissions:
 
 jobs:
   build_push_docker_images:
-    name: Build and push docker image ${{ matrix.image_name }}
+    name: Docker image ${{ matrix.image_name }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main'
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    env:
+      is_dry_run: ${{ github.event_name == 'workflow_dispatch' }}
 
     strategy:
       matrix:
@@ -64,7 +68,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
+      - name: ${{ env.is_dry_run == 'true' && 'Build (no push)' || 'Build and push' }}
         id: docker-build
         uses: docker/build-push-action@v7
         env:
@@ -88,12 +92,13 @@ jobs:
           tags: |
             ${{ matrix.image_ref }}:latest
             ${{ matrix.image_ref }}:${{ github.sha }}
-          push: true
+          push: ${{ env.is_dry_run != 'true' }}
           provenance: mode=max
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Generate artifact attestation
+        if: env.is_dry_run != 'true'
         uses: actions/attest@v4.2.2
         with:
           subject-name: ${{ matrix.image_ref }}

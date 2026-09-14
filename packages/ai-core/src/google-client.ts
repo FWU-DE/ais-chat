@@ -4,6 +4,10 @@ import { GoogleAuth, type GoogleAuthOptions } from 'google-auth-library';
 import { ProviderConfigurationError } from './errors';
 import { instrumentGoogleGenAIClient } from '@sentry/core';
 
+type GoogleGenAIAuthOptions = NonNullable<
+  NonNullable<ConstructorParameters<typeof GoogleGenAI>[0]>['googleAuthOptions']
+>;
+
 const GOOGLE_API_VERSION = 'v1';
 const GOOGLE_CLOUD_PLATFORM_SCOPE = 'https://www.googleapis.com/auth/cloud-platform';
 const GOOGLE_MULTI_REGION_LOCATIONS = new Set(['eu', 'us']);
@@ -80,7 +84,7 @@ export function createGoogleClient(model: LlmModel): GoogleClientConfig {
       project: projectId,
       location,
       apiVersion: GOOGLE_API_VERSION,
-      googleAuthOptions: getGoogleAuthOptions(model.setting),
+      googleAuthOptions: getGoogleAuthOptions(model.setting) as unknown as GoogleGenAIAuthOptions,
     }),
   );
 

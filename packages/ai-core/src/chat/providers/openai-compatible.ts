@@ -1,7 +1,7 @@
 import type OpenAI from 'openai';
 import type { Message, StreamEvent, TokenUsage, ToolCall, ToolDefinition } from '../types';
 import { AiGenerationError } from '../../errors';
-import { toOpenAIResponsesInput, toOpenAITools } from '../utils';
+import { estimateTokenUsage, isAbortError, toOpenAIResponsesInput, toOpenAITools } from '../utils';
 
 type OpenAICompatibleAgenticStreamArgs = {
   client: OpenAI;
@@ -60,59 +60,72 @@ export async function* streamOpenAICompatibleAgenticResponse({
   let modelId: string | undefined;
   const toolCalls = new Map<number, ToolCallAccumulator>();
 
-  for await (const chunk of stream) {
-    if (chunk.type === 'response.output_text.delta') {
-      content += chunk.delta;
-      yield { type: 'text', delta: chunk.delta };
-    } else if (chunk.type === 'response.function_call_arguments.delta') {
-      const existingToolCall = toolCalls.get(chunk.output_index) ?? {
-        id: '',
-        callId: '',
-        name: '',
-        arguments: '',
-      };
+  try {
+    for await (const chunk of stream) {
+      if (chunk.type === 'response.output_text.delta') {
+        content += chunk.delta;
+        yield { type: 'text', delta: chunk.delta };
+      } else if (chunk.type === 'response.function_call_arguments.delta') {
+        const existingToolCall = toolCalls.get(chunk.output_index) ?? {
+          id: '',
+          callId: '',
+          name: '',
+          arguments: '',
+        };
 
-      existingToolCall.arguments += chunk.delta;
-      toolCalls.set(chunk.output_index, existingToolCall);
-    } else if (chunk.type === 'response.function_call_arguments.done') {
-      const existingToolCall = toolCalls.get(chunk.output_index) ?? {
-        id: '',
-        callId: '',
-        name: '',
-        arguments: '',
-      };
+        existingToolCall.arguments += chunk.delta;
+        toolCalls.set(chunk.output_index, existingToolCall);
+      } else if (chunk.type === 'response.function_call_arguments.done') {
+        const existingToolCall = toolCalls.get(chunk.output_index) ?? {
+          id: '',
+          callId: '',
+          name: '',
+          arguments: '',
+        };
 
-      existingToolCall.name = chunk.name;
-      existingToolCall.arguments = chunk.arguments;
-      toolCalls.set(chunk.output_index, existingToolCall);
-    } else if (chunk.type === 'response.output_item.done' && chunk.item.type === 'function_call') {
-      const existingToolCall = toolCalls.get(chunk.output_index) ?? {
-        id: '',
-        callId: '',
-        name: '',
-        arguments: '',
-      };
+        existingToolCall.name = chunk.name;
+        existingToolCall.arguments = chunk.arguments;
+        toolCalls.set(chunk.output_index, existingToolCall);
+      } else if (
+        chunk.type === 'response.output_item.done' &&
+        chunk.item.type === 'function_call'
+      ) {
+        const existingToolCall = toolCalls.get(chunk.output_index) ?? {
+          id: '',
+          callId: '',
+          name: '',
+          arguments: '',
+        };
 
-      existingToolCall.id = chunk.item.id ?? chunk.item.call_id;
-      existingToolCall.callId = chunk.item.call_id;
-      existingToolCall.name = chunk.item.name;
-      existingToolCall.arguments = chunk.item.arguments;
-      toolCalls.set(chunk.output_index, existingToolCall);
-    } else if (
-      (chunk.type === 'response.completed' ||
-        chunk.type === 'response.incomplete' ||
-        chunk.type === 'response.failed') &&
-      chunk.response.usage
-    ) {
-      usage = {
-        completionTokens: chunk.response.usage.output_tokens,
-        promptTokens: chunk.response.usage.input_tokens,
-        totalTokens: chunk.response.usage.total_tokens,
-      };
-      modelId = await getModelId?.(
-        (chunk.response as typeof chunk.response & { extra_fields?: unknown }).extra_fields,
-      );
+        existingToolCall.id = chunk.item.id ?? chunk.item.call_id;
+        existingToolCall.callId = chunk.item.call_id;
+        existingToolCall.name = chunk.item.name;
+        existingToolCall.arguments = chunk.item.arguments;
+        toolCalls.set(chunk.output_index, existingToolCall);
+      } else if (
+        (chunk.type === 'response.completed' ||
+          chunk.type === 'response.incomplete' ||
+          chunk.type === 'response.failed') &&
+        chunk.response.usage
+      ) {
+        usage = {
+          completionTokens: chunk.response.usage.output_tokens,
+          promptTokens: chunk.response.usage.input_tokens,
+          totalTokens: chunk.response.usage.total_tokens,
+        };
+        modelId = await getModelId?.(
+          (chunk.response as typeof chunk.response & { extra_fields?: unknown }).extra_fields,
+        );
+      }
     }
+  } catch (error) {
+    if (!isAbortError(error, abortSignal)) {
+      throw error;
+    }
+
+    // Partial tool calls are unusable, but the prompt was consumed upstream and still costs money.
+    yield { type: 'finish', usage: usage ?? estimateTokenUsage({ messages, text: content }) };
+    return;
   }
 
   const resolvedToolCalls: ToolCall[] = [];

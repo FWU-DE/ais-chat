@@ -1,12 +1,12 @@
 import { isKnownAiGenerationError, ResponsibleAIError } from '../errors';
 import { getSafetyModelByName } from '../models';
 import { checkSafety } from './providers';
-import type { SafetyMessage } from './types';
+import type { SafetyMessage, SafetyResult } from './types';
 
 export { checkSafety } from './providers';
 export type { SafetyCheckArgs, SafetyImage, SafetyMessage, SafetyResult } from './types';
 
-export function interpretSafetyResult(result: import('./types').SafetyResult): void {
+export function interpretSafetyResult(result: SafetyResult): void {
   if (result.safe) {
     return;
   }

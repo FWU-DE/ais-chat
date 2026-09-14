@@ -139,6 +139,8 @@ describe('handleImageGeneration', () => {
   });
 
   it('persists a second version and attaches the selected generated image to its prompt', async () => {
+    mocks.getSafetyModel.mockResolvedValue({ name: 'safety-model' });
+
     const result = await handleImageGeneration({
       prompt: 'Make it blue',
       model: imageModel,
@@ -154,6 +156,13 @@ describe('handleImageGeneration', () => {
       conversationId: 'conversation-id',
       fileIds: ['previous-generated-file'],
     });
+    expect(mocks.generateImageWithBilling).toHaveBeenCalledWith(
+      imageModel.id,
+      'Make it blue',
+      'api-key-id',
+      { inputImages: [], size: '1024x1024' },
+      'safety-model',
+    );
     expect(mocks.dbInsertChatContent).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({ orderNumber: 3, role: 'user' }),

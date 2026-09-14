@@ -1,10 +1,17 @@
 import { billImageGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
 import { generateImage } from './providers';
 import { hasAccessToModel } from '../api-keys/model-access';
-import { AiGenerationError, InvalidModelError } from '../errors';
+import {
+  ApiKeyQuotaExceededError,
+  InvalidModelError,
+  normalizeAiGenerationError,
+  ResponsibleAIError,
+} from '../errors';
 import { getImageModelById, getImageModelByName } from '../models';
 import { ImageGenerationRequestOptions } from './types';
 import { checkInputSafety } from '../safety';
+
+const MAX_SAFETY_IMAGE_URL_LENGTH = 10 * 1024 * 1024;
 
 /**
  * Generates an image using the specified model and prompt, with access control and billing.
@@ -39,22 +46,28 @@ export async function generateImageWithBilling(
   }
 
   if (isOverQuota) {
-    throw new AiGenerationError(`API key has exceeded its monthly quota`);
+    throw new ApiKeyQuotaExceededError(`API key has exceeded its monthly quota`);
   }
 
   try {
     if (safetyModelName && model.safetyFilterEnabled !== false) {
+      const safetyImages = (options?.inputImages ?? []).map((image) => ({
+        type: 'image' as const,
+        contentType: image.mimeType,
+        url: `data:${image.mimeType};base64,${image.data.toString('base64')}`,
+      }));
+
+      if (safetyImages.some((image) => image.url.length > MAX_SAFETY_IMAGE_URL_LENGTH)) {
+        throw new ResponsibleAIError('Input image is too large for the safety model');
+      }
+
       await checkInputSafety(
         safetyModelName,
         [
           {
             role: 'user',
             content: prompt,
-            images: (options?.inputImages ?? []).map((image) => ({
-              type: 'image' as const,
-              contentType: image.mimeType,
-              url: `data:${image.mimeType};base64,${image.data.toString('base64')}`,
-            })),
+            images: safetyImages,
           },
         ],
         apiKeyId,
@@ -74,13 +87,7 @@ export async function generateImageWithBilling(
       priceInCents,
     };
   } catch (error) {
-    // Wrap non-AiGenerationError errors
-    if (!(error instanceof AiGenerationError)) {
-      throw new AiGenerationError(
-        `Image generation failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-    throw error;
+    throw normalizeAiGenerationError(error, 'Image generation failed');
   }
 }
 

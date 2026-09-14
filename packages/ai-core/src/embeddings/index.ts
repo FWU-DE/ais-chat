@@ -1,7 +1,7 @@
 import { isApiKeyOverQuota } from '../api-keys/billing';
 import { generateEmbeddings } from './providers';
 import { hasAccessToModel } from '../api-keys/model-access';
-import { AiGenerationError, InvalidModelError } from '../errors';
+import { ApiKeyQuotaExceededError, InvalidModelError, normalizeAiGenerationError } from '../errors';
 import { getEmbeddingModelById, getEmbeddingModelByName } from '../models';
 
 /**
@@ -37,7 +37,7 @@ export async function generateEmbeddingsWithBilling(
   }
 
   if (isOverQuota) {
-    throw new AiGenerationError(`API key has exceeded its monthly quota`);
+    throw new ApiKeyQuotaExceededError(`API key has exceeded its monthly quota`);
   }
 
   try {
@@ -47,13 +47,7 @@ export async function generateEmbeddingsWithBilling(
 
     return embeddingResponse;
   } catch (error) {
-    // Wrap non-AiGenerationError errors
-    if (!(error instanceof AiGenerationError)) {
-      throw new AiGenerationError(
-        `Embedding generation failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-    throw error;
+    throw normalizeAiGenerationError(error, 'Embedding generation failed');
   }
 }
 
