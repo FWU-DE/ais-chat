@@ -117,7 +117,9 @@ export function LargeLanguageModelDetailView({
           description: model.description,
           priceMetadata: JSON.stringify(model.priceMetadata, null, 2),
           supportedImageFormats: JSON.stringify(model.supportedImageFormats, null, 2),
-          imageGenerationConfig: JSON.stringify(model.imageGenerationConfig, null, 2),
+          imageGenerationConfig: model.imageGenerationConfig
+            ? JSON.stringify(model.imageGenerationConfig, null, 2)
+            : '',
           additionalParameters: JSON.stringify(model.additionalParameters, null, 2),
           isNew: model.isNew,
           isDeleted: model.isDeleted,
