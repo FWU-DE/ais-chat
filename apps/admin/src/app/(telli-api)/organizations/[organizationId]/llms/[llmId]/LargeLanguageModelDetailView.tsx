@@ -34,12 +34,8 @@ const jsonStringSchema = z.string().refine((str) => {
   }
 }, 'Muss ein gültiges JSON-Format sein');
 
-// Builds a Zod schema for a JSON-encoded textarea field that must parse into
-// a value matching `shape`. Used to give fields like priceMetadata,
-// supportedImageFormats, and imageGenerationConfig proper shape validation
-// instead of just checking they contain *some* valid JSON — leaving them on
-// generic JSON validation lets invalid-but-parseable values (e.g. `{}`)
-// silently break the model downstream.
+// Builds a Zod schema for a JSON-encoded textarea that must parse into a
+// value matching `shape`, instead of just checking for *some* valid JSON.
 function createJsonStringSchema<T>(
   shape: z.ZodType<T>,
   invalidShapeMessage: string,
@@ -65,9 +61,6 @@ function createJsonStringSchema<T>(
   });
 }
 
-// priceMetadata must match one of the known shapes ({type: 'text', ...},
-// {type: 'image', ...}, ...), otherwise the model breaks downstream in areas
-// that evaluate priceMetadata.type (see StaticModelConfigurationView).
 const priceMetadataSchema = createJsonStringSchema(
   llmModelPriceMetadataSchema,
   'Muss einer der bekannten Preis-Formen entsprechen (siehe Beispiele). Ein leeres Objekt ist nicht gültig.',
