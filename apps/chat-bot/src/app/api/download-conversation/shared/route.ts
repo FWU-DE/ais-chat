@@ -8,7 +8,6 @@ import { dbGetFilesInIds } from '@shared/db/functions/files';
 import { type FileModel } from '@shared/db/schema';
 import { ForbiddenError } from '@shared/error';
 import { isSharedChatFileMetadata, type SharedChatFileMetadata, verify } from '../../shared-chat';
-import { getSharedChatEntity } from '../../shared-chat/shared-chat-get-entity';
 
 const requestSchema = z.object({
   messages: z.array(
@@ -98,13 +97,7 @@ async function getSharedChatFileMapping({
   const files = await dbGetFilesInIds(fileIds);
   verify.filesDoNotBelongToAnyUser(files);
   const fileMetadata = verifySharedChatFilesBelongToSession({ files, inviteCode, sharedSessionId });
-  const sharedEntity = await getSharedChatEntity({
-    inviteCode,
-    entityType: fileMetadata.entityType,
-    entityId: fileMetadata.entityId,
-  });
 
-  verify.sharedChatEntityIsAccessible(sharedEntity);
   verify.sharedChatFileOwnershipBySession({
     files,
     inviteCode,
