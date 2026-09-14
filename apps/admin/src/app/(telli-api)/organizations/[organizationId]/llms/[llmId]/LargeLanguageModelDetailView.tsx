@@ -20,6 +20,7 @@ import { Field, FieldDescription, FieldError, FieldLabel } from '@ui/components/
 import { Input } from '@ui/components/input';
 import { TrashSimpleIcon } from '@phosphor-icons/react';
 import { llmModelPriceMetadataSchema } from '@ais-chat/shared/db/schema';
+import { imageGenerationConfigSchema } from '@ais-chat/api-database/types';
 import { PriceMetadataExamplesDialog } from './PriceMetadataExamplesDialog';
 
 // Helper function to validate JSON
@@ -33,13 +34,24 @@ const jsonStringSchema = z.string().refine((str) => {
   }
 }, 'Muss ein gültiges JSON-Format sein');
 
-// priceMetadata must match one of the known shapes ({type: 'text', ...},
-// {type: 'image', ...}, ...), otherwise the model breaks downstream in areas
-// that evaluate priceMetadata.type (see StaticModelConfigurationView).
-const priceMetadataSchema = z
-  .string()
-  .min(1, 'Preis-Metadaten sind erforderlich')
-  .superRefine((str, ctx) => {
+// Builds a Zod schema for a JSON-encoded textarea field that must parse into
+// a value matching `shape`. Used to give fields like priceMetadata,
+// supportedImageFormats, and imageGenerationConfig proper shape validation
+// instead of just checking they contain *some* valid JSON — leaving them on
+// generic JSON validation lets invalid-but-parseable values (e.g. `{}`)
+// silently break the model downstream.
+function createJsonStringSchema<T>(
+  shape: z.ZodType<T>,
+  invalidShapeMessage: string,
+  { allowEmpty = true }: { allowEmpty?: boolean } = {},
+) {
+  return z.string().superRefine((str, ctx) => {
+    if (!str.trim()) {
+      if (!allowEmpty) {
+        ctx.addIssue({ code: 'custom', message: 'Dieses Feld ist erforderlich' });
+      }
+      return;
+    }
     let parsed: unknown;
     try {
       parsed = JSON.parse(str);
@@ -47,23 +59,38 @@ const priceMetadataSchema = z
       ctx.addIssue({ code: 'custom', message: 'Muss ein gültiges JSON-Format sein' });
       return;
     }
-    const result = llmModelPriceMetadataSchema.safeParse(parsed);
-    if (!result.success) {
-      ctx.addIssue({
-        code: 'custom',
-        message:
-          'Muss einer der bekannten Preis-Formen entsprechen (siehe Beispiele). Ein leeres Objekt ist nicht gültig.',
-      });
+    if (!shape.safeParse(parsed).success) {
+      ctx.addIssue({ code: 'custom', message: invalidShapeMessage });
     }
   });
+}
+
+// priceMetadata must match one of the known shapes ({type: 'text', ...},
+// {type: 'image', ...}, ...), otherwise the model breaks downstream in areas
+// that evaluate priceMetadata.type (see StaticModelConfigurationView).
+const priceMetadataSchema = createJsonStringSchema(
+  llmModelPriceMetadataSchema,
+  'Muss einer der bekannten Preis-Formen entsprechen (siehe Beispiele). Ein leeres Objekt ist nicht gültig.',
+  { allowEmpty: false },
+);
+
+const supportedImageFormatsSchema = createJsonStringSchema(
+  z.array(z.string()),
+  'Muss ein JSON-Array mit unterstützten Bild-Dateiendungen sein (z. B. ["png", "jpeg"])',
+);
+
+const imageGenerationConfigFormSchema = createJsonStringSchema(
+  imageGenerationConfigSchema,
+  'Muss eine gültige Bildgenerierungs-Konfiguration sein',
+);
 
 const llmFormSchema = z.object({
   name: z.string().min(1, 'Name ist erforderlich'),
   displayName: z.string().min(1, 'Anzeigename ist erforderlich'),
   description: z.string().optional().default(''),
   priceMetadata: priceMetadataSchema,
-  supportedImageFormats: jsonStringSchema.optional().default(''),
-  imageGenerationConfig: jsonStringSchema.optional().default(''),
+  supportedImageFormats: supportedImageFormatsSchema.optional().default(''),
+  imageGenerationConfig: imageGenerationConfigFormSchema.optional().default(''),
   additionalParameters: jsonStringSchema.optional().default(''),
   isNew: z.boolean().default(false),
   isDeleted: z.boolean().default(false),
