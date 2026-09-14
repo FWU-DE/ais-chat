@@ -98,7 +98,7 @@ function getConversationMetadata({ conversation }: { conversation: ConversationM
 }
 
 type SectionType = Paragraph | Table;
-function getConversationMessages({
+async function getConversationMessages({
   messages,
   fileMapping,
   gptName,
@@ -109,7 +109,7 @@ function getConversationMessages({
   gptName: string;
   userFullName: string;
 }): Promise<SectionType[]> {
-  return Promise.all(
+  const messageSections = await Promise.all(
     messages.map(async (message: ConversationMessageModel) => [
       new Paragraph({
         children: [
@@ -124,7 +124,9 @@ function getConversationMessages({
       ...(await getImageParagraphsForMessage({ messageId: message.id, fileMapping })),
       new Paragraph({}),
     ]),
-  ).then((messageSections) => messageSections.flat());
+  );
+
+  return messageSections.flat();
 }
 
 export async function generateConversationMessageDocxFile({
