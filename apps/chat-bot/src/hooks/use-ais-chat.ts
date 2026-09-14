@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { decodeChatStreamEvent, readTextStream } from '@/utils/streaming';
 import type { WebSearchResult } from '@shared/db/schema';
+import type { AiActivityStep } from '@/types/ai-activity';
 import {
   deserializeError,
   toUIMessages,
@@ -51,6 +52,8 @@ export type UseChatReturn = {
   ) => Promise<void>;
   isLoading: boolean;
   status: ChatStatus;
+  /** Activity steps of the generation that is currently running. */
+  activitySteps: AiActivityStep[];
   error: Error | null;
   reload: (context?: ChatRequestContext) => Promise<void>;
   stop: () => void;
@@ -80,6 +83,7 @@ export function useAisChat({
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState('');
   const [status, setStatus] = useState<ChatStatus>('ready');
+  const [activitySteps, setActivitySteps] = useState<AiActivityStep[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   // Seed from the actual initial state (which may have been restored from
@@ -112,6 +116,7 @@ export function useAisChat({
 
       setStatus('submitted');
       setError(null);
+      setActivitySteps([]);
       abortControllerRef.current = new AbortController();
 
       // Add user message immediately
@@ -135,6 +140,7 @@ export function useAisChat({
         // We need to handle the first chunk separately to avoid missing content
         let firstChunk = true;
         let assistantWebSearchResults: WebSearchResult[] = result.webSearchResults ?? [];
+        let assistantActivitySteps: AiActivityStep[] = [];
 
         const ensureAssistantMessage = () => {
           if (!firstChunk) {
@@ -146,6 +152,7 @@ export function useAisChat({
             role: 'assistant',
             content: '',
             webSearchResults: assistantWebSearchResults,
+            activitySteps: assistantActivitySteps.length > 0 ? assistantActivitySteps : undefined,
           };
 
           setMessages((prev) => [...prev, assistantMessage]);
@@ -186,6 +193,31 @@ export function useAisChat({
               continue;
             }
 
+            if (streamEvent?.type === 'ai_activity') {
+              assistantActivitySteps = streamEvent.steps;
+              setActivitySteps(assistantActivitySteps);
+
+              if (firstChunk) {
+                continue;
+              }
+
+              setMessages((prev) => {
+                const updated = [...prev];
+                const lastIdx = updated.length - 1;
+
+                if (updated[lastIdx]?.role === 'assistant') {
+                  updated[lastIdx] = {
+                    ...updated[lastIdx]!,
+                    activitySteps: assistantActivitySteps,
+                  };
+                }
+
+                return updated;
+              });
+
+              continue;
+            }
+
             ensureAssistantMessage();
             setMessages((prev) => {
               const updated = [...prev];
@@ -210,11 +242,13 @@ export function useAisChat({
           return prev;
         });
 
+        setActivitySteps([]);
         setStatus('ready');
       } catch (err) {
         const error = err instanceof Error ? err : new Error('Unknown error');
         setError(error);
         setStatus('error');
+        setActivitySteps([]);
         onError?.(error);
         logError('Error in submitMessage', error);
 
@@ -290,6 +324,7 @@ export function useAisChat({
     handleSubmit,
     isLoading,
     status,
+    activitySteps,
     error,
     reload,
     stop,
