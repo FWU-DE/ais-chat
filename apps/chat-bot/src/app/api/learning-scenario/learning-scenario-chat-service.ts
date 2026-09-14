@@ -147,7 +147,6 @@ export async function sendLearningScenarioMessage({
   });
 
   const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
-  const aiActivity = createAiActivityStream(update);
   const assistantMessageId = crypto.randomUUID();
 
   const allowWebTools = isWebSearchEnabledForEntity({
@@ -174,6 +173,7 @@ export async function sendLearningScenarioMessage({
       );
     },
   });
+  const aiActivity = createAiActivityStream(update, tools.toolRegistry);
 
   // Build system prompt
   const systemPrompt = constructLearningScenarioSystemPrompt({

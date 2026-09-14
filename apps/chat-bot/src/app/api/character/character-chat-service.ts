@@ -142,7 +142,6 @@ export async function sendCharacterMessage({
   });
 
   const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
-  const aiActivity = createAiActivityStream(update);
   const assistantMessageId = crypto.randomUUID();
 
   const allowWebTools = isWebSearchEnabledForEntity({
@@ -169,6 +168,7 @@ export async function sendCharacterMessage({
       );
     },
   });
+  const aiActivity = createAiActivityStream(update, tools.toolRegistry);
 
   // Build system prompt
   const systemPrompt = constructCharacterSystemPrompt({

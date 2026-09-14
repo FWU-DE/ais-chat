@@ -10,6 +10,8 @@ import {
   sanitizeSubject,
   type MundoSearchResult,
 } from '../mundo-search';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import { parseJsonRecord, readString, truncate } from '@/utils/chat/ai-activity';
 import type { ToolDefinition, ToolRegistration } from './types';
 
 type MundoSearchToolResponse = {
@@ -82,5 +84,19 @@ export function buildMundoSearchTool(): ToolRegistration {
     return JSON.stringify(response);
   };
 
-  return { definition, handler };
+  return {
+    definition,
+    handler,
+    activity: {
+      createStep: (toolCall: ToolCall) => {
+        const args = parseJsonRecord(toolCall.arguments);
+        return {
+          kind: 'tool' as const,
+          id: toolCall.id,
+          tool: 'mundo_search' as const,
+          detail: truncate(readString(args, 'query')),
+        };
+      },
+    },
+  };
 }
