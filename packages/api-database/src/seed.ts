@@ -75,12 +75,14 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     id: 'a0a46b60-41d5-4843-856d-c6d8172f0fca',
     name: 'mock-echo-1',
     displayName: process.env.E2E_TEXT_MODEL_1 ?? 'Mock LLM',
+    safetyFilterEnabled: false,
   },
   {
     ...mockLlm,
     id: '689342a5-89ed-4d43-bc8c-a1a00f464184',
     name: 'mock-echo-2',
     displayName: process.env.E2E_TEXT_MODEL_2 ?? 'Mock LLM (2)',
+    safetyFilterEnabled: false,
   },
   // Realm LLMs
   {
