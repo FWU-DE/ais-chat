@@ -13,7 +13,7 @@ import { isChatImageAttachment } from './types';
 import { getTextModelById } from '../models';
 
 export const MAX_AGENTIC_ITERATIONS = 3;
-export const MAX_TOOL_CALLS_PER_ITERATION = 2;
+export const MAX_TOOL_CALLS_PER_ITERATION = 8;
 
 const toolCallDuration = metrics
   .getMeter('ais-chat.tools', '0.0.1')
@@ -36,6 +36,9 @@ type RunAgentLoopParams = {
   /** Tears down the upstream provider stream when the client goes away or the generation times out. */
   abortSignal?: AbortSignal;
   onTextChunk: (delta: string) => void;
+  /** Called once per iteration with the tool calls that are about to be executed. */
+  onToolCalls?: (calls: ToolCall[]) => void;
+  onToolResult?: (result: { toolCallId: string; name: string; result: string }) => void;
   onComplete: (result: {
     fullText: string;
     usage: TokenUsage;
@@ -67,6 +70,8 @@ export function runAgentLoop({
   agentName,
   abortSignal,
   onTextChunk,
+  onToolCalls,
+  onToolResult,
   onComplete,
   onError,
 }: RunAgentLoopParams): void {
@@ -199,6 +204,10 @@ export function runAgentLoop({
               toolCalls: [...pendingToolCalls, ...overBudgetToolCalls],
             });
 
+            if (pendingToolCalls.length > 0) {
+              onToolCalls?.(pendingToolCalls);
+            }
+
             const toolResults = await Promise.all([
               ...pendingToolCalls.map((toolCall) =>
                 Sentry.startSpan(
@@ -240,6 +249,8 @@ export function runAgentLoop({
                         'tool.status': status,
                       });
                     }
+
+                    onToolResult?.({ toolCallId: toolCall.id, name: toolCall.name, result });
 
                     return { toolCallId: toolCall.id, result };
                   },

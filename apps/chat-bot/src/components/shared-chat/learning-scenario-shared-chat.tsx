@@ -19,6 +19,7 @@ export default function LearningScenarioSharedChat({
       id: message.id,
       role: message.role,
       content: message.content,
+      activitySteps: message.activitySteps,
     })) ?? [];
 
   const chat = useLearningScenarioChat({
