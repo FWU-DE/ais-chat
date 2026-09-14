@@ -189,6 +189,58 @@ describe('constructGoogleSafetyCheckFn', () => {
     });
   });
 
+  it('preserves signed URL query parameters', async () => {
+    const model = createGoogleSafetyModel();
+    const signedUrl = 'https://example.com/image.png?X-Amz-Signature=test&X-Amz-Expires=300';
+
+    await constructGoogleSafetyCheckFn(model)({
+      model: model.name,
+      messages: [
+        {
+          role: 'user',
+          content: 'Describe this image',
+          images: [{ type: 'image', contentType: 'image/png', url: signedUrl }],
+        },
+      ],
+    });
+
+    const request = vi.mocked(fetch).mock.calls[0]?.[1];
+    const body = JSON.parse(request?.body as string) as {
+      instances: [{ messages: Array<{ content: unknown[] }> }];
+    };
+
+    expect(body.instances[0].messages[0]?.content).toContainEqual({
+      type: 'image_url',
+      image_url: { url: signedUrl },
+    });
+  });
+
+  it('preserves valid base64 data URLs', async () => {
+    const model = createGoogleSafetyModel();
+    const dataUrl = 'data:image/png;base64,iVBORw0KGgo=';
+
+    await constructGoogleSafetyCheckFn(model)({
+      model: model.name,
+      messages: [
+        {
+          role: 'user',
+          content: 'Describe this image',
+          images: [{ type: 'image', contentType: 'image/png', url: dataUrl }],
+        },
+      ],
+    });
+
+    const request = vi.mocked(fetch).mock.calls[0]?.[1];
+    const body = JSON.parse(request?.body as string) as {
+      instances: [{ messages: Array<{ content: unknown[] }> }];
+    };
+
+    expect(body.instances[0].messages[0]?.content).toContainEqual({
+      type: 'image_url',
+      image_url: { url: dataUrl },
+    });
+  });
+
   it('forwards at most four valid images and reports dropped extras', async () => {
     const model = createGoogleSafetyModel();
     const images = Array.from({ length: 5 }, (_, index) => ({
@@ -358,6 +410,30 @@ describe('constructGoogleSafetyCheckFn', () => {
       }),
     ).resolves.toEqual({ safe: false, categories: [] });
   });
+
+  it.each(['unsafe S1 S2', 'unsafe S1,S2'])(
+    'parses multiple category formats: %s',
+    async (classification) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(
+          new Response(
+            JSON.stringify({
+              predictions: [{ choices: [{ message: { content: classification } }] }],
+            }),
+            { status: 200 },
+          ),
+        ),
+      );
+
+      await expect(
+        constructGoogleSafetyCheckFn(createGoogleSafetyModel())({
+          model: 'google-safety-model',
+          messages: [{ role: 'user', content: 'test' }],
+        }),
+      ).resolves.toEqual({ safe: false, categories: ['S1', 'S2'] });
+    },
+  );
 
   it.each([
     [
