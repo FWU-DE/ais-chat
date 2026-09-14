@@ -6,14 +6,19 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@ui/components/button';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/components/card';
 import { FormField } from '@ui/components/form/form-field';
 import { FormFieldCheckbox } from '@ui/components/form/form-field-checkbox';
 import { FormErrorDisplay } from '@/components/FormErrorDisplay';
 import { ROUTES } from '@/consts/routes';
 import type { ProviderKey } from '@/types/provider-key';
-import { logError } from '@shared/logging';
-import { createProviderKeyAction, updateProviderKeyAction } from './actions';
+import {
+  createProviderKeyAction,
+  deleteProviderKeyAction,
+  updateProviderKeyAction,
+} from './actions';
+import { TrashSimpleIcon } from '@phosphor-icons/react';
 
 const providerKeyFormSchema = z.object({
   name: z.string().trim().min(1, 'Name ist erforderlich'),
@@ -42,6 +47,7 @@ export function ProviderKeyDetailView({
 }) {
   const router = useRouter();
   const isCreate = mode === 'create';
+  const { dialogProps: deleteDialogProps, confirm: confirmDelete } = useConfirmAlertDialog();
   const {
     control,
     formState: { errors, isDirty, isSubmitting },
@@ -66,24 +72,33 @@ export function ProviderKeyDetailView({
       isEnabled: data.isEnabled,
     };
 
-    try {
-      if (isCreate) {
-        const result = await createProviderKeyAction(organizationId, payload);
-        if (!result.success) throw new Error(result.error.message);
+    if (isCreate) {
+      const result = await createProviderKeyAction(organizationId, payload);
+      if (result.success) {
         toast.success('Provider-Key erfolgreich erstellt');
         router.push(ROUTES.api.providerKeyDetails(organizationId, result.value.id));
-      } else if (providerKey) {
-        const result = await updateProviderKeyAction(organizationId, providerKey.id, payload);
-        if (!result.success) throw new Error(result.error.message);
-        toast.success('Provider-Key erfolgreich aktualisiert');
+      } else {
+        toast.error(result.error.message);
       }
-    } catch (error) {
-      logError('Error saving provider key', error);
-      toast.error(
-        isCreate
-          ? 'Fehler beim Erstellen des Provider-Keys'
-          : 'Fehler beim Aktualisieren des Provider-Keys',
-      );
+    } else if (providerKey) {
+      const result = await updateProviderKeyAction(organizationId, providerKey.id, payload);
+      if (result.success) {
+        toast.success('Provider-Key erfolgreich aktualisiert');
+      } else {
+        toast.error(result.error.message);
+      }
+    }
+  }
+
+  async function handleDelete() {
+    if (!providerKey) return;
+
+    const result = await deleteProviderKeyAction(organizationId, providerKey.id);
+    if (result.success) {
+      toast.success('Provider-Key erfolgreich gelöscht');
+      router.push(ROUTES.api.providerKeys(organizationId));
+    } else {
+      toast.error(result.error.message);
     }
   }
 
@@ -123,6 +138,16 @@ export function ProviderKeyDetailView({
           <FormFieldCheckbox name="isEnabled" label="Aktiv" control={control} />
 
           <div className="flex justify-end gap-3 pt-4">
+            {!isCreate && (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={isSubmitting}
+                onClick={() => confirmDelete(handleDelete)}
+              >
+                <TrashSimpleIcon /> Löschen
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -137,6 +162,13 @@ export function ProviderKeyDetailView({
           </div>
         </form>
       </CardContent>
+      <ConfirmAlertDialog
+        title="Provider-Key löschen"
+        description="Möchten Sie diesen Provider-Key wirklich löschen? Alle zugehörigen Modell-Zuordnungen werden ebenfalls entfernt."
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        {...deleteDialogProps}
+      />
     </Card>
   );
 }

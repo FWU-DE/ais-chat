@@ -369,9 +369,6 @@ importers:
       import-in-the-middle:
         specifier: 3.4.0
         version: 3.4.0
-      ioredis:
-        specifier: 6.0.0
-        version: 6.0.0
       isbinaryfile:
         specifier: 6.0.0
         version: 6.0.0
@@ -784,6 +781,9 @@ importers:
       drizzle-zod:
         specifier: 0.8.3
         version: 0.8.3(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(pg@8.23.0))(zod@4.5.4)
+      ioredis:
+        specifier: 6.0.0
+        version: 6.0.0
       linkup-sdk:
         specifier: 3.6.0
         version: 3.6.0(viem@2.56.3(typescript@6.0.3)(zod@4.5.4))
@@ -798,7 +798,7 @@ importers:
         version: 8.23.0
       unstorage:
         specifier: 1.17.5
-        version: 1.17.5(@vercel/functions@2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76))
+        version: 1.17.5(@vercel/functions@2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76))(ioredis@6.0.0)
       uuid:
         specifier: 14.0.2
         version: 14.0.2
@@ -19696,7 +19696,7 @@ snapshots:
       '@unrs/resolver-binding-win32-ia32-msvc': 1.12.2
       '@unrs/resolver-binding-win32-x64-msvc': 1.12.2
 
-  unstorage@1.17.5(@vercel/functions@2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76)):
+  unstorage@1.17.5(@vercel/functions@2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76))(ioredis@6.0.0):
     dependencies:
       anymatch: 3.1.3
       chokidar: 5.0.0
@@ -19708,6 +19708,7 @@ snapshots:
       ufo: 1.6.4
     optionalDependencies:
       '@vercel/functions': 2.2.13(@aws-sdk/credential-provider-web-identity@3.972.76)
+      ioredis: 6.0.0
 
   update-browserslist-db@1.3.2(browserslist@4.28.9):
     dependencies:

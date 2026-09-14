@@ -3,9 +3,11 @@ import {
   dbGetApiKey,
   dbCreateJustTheApiKey,
   dbUpdateApiKey,
+  dbDeleteApiKey,
 } from '@ais-chat/api-database';
 import { CreateApiKey, UpdateApiKey } from '../types/api-key';
 import { logInfo } from '@shared/logging';
+import { runDeleteOrThrowError } from '@/utils/run-delete-or-throw-error';
 
 function stripSensitiveFields<T extends { keyId?: string; secretHash?: string }>(
   apiKey: T,
@@ -48,4 +50,16 @@ export async function updateApiKey(
   logInfo('API Key was updated successfully', { projectId, apiKeyId, apiKeyData });
 
   return result;
+}
+
+export async function deleteApiKey(organizationId: string, projectId: string, apiKeyId: string) {
+  const apiKey = await dbGetApiKey(organizationId, projectId, apiKeyId);
+  if (!apiKey) throw new Error('API key not found');
+
+  await runDeleteOrThrowError(
+    () => dbDeleteApiKey(apiKeyId),
+    'API-Schlüssel kann nicht gelöscht werden, da er noch verwendet wird.',
+  );
+
+  logInfo('API Key was deleted successfully', { organizationId, projectId, apiKeyId });
 }

@@ -1,5 +1,6 @@
 import {
   dbCreateProviderKey,
+  dbDeleteProviderKey,
   dbGetOrganizationById,
   dbGetProviderKeysWithModelsByOrganizationId,
   dbUpdateProviderKey,
@@ -7,7 +8,8 @@ import {
 import { llmModelSettingsSchema } from '@ais-chat/api-database/llm-model';
 import { logInfo } from '@shared/logging';
 import type { SaveProviderKey } from '@/types/provider-key';
-import { syncBifrostProvidersForOrganization } from './bifrost-provider-sync-service';
+import { syncBifrostProvidersForOrganizationOrThrow } from './bifrost-provider-sync-service';
+import { runDeleteOrThrowError } from '@/utils/run-delete-or-throw-error';
 
 export async function getProviderKeys(organizationId: string) {
   return dbGetProviderKeysWithModelsByOrganizationId(organizationId);
@@ -36,7 +38,7 @@ export async function createProviderKey(organizationId: string, data: SaveProvid
   });
   if (!providerKey) throw new Error('Failed to create provider key');
 
-  await syncBifrostProvidersForOrganization(organizationId);
+  await syncBifrostProvidersForOrganizationOrThrow(organizationId);
   logInfo('Provider key was created successfully', {
     organizationId,
     providerKeyId: providerKey.id,
@@ -63,7 +65,18 @@ export async function updateProviderKey(
   });
   if (!providerKey) throw new Error('Failed to update provider key');
 
-  await syncBifrostProvidersForOrganization(organizationId);
+  await syncBifrostProvidersForOrganizationOrThrow(organizationId);
   logInfo('Provider key was updated successfully', { organizationId, providerKeyId });
   return providerKey;
+}
+
+export async function deleteProviderKey(organizationId: string, providerKeyId: string) {
+  const deleted = await runDeleteOrThrowError(
+    () => dbDeleteProviderKey(providerKeyId, organizationId),
+    'Provider-Key kann nicht gelöscht werden, da noch Daten damit verknüpft sind.',
+  );
+  if (!deleted) throw new Error('Provider key not found');
+
+  await syncBifrostProvidersForOrganizationOrThrow(organizationId);
+  logInfo('Provider key was deleted successfully', { organizationId, providerKeyId });
 }
