@@ -371,6 +371,7 @@ export async function seedDatabase() {
             additionalParameters: model.additionalParameters,
             isNew: model.isNew,
             isDeleted: model.isDeleted,
+            safetyFilterEnabled: model.safetyFilterEnabled,
             useBifrost: true,
           },
         });
@@ -405,6 +406,7 @@ export async function seedDatabase() {
             additionalParameters: llamaGuardModel.additionalParameters,
             isNew: llamaGuardModel.isNew,
             isDeleted: llamaGuardModel.isDeleted,
+            safetyFilterEnabled: llamaGuardModel.safetyFilterEnabled,
             useBifrost: false,
           },
         });
