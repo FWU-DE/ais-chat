@@ -8,11 +8,10 @@ import { type ChatMessage as Message } from '@/types/chat';
 import { Button } from '@ui/components/button';
 import { BoxArrowDownIcon } from '@phosphor-icons/react';
 import { downloadFileFromBlob, extractFilenameFromResponse } from '@/utils/files/blob-download';
-
-export type SharedConversationMessage = Message & { files?: { id: string }[] };
+import { loadSharedChat } from '@/utils/shared-chat-storage';
 
 type DownloadConversationButtonProps = {
-  conversationMessages: SharedConversationMessage[];
+  conversationMessages: Message[];
   className?: React.ComponentProps<'button'>['className'];
   disabled: boolean;
   primaryButton?: boolean;
@@ -24,7 +23,7 @@ type DownloadConversationButtonProps = {
 };
 
 type DownloadSharedConversationParams = {
-  conversationMessages: SharedConversationMessage[];
+  conversationMessages: Message[];
   sharedConversationName?: string;
   characterName?: string;
   inviteCode: string;
@@ -38,13 +37,22 @@ export async function fetchSharedConversationDownload({
   inviteCode,
   sharedSessionId,
 }: DownloadSharedConversationParams) {
+  const storedChat = loadSharedChat(inviteCode);
+  const filesByMessageId = new Map(
+    storedChat?.messages.map((message) => [message.id, message.files]) ?? [],
+  );
+  const messagesWithFiles = conversationMessages.map((message) => ({
+    ...message,
+    files: filesByMessageId.get(message.id)?.map((file) => ({ id: file.id })) ?? [],
+  }));
+
   const response = await fetch(`/api/download-conversation/shared`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      messages: conversationMessages,
+      messages: messagesWithFiles,
       characterName,
       sharedConversationName,
       inviteCode,

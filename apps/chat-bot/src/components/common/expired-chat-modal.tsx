@@ -2,9 +2,8 @@
 
 import React from 'react';
 import StopWatchDoneIcon from '@/components/icons/stopwatch-done';
-import DownloadSharedConversationButton, {
-  type SharedConversationMessage,
-} from '@/app/(unauth)/ua/download-shared-conversation-button';
+import DownloadSharedConversationButton from '@/app/(unauth)/ua/download-shared-conversation-button';
+import { type ChatMessage as Message } from '@/types/chat';
 import { useTranslations } from 'next-intl';
 import { Button } from '@ui/components/button';
 import {
@@ -18,7 +17,7 @@ import {
 import { ArrowClockwiseIcon } from '@phosphor-icons/react';
 
 type ExpiredChatModalProps = {
-  conversationMessages: SharedConversationMessage[];
+  conversationMessages: Message[];
   title: string;
   inviteCode: string;
   sharedSessionId: string;

@@ -287,10 +287,6 @@ export default function GenericSharedChat({
       ? messages.length === 0 && !dialogStarted
       : messages.length === 0;
   const showChatInputBox = dialogStartMode === 'explicit' ? dialogStarted : true;
-  const sharedConversationMessages = uiMessages.map((message) => ({
-    ...message,
-    files: pendingFileMapping.get(message.id)?.map((file) => ({ id: file.id })) ?? [],
-  }));
 
   useEffect(() => {
     if (alreadyMounted.current) {
@@ -313,7 +309,7 @@ export default function GenericSharedChat({
     <>
       {!chatUsable && (
         <ExpiredChatModal
-          conversationMessages={sharedConversationMessages}
+          conversationMessages={uiMessages}
           title={entity.name}
           inviteCode={inviteCode}
           sharedSessionId={sharedSessionId}
@@ -332,7 +328,6 @@ export default function GenericSharedChat({
           imageSource={avatarPictureUrl}
           inviteCode={inviteCode}
           sharedSessionId={sharedSessionId}
-          pendingFileMapping={pendingFileMapping}
         />
         <div ref={containerRef} className="relative flex min-h-0 flex-1 flex-col items-center">
           <div

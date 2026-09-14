@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { cn } from '@/utils/tailwind';
 import DownloadSharedConversationButton, {
   fetchSharedConversationDownload,
-  type SharedConversationMessage,
 } from '@/app/(unauth)/ua/download-shared-conversation-button';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
 import Image from 'next/image';
@@ -33,7 +32,6 @@ export function SharedChatHeader({
   dialogStarted,
   inviteCode,
   sharedSessionId,
-  pendingFileMapping,
 }: {
   chatActive: boolean;
   hasMessages: boolean;
@@ -45,7 +43,6 @@ export function SharedChatHeader({
   dialogStarted: boolean;
   inviteCode: string;
   sharedSessionId?: string;
-  pendingFileMapping?: Map<string, { id: string }[]>;
 }) {
   const { isBelow } = useBreakpoints();
   const tCommon = useTranslations('common');
@@ -53,10 +50,6 @@ export function SharedChatHeader({
   const toast = useToast();
 
   const showCompactHeader = isBelow[reductionBreakpoint];
-  const messagesWithFiles: SharedConversationMessage[] = messages.map((message) => ({
-    ...message,
-    files: pendingFileMapping?.get(message.id)?.map((file) => ({ id: file.id })) ?? [],
-  }));
 
   const openDeleteConfirm = React.useCallback(() => {
     confirmDelete(handleOpenNewChat);
@@ -81,7 +74,7 @@ export function SharedChatHeader({
 
         try {
           const { blob, fileName } = await fetchSharedConversationDownload({
-            conversationMessages: messagesWithFiles,
+            conversationMessages: messages,
             sharedConversationName: title,
             inviteCode,
             sharedSessionId,
@@ -132,7 +125,7 @@ export function SharedChatHeader({
       {!showCompactHeader ? (
         <>
           <DownloadSharedConversationButton
-            conversationMessages={messagesWithFiles}
+            conversationMessages={messages}
             disabled={!chatActive || !hasMessages}
             sharedConversationName={title}
             showText={false}
