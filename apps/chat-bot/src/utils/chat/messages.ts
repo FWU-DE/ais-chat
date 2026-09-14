@@ -1,6 +1,47 @@
 import { ConversationMessageModel } from '@shared/db/types';
+import type { Message as AiCoreMessage } from '@ais-chat/ai-core';
 import { type ChatMessage } from '@/types/chat';
 import { aiActivityStepSchema } from '@/types/ai-activity';
+
+export function filterPersistedAgentLoopMessages(
+  agentLoopMessages: AiCoreMessage[],
+): AiCoreMessage[] {
+  const excludedToolCallIds = new Set<string>();
+
+  return agentLoopMessages.flatMap((message) => {
+    if (message.role === 'assistant' && message.toolCalls?.length) {
+      const retainedToolCalls = message.toolCalls.filter((toolCall) => {
+        if (toolCall.name === 'retrieve_entire_file') {
+          excludedToolCallIds.add(toolCall.id);
+          return false;
+        }
+
+        return true;
+      });
+
+      if (retainedToolCalls.length === 0 && message.content.trim().length === 0) {
+        return [];
+      }
+
+      return [
+        {
+          ...message,
+          toolCalls: retainedToolCalls.length > 0 ? retainedToolCalls : undefined,
+        },
+      ];
+    }
+
+    if (
+      message.role === 'tool' &&
+      message.toolCallId &&
+      excludedToolCallIds.has(message.toolCallId)
+    ) {
+      return [];
+    }
+
+    return [message];
+  });
+}
 
 /**
  * Converts database conversation message models to frontend message format.
