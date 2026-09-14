@@ -5,6 +5,7 @@
 
 import type { WebSearchResult } from '@shared/db/schema';
 import type { AiActivityStep } from '@/types/ai-activity';
+import type { ToolCall } from '@ais-chat/ai-core';
 import { logError } from '@shared/logging';
 
 const STREAM_EVENT_PREFIX = '\u001e';
@@ -17,6 +18,15 @@ export type ChatStreamEvent =
   | {
       type: 'ai_activity';
       steps: AiActivityStep[];
+    }
+  | {
+      type: 'tool_calls';
+      toolCalls: ToolCall[];
+    }
+  | {
+      type: 'tool_result';
+      toolCallId: string;
+      content: string;
     };
 
 export function encodeChatStreamEvent(event: ChatStreamEvent): string {
@@ -31,7 +41,12 @@ export function decodeChatStreamEvent(chunk: string): ChatStreamEvent | null {
   try {
     const event = JSON.parse(chunk.slice(STREAM_EVENT_PREFIX.length)) as ChatStreamEvent;
 
-    if (event.type !== 'web_search_results' && event.type !== 'ai_activity') {
+    if (
+      event.type !== 'web_search_results' &&
+      event.type !== 'ai_activity' &&
+      event.type !== 'tool_calls' &&
+      event.type !== 'tool_result'
+    ) {
       return null;
     }
 

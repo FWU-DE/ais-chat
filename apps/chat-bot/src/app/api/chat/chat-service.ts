@@ -613,8 +613,29 @@ export async function sendChatMessage({
     onTextChunk: (delta: string) => {
       update(delta);
     },
-    onToolCalls: aiActivity.onToolCalls,
-    onToolResult: aiActivity.onToolResult,
+    onToolCalls: (toolCalls) => {
+      // Stream tool calls to client for real-time display
+      update(
+        encodeChatStreamEvent({
+          type: 'tool_calls',
+          toolCalls,
+        }),
+      );
+      // Also track in AI activity
+      aiActivity.onToolCalls(toolCalls);
+    },
+    onToolResult: (toolCallId, result) => {
+      // Stream tool result to client
+      update(
+        encodeChatStreamEvent({
+          type: 'tool_result',
+          toolCallId,
+          content: result,
+        }),
+      );
+      // Also track in AI activity
+      aiActivity.onToolResult(toolCallId, result);
+    },
     onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {
       try {
         aiActivity.finish();

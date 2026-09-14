@@ -3,6 +3,7 @@ import {
   SharedChatExpiredError,
   runAgentLoop,
   type TokenUsage,
+  type Message as AiCoreMessage,
 } from '@ais-chat/ai-core';
 import { NotFoundError } from '@shared/error';
 import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
@@ -16,6 +17,13 @@ import {
   dbUpdateTokenUsageBySharedLearningScenarioId,
 } from '@shared/db/functions/learning-scenario';
 import { dbGetRelatedLearningScenarioFiles } from '@shared/db/functions/files';
+import {
+  dbGetOrCreateConversation,
+  dbGetConversationAndMessages,
+  dbInsertChatContent,
+  dbInsertChatContentBatch,
+} from '@shared/db/functions/chat';
+import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
 import { sendRabbitmqEvent } from '@/rabbitmq/send';
 import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
 import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
@@ -28,6 +36,7 @@ import {
   limitChatHistory,
   annotateMessageAttachmentNames,
 } from '../chat/utils';
+import { convertMessageModelToMessage } from '@/utils/chat/messages';
 import { logError } from '@shared/logging';
 import { buildTools } from '../chat/build-tools';
 import { isWebSearchEnabledForEntity } from '../chat/websearch';
@@ -42,6 +51,45 @@ import {
   sharedLearningScenarioChatHasReachedTokenPointsLimit,
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
+import type { WebSearchResult } from '@shared/db/schema';
+
+function filterPersistedAgentLoopMessages(agentLoopMessages: AiCoreMessage[]) {
+  const excludedToolCallIds = new Set<string>();
+
+  return agentLoopMessages.flatMap((message) => {
+    if (message.role === 'assistant' && message.toolCalls?.length) {
+      const retainedToolCalls = message.toolCalls.filter((toolCall) => {
+        if (toolCall.name === 'retrieve_entire_file') {
+          excludedToolCallIds.add(toolCall.id);
+          return false;
+        }
+
+        return true;
+      });
+
+      if (retainedToolCalls.length === 0 && message.content.trim().length === 0) {
+        return [];
+      }
+
+      return [
+        {
+          ...message,
+          toolCalls: retainedToolCalls.length > 0 ? retainedToolCalls : undefined,
+        },
+      ];
+    }
+
+    if (
+      message.role === 'tool' &&
+      message.toolCallId &&
+      excludedToolCallIds.has(message.toolCallId)
+    ) {
+      return [];
+    }
+
+    return [message];
+  });
+}
 
 /**
  * Server Action to send a learning scenario message and stream the response.
@@ -128,6 +176,51 @@ export async function sendLearningScenarioMessage({
     return createErrorResult(new TokenPointsExceededError());
   }
 
+  // Create or get conversation for this shared learning scenario
+  const conversation = await dbGetOrCreateConversation({
+    conversationId: sharedSessionId || crypto.randomUUID(),
+    userId: teacherUserAndContext.id,
+    learningScenarioId,
+  });
+
+  if (conversation === undefined) {
+    throw new Error('Could not get or create conversation');
+  }
+
+  const activeConversation = conversation;
+
+  // Load existing messages from database
+  const conversationObject = await dbGetConversationAndMessages({
+    conversationId: activeConversation.id,
+    userId: teacherUserAndContext.id,
+  });
+
+  if (conversationObject === undefined) {
+    throw new Error('Could not get conversation object');
+  }
+
+  const existingMessages = conversationObject.messages;
+  const latestOrderNumber = existingMessages[existingMessages.length - 1]?.orderNumber ?? 0;
+  const userMessageOrderNumber = latestOrderNumber + 1;
+  const assistantMessageOrderNumber = userMessageOrderNumber + 1;
+
+  // Get the user message (last message should be from user)
+  const userMessage = messages[messages.length - 1];
+  if (!userMessage || userMessage.role !== 'user') {
+    throw new Error('No user message found');
+  }
+
+  // Store user message in database
+  await dbInsertChatContent({
+    conversationId: activeConversation.id,
+    id: userMessage.id,
+    content: userMessage.content,
+    role: 'user',
+    userId: teacherUserAndContext.id,
+    modelName: modelSelection.modelName,
+    orderNumber: userMessageOrderNumber,
+  });
+
   // Get related files and web sources
   const relatedFileEntities = await combineSharedRelatedFiles({
     relatedFileEntities: await dbGetRelatedLearningScenarioFiles(learningScenario.id),
@@ -165,6 +258,7 @@ export async function sendLearningScenarioMessage({
     allowMundoSearch: false,
     isCalculatorEnabled: teacherUserAndContext.federalState.featureToggles.isCalculatorEnabled,
     onWebSearchResults: (results) => {
+      webSearchResults = results;
       update(
         encodeChatStreamEvent({
           type: 'web_search_results',
@@ -181,9 +275,15 @@ export async function sendLearningScenarioMessage({
     activeToolDefinitions: Object.values(tools.toolRegistry).map((entry) => entry.definition),
   });
 
+  // Build full message history from database + new user message
+  const fullMessages: ChatMessage[] = [
+    ...convertMessageModelToMessage(existingMessages),
+    userMessage,
+  ];
+
   // Prune messages
   const prunedMessages = limitChatHistory(
-    annotateMessageAttachmentNames(messages, relatedFileEntities),
+    annotateMessageAttachmentNames(fullMessages, relatedFileEntities),
   );
 
   // Check if the model supports images based on supportedImageFormats
@@ -205,6 +305,8 @@ export async function sendLearningScenarioMessage({
     modelSupportsImages,
     imageAttachmentType,
   );
+
+  let webSearchResults: WebSearchResult[] = [];
 
   const persistUsage = async ({
     usage,
@@ -230,6 +332,16 @@ export async function sendLearningScenarioMessage({
         userId: teacherUserAndContext.id,
         costsInCent: modelUsage.priceInCents,
       });
+
+      // Also persist to conversation usage table for consistency with regular chats
+      await dbInsertConversationUsage({
+        conversationId: activeConversation.id,
+        userId: teacherUserAndContext.id,
+        modelId: modelUsage.modelId,
+        completionTokens: modelUsage.usage.completionTokens,
+        promptTokens: modelUsage.usage.promptTokens,
+        costsInCent: modelUsage.priceInCents,
+      });
     }
 
     await sendRabbitmqEvent(
@@ -245,6 +357,62 @@ export async function sendLearningScenarioMessage({
     );
   };
 
+  async function persistAssistantMessage({
+    fullText,
+    usage,
+    priceInCents,
+    agentLoopMessages,
+    modelUsages,
+  }: {
+    fullText: string;
+    usage: TokenUsage;
+    priceInCents: number;
+    agentLoopMessages: AiCoreMessage[];
+    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+  }) {
+    const persistedAgentLoopMessages = filterPersistedAgentLoopMessages(agentLoopMessages);
+
+    // Persist intermediate tool call/result messages and the final assistant message in one query
+    const messagesToInsert = [
+      ...persistedAgentLoopMessages.map((msg, index) => ({
+        content: msg.content,
+        role: msg.role,
+        userId: teacherUserAndContext.id,
+        orderNumber: assistantMessageOrderNumber + index,
+        modelName: definedModel.name,
+        conversationId: activeConversation.id,
+        toolCalls: msg.toolCalls ?? null,
+        toolCallId: msg.toolCallId ?? null,
+      })),
+      {
+        id: assistantMessageId,
+        content: fullText,
+        role: 'assistant' as const,
+        userId: teacherUserAndContext.id,
+        orderNumber: assistantMessageOrderNumber + persistedAgentLoopMessages.length,
+        modelName: definedModel.name,
+        conversationId: activeConversation.id,
+        webSearchResults,
+        aiActivity: aiActivity.getSteps(),
+      },
+    ];
+
+    await dbInsertChatContentBatch(messagesToInsert);
+    await persistUsage({ usage, priceInCents, modelUsages });
+  }
+
+  async function persistEmptyAssistantMessage() {
+    await dbInsertChatContent({
+      id: assistantMessageId,
+      content: '',
+      role: 'assistant',
+      userId: teacherUserAndContext.id,
+      orderNumber: assistantMessageOrderNumber,
+      modelName: definedModel.name,
+      conversationId: activeConversation.id,
+    });
+  }
+
   runAgentLoop({
     modelSelection,
     apiKeyId,
@@ -255,17 +423,49 @@ export async function sendLearningScenarioMessage({
     onTextChunk: (delta) => {
       update(delta);
     },
-    onToolCalls: aiActivity.onToolCalls,
-    onToolResult: aiActivity.onToolResult,
-    onComplete: async ({ usage, priceInCents, modelUsages }) => {
-      aiActivity.finish();
-      await persistUsage({ usage, priceInCents, modelUsages });
-
-      done();
+    onToolCalls: (toolCalls) => {
+      // Stream tool calls to client for real-time display
+      update(
+        encodeChatStreamEvent({
+          type: 'tool_calls',
+          toolCalls,
+        }),
+      );
+      // Also track in AI activity
+      aiActivity.onToolCalls(toolCalls);
+    },
+    onToolResult: (toolCallId, result) => {
+      // Stream tool result to client
+      update(
+        encodeChatStreamEvent({
+          type: 'tool_result',
+          toolCallId,
+          content: result,
+        }),
+      );
+      // Also track in AI activity
+      aiActivity.onToolResult(toolCallId, result);
+    },
+    onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {
+      try {
+        aiActivity.finish();
+        await persistAssistantMessage({
+          fullText,
+          usage,
+          priceInCents,
+          modelUsages,
+          agentLoopMessages: agentLoopMessages ?? [],
+        });
+        done();
+      } catch (persistError) {
+        logError('Error during learning scenario message persistence:', persistError);
+        streamError(persistError instanceof Error ? persistError : new Error('Unknown error'));
+      }
     },
     onError: async (error, billedUsage) => {
       logError('Error during shared chat streaming:', error);
       try {
+        await persistEmptyAssistantMessage();
         await persistUsage(billedUsage);
       } catch (persistenceError) {
         logError('Error persisting failed shared chat usage:', persistenceError);
