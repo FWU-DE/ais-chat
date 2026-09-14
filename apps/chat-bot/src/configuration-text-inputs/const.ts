@@ -72,6 +72,7 @@ export const MUNDO_SUBJECTS = [
 export const NUMBER_OF_FILES_LIMIT = 20; // Maximum number of files that can be attached to a chat
 export const NUMBER_OF_IMAGES_LIMIT = 5;
 export const NUMBER_OF_FILES_LIMIT_FOR_SHARED_CHAT = 5; // Maximum number of files that can be attached to a shared chat
+export const IMAGE_GENERATION_INPUT_LIMIT = 4; // Maximum number of input images for image generation
 export const NUMBER_OF_LINKS_LIMIT_FOR_SHARED_CHAT = 5; // Maximum number of links that can be attached to a shared chat
 
 // Example prompts

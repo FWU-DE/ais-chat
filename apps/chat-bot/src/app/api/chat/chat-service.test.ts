@@ -67,8 +67,11 @@ const mocks = vi.hoisted(() => ({
   userHasReachedTokenPointsLimitMock: vi.fn(),
   logErrorMock: vi.fn(),
   getCharacterForChatSessionMock: vi.fn(),
+  getCharacterForExistingConversationMock: vi.fn(),
   getLearningScenarioForChatSessionMock: vi.fn(),
+  getLearningScenarioForExistingConversationMock: vi.fn(),
   getAssistantForNewChatMock: vi.fn(),
+  getAssistantForExistingConversationMock: vi.fn(),
 }));
 
 vi.mock('@ais-chat/ai-core', () => ({
@@ -162,14 +165,17 @@ vi.mock('@shared/logging', () => ({
 
 vi.mock('@shared/characters/character-service', () => ({
   getCharacterForChatSession: mocks.getCharacterForChatSessionMock,
+  getCharacterForExistingConversation: mocks.getCharacterForExistingConversationMock,
 }));
 
 vi.mock('@shared/learning-scenarios/learning-scenario-service', () => ({
   getLearningScenarioForChatSession: mocks.getLearningScenarioForChatSessionMock,
+  getLearningScenarioForExistingConversation: mocks.getLearningScenarioForExistingConversationMock,
 }));
 
 vi.mock('@shared/assistants/assistant-service', () => ({
   getAssistantForNewChat: mocks.getAssistantForNewChatMock,
+  getAssistantForExistingConversation: mocks.getAssistantForExistingConversationMock,
 }));
 
 const mainModel = {
@@ -192,6 +198,7 @@ const conversation = {
 };
 
 const conversationObject = {
+  conversation,
   messages: [{ id: 'existing-message' }],
 };
 
@@ -263,6 +270,8 @@ beforeEach(() => {
     }),
   );
   mocks.dbGetOrCreateConversationMock.mockResolvedValue(conversation as never);
+  // First call checks for a pre-existing conversation before it is created; these tests start a new chat.
+  mocks.dbGetConversationAndMessagesMock.mockResolvedValueOnce(undefined as never);
   mocks.dbGetConversationAndMessagesMock.mockResolvedValue(conversationObject as never);
   mocks.userHasReachedTokenPointsLimitMock.mockResolvedValue(false);
   mocks.extractUrlsMock.mockResolvedValue([]);
@@ -525,6 +534,42 @@ describe('sendChatMessage', () => {
         }),
       ]),
     );
+  });
+
+  it('reuses an existing conversation via the ForExistingConversation lookup', async () => {
+    const characterId = 'character-1';
+    const existingConversationObject = {
+      conversation: { ...conversation, characterId, learningScenarioId: null, assistantId: null },
+      messages: [{ id: 'existing-message' }],
+    };
+    mocks.dbGetConversationAndMessagesMock.mockReset();
+    mocks.dbGetConversationAndMessagesMock.mockResolvedValue(existingConversationObject as never);
+    mocks.dbGetOrCreateConversationMock.mockResolvedValue({
+      ...conversation,
+      characterId,
+      learningScenarioId: null,
+      assistantId: null,
+    } as never);
+    mocks.getCharacterForExistingConversationMock.mockResolvedValue({ suspended: false } as never);
+
+    const { sendChatMessage } = await import('./chat-service');
+
+    const result = await sendChatMessage({
+      conversationId: conversation.id,
+      messages,
+      modelId: mainModel.id,
+      characterId,
+      user: createUser(),
+    });
+
+    await collectStream(result.stream);
+
+    expect(mocks.getCharacterForExistingConversationMock).toHaveBeenCalledWith({
+      characterId,
+      conversationId: conversation.id,
+      user: expect.anything(),
+    });
+    expect(mocks.getCharacterForChatSessionMock).not.toHaveBeenCalled();
   });
 
   it('throws when conversation context ids do not match', async () => {

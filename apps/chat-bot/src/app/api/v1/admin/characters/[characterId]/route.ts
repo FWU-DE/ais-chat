@@ -20,7 +20,7 @@ export async function GET(
 
     const { characterId } = await params;
 
-    const character = await dbGetCharacterById({ characterId });
+    const character = await dbGetCharacterById({ characterId, includeDeleted: true });
     return Response.json(character);
   } catch (error) {
     return handleErrorInRoute(error);

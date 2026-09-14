@@ -4,7 +4,7 @@ import {
   WEBSEARCH_RESULT_LENGTH_LIMIT,
   WEBSEARCH_RESULTS_LIMIT,
 } from '@/configuration-text-inputs/const';
-import type { WebSearchResult, WebSearchScope } from '@shared/db/schema';
+import type { WebSearchModel, WebSearchResult, WebSearchScope } from '@shared/db/schema';
 import { logError } from '@shared/logging';
 import { dbInsertConversationToolCallUsage } from '@shared/db/functions/token-usage';
 import { dbUpdateTokenUsageByCharacterChatId } from '@shared/db/functions/character';
@@ -12,9 +12,6 @@ import { dbUpdateTokenUsageBySharedLearningScenarioId } from '@shared/db/functio
 import { dbGetToolCallCostByName } from '@shared/db/functions/tool-call';
 import { UserAndContext } from '@/auth/types';
 import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
-import { dbGetAssistantById } from '@shared/db/functions/assistants';
-import { dbGetCharacterById } from '@shared/db/functions/character';
-import { dbGetLearningScenarioById } from '@shared/db/functions/learning-scenario';
 
 export type WebSearchConfig = {
   enabled: boolean;
@@ -44,52 +41,32 @@ export function isWebSearchAvailableForFederalState(featureToggles: {
   return (featureToggles.isWebSearchEnabled ?? false) && !!env.linkupApiKey;
 }
 
-export async function resolveWebSearchConfig({
+export function resolveWebSearchConfig({
   user,
-  characterId,
-  learningScenarioId,
   assistantId,
+  webSearchSettings,
 }: {
   user: UserAndContext;
-  characterId?: string;
-  learningScenarioId?: string;
   assistantId?: string;
-}): Promise<WebSearchConfig> {
+  webSearchSettings?: WebSearchModel;
+}): WebSearchConfig {
   if (!isWebSearchAvailableForFederalState(user.federalState.featureToggles)) {
     return DISABLED_WEB_SEARCH_CONFIG;
   }
 
-  if (characterId) {
-    const character = await dbGetCharacterById({ characterId });
-    if (!character?.isWebSearchEnabled) return DISABLED_WEB_SEARCH_CONFIG;
-    return {
-      enabled: true,
-      scope: character.webSearchScope,
-      includedDomains: normalizeIncludedDomains(character.webSearchIncludedDomains),
-    };
-  }
-
-  if (learningScenarioId) {
-    const learningScenario = await dbGetLearningScenarioById({ learningScenarioId });
-    if (!learningScenario?.isWebSearchEnabled) return DISABLED_WEB_SEARCH_CONFIG;
-    return {
-      enabled: true,
-      scope: learningScenario.webSearchScope,
-      includedDomains: normalizeIncludedDomains(learningScenario.webSearchIncludedDomains),
-    };
-  }
-
-  if (!assistantId) return ENABLED_ALL_WEB_CONFIG;
   if (assistantId === HELP_MODE_ASSISTANT_ID) return DISABLED_WEB_SEARCH_CONFIG;
 
-  const assistant = await dbGetAssistantById({ assistantId });
-  if (!assistant?.isWebSearchEnabled) return DISABLED_WEB_SEARCH_CONFIG;
+  if (webSearchSettings) {
+    if (!webSearchSettings.isWebSearchEnabled) return DISABLED_WEB_SEARCH_CONFIG;
+    return {
+      enabled: true,
+      scope: webSearchSettings.webSearchScope,
+      includedDomains: normalizeIncludedDomains(webSearchSettings.webSearchIncludedDomains),
+    };
+  }
 
-  return {
-    enabled: true,
-    scope: assistant.webSearchScope,
-    includedDomains: normalizeIncludedDomains(assistant.webSearchIncludedDomains),
-  };
+  // No custom chat involved: plain chat may search the whole web.
+  return ENABLED_ALL_WEB_CONFIG;
 }
 
 export function isWebSearchEnabledForEntity({

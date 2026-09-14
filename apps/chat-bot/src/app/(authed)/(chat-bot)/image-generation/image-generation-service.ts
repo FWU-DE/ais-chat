@@ -21,6 +21,7 @@ import { getAvailableImageModelsForFederalState } from '@shared/image-generation
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
 import { ImageGenerationRequestOptions } from '@ais-chat/ai-core/images/types';
 import { ImageGenerationOptions } from '@/components/image-generation/image-generation-types';
+import { validateInputFiles, fetchInputImages } from './image-generation-input-files';
 
 export interface ImageGenerationParams {
   prompt: string;
@@ -68,6 +69,7 @@ export async function handleImageGeneration({
   userId,
   federalStateId,
   options,
+  inputFileIds = [],
 }: {
   prompt: string;
   model: LlmModelSelectModel;
@@ -75,12 +77,17 @@ export async function handleImageGeneration({
   userId: string;
   federalStateId: string;
   options: ImageGenerationOptions;
+  inputFileIds?: string[];
 }) {
   await checkIfImageModelIsAssignedToFederalState(model, federalStateId);
 
   if (!prompt || prompt.trim().length === 0) {
     throw new Error('Prompt is required');
   }
+
+  validateInputFiles({ model, inputFileIds });
+
+  const inputImages = await fetchInputImages({ inputFileIds, userId });
 
   let conversationId: string | undefined;
 
@@ -95,7 +102,7 @@ export async function handleImageGeneration({
     }
 
     // Store user prompt as a message
-    await dbInsertChatContent({
+    const userMessage = await dbInsertChatContent({
       conversationId: conversationId,
       role: 'user',
       userId: userId,
@@ -105,6 +112,18 @@ export async function handleImageGeneration({
       parameters: { imageStyle: style?.name, aspectRatio: options.aspectRatio },
     });
 
+    if (!userMessage) {
+      throw new Error('Failed to create user message');
+    }
+
+    if (inputFileIds.length > 0) {
+      await linkFilesToConversation({
+        conversationMessageId: userMessage.id,
+        conversationId,
+        fileIds: inputFileIds,
+      });
+    }
+
     const size = model.imageGenerationConfig?.aspectRatio?.[options.aspectRatio] ?? 'auto';
 
     // Generate image using the service
@@ -112,7 +131,7 @@ export async function handleImageGeneration({
       prompt: fullPrompt.trim(),
       modelId: model.id,
       conversationId,
-      options: { size },
+      options: { size, inputImages },
     });
 
     const image = result.data[0];

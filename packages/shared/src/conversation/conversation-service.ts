@@ -118,7 +118,10 @@ export async function getConversationAndMessagesForExport({
   const fileMapping = await dbGetRelatedFiles(conversationId);
 
   if (conversation.characterId) {
-    const character = await dbGetCharacterById({ characterId: conversation.characterId });
+    const character = await dbGetCharacterById({
+      characterId: conversation.characterId,
+      includeDeleted: true,
+    });
 
     if (character?.initialMessage) {
       const initialMessage = {

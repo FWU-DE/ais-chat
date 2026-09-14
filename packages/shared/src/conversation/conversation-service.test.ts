@@ -12,6 +12,7 @@ import {
   dbGetConversationMessageById,
   dbGetConversationMessages,
 } from '@shared/db/functions/chat';
+import { dbGetCharacterById } from '@shared/db/functions/character';
 import { dbGetRelatedFiles } from '@shared/db/functions/files';
 import { ConversationModel } from '@shared/db/types';
 
@@ -163,6 +164,36 @@ describe('conversation-service', () => {
         'assistant',
       ]);
       expect(result.messages.some((message) => message.role === 'tool')).toBe(false);
+    });
+
+    it('prepends the character initial message and includes soft-deleted characters', async () => {
+      const userId = generateUUID();
+      const conversationId = generateUUID();
+      const characterId = generateUUID();
+
+      (dbGetConversationById as MockedFunction<typeof dbGetConversationById>).mockResolvedValue({
+        id: conversationId,
+        userId,
+        characterId,
+      } as ConversationModel);
+      (
+        dbGetConversationMessages as MockedFunction<typeof dbGetConversationMessages>
+      ).mockResolvedValue([
+        {
+          id: generateUUID(),
+          role: 'user',
+          content: 'Hallo',
+          toolCallId: null,
+        },
+      ] as never);
+      (dbGetCharacterById as MockedFunction<typeof dbGetCharacterById>).mockResolvedValue({
+        initialMessage: 'Willkommen!',
+      } as never);
+
+      const result = await getConversationAndMessagesForExport({ conversationId, userId });
+
+      expect(dbGetCharacterById).toHaveBeenCalledWith({ characterId, includeDeleted: true });
+      expect(result.messages.map((message) => message.content)).toEqual(['Willkommen!', 'Hallo']);
     });
   });
 

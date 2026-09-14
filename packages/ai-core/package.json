@@ -21,9 +21,9 @@
   },
   "dependencies": {
     "@ais-chat/api-database": "workspace:*",
-    "@anthropic-ai/sdk": "0.117.1",
-    "@anthropic-ai/vertex-sdk": "0.19.4",
-    "@google/genai": "2.17.1",
+    "@anthropic-ai/sdk": "0.120.0",
+    "@anthropic-ai/vertex-sdk": "0.19.5",
+    "@google/genai": "2.18.0",
     "@sentry/core": "10.70.0",
     "js-tiktoken": "1.0.21",
     "openai": "7.5.0",
@@ -38,7 +38,7 @@
     "@vitest/coverage-v8": "4.1.11",
     "eslint": "10.8.1",
     "prettier": "3.9.6",
-    "prettier-eslint": "17.1.1",
+    "prettier-eslint": "17.1.2",
     "tsx": "4.23.12",
     "typescript": "6.0.3",
     "vitest": "4.1.11"

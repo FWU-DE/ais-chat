@@ -188,6 +188,7 @@ const DEFAULT_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
       outputTextTokenPrice: 828,
       outputImageTokenPrice: 2648,
     },
+    supportedImageFormats: ['jpg', 'jpeg', 'png'],
   },
   {
     id: 'f1c2d3e4-5b6a-7c8d-9e0f-1a2b3c4d5e6f',

@@ -14,6 +14,7 @@ import {
   dbGetGlobalLearningScenarios,
   dbGetLatestManageableLearningScenarioShare,
   dbGetLearningScenarioById,
+  dbGetLearningScenarioByIdForConversation,
   dbGetLearningScenarioByIdOptionalShareData,
   dbGetLearningScenarioByIdWithShareData,
   dbGetLearningScenariosByAssociatedSchools,
@@ -722,6 +723,27 @@ export async function getLearningScenarioForChatSession({
 }) {
   checkParameterUUID(learningScenarioId);
   const learningScenario = await dbGetLearningScenarioById({ learningScenarioId });
+  if (!learningScenario) throw new NotFoundError('Learning scenario not found');
+  verifyReadAccess({ item: learningScenario, user });
+
+  return learningScenario;
+}
+
+export async function getLearningScenarioForExistingConversation({
+  learningScenarioId,
+  conversationId,
+  user,
+}: {
+  learningScenarioId: string;
+  conversationId: string;
+  user: Pick<UserModel, 'id' | 'schoolIds'>;
+}) {
+  checkParameterUUID(learningScenarioId, conversationId);
+  const learningScenario = await dbGetLearningScenarioByIdForConversation({
+    learningScenarioId,
+    conversationId,
+    userId: user.id,
+  });
   if (!learningScenario) throw new NotFoundError('Learning scenario not found');
   verifyReadAccess({ item: learningScenario, user });
 

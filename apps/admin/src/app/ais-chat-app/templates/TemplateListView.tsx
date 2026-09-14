@@ -3,9 +3,11 @@
 import { useEffect, useState, useTransition } from 'react';
 import { type ColumnFiltersState } from '@tanstack/react-table';
 import { Button } from '@ui/components/button';
+import { Checkbox } from '@ui/components/checkbox';
 import { Input } from '@ui/components/input';
 import { DataTable } from '@ui/components/data-table';
 import { getTemplatesAction } from './actions';
+import { FieldLabel } from '@ui/components/field';
 import {
   Card,
   CardAction,
@@ -24,6 +26,11 @@ export default function TemplateListView() {
   const [isPending, startTransition] = useTransition();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [showDeletedTemplates, setShowDeletedTemplates] = useState(false);
+
+  const visibleTemplates = showDeletedTemplates
+    ? templates
+    : templates.filter((template) => !template.isDeleted);
 
   const loadTemplates = async () => {
     startTransition(async () => {
@@ -64,15 +71,27 @@ export default function TemplateListView() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              <Input
-                placeholder="Nach Name filtern"
-                value={(columnFilters.find((f) => f.id === 'name')?.value as string) ?? ''}
-                onChange={(e) => setColumnFilters([{ id: 'name', value: e.target.value }])}
-                className="max-w-sm"
-              />
+              <div className="flex flex-row gap-8 items-center">
+                <Input
+                  placeholder="Nach Name filtern"
+                  value={(columnFilters.find((f) => f.id === 'name')?.value as string) ?? ''}
+                  onChange={(e) => setColumnFilters([{ id: 'name', value: e.target.value }])}
+                  className="max-w-sm"
+                />
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="show-deleted-templates"
+                    checked={showDeletedTemplates}
+                    onCheckedChange={(checked) => setShowDeletedTemplates(checked === true)}
+                  />
+                  <FieldLabel htmlFor="show-deleted-templates">
+                    gelöschte Vorlagen anzeigen
+                  </FieldLabel>
+                </div>
+              </div>
               <DataTable
                 columns={columns}
-                data={templates}
+                data={visibleTemplates}
                 columnFilters={columnFilters}
                 onColumnFiltersChange={setColumnFilters}
               />

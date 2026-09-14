@@ -30,30 +30,22 @@ test('should successfully upload a file and get response about its contents', as
   await deleteChat(page, path.basename(page.url()));
 });
 
-test('should successfully upload each supported file type and receive an assistant response', async ({
-  page,
-}) => {
-  test.setTimeout(5 * 60_000);
+for (const extension of SUPPORTED_FILE_EXTENSIONS) {
+  test(`should successfully upload a ${extension} file`, async ({ page }) => {
+    const file = `sample.${extension}`;
 
-  await page.goto('/');
+    await page.goto('/');
+    await uploadFile(page, `./e2e/fixtures/file-upload/${file}`);
 
-  for (let i = 0; i < SUPPORTED_FILE_EXTENSIONS.length; i++) {
-    const file = `sample.${SUPPORTED_FILE_EXTENSIONS[i]}`;
+    // Verify file upload was successful
+    await expect(page.locator('form').getByRole('img').nth(1)).toBeVisible();
 
-    await test.step(`File ${file}`, async () => {
-      await uploadFile(page, `./e2e/fixtures/file-upload/${file}`);
+    await sendMessage(page, `Was ist der Inhalt der Datei "${file}"?`);
 
-      // Verify file upload was successful
-      await expect(page.locator('form').getByRole('img').nth(1)).toBeVisible();
+    // Verify an assistant message is returned for this upload
+    await expect(page.getByLabel('assistant message 1')).toBeVisible();
 
-      await sendMessage(page, `Was ist der Inhalt der Datei "${file}"?`);
-
-      // Verify an assistant message is returned for this upload
-      const assistantMessage = page.getByLabel(`assistant message ${i + 1}`);
-      await expect(assistantMessage).toBeVisible();
-    });
-  }
-
-  // Clean up by deleting the conversation
-  await deleteChat(page, path.basename(page.url()));
-});
+    // Clean up by deleting the conversation
+    await deleteChat(page, path.basename(page.url()));
+  });
+}

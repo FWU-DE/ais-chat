@@ -34,6 +34,6 @@ export async function GET(request: NextRequest) {
     return handleEmptyToken(trustedRequest);
   } catch (error) {
     logError('Error during logout', error);
-    return NextResponse.redirect(new URL('/login', trustedRequest.url));
+    return NextResponse.redirect(new URL('/', trustedRequest.url));
   }
 }

@@ -32,6 +32,14 @@ import {
 import { findStaticModelByRole } from '@shared/llm-models/llm-model-service';
 import { UserModel } from '@shared/auth/user-model';
 
+type IncludeDeletedOption = {
+  includeDeleted?: boolean;
+};
+
+function excludeDeletedCharacters(options?: IncludeDeletedOption) {
+  return options?.includeDeleted ? undefined : eq(characterTable.isDeleted, false);
+}
+
 /**
  * Returns a subquery that selects only the single latest non-expired share per character for a given user.
  *
@@ -136,9 +144,10 @@ function baseCharacterWithShareQuery(activeShare: ReturnType<typeof latestActive
  */
 export async function dbGetCharacters({
   user,
+  includeDeleted,
 }: {
   user: Pick<UserModel, 'id' | 'schoolIds'>;
-}): Promise<CharacterSelectModel[]> {
+} & IncludeDeletedOption): Promise<CharacterSelectModel[]> {
   const schoolCondition =
     user.schoolIds.length > 0
       ? and(
@@ -155,7 +164,7 @@ export async function dbGetCharacters({
         eq(characterTable.accessLevel, 'community'),
         eq(characterTable.accessLevel, 'global'),
       ),
-      eq(characterTable.isDeleted, false),
+      excludeDeletedCharacters({ includeDeleted }),
     ),
   );
 
@@ -174,49 +183,83 @@ export async function dbGetCharacters({
 export async function dbGetCharacterByIdWithShareData({
   characterId,
   user,
+  includeDeleted,
 }: {
   characterId: string;
   user: Pick<UserModel, 'id'>;
-}): Promise<CharacterWithShareDataModel | undefined> {
+} & IncludeDeletedOption): Promise<CharacterWithShareDataModel | undefined> {
   const latestShare = latestNonStoppedCharacterShare(user);
   const [row] = await baseCharacterWithShareQuery(latestShare)
     .innerJoin(latestShare, eq(latestShare.characterId, characterTable.id))
-    .where(eq(characterTable.id, characterId));
+    .where(and(eq(characterTable.id, characterId), excludeDeletedCharacters({ includeDeleted })));
   return row;
 }
 
 export async function dbGetCharacterByIdOptionalShareData({
   characterId,
   user,
+  includeDeleted,
 }: {
   characterId: string;
   user: Pick<UserModel, 'id'>;
-}): Promise<CharacterOptionalShareDataModel | undefined> {
+} & IncludeDeletedOption): Promise<CharacterOptionalShareDataModel | undefined> {
   const latestShare = latestCharacterShare(user);
   const [row] = await baseCharacterWithShareQuery(latestShare)
     .leftJoin(latestShare, eq(latestShare.characterId, characterTable.id))
-    .where(eq(characterTable.id, characterId));
+    .where(and(eq(characterTable.id, characterId), excludeDeletedCharacters({ includeDeleted })));
   return row;
 }
 
 /**
  * The returned entity has no Shared Data Attached! These are found in the SharedCharacterConversation Table
  */
-export async function dbGetCharacterById({ characterId }: { characterId: string }) {
-  const [row] = await baseCharacterQuery().where(eq(characterTable.id, characterId));
+export async function dbGetCharacterById({
+  characterId,
+  includeDeleted,
+}: {
+  characterId: string;
+} & IncludeDeletedOption) {
+  const [row] = await baseCharacterQuery().where(
+    and(eq(characterTable.id, characterId), excludeDeletedCharacters({ includeDeleted })),
+  );
+  return row;
+}
+
+export async function dbGetCharacterByIdForConversation({
+  characterId,
+  conversationId,
+  userId,
+}: {
+  characterId: string;
+  conversationId: string;
+  userId: string;
+}): Promise<CharacterSelectModel | undefined> {
+  const [row] = await baseCharacterQuery()
+    .innerJoin(conversationTable, eq(conversationTable.characterId, characterTable.id))
+    .where(
+      and(
+        eq(characterTable.id, characterId),
+        eq(conversationTable.id, conversationId),
+        eq(conversationTable.userId, userId),
+        isNull(conversationTable.deletedAt),
+      ),
+    );
   return row;
 }
 
 export async function dbGetCharactersByIds({
   characterIds,
+  includeDeleted,
 }: {
   characterIds: string[];
-}): Promise<CharacterSelectModel[]> {
+} & IncludeDeletedOption): Promise<CharacterSelectModel[]> {
   if (characterIds.length === 0) {
     return [];
   }
 
-  return baseCharacterQuery().where(inArray(characterTable.id, characterIds));
+  return baseCharacterQuery().where(
+    and(inArray(characterTable.id, characterIds), excludeDeletedCharacters({ includeDeleted })),
+  );
 }
 
 export async function dbGetCopyTemplateCharacter({
@@ -261,9 +304,10 @@ export async function dbCreateCharacter(
 
 export async function dbGetGlobalCharacters({
   user,
+  includeDeleted,
 }: {
   user: Pick<UserModel, 'id' | 'federalStateId'>;
-}): Promise<CharacterOptionalShareDataModel[]> {
+} & IncludeDeletedOption): Promise<CharacterOptionalShareDataModel[]> {
   const federalStateId = user.federalStateId;
 
   const activeShare = latestActiveCharacterShare(user);
@@ -279,6 +323,7 @@ export async function dbGetGlobalCharacters({
         federalStateId
           ? eq(characterTemplateMappingTable.federalStateId, federalStateId)
           : undefined,
+        excludeDeletedCharacters({ includeDeleted }),
       ),
     )
     .orderBy(desc(characterTable.createdAt));
@@ -288,13 +333,19 @@ export async function dbGetGlobalCharacters({
 
 export async function dbGetCommunityCharacters({
   user,
+  includeDeleted,
 }: {
   user: Pick<UserModel, 'id'>;
-}): Promise<CharacterOptionalShareDataModel[]> {
+} & IncludeDeletedOption): Promise<CharacterOptionalShareDataModel[]> {
   const activeShare = latestActiveCharacterShare(user);
   const characters = await baseCharacterWithShareQuery(activeShare)
     .leftJoin(activeShare, eq(activeShare.characterId, characterTable.id))
-    .where(eq(characterTable.accessLevel, 'community'))
+    .where(
+      and(
+        eq(characterTable.accessLevel, 'community'),
+        excludeDeletedCharacters({ includeDeleted }),
+      ),
+    )
     .orderBy(desc(characterTable.createdAt));
 
   return characters;
@@ -312,9 +363,10 @@ export async function dbGetCommunityCharacters({
  */
 export async function dbGetCharactersByAssociatedSchools({
   user,
+  includeDeleted,
 }: {
   user: Pick<UserModel, 'id' | 'schoolIds'>;
-}): Promise<CharacterOptionalShareDataModel[]> {
+} & IncludeDeletedOption): Promise<CharacterOptionalShareDataModel[]> {
   if (user.schoolIds.length === 0) {
     return [];
   }
@@ -326,6 +378,7 @@ export async function dbGetCharactersByAssociatedSchools({
       and(
         arrayOverlaps(userTable.schoolIds, user.schoolIds),
         eq(characterTable.accessLevel, 'school'),
+        excludeDeletedCharacters({ includeDeleted }),
       ),
     )
     .orderBy(desc(characterTable.createdAt));
@@ -335,13 +388,20 @@ export async function dbGetCharactersByAssociatedSchools({
 
 export async function dbGetCharactersByUser({
   user,
+  includeDeleted,
 }: {
   user: Pick<UserModel, 'id'>;
-}): Promise<CharacterOptionalShareDataModel[]> {
+} & IncludeDeletedOption): Promise<CharacterOptionalShareDataModel[]> {
   const activeShare = latestActiveCharacterShare(user);
   const characters = await baseCharacterWithShareQuery(activeShare)
     .leftJoin(activeShare, eq(activeShare.characterId, characterTable.id))
-    .where(and(eq(characterTable.userId, user.id), eq(characterTable.accessLevel, 'private')))
+    .where(
+      and(
+        eq(characterTable.userId, user.id),
+        eq(characterTable.accessLevel, 'private'),
+        excludeDeletedCharacters({ includeDeleted }),
+      ),
+    )
     .orderBy(desc(characterTable.createdAt));
 
   return characters;
@@ -349,13 +409,14 @@ export async function dbGetCharactersByUser({
 
 export async function dbGetAllCharactersByUser({
   user,
+  includeDeleted,
 }: {
   user: Pick<UserModel, 'id'>;
-}): Promise<CharacterOptionalShareDataModel[]> {
+} & IncludeDeletedOption): Promise<CharacterOptionalShareDataModel[]> {
   const activeShare = latestActiveCharacterShare(user);
   const characters = await baseCharacterWithShareQuery(activeShare)
     .leftJoin(activeShare, eq(activeShare.characterId, characterTable.id))
-    .where(eq(characterTable.userId, user.id))
+    .where(and(eq(characterTable.userId, user.id), excludeDeletedCharacters({ includeDeleted })))
     .orderBy(desc(characterTable.createdAt));
 
   return characters;
@@ -363,9 +424,10 @@ export async function dbGetAllCharactersByUser({
 
 export async function dbGetAllAccessibleCharacters({
   user,
+  includeDeleted,
 }: {
   user: Pick<UserModel, 'id' | 'schoolIds' | 'federalStateId'>;
-}): Promise<CharacterOptionalShareDataModel[]> {
+} & IncludeDeletedOption): Promise<CharacterOptionalShareDataModel[]> {
   const federalStateId = user.federalStateId;
   const activeShare = latestActiveCharacterShare(user);
   return baseCharacterWithShareQuery(activeShare)
@@ -375,19 +437,22 @@ export async function dbGetAllAccessibleCharacters({
       eq(characterTemplateMappingTable.characterId, characterTable.id),
     )
     .where(
-      or(
-        and(eq(characterTable.userId, user.id), eq(characterTable.accessLevel, 'private')),
-        user.schoolIds && user.schoolIds.length > 0
-          ? and(
-              eq(characterTable.accessLevel, 'school'),
-              arrayOverlaps(userTable.schoolIds, user.schoolIds),
-            )
-          : undefined,
-        eq(characterTable.accessLevel, 'community'),
-        and(
-          eq(characterTable.accessLevel, 'global'),
-          eq(characterTemplateMappingTable.federalStateId, federalStateId),
+      and(
+        or(
+          and(eq(characterTable.userId, user.id), eq(characterTable.accessLevel, 'private')),
+          user.schoolIds && user.schoolIds.length > 0
+            ? and(
+                eq(characterTable.accessLevel, 'school'),
+                arrayOverlaps(userTable.schoolIds, user.schoolIds),
+              )
+            : undefined,
+          eq(characterTable.accessLevel, 'community'),
+          and(
+            eq(characterTable.accessLevel, 'global'),
+            eq(characterTemplateMappingTable.federalStateId, federalStateId),
+          ),
         ),
+        excludeDeletedCharacters({ includeDeleted }),
       ),
     )
     .orderBy(desc(characterTable.createdAt));
@@ -396,14 +461,15 @@ export async function dbGetAllAccessibleCharacters({
 export async function dbGetCharacterByIdAndUser({
   characterId,
   user,
+  includeDeleted,
 }: {
   characterId: string;
   user: Pick<UserModel, 'id'>;
-}): Promise<CharacterWithShareDataModel | undefined> {
+} & IncludeDeletedOption): Promise<CharacterWithShareDataModel | undefined> {
   const activeShare = latestActiveCharacterShare(user);
   const [row] = await baseCharacterWithShareQuery(activeShare)
     .innerJoin(activeShare, eq(activeShare.characterId, characterTable.id))
-    .where(eq(characterTable.id, characterId));
+    .where(and(eq(characterTable.id, characterId), excludeDeletedCharacters({ includeDeleted })));
   return row;
 }
 
@@ -455,10 +521,11 @@ export async function dbDeleteCharacterByIdAndUser({
 export async function dbGetCharacterByIdAndInviteCode({
   id,
   inviteCode,
+  includeDeleted,
 }: {
   id: string;
   inviteCode: string;
-}): Promise<CharacterWithShareDataModel | undefined> {
+} & IncludeDeletedOption): Promise<CharacterWithShareDataModel | undefined> {
   const [row] = await db
     .select({
       ...getTableColumns(characterTable),
@@ -477,7 +544,13 @@ export async function dbGetCharacterByIdAndInviteCode({
       sharedCharacterConversation,
       eq(sharedCharacterConversation.characterId, characterTable.id),
     )
-    .where(and(eq(characterTable.id, id), eq(sharedCharacterConversation.inviteCode, inviteCode)));
+    .where(
+      and(
+        eq(characterTable.id, id),
+        eq(sharedCharacterConversation.inviteCode, inviteCode),
+        excludeDeletedCharacters({ includeDeleted }),
+      ),
+    );
 
   return row;
 }
@@ -498,23 +571,33 @@ export async function dbUpdateTokenUsageByCharacterChatId(
 export async function dbGetCharacterByNameAndUser({
   name,
   user,
+  includeDeleted,
 }: {
   name: string;
   user: Pick<UserModel, 'id'>;
-}): Promise<CharacterSelectModel | undefined> {
+} & IncludeDeletedOption): Promise<CharacterSelectModel | undefined> {
   const [character] = await baseCharacterQuery().where(
-    and(eq(characterTable.name, name), eq(characterTable.userId, user.id)),
+    and(
+      eq(characterTable.name, name),
+      eq(characterTable.userId, user.id),
+      excludeDeletedCharacters({ includeDeleted }),
+    ),
   );
   return character;
 }
 
 export async function dbGetGlobalCharacterByName({
   name,
+  includeDeleted,
 }: {
   name: string;
-}): Promise<CharacterSelectModel | undefined> {
+} & IncludeDeletedOption): Promise<CharacterSelectModel | undefined> {
   const [character] = await baseCharacterQuery().where(
-    and(eq(characterTable.name, name), eq(characterTable.accessLevel, 'global')),
+    and(
+      eq(characterTable.name, name),
+      eq(characterTable.accessLevel, 'global'),
+      excludeDeletedCharacters({ includeDeleted }),
+    ),
   );
   return character;
 }
@@ -534,7 +617,10 @@ export async function dbSetCharacterSuspended({ characterId }: { characterId: st
     throw new NotFoundError('Character not found');
   }
 
-  const character = await dbGetCharacterById({ characterId: updatedCharacter.id });
+  const character = await dbGetCharacterById({
+    characterId: updatedCharacter.id,
+    includeDeleted: true,
+  });
   if (!character) {
     throw new NotFoundError('Character not found');
   }
@@ -553,7 +639,10 @@ export async function dbLiftSuspensionOnCharacter({ characterId }: { characterId
     throw new NotFoundError('Character not found');
   }
 
-  const character = await dbGetCharacterById({ characterId: updatedCharacter.id });
+  const character = await dbGetCharacterById({
+    characterId: updatedCharacter.id,
+    includeDeleted: true,
+  });
   if (!character) {
     throw new NotFoundError('Character not found');
   }

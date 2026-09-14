@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { TemplateModel, TemplateTypes } from '@shared/templates/template';
 import { Card, CardContent, CardHeader, CardTitle } from '@ui/components/card';
 import { SimpleInputDialog } from '@ui/components/simple-input-dialog';
@@ -5,27 +6,59 @@ import { getTemplateTypeName } from '../../templateTypeName';
 import { EditIcon } from 'lucide-react';
 import { Button } from '@ui/components/button';
 import { Input } from '@ui/components/input';
-import { updateAuthorOfTemplateAction } from './actions';
+import { updateAuthorOfTemplateAction, updateTemplateDeletedStateAction } from './actions';
 import { toast } from 'sonner';
 
 export type TemplateInfoCardProps = {
   template: TemplateModel;
-  onDataChanged: () => void;
+  onDataChanged: () => void | Promise<void>;
 };
 
 export function TemplateInfoCard({ template, onDataChanged }: TemplateInfoCardProps) {
+  const [isUpdatingDeletedState, setIsUpdatingDeletedState] = useState(false);
+
   async function handleSubmitOfAuthorChange(
     templateId: string,
     templateType: TemplateTypes,
     newAuthor: string,
   ) {
     try {
-      await updateAuthorOfTemplateAction(templateType, templateId, newAuthor);
-      onDataChanged();
+      const result = await updateAuthorOfTemplateAction(templateType, templateId, newAuthor);
+      if (!result.success) {
+        toast.error('Fehler beim Aktualisieren des Autors.', {
+          description: result.error.message,
+        });
+        return;
+      }
+      await onDataChanged();
     } catch (error) {
       toast.error('Fehler beim Aktualisieren des Autors.', {
         description: (error as Error).message,
       });
+    }
+  }
+
+  async function handleToggleDeletedState() {
+    setIsUpdatingDeletedState(true);
+    try {
+      const result = await updateTemplateDeletedStateAction(
+        template.type,
+        template.id,
+        !template.isDeleted,
+      );
+      if (!result.success) {
+        toast.error('Fehler beim Löschen/Wiederherstellen.', {
+          description: result.error.message,
+        });
+        return;
+      }
+      await onDataChanged();
+    } catch (error) {
+      toast.error('Fehler beim Löschen/Wiederherstellen.', {
+        description: (error as Error).message,
+      });
+    } finally {
+      setIsUpdatingDeletedState(false);
     }
   }
 
@@ -45,7 +78,22 @@ export function TemplateInfoCard({ template, onDataChanged }: TemplateInfoCardPr
           <dt>Erstellt am:</dt>
           <dd>{template.createdAt.toLocaleString()}</dd>
           <dt>Gelöscht:</dt>
-          <dd>{template.isDeleted ? 'Ja' : 'Nein'}</dd>
+          <dd className="flex items-center gap-3">
+            <span>{template.isDeleted ? 'Ja' : 'Nein'}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              disabled={isUpdatingDeletedState}
+              onClick={handleToggleDeletedState}
+            >
+              {isUpdatingDeletedState
+                ? 'Speichert...'
+                : template.isDeleted
+                  ? 'Wiederherstellen'
+                  : 'Löschen'}
+            </Button>
+          </dd>
           <dt>Autor:</dt>
           <dd className="flex items-center gap-2">
             <span>{template.author !== '' ? template.author : 'nicht gesetzt'}</span>

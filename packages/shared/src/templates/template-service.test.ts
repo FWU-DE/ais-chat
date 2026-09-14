@@ -5,6 +5,7 @@ import {
   copyEntityPictureIfExists,
   copyRelatedTemplateFiles,
   createTemplateFromUrl,
+  updateTemplateDeletedState,
 } from './template-service';
 import { dbGetAssistantById, dbUpsertAssistant } from '@shared/db/functions/assistants';
 import { dbCreateCharacter, dbGetCharacterById } from '@shared/db/functions/character';
@@ -23,6 +24,20 @@ import {
 import { logError } from '@shared/logging';
 import { copyFileInS3 } from '@shared/s3';
 import { generateUUID } from '@shared/utils/uuid';
+
+const { mockDbSet, mockDbUpdate, mockDbReturning, mockDbValues, mockDbInsert } = vi.hoisted(() => {
+  const mockDbWhere = vi.fn().mockResolvedValue(undefined);
+  const mockDbSet = vi.fn(() => ({ where: mockDbWhere }));
+  const mockDbUpdate = vi.fn(() => ({ set: mockDbSet }));
+  const mockDbReturning = vi.fn();
+  const mockDbValues = vi.fn<
+    (values: Record<string, unknown>) => { returning: typeof mockDbReturning }
+  >(() => ({ returning: mockDbReturning }));
+  const mockDbInsert = vi.fn(() => ({ values: mockDbValues }));
+  return { mockDbSet, mockDbUpdate, mockDbReturning, mockDbValues, mockDbInsert };
+});
+
+vi.mock('@shared/db', () => ({ db: { update: mockDbUpdate, insert: mockDbInsert } }));
 
 vi.mock('@shared/db/functions/assistants', () => ({
   dbGetAssistantById: vi.fn(),
@@ -59,17 +74,6 @@ vi.mock('@shared/logging', () => ({
 vi.mock('@shared/s3', () => ({
   copyFileInS3: vi.fn(),
 }));
-
-const { mockDbReturning, mockDbValues, mockDbInsert } = vi.hoisted(() => {
-  const mockDbReturning = vi.fn();
-  const mockDbValues = vi.fn<
-    (values: Record<string, unknown>) => { returning: typeof mockDbReturning }
-  >(() => ({ returning: mockDbReturning }));
-  const mockDbInsert = vi.fn(() => ({ values: mockDbValues }));
-  return { mockDbReturning, mockDbValues, mockDbInsert };
-});
-
-vi.mock('@shared/db', () => ({ db: { insert: mockDbInsert } }));
 
 describe('template-service', () => {
   beforeEach(() => {
@@ -475,6 +479,27 @@ describe('template-service', () => {
         newKey: call?.pictureId,
       });
       expect(call?.pictureId).not.toContain(originalId);
+    });
+  });
+
+  describe('updateTemplateDeletedState', () => {
+    it.each([
+      { templateType: 'character' as const },
+      { templateType: 'assistant' as const },
+      { templateType: 'learning-scenario' as const },
+    ])('updates the isDeleted flag for templateType=$templateType', async ({ templateType }) => {
+      await updateTemplateDeletedState(templateType, 'template-1', true);
+
+      expect(mockDbUpdate).toHaveBeenCalledTimes(1);
+      expect(mockDbSet).toHaveBeenCalledWith({ isDeleted: true });
+    });
+
+    it('throws for an invalid template type', async () => {
+      await expect(
+        updateTemplateDeletedState('invalid-template-type' as never, 'template-1', true),
+      ).rejects.toThrow('Invalid template type');
+
+      expect(mockDbUpdate).not.toHaveBeenCalled();
     });
   });
 });

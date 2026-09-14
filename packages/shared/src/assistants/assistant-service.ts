@@ -8,6 +8,7 @@ import {
   dbGetAssistantsByUserId,
   dbDeleteAssistantByIdAndUser,
   dbGetAssistantById,
+  dbGetAssistantByIdForConversation,
   dbGetCommunityGpts,
   dbGetGlobalGpts,
   dbGetGptsByAssociatedSchools,
@@ -110,13 +111,32 @@ export async function getAssistantForNewChat({
   user: Pick<UserModel, 'id' | 'schoolIds'>;
 }) {
   checkParameterUUID(assistantId);
-  const assistant = await dbGetAssistantById({
-    assistantId,
-  });
+  const assistant = await dbGetAssistantById({ assistantId });
   verifyReadAccess({
     item: assistant,
     user,
   });
+
+  return assistant;
+}
+
+export async function getAssistantForExistingConversation({
+  assistantId,
+  conversationId,
+  user,
+}: {
+  assistantId: string;
+  conversationId: string;
+  user: Pick<UserModel, 'id' | 'schoolIds'>;
+}) {
+  checkParameterUUID(assistantId, conversationId);
+  const assistant = await dbGetAssistantByIdForConversation({
+    assistantId,
+    conversationId,
+    userId: user.id,
+  });
+  if (!assistant) throw new NotFoundError('Assistant not found');
+  verifyReadAccess({ item: assistant, user });
 
   return assistant;
 }
@@ -138,12 +158,12 @@ export async function getConversationWithMessagesAndAssistant({
 }) {
   checkParameterUUID(assistantId, conversationId);
   const [assistant, conversation, messages] = await Promise.all([
-    dbGetAssistantById({ assistantId }),
+    dbGetAssistantByIdForConversation({ assistantId, conversationId, userId }),
     getConversation({ conversationId, userId }),
     getConversationMessages({ conversationId, userId }),
   ]);
 
-  if (conversation.assistantId !== assistantId) {
+  if (!assistant || conversation.assistantId !== assistantId) {
     throw new NotFoundError('Conversation not found');
   }
 

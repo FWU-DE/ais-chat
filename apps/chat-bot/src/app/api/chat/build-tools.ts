@@ -1,6 +1,6 @@
 import type { ToolRegistry } from '@ais-chat/ai-core';
 import type { UserAndContext } from '@/auth/types';
-import type { FileModel, WebSearchResult } from '@shared/db/schema';
+import type { FileModel, WebSearchModel, WebSearchResult } from '@shared/db/schema';
 import { buildWebSearchTool } from './tools/web-search-tool';
 import { buildWebScraperTool } from './tools/web-scraper-tool';
 import { buildRetrieveEntireFileTool } from './tools/retrieve-entire-file-tool';
@@ -13,6 +13,7 @@ type BuildToolsParams = {
   learningScenarioId?: string;
   assistantId?: string;
   conversationId?: string;
+  webSearchSettings?: WebSearchModel;
   relatedFileEntities: FileModel[];
   sourceUrls?: string[];
   attachedLinks?: string[];
@@ -31,6 +32,7 @@ export async function buildTools({
   learningScenarioId,
   assistantId,
   conversationId,
+  webSearchSettings,
   relatedFileEntities,
   sourceUrls = [],
   attachedLinks = [],
@@ -47,6 +49,7 @@ export async function buildTools({
       learningScenarioId,
       assistantId,
       conversationId,
+      webSearchSettings,
       onWebSearchResults,
     });
 

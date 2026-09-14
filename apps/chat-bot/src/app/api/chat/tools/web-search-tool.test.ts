@@ -45,13 +45,13 @@ const user = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.resolveWebSearchConfigMock.mockResolvedValue(disabledConfig);
+  mocks.resolveWebSearchConfigMock.mockReturnValue(disabledConfig);
   mocks.searchWebMock.mockResolvedValue([]);
 });
 
 describe('buildWebSearchTool', () => {
   it('returns null when web search is disabled', async () => {
-    mocks.resolveWebSearchConfigMock.mockResolvedValue(disabledConfig);
+    mocks.resolveWebSearchConfigMock.mockReturnValue(disabledConfig);
     const { buildWebSearchTool } = await import('./web-search-tool');
 
     const result = await buildWebSearchTool({
@@ -63,7 +63,7 @@ describe('buildWebSearchTool', () => {
   });
 
   it('adds a web search tool and returns search results as JSON', async () => {
-    mocks.resolveWebSearchConfigMock.mockResolvedValue(allWebConfig);
+    mocks.resolveWebSearchConfigMock.mockReturnValue(allWebConfig);
     mocks.searchWebMock.mockResolvedValue([
       {
         name: 'Beispielartikel',
@@ -111,7 +111,7 @@ describe('buildWebSearchTool', () => {
   });
 
   it('calls onWebSearchResults callback when provided', async () => {
-    mocks.resolveWebSearchConfigMock.mockResolvedValue(allWebConfig);
+    mocks.resolveWebSearchConfigMock.mockReturnValue(allWebConfig);
     mocks.searchWebMock.mockResolvedValue([
       {
         name: 'Test',
@@ -141,7 +141,7 @@ describe('buildWebSearchTool', () => {
   });
 
   it('forwards includedDomains to searchWeb when scope is included-domains', async () => {
-    mocks.resolveWebSearchConfigMock.mockResolvedValue({
+    mocks.resolveWebSearchConfigMock.mockReturnValue({
       enabled: true,
       scope: 'included-domains',
       includedDomains: ['example.com', 'foo.de'],
@@ -165,7 +165,7 @@ describe('buildWebSearchTool', () => {
   });
 
   it('forwards includedDomains for learning scenarios when scope is included-domains', async () => {
-    mocks.resolveWebSearchConfigMock.mockResolvedValue({
+    mocks.resolveWebSearchConfigMock.mockReturnValue({
       enabled: true,
       scope: 'included-domains',
       includedDomains: ['example.com', 'foo.de'],
@@ -189,7 +189,7 @@ describe('buildWebSearchTool', () => {
   });
 
   it('forwards includedDomains for assistants when scope is included-domains', async () => {
-    mocks.resolveWebSearchConfigMock.mockResolvedValue({
+    mocks.resolveWebSearchConfigMock.mockReturnValue({
       enabled: true,
       scope: 'included-domains',
       includedDomains: ['example.com', 'foo.de'],
@@ -213,7 +213,7 @@ describe('buildWebSearchTool', () => {
   });
 
   it('does not forward includedDomains when scope is all-web', async () => {
-    mocks.resolveWebSearchConfigMock.mockResolvedValue(allWebConfig);
+    mocks.resolveWebSearchConfigMock.mockReturnValue(allWebConfig);
 
     const { buildWebSearchTool } = await import('./web-search-tool');
 

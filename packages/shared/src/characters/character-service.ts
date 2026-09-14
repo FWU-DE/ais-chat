@@ -7,6 +7,7 @@ import {
   dbGetAllAccessibleCharacters,
   dbGetAllCharactersByUser,
   dbGetCharacterById,
+  dbGetCharacterByIdForConversation,
   dbGetCharacterByIdOptionalShareData,
   dbGetCharacterByIdWithShareData,
   dbGetCommunityCharacters,
@@ -667,6 +668,30 @@ export const getCharacterForChatSession = async ({
 }) => {
   checkParameterUUID(characterId);
   const character = await dbGetCharacterById({ characterId });
+  if (!character) throw new NotFoundError('Character not found');
+  verifyReadAccess({
+    item: character,
+    user,
+  });
+
+  return character;
+};
+
+export const getCharacterForExistingConversation = async ({
+  characterId,
+  conversationId,
+  user,
+}: {
+  characterId: string;
+  conversationId: string;
+  user: Pick<UserModel, 'id' | 'schoolIds'>;
+}) => {
+  checkParameterUUID(characterId, conversationId);
+  const character = await dbGetCharacterByIdForConversation({
+    characterId,
+    conversationId,
+    userId: user.id,
+  });
   if (!character) throw new NotFoundError('Character not found');
   verifyReadAccess({
     item: character,

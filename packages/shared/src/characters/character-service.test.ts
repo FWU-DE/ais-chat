@@ -10,6 +10,7 @@ import {
   getCharacterByAccessLevel,
   getCharacterForChatSession,
   getCharacterForEditView,
+  getCharacterForExistingConversation,
   getCharactersByOverviewFilter,
   getSharedCharacter,
   linkFileToCharacter,
@@ -26,6 +27,7 @@ import {
   dbGetAllAccessibleCharacters,
   dbGetAllCharactersByUser,
   dbGetCharacterById,
+  dbGetCharacterByIdForConversation,
   dbGetCharacterByIdOptionalShareData,
   dbGetCharacterByIdWithShareData,
   dbGetCharactersByAssociatedSchools,
@@ -53,6 +55,7 @@ vi.mock('../db/functions/character', () => ({
   dbGetAllCharactersByUser: vi.fn(),
   dbGetCharacterById: vi.fn(),
   dbGetCharacterByIdAndUserId: vi.fn(),
+  dbGetCharacterByIdForConversation: vi.fn(),
   dbGetCharacterByIdOptionalShareData: vi.fn(),
   dbGetCharacterByIdWithShareData: vi.fn(),
   dbDeleteCharacterByIdAndUser: vi.fn(),
@@ -185,6 +188,65 @@ describe('character-service', () => {
           userId: 'user-id',
         }),
       ).rejects.toThrow(NotFoundError);
+    });
+  });
+
+  describe('getCharacterForExistingConversation', () => {
+    const characterId = generateUUID();
+    const conversationId = generateUUID();
+
+    it('returns the character when it is linked to the given conversation', async () => {
+      const user = mockUser();
+      const mockCharacter = {
+        id: characterId,
+        userId: user.id,
+        accessLevel: 'private' as const,
+        hasLinkAccess: false,
+      };
+      vi.mocked(dbGetCharacterByIdForConversation).mockResolvedValue(mockCharacter as never);
+
+      const result = await getCharacterForExistingConversation({
+        characterId,
+        conversationId,
+        user,
+      });
+
+      expect(result).toBe(mockCharacter);
+      expect(dbGetCharacterByIdForConversation).toHaveBeenCalledWith({
+        characterId,
+        conversationId,
+        userId: user.id,
+      });
+    });
+
+    it('throws NotFoundError when the character is not linked to the conversation', async () => {
+      vi.mocked(dbGetCharacterByIdForConversation).mockResolvedValue(undefined);
+
+      await expect(
+        getCharacterForExistingConversation({
+          characterId,
+          conversationId,
+          user: mockUser(),
+        }),
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it('throws ForbiddenError when the user is not authorized to read the character', async () => {
+      const mockCharacter = {
+        id: characterId,
+        userId: generateUUID(),
+        accessLevel: 'private' as const,
+        hasLinkAccess: false,
+      };
+      vi.mocked(dbGetCharacterByIdForConversation).mockResolvedValue(mockCharacter as never);
+
+      await expect(
+        getCharacterForExistingConversation({
+          characterId,
+          conversationId,
+          user: mockUser(),
+        }),
+      ).rejects.toThrow(ForbiddenError);
     });
   });
 

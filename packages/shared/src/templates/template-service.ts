@@ -252,6 +252,26 @@ export async function updateAuthorOfTemplate(
   }
 }
 
+/** Admin is allowed to update the deleted state of a template. */
+export async function updateTemplateDeletedState(
+  templateType: TemplateTypes,
+  templateId: string,
+  isDeleted: boolean,
+) {
+  if (templateType === 'character') {
+    await db.update(characterTable).set({ isDeleted }).where(eq(characterTable.id, templateId));
+  } else if (templateType === 'assistant') {
+    await db.update(assistantTable).set({ isDeleted }).where(eq(assistantTable.id, templateId));
+  } else if (templateType === 'learning-scenario') {
+    await db
+      .update(learningScenarioTable)
+      .set({ isDeleted })
+      .where(eq(learningScenarioTable.id, templateId));
+  } else {
+    throw new Error('Invalid template type');
+  }
+}
+
 /** Select all federal states with the mapping information for the given template. */
 export async function getFederalStatesWithMappings(
   templateType: TemplateTypes,

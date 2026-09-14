@@ -47,9 +47,18 @@ import type {
 } from '@shared/db/schema';
 import type { ConversationMessageModel } from '@shared/db/types';
 import { NotFoundError } from '@shared/error';
-import { getCharacterForChatSession } from '@shared/characters/character-service';
-import { getLearningScenarioForChatSession } from '@shared/learning-scenarios/learning-scenario-service';
-import { getAssistantForNewChat } from '@shared/assistants/assistant-service';
+import {
+  getCharacterForChatSession,
+  getCharacterForExistingConversation,
+} from '@shared/characters/character-service';
+import {
+  getLearningScenarioForChatSession,
+  getLearningScenarioForExistingConversation,
+} from '@shared/learning-scenarios/learning-scenario-service';
+import {
+  getAssistantForNewChat,
+  getAssistantForExistingConversation,
+} from '@shared/assistants/assistant-service';
 import { deepEqual } from '@/utils/object';
 import { resolveAgentNameForTracing } from '../utils/agent-name';
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
@@ -234,11 +243,30 @@ export async function sendChatMessage({
   let activeLearningScenario: LearningScenarioSelectModel | undefined;
   let activeAssistant: AssistantSelectModel | undefined;
 
-  if (characterId !== undefined) {
-    activeCharacter = await getCharacterForChatSession({
-      characterId,
-      user,
+  const existingConversationObject = await dbGetConversationAndMessages({
+    conversationId,
+    userId: user.id,
+  });
+
+  if (existingConversationObject !== undefined) {
+    ensureConversationCustomChatIdsMatch({
+      incomingIds: { characterId, learningScenarioId, assistantId },
+      storedIds: {
+        characterId: existingConversationObject.conversation.characterId ?? undefined,
+        learningScenarioId: existingConversationObject.conversation.learningScenarioId ?? undefined,
+        assistantId: existingConversationObject.conversation.assistantId ?? undefined,
+      },
     });
+  }
+
+  if (characterId !== undefined) {
+    activeCharacter = existingConversationObject
+      ? await getCharacterForExistingConversation({
+          characterId,
+          conversationId,
+          user,
+        })
+      : await getCharacterForChatSession({ characterId, user });
 
     if (activeCharacter.suspended) {
       throw new NotFoundError('Character not found');
@@ -246,10 +274,13 @@ export async function sendChatMessage({
   }
 
   if (learningScenarioId !== undefined) {
-    activeLearningScenario = await getLearningScenarioForChatSession({
-      learningScenarioId,
-      user,
-    });
+    activeLearningScenario = existingConversationObject
+      ? await getLearningScenarioForExistingConversation({
+          learningScenarioId,
+          conversationId,
+          user,
+        })
+      : await getLearningScenarioForChatSession({ learningScenarioId, user });
 
     if (activeLearningScenario.suspended) {
       throw new NotFoundError('Learning scenario not found');
@@ -257,10 +288,9 @@ export async function sendChatMessage({
   }
 
   if (assistantId !== undefined) {
-    activeAssistant = await getAssistantForNewChat({
-      assistantId,
-      user,
-    });
+    activeAssistant = existingConversationObject
+      ? await getAssistantForExistingConversation({ assistantId, conversationId, user })
+      : await getAssistantForNewChat({ assistantId, user });
 
     if (activeAssistant.suspended) {
       throw new NotFoundError('Assistant not found');
@@ -282,10 +312,12 @@ export async function sendChatMessage({
 
   const activeConversation = conversation;
 
-  const conversationObject = await dbGetConversationAndMessages({
-    conversationId: activeConversation.id,
-    userId: user.id,
-  });
+  const conversationObject =
+    existingConversationObject ??
+    (await dbGetConversationAndMessages({
+      conversationId: activeConversation.id,
+      userId: user.id,
+    }));
 
   if (conversationObject === undefined) {
     throw new Error('Could not get conversation object');
@@ -393,6 +425,7 @@ export async function sendChatMessage({
     learningScenarioId,
     assistantId,
     conversationId: activeConversation.id,
+    webSearchSettings: activeCharacter ?? activeLearningScenario ?? activeAssistant,
     relatedFileEntities,
     attachedLinks,
     sourceUrls: ingestResult.processedUrls,

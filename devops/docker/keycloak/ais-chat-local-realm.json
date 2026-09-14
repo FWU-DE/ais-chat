@@ -48,6 +48,24 @@
   "roles": {
     "realm": [
       {
+        "id": "8b2c4f34-1b7d-4c4a-9f75-2a0d63a11b2e",
+        "name": "Admin",
+        "description": "Full access to the AIS.chat admin UI",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "d1a51226-5a15-4087-9d4f-a9e825292aeb",
+        "attributes": {}
+      },
+      {
+        "id": "f4b5e8c7-2a31-4f5e-8d69-1c2b7a9e4f03",
+        "name": "Editor",
+        "description": "Access to templates and suspensions in the AIS.chat admin UI",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "d1a51226-5a15-4087-9d4f-a9e825292aeb",
+        "attributes": {}
+      },
+      {
         "id": "4da28a9e-3e7b-40ab-afc7-6158215dcd9a",
         "name": "default-roles-ais-chat-local",
         "description": "${role_default-roles}",
@@ -1023,7 +1041,8 @@
           "config": {
             "user.attribute": "foo",
             "introspection.token.claim": "true",
-            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "false",
             "claim.name": "resource_access.${client_id}.roles",
             "jsonType.label": "String",
             "multivalued": "true"
@@ -1038,7 +1057,8 @@
           "config": {
             "user.attribute": "foo",
             "introspection.token.claim": "true",
-            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "false",
             "claim.name": "realm_access.roles",
             "jsonType.label": "String",
             "multivalued": "true"
@@ -2938,6 +2958,44 @@
         "role": ["LEHR"]
       },
       "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ]
+    },
+    {
+      "username": "admin",
+      "firstName": "Admin",
+      "lastName": "Admin",
+      "email": "admin@example.com",
+      "attributes": {
+        "schulnummer": ["test_school1"],
+        "federal_state": ["DE-TEST"],
+        "role": ["LEHR"]
+      },
+      "enabled": true,
+      "realmRoles": ["Admin"],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ]
+    },
+    {
+      "username": "editor",
+      "firstName": "Editor",
+      "lastName": "Editor",
+      "email": "editor@example.com",
+      "attributes": {
+        "schulnummer": ["test_school1"],
+        "federal_state": ["DE-TEST"],
+        "role": ["LEHR"]
+      },
+      "enabled": true,
+      "realmRoles": ["Editor"],
       "credentials": [
         {
           "type": "password",

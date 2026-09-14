@@ -6,7 +6,7 @@ import {
   getConversation,
   getConversationMessages,
 } from '@shared/conversation/conversation-service';
-import { getCharacterForChatSession } from '@shared/characters/character-service';
+import { getCharacterForExistingConversation } from '@shared/characters/character-service';
 import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 import { getAvatarPictureUrl } from '@shared/files/fileService';
 import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
@@ -50,8 +50,9 @@ export default async function Page(
       conversationId: params.conversationId,
       userId: user.id,
     }),
-    getCharacterForChatSession({
+    getCharacterForExistingConversation({
       characterId: params.characterId,
+      conversationId: params.conversationId,
       user,
     }),
   ]).catch(handleErrorInServerComponent);

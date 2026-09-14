@@ -11,6 +11,7 @@ import {
   getLearningScenariosForUser,
   getLearningScenarioForEditView,
   getLearningScenarioForChatSession,
+  getLearningScenarioForExistingConversation,
   getSharedLearningScenario,
   linkFileToLearningScenario,
   removeFileFromLearningScenario,
@@ -30,6 +31,7 @@ import {
   dbGetGlobalLearningScenarios,
   dbGetLatestManageableLearningScenarioShare,
   dbGetLearningScenarioById,
+  dbGetLearningScenarioByIdForConversation,
   dbGetLearningScenarioByIdOptionalShareData,
   dbGetLearningScenarioByIdWithShareData,
   dbGetLearningScenariosByAssociatedSchools,
@@ -59,6 +61,7 @@ vi.mock('../db/functions/learning-scenario', () => ({
   dbGetGlobalLearningScenarios: vi.fn(),
   dbGetLatestManageableLearningScenarioShare: vi.fn(),
   dbGetLearningScenarioById: vi.fn(),
+  dbGetLearningScenarioByIdForConversation: vi.fn(),
   dbGetLearningScenarioByIdOptionalShareData: vi.fn(),
   dbGetLearningScenarioByIdWithShareData: vi.fn(),
   dbGetLearningScenariosByAssociatedSchools: vi.fn(),
@@ -805,6 +808,69 @@ describe('learning-scenario-service', () => {
           user,
         }),
       ).resolves.toBe(learningScenario);
+    });
+  });
+
+  describe('getLearningScenarioForExistingConversation', () => {
+    const learningScenarioId = generateUUID();
+    const conversationId = generateUUID();
+
+    it('returns the learning scenario when it is linked to the given conversation', async () => {
+      const user = mockUser('teacher');
+      const learningScenario = {
+        id: learningScenarioId,
+        userId: user.id,
+        accessLevel: 'private',
+        hasLinkAccess: false,
+      } as unknown as LearningScenarioSelectModel;
+      vi.mocked(dbGetLearningScenarioByIdForConversation).mockResolvedValue(
+        learningScenario as never,
+      );
+
+      const result = await getLearningScenarioForExistingConversation({
+        learningScenarioId,
+        conversationId,
+        user,
+      });
+
+      expect(result).toBe(learningScenario);
+      expect(dbGetLearningScenarioByIdForConversation).toHaveBeenCalledWith({
+        learningScenarioId,
+        conversationId,
+        userId: user.id,
+      });
+    });
+
+    it('throws NotFoundError when the learning scenario is not linked to the conversation', async () => {
+      vi.mocked(dbGetLearningScenarioByIdForConversation).mockResolvedValue(undefined);
+
+      await expect(
+        getLearningScenarioForExistingConversation({
+          learningScenarioId,
+          conversationId,
+          user: mockUser('teacher'),
+        }),
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it('throws ForbiddenError when the user is not authorized to read the learning scenario', async () => {
+      const learningScenario = {
+        id: learningScenarioId,
+        userId: generateUUID(),
+        accessLevel: 'private',
+        hasLinkAccess: false,
+      } as unknown as LearningScenarioSelectModel;
+      vi.mocked(dbGetLearningScenarioByIdForConversation).mockResolvedValue(
+        learningScenario as never,
+      );
+
+      await expect(
+        getLearningScenarioForExistingConversation({
+          learningScenarioId,
+          conversationId,
+          user: mockUser('teacher'),
+        }),
+      ).rejects.toThrow(ForbiddenError);
     });
   });
 

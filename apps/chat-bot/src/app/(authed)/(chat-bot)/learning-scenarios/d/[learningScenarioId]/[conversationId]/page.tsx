@@ -14,7 +14,7 @@ import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-mode
 import { parseSearchParams } from '@/utils/parse-search-params';
 import { z } from 'zod';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
-import { getLearningScenarioForChatSession } from '@shared/learning-scenarios/learning-scenario-service';
+import { getLearningScenarioForExistingConversation } from '@shared/learning-scenarios/learning-scenario-service';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { NotFoundError } from '@shared/error';
@@ -49,8 +49,9 @@ export default async function Page(
       conversationId: params.conversationId,
       userId: user.id,
     }),
-    getLearningScenarioForChatSession({
+    getLearningScenarioForExistingConversation({
       learningScenarioId: params.learningScenarioId,
+      conversationId: params.conversationId,
       user,
     }),
   ]).catch(handleErrorInServerComponent);

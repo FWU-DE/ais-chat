@@ -13,9 +13,17 @@ export type ImageResponse = {
   usage?: Usage;
 };
 
+/** Reference image passed to an image editing endpoint */
+export type ImageGenerationInputImage = {
+  data: Buffer;
+  mimeType: string;
+  filename: string;
+};
+
 /** size must have the correct aspect ratio that is supported by the model */
 export type ImageGenerationRequestOptions = {
   size: string; // e.g. "1024x1024", "1536x1024", "1408x768"
+  inputImages?: ImageGenerationInputImage[];
 };
 
 export type ImageGenerationFn = (args: {

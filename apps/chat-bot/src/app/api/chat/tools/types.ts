@@ -1,7 +1,6 @@
 import { type ToolDefinition, type ToolRegistry } from '@ais-chat/ai-core';
 import type { UserAndContext } from '@/auth/types';
-import type { FileModel } from '@shared/db/schema';
-import type { WebSearchResult } from '@shared/db/schema';
+import type { FileModel, WebSearchModel, WebSearchResult } from '@shared/db/schema';
 
 export type { ToolDefinition, ToolRegistry };
 
@@ -16,6 +15,7 @@ export type BuildToolsContext = {
   learningScenarioId?: string;
   assistantId?: string;
   conversationId?: string;
+  webSearchSettings?: WebSearchModel;
   relatedFileEntities: FileModel[];
   sourceUrls: string[];
   attachedLinks: string[];

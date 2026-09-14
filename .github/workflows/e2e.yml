@@ -20,6 +20,9 @@ jobs:
       VIDIS_CLIENT_ID: ais-chat-e2e-client
       VIDIS_CLIENT_SECRET: ClientSecret-e2e
       VIDIS_ISSUER_URI: http://localhost:8080/realms/ais-chat-local
+      KEYCLOAK_CLIENT_ID: ais-chat-e2e-client
+      KEYCLOAK_CLIENT_SECRET: ClientSecret-e2e
+      KEYCLOAK_ISSUER: http://localhost:8080/realms/ais-chat-local
       API_DATABASE_URL: postgresql://admin:test1234@127.0.0.1:5432/api_db
       API_URL: http://localhost:3002
       API_KEY: ApiKeyForAISChatApiAdminApi
@@ -156,6 +159,21 @@ jobs:
           LOG_TO_STDOUT: 'true'
           LINKUP_API_KEY: ${{ secrets.LINKUP_API_KEY }}
 
+      - name: Start admin application
+        run: |
+          pnpm --filter ais-chat-admin dev > /tmp/ais-chat-admin.log 2>&1 &
+          timeout=60
+          elapsed=0
+          until wget -qO- http://localhost:3001/api/healthz > /dev/null 2>&1; do
+            if [ $elapsed -ge $timeout ]; then
+              echo "ais-chat-admin did not become ready within ${timeout}s"
+              exit 1
+            fi
+            echo "$(date) - waiting for ais-chat-admin to be ready"
+            sleep 1
+            elapsed=$((elapsed + 1))
+          done
+
       - name: Wait for valkey and keycloak
         run: |
           docker compose -f devops/docker/docker-compose.local.yml up -d --wait valkey keycloak
@@ -182,6 +200,11 @@ jobs:
           E2E_TEXT_MODEL_1: Mock LLM
           E2E_TEXT_MODEL_2: Mock LLM (2)
 
+      - name: Run E2E tests (admin)
+        run: pnpm --filter ais-chat-admin e2e
+        env:
+          CI: true
+
       - name: Run E2E tests (api)
         run: pnpm --filter ais-chat-api e2e
         env:
@@ -204,6 +227,14 @@ jobs:
           path: apps/api/playwright-report
           retention-days: 30
 
+      - name: Upload Playwright reports (admin)
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: admin-playwright-report
+          path: apps/admin/playwright-report
+          retention-days: 30
+
       - name: Print ais-chat-api logs
         if: always()
         run: |
@@ -215,6 +246,12 @@ jobs:
         run: |
           echo "=== ais-chat-app logs ==="
           cat "$APP_LOG_FILE" || true
+
+      - name: Print ais-chat-admin logs
+        if: always()
+        run: |
+          echo "=== ais-chat-admin logs ==="
+          cat /tmp/ais-chat-admin.log || true
 
       - name: Print container logs
         if: always()

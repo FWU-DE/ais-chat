@@ -5,7 +5,7 @@ services:
   # Containers share this network namespace via network_mode: "service:keycloak"
   # This is required to access keycloak using the same URL from within the container and the browser
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.1
+    image: quay.io/keycloak/keycloak:26.7.2-1
     restart: unless-stopped
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
@@ -13,6 +13,8 @@ services:
       CLIENT_NAME: ais-chat-dev-client
       CLIENT_SECRET: ClientSecret
     entrypoint: /opt/keycloak/data/import/entrypoint.sh
+    # Stop grace period is set to 2 minutes to allow Keycloak to export the realm and users on shutdown
+    stop_grace_period: 2m
     volumes:
       - keycloak_data:/opt/keycloak/data/h2
       - ./keycloak:/opt/keycloak/data/import
