@@ -1,20 +1,17 @@
 'use server';
 
 import { requireAdminAuth } from '@/auth/requireAdminAuth';
-import { createLargeLanguageModel, updateLargeLanguageModel } from '@/services/llm-service';
+import {
+  createLargeLanguageModel,
+  deleteLargeLanguageModel,
+  updateLargeLanguageModel,
+} from '@/services/llm-service';
 import { CreateLargeLanguageModel, UpdateLargeLanguageModel } from '@/types/large-language-model';
-import { logError } from '@shared/logging';
+import { runServerAction } from '@shared/actions/run-server-action';
 
 export async function createLLMAction(organizationId: string, data: CreateLargeLanguageModel) {
   await requireAdminAuth();
-
-  try {
-    const result = await createLargeLanguageModel(organizationId, data);
-    return result;
-  } catch (error) {
-    logError('Error creating LLM', error);
-    throw error;
-  }
+  return runServerAction('createLLMAction', createLargeLanguageModel)(organizationId, data);
 }
 
 export async function updateLLMAction(
@@ -23,12 +20,10 @@ export async function updateLLMAction(
   data: UpdateLargeLanguageModel,
 ) {
   await requireAdminAuth();
+  return runServerAction('updateLLMAction', updateLargeLanguageModel)(organizationId, llmId, data);
+}
 
-  try {
-    const result = await updateLargeLanguageModel(organizationId, llmId, data);
-    return result;
-  } catch (error) {
-    logError('Error updating LLM', error);
-    throw error;
-  }
+export async function deleteLLMAction(organizationId: string, modelId: string) {
+  await requireAdminAuth();
+  return runServerAction('deleteLLMAction', deleteLargeLanguageModel)(organizationId, modelId);
 }

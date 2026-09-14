@@ -1,7 +1,11 @@
 'use server';
 
 import { requireAdminAuth } from '@/auth/requireAdminAuth';
-import { createProviderKey, updateProviderKey } from '@/services/provider-key-service';
+import {
+  createProviderKey,
+  deleteProviderKey,
+  updateProviderKey,
+} from '@/services/provider-key-service';
 import type { SaveProviderKey } from '@/types/provider-key';
 import { runServerAction } from '@shared/actions/run-server-action';
 
@@ -20,5 +24,13 @@ export async function updateProviderKeyAction(
     organizationId,
     providerKeyId,
     data,
+  );
+}
+
+export async function deleteProviderKeyAction(organizationId: string, providerKeyId: string) {
+  await requireAdminAuth();
+  return runServerAction('deleteProviderKeyAction', deleteProviderKey)(
+    organizationId,
+    providerKeyId,
   );
 }
