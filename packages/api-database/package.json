@@ -26,6 +26,7 @@
     "types": "tsc --noEmit"
   },
   "dependencies": {
+    "@ais-chat/shared-core": "workspace:*",
     "@t3-oss/env-core": "0.13.11",
     "bcryptjs": "3.0.3",
     "drizzle-orm": "0.45.2",

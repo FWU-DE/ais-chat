@@ -16,9 +16,11 @@ import { ROUTES } from '@/consts/routes';
 import { FormErrorDisplay } from '@/components/FormErrorDisplay';
 import type { ProviderKey } from '@/types/provider-key';
 import { Checkbox } from '@ui/components/checkbox';
-import { Field, FieldError, FieldLabel } from '@ui/components/field';
+import { Field, FieldDescription, FieldError, FieldLabel } from '@ui/components/field';
 import { Input } from '@ui/components/input';
 import { TrashSimpleIcon } from '@phosphor-icons/react';
+import { llmModelPriceMetadataSchema } from '@ais-chat/shared/db/schema';
+import { PriceMetadataExamplesDialog } from './PriceMetadataExamplesDialog';
 
 // Helper function to validate JSON
 const jsonStringSchema = z.string().refine((str) => {
@@ -31,11 +33,35 @@ const jsonStringSchema = z.string().refine((str) => {
   }
 }, 'Muss ein gültiges JSON-Format sein');
 
+// priceMetadata must match one of the known shapes ({type: 'text', ...},
+// {type: 'image', ...}, ...), otherwise the model breaks downstream in areas
+// that evaluate priceMetadata.type (see StaticModelConfigurationView).
+const priceMetadataSchema = z
+  .string()
+  .min(1, 'Preis-Metadaten sind erforderlich')
+  .superRefine((str, ctx) => {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(str);
+    } catch {
+      ctx.addIssue({ code: 'custom', message: 'Muss ein gültiges JSON-Format sein' });
+      return;
+    }
+    const result = llmModelPriceMetadataSchema.safeParse(parsed);
+    if (!result.success) {
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          'Muss einer der bekannten Preis-Formen entsprechen (siehe Beispiele). Ein leeres Objekt ist nicht gültig.',
+      });
+    }
+  });
+
 const llmFormSchema = z.object({
   name: z.string().min(1, 'Name ist erforderlich'),
   displayName: z.string().min(1, 'Anzeigename ist erforderlich'),
   description: z.string().optional().default(''),
-  priceMetadata: jsonStringSchema.optional().default(''),
+  priceMetadata: priceMetadataSchema,
   supportedImageFormats: jsonStringSchema.optional().default(''),
   imageGenerationConfig: jsonStringSchema.optional().default(''),
   additionalParameters: jsonStringSchema.optional().default(''),
@@ -219,11 +245,19 @@ export function LargeLanguageModelDetailView({
 
           <FormField
             name="priceMetadata"
-            label="Preis-Metadaten"
-            description="JSON mit Preisinformationen"
+            label="Preis-Metadaten *"
             control={control}
             type="textArea"
-          />
+          >
+            {(input) => (
+              <>
+                <FieldDescription>
+                  JSON mit Preisinformationen <PriceMetadataExamplesDialog />
+                </FieldDescription>
+                {input}
+              </>
+            )}
+          </FormField>
 
           <FormField
             name="supportedImageFormats"

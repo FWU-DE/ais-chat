@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import {
   dbGetAllModelsByOrganizationId,
   dbCreateLlmModel,
@@ -6,11 +7,15 @@ import {
   dbGetOrganizationById,
   dbReplaceModelProviderKeyMappings,
 } from '@ais-chat/api-database';
+import { imageGenerationConfigSchema } from '@ais-chat/api-database/types';
+import { llmModelPriceMetadataSchema } from '@ais-chat/shared/db/schema';
 import { CreateLargeLanguageModel, UpdateLargeLanguageModel } from '../types/large-language-model';
 import { logInfo } from '@shared/logging';
 import { dbUpdateLlmModelsForAllFederalStates } from '@shared/db/functions/llm-model';
 import { syncBifrostProvidersForOrganizationOrThrow } from './bifrost-provider-sync-service';
 import { runDeleteOrThrowError } from '@/utils/run-delete-or-throw-error';
+
+const supportedImageFormatsSchema = z.array(z.string());
 
 export async function getLargeLanguageModels(organizationId: string) {
   return dbGetAllModelsByOrganizationId(organizationId);
@@ -33,12 +38,12 @@ export async function createLargeLanguageModel(
     provider: 'bifrost',
     description: data.description ?? '',
     setting: { provider: 'bifrost' },
-    priceMetadata: data.priceMetadata
-      ? JSON.parse(data.priceMetadata)
-      : { type: 'text' as const, completionTokenPrice: 0, promptTokenPrice: 0 },
-    supportedImageFormats: data.supportedImageFormats ? JSON.parse(data.supportedImageFormats) : [],
+    priceMetadata: llmModelPriceMetadataSchema.parse(JSON.parse(data.priceMetadata)),
+    supportedImageFormats: data.supportedImageFormats
+      ? supportedImageFormatsSchema.parse(JSON.parse(data.supportedImageFormats))
+      : [],
     imageGenerationConfig: data.imageGenerationConfig
-      ? JSON.parse(data.imageGenerationConfig)
+      ? imageGenerationConfigSchema.parse(JSON.parse(data.imageGenerationConfig))
       : undefined,
     additionalParameters: data.additionalParameters ? JSON.parse(data.additionalParameters) : {},
     organizationId,
@@ -76,12 +81,12 @@ export async function updateLargeLanguageModel(
     provider: 'bifrost',
     description: data.description,
     setting: { provider: 'bifrost' },
-    priceMetadata: data.priceMetadata ? JSON.parse(data.priceMetadata) : undefined,
+    priceMetadata: llmModelPriceMetadataSchema.parse(JSON.parse(data.priceMetadata)),
     supportedImageFormats: data.supportedImageFormats
-      ? JSON.parse(data.supportedImageFormats)
+      ? supportedImageFormatsSchema.parse(JSON.parse(data.supportedImageFormats))
       : undefined,
     imageGenerationConfig: data.imageGenerationConfig
-      ? JSON.parse(data.imageGenerationConfig)
+      ? imageGenerationConfigSchema.parse(JSON.parse(data.imageGenerationConfig))
       : undefined,
     additionalParameters: data.additionalParameters
       ? JSON.parse(data.additionalParameters)
