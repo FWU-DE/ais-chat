@@ -1,3 +1,4 @@
+import { metrics } from '@opentelemetry/api';
 import * as Sentry from '@sentry/core';
 import type {
   Message as AiCoreMessage,
@@ -11,6 +12,13 @@ import { EmptyResponseError } from '../errors';
 export const MAX_AGENTIC_ITERATIONS = 3;
 export const MAX_TOOL_CALLS_PER_ITERATION = 2;
 
+const toolCallDuration = metrics
+  .getMeter('ais-chat.tools', '0.0.1')
+  .createHistogram('tool_call_duration', {
+    description: 'Duration of executed AI tool calls',
+    unit: 'ms',
+  });
+
 function logError(message: string, error: unknown) {
   console.error(message, error);
 }
@@ -21,6 +29,8 @@ type RunAgentLoopParams = {
   messages: AiCoreMessage[];
   toolRegistry?: ToolRegistry;
   agentName: string;
+  /** Tears down the upstream provider stream when the client goes away or the generation times out. */
+  abortSignal?: AbortSignal;
   onTextChunk: (delta: string) => void;
   onComplete: (result: {
     fullText: string;
@@ -30,7 +40,18 @@ type RunAgentLoopParams = {
     modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
     agentLoopMessages: AiCoreMessage[];
   }) => void;
-  onError: (error: Error) => void;
+  /**
+   * Receives whatever was billed before the failure, so a partially completed generation is
+   * still accounted for.
+   */
+  onError: (
+    error: Error,
+    billedUsage: {
+      usage: TokenUsage;
+      priceInCents: number;
+      modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+    },
+  ) => void;
 };
 
 export function runAgentLoop({
@@ -39,6 +60,7 @@ export function runAgentLoop({
   messages,
   toolRegistry,
   agentName,
+  abortSignal,
   onTextChunk,
   onComplete,
   onError,
@@ -54,6 +76,23 @@ export function runAgentLoop({
     const loopMessages = [...messages];
     const tools = toolRegistry ? Object.values(toolRegistry).map((entry) => entry.definition) : [];
 
+    const complete = () =>
+      onComplete({
+        fullText,
+        usage: totalUsage,
+        priceInCents: totalPriceInCents,
+        modelId: lastModelId,
+        modelUsages,
+        agentLoopMessages: loopMessages.slice(messages.length),
+      });
+
+    const fail = (error: Error) =>
+      onError(error, {
+        usage: totalUsage,
+        priceInCents: totalPriceInCents,
+        modelUsages,
+      });
+
     try {
       await Sentry.startSpan(
         {
@@ -68,6 +107,10 @@ export function runAgentLoop({
         },
         async (agentSpan) => {
           for (let iteration = 0; iteration < MAX_AGENTIC_ITERATIONS; iteration++) {
+            if (abortSignal?.aborted) {
+              break;
+            }
+
             const pendingToolCalls: ToolCall[] = [];
             const overBudgetToolCalls: ToolCall[] = [];
             let iterationText = '';
@@ -93,29 +136,41 @@ export function runAgentLoop({
                   totalTokens: totalUsage.totalTokens + usage.totalTokens,
                 };
                 totalPriceInCents += priceInCents;
+                if (usage.estimated) {
+                  agentSpan.setAttribute('gen_ai.usage.estimated', true);
+                }
               },
-              tools.length > 0 && !isLastIteration ? { tools, toolChoice: 'auto' } : undefined,
+              tools.length > 0 && !isLastIteration
+                ? { tools, toolChoice: 'auto', abortSignal }
+                : { abortSignal },
             );
 
-            for await (const event of stream) {
-              if (event.type === 'text') {
-                iterationText += event.delta;
-                onTextChunk(event.delta);
-              } else if (event.type === 'tool_call') {
-                if (pendingToolCalls.length < MAX_TOOL_CALLS_PER_ITERATION) {
-                  // On last iteration, tools are disabled but model might still emit tool calls
-                  if (!isLastIteration) {
-                    pendingToolCalls.push(event.call);
+            try {
+              for await (const event of stream) {
+                if (event.type === 'text') {
+                  iterationText += event.delta;
+                  onTextChunk(event.delta);
+                } else if (event.type === 'tool_call') {
+                  if (pendingToolCalls.length < MAX_TOOL_CALLS_PER_ITERATION) {
+                    // On last iteration, tools are disabled but model might still emit tool calls
+                    if (!isLastIteration) {
+                      pendingToolCalls.push(event.call);
+                    }
+                  } else {
+                    overBudgetToolCalls.push(event.call);
                   }
-                } else {
-                  overBudgetToolCalls.push(event.call);
                 }
               }
+            } finally {
+              // An interrupted stream still produced text; keep it instead of discarding it.
+              fullText += iterationText;
             }
 
-            fullText += iterationText;
-
             if (pendingToolCalls.length === 0 && overBudgetToolCalls.length === 0) {
+              break;
+            }
+
+            if (abortSignal?.aborted) {
               break;
             }
 
@@ -139,24 +194,32 @@ export function runAgentLoop({
                   },
                   async (toolSpan) => {
                     const registryEntry = toolRegistry?.[toolCall.name];
+                    const startedAt = performance.now();
+                    let status = registryEntry ? 'success' : 'unknown_tool';
                     let result: string;
 
-                    if (registryEntry) {
-                      try {
+                    try {
+                      if (registryEntry) {
                         const args = JSON.parse(toolCall.arguments) as Record<string, unknown>;
                         result = await registryEntry.handler(args);
-                      } catch (error) {
-                        // TODO: see tech debt (refactoring of tool calls for error handling). The catch clause is usually never executed, because tool handlers return errors as plain string or in the 'error' key of a stringified json
-                        const message =
-                          error instanceof Error ? error.message : 'Tool execution failed';
+                      } else {
+                        const message = `Unknown tool "${toolCall.name}"`;
                         toolSpan.setStatus({ code: 2, message });
-                        logError(`Error executing tool ${toolCall.name}:`, error);
                         result = `Error: ${message}`;
                       }
-                    } else {
-                      const message = `Unknown tool "${toolCall.name}"`;
+                    } catch (error) {
+                      status = 'error';
+                      // TODO: see tech debt (refactoring of tool calls for error handling). The catch clause is usually never executed, because tool handlers return errors as plain string or in the 'error' key of a stringified json
+                      const message =
+                        error instanceof Error ? error.message : 'Tool execution failed';
                       toolSpan.setStatus({ code: 2, message });
+                      logError(`Error executing tool ${toolCall.name}:`, error);
                       result = `Error: ${message}`;
+                    } finally {
+                      toolCallDuration.record(performance.now() - startedAt, {
+                        'gen_ai.tool.name': registryEntry ? toolCall.name : 'unknown',
+                        'tool.status': status,
+                      });
                     }
 
                     return { toolCallId: toolCall.id, result };
@@ -181,21 +244,30 @@ export function runAgentLoop({
       );
 
       if (fullText.trim().length === 0) {
-        onError(new EmptyResponseError({ modelId: lastModelId }));
-        return;
+        // An abort before any output is a teardown, not an empty-response failure.
+        if (!abortSignal?.aborted) {
+          fail(new EmptyResponseError({ modelId: lastModelId }));
+          return;
+        }
+
+        // Nothing was generated and nothing was billed, so there is nothing to report.
+        if (modelUsages.length === 0) {
+          return;
+        }
       }
 
-      onComplete({
-        fullText,
-        usage: totalUsage,
-        priceInCents: totalPriceInCents,
-        modelId: lastModelId,
-        modelUsages,
-        agentLoopMessages: loopMessages.slice(messages.length),
-      });
+      complete();
     } catch (error) {
+      // An aborted generation is an expected teardown, not a failure to report, but whatever
+      // was already generated must still reach the caller so it can be persisted and billed.
+      if (abortSignal?.aborted) {
+        if (fullText.trim().length > 0 || modelUsages.length > 0) {
+          complete();
+        }
+        return;
+      }
       logError('Error during agent loop:', error);
-      onError(error instanceof Error ? error : new Error('Unknown error'));
+      fail(error instanceof Error ? error : new Error('Unknown error'));
     }
   })();
 }

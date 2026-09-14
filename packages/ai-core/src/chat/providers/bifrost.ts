@@ -77,15 +77,21 @@ async function getUsedModelId(
 export function constructBifrostTextStreamFn(model: AiModel): TextStreamFn {
   const { client, modelName } = createBifrostClient(model);
 
-  return async function* getBifrostTextStream({ messages, maxTokens, fallbackModels }, onComplete) {
-    const response = await client.responses.create({
-      model: modelName,
-      input: toOpenAIResponsesInput(messages),
-      stream: true,
-      max_output_tokens: maxTokens,
-      ...model.additionalParameters,
-      ...(fallbackModels?.length ? { fallbacks: fallbackModels.map(getBifrostModelName) } : {}),
-    });
+  return async function* getBifrostTextStream(
+    { messages, maxTokens, fallbackModels, abortSignal },
+    onComplete,
+  ) {
+    const response = await client.responses.create(
+      {
+        model: modelName,
+        input: toOpenAIResponsesInput(messages),
+        stream: true,
+        max_output_tokens: maxTokens,
+        ...model.additionalParameters,
+        ...(fallbackModels?.length ? { fallbacks: fallbackModels.map(getBifrostModelName) } : {}),
+      },
+      { signal: abortSignal },
+    );
 
     let usage: TokenUsage | undefined;
     let modelId: string | undefined;
@@ -135,6 +141,7 @@ export function constructBifrostAgenticStreamFn(model: AiModel): AgenticStreamFn
     maxTokens,
     tools,
     toolChoice,
+    abortSignal,
     fallbackModels,
   }) {
     yield* streamOpenAICompatibleAgenticResponse({
@@ -144,6 +151,7 @@ export function constructBifrostAgenticStreamFn(model: AiModel): AgenticStreamFn
       maxTokens,
       tools,
       toolChoice,
+      abortSignal,
       providerName: 'Bifrost',
       additionalParameters: {
         ...(model.additionalParameters as Record<string, unknown>),
@@ -157,15 +165,23 @@ export function constructBifrostAgenticStreamFn(model: AiModel): AgenticStreamFn
 export function constructBifrostTextGenerationFn(model: AiModel): TextGenerationFn {
   const { client, modelName } = createBifrostClient(model);
 
-  return async function getBifrostTextGeneration({ messages, maxTokens, fallbackModels }) {
-    const response = await client.responses.create({
-      model: modelName,
-      input: toOpenAIResponsesInput(messages),
-      stream: false,
-      max_output_tokens: maxTokens,
-      ...model.additionalParameters,
-      ...(fallbackModels?.length ? { fallbacks: fallbackModels.map(getBifrostModelName) } : {}),
-    });
+  return async function getBifrostTextGeneration({
+    messages,
+    maxTokens,
+    fallbackModels,
+    abortSignal,
+  }) {
+    const response = await client.responses.create(
+      {
+        model: modelName,
+        input: toOpenAIResponsesInput(messages),
+        stream: false,
+        max_output_tokens: maxTokens,
+        ...model.additionalParameters,
+        ...(fallbackModels?.length ? { fallbacks: fallbackModels.map(getBifrostModelName) } : {}),
+      },
+      { signal: abortSignal },
+    );
 
     const textOutput = response.output.find((item) => item.type === 'message');
     const text =

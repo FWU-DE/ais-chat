@@ -25,12 +25,12 @@
   },
   "packageManager": "pnpm@11.11.0",
   "engines": {
-    "node": ">=24.19.0"
+    "node": ">=24.21.0"
   },
   "devDependencies": {
     "@ais-chat/typescript-config": "workspace:*",
     "madge": "8.0.0",
     "prettier": "3.9.6",
-    "turbo": "2.10.11"
+    "turbo": "2.10.12"
   }
 }

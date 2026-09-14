@@ -3,11 +3,14 @@ import Image from 'next/image';
 import { FileModel } from '@shared/db/schema';
 import { cn } from '@/utils/tailwind';
 
+// Minimal type required to render an image attachment chip
+export type ImageAttachment = Pick<FileModel, 'id' | 'name'>;
+
 // Extended type for pending files that includes a local blob URL
 export type PendingFileModel = FileModel & { localUrl?: string };
 
 type MessageImageAttachmentProps = {
-  file: FileModel | PendingFileModel;
+  file: ImageAttachment | PendingFileModel;
   width?: number;
   height?: number;
   className?: string;

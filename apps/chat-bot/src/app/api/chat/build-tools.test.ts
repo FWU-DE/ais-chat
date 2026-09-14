@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   buildRetrieveEntireFileToolMock: vi.fn(),
   buildRetrieveTextChunksToolMock: vi.fn(),
   buildMundoSearchToolMock: vi.fn(),
+  buildMathCalculateToolMock: vi.fn(),
 }));
 
 vi.mock('./tools/web-search-tool', () => ({
@@ -28,6 +29,10 @@ vi.mock('./tools/retrieve-text-chunks-tool', () => ({
 
 vi.mock('./tools/mundo-search-tool', () => ({
   buildMundoSearchTool: mocks.buildMundoSearchToolMock,
+}));
+
+vi.mock('./tools/math-calculate-tool', () => ({
+  buildMathCalculateTool: mocks.buildMathCalculateToolMock,
 }));
 
 const user = {
@@ -94,6 +99,15 @@ beforeEach(() => {
     },
     handler: vi.fn(),
   });
+
+  mocks.buildMathCalculateToolMock.mockReturnValue({
+    definition: {
+      name: 'math_calculate',
+      description: 'Calculate',
+      parameters: { type: 'object' },
+    },
+    handler: vi.fn(),
+  });
 });
 
 describe('buildTools', () => {
@@ -105,14 +119,23 @@ describe('buildTools', () => {
       conversationId: 'conv-1',
       relatedFileEntities,
       allowWebTools: true,
+      isCalculatorEnabled: true,
     });
 
     expect(Object.keys(toolRegistry)).toEqual([
+      'math_calculate',
       'web_search',
       'web_scraper',
       'retrieve_entire_file',
       'retrieve_text_chunks',
     ]);
+  });
+
+  it('returns no calculator tool when disabled', async () => {
+    const { buildTools } = await import('./build-tools');
+    const { toolRegistry } = await buildTools({ user, relatedFileEntities, allowWebTools: false });
+    expect(toolRegistry).not.toHaveProperty('math_calculate');
+    expect(mocks.buildMathCalculateToolMock).not.toHaveBeenCalled();
   });
 
   it('skips tools that return null', async () => {

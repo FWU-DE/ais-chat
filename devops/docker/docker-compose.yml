@@ -5,7 +5,7 @@ services:
   # Containers share this network namespace via network_mode: "service:keycloak"
   # This is required to access keycloak using the same URL from within the container and the browser
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.2-1
+    image: quay.io/keycloak/keycloak:26.7.3-0
     restart: unless-stopped
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
@@ -58,7 +58,7 @@ services:
 
   # Valkey (Redis-compatible) for session storage
   valkey:
-    image: ghcr.io/valkey-io/valkey:9.1.1-alpine
+    image: ghcr.io/valkey-io/valkey:9.1.2-alpine
     restart: unless-stopped
     volumes:
       - valkey_data:/data
@@ -88,7 +88,7 @@ services:
 
   # Crawl4AI for web scraping capabilities
   crawl4ai:
-    image: unclecode/crawl4ai:0.9.2
+    image: unclecode/crawl4ai:0.9.3
     environment:
       CRAWL4AI_API_TOKEN: ais-chat-crawl4ai-token
     restart: unless-stopped
@@ -110,7 +110,7 @@ services:
 
   # Xberg text extraction service
   xberg:
-    image: ghcr.io/xberg-io/xberg:1.0.14-core
+    image: ghcr.io/xberg-io/xberg:1.1.5-core
     restart: unless-stopped
     environment:
       XBERG_MAX_UPLOAD_SIZE_MB: '50'
@@ -149,7 +149,7 @@ services:
       start_period: 2s
 
   bifrost:
-    image: ghcr.io/maximhq/bifrost:v1.6.11
+    image: ghcr.io/maximhq/bifrost:v2.1.1
     restart: unless-stopped
     environment:
       BIFROST_ADMIN_USERNAME: admin
@@ -160,6 +160,37 @@ services:
       - bifrost_data:/app/data
     ports:
       - '8089:8080'
+
+  # Sandboxed arithmetic service backed by libqalculate.
+  calculator:
+    image: ghcr.io/fwu-de/ais-chat-calculator:latest
+    restart: unless-stopped
+    expose:
+      - '8080'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8080/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # AIS.chat API - OpenAI compatible API service
   ais-chat-api:
@@ -241,6 +272,9 @@ services:
       # Xberg text extraction
       XBERG_URL: http://xberg:8000
 
+      # Calculator arithmetic service
+      CALCULATOR_URL: http://calculator:8080
+
       # Bifrost LLM proxy
       BIFROST_BASE_URL: http://bifrost:8080/openai/v1
       BIFROST_API_KEY: sk-bf-example-key
@@ -262,6 +296,7 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: ''
 
       # Logging
+      LOG_TO_STDOUT: true
       NEXT_PUBLIC_SENTRY_LOG_LEVEL: debug
     network_mode: service:keycloak
     depends_on:
@@ -281,6 +316,8 @@ services:
         condition: service_started
       bifrost:
         condition: service_started
+      calculator:
+        condition: service_healthy
 
   # AIS.chat Admin - Administration interface
   ais-chat-admin:
@@ -315,7 +352,15 @@ services:
       BIFROST_ADMIN_USERNAME: admin
       BIFROST_ADMIN_PASSWORD: admin
 
+      # S3 Object Storage for file uploads
+      OTC_SECRET_ACCESS_KEY: RustFS-Admin-123456
+      OTC_ACCESS_KEY_ID: rustfsadmin
+      OTC_S3_HOSTNAME: http://rustfs:9000
+      OTC_S3_REGION: eu-de
+      OTC_BUCKET_NAME: ais-chat
+
       # Monitoring (optional, leave empty to disable)
+      LOG_TO_STDOUT: true
       NEXT_PUBLIC_SENTRY_LOG_LEVEL: info
     network_mode: service:keycloak
     depends_on:

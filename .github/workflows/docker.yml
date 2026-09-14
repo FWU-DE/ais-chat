@@ -5,10 +5,16 @@ on:
     workflows: ['Build'] # must match the name from `checks.yml`
     types: [completed]
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      build_all_images:
+        description: 'Build all images, ignoring turbo-ignore change detection'
+        type: boolean
+        default: false
 
 concurrency:
-  group: docker-build-main
-  cancel-in-progress: true
+  group: ${{ github.event_name == 'workflow_dispatch' && github.run_id || 'docker-build-main' }}
+  cancel-in-progress: false
 
 permissions:
   artifact-metadata: write
@@ -19,35 +25,54 @@ permissions:
 
 jobs:
   build_push_docker_images:
-    name: Build and push docker image ${{ matrix.image_name }}
+    name: Docker image ${{ matrix.image_name }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main'
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    env:
+      is_dry_run: ${{ github.event_name == 'workflow_dispatch' }}
+      # Triggered by workflow_run after "Build" (checks.yml) finishes, to build
+      # the same commit it just validated. Bare `github.sha` would instead
+      # resolve to main's current tip, which may have moved on since.
+      resolved_sha: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
 
     strategy:
       matrix:
         include:
           - image_name: ais-chat-api
+            package_name: ais-chat-api
             dockerfile: apps/api/Dockerfile
             image_ref: ghcr.io/fwu-de/ais-chat-api
             sentry_project: ${{ vars.SENTRY_PROJECT_API }}
             server_actions_secret: ''
           - image_name: ais-chat-app
+            package_name: ais-chat-app
             dockerfile: apps/chat-bot/Dockerfile
             image_ref: ghcr.io/fwu-de/ais-chat-app
             sentry_project: ${{ vars.SENTRY_PROJECT_DIALOG }}
             server_actions_secret: NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_APP
           - image_name: ais-chat-admin
+            package_name: ais-chat-admin
             dockerfile: apps/admin/Dockerfile
             image_ref: ghcr.io/fwu-de/ais-chat-admin
             sentry_project: ${{ vars.SENTRY_PROJECT_ADMIN }}
             server_actions_secret: NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_ADMIN
+          - image_name: ais-chat-calculator
+            package_name: '@ais-chat/calculator-service'
+            dockerfile: services/calculator/Dockerfile
+            image_ref: ghcr.io/fwu-de/ais-chat-calculator
+            sentry_project: ''
+            server_actions_secret: ''
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.resolved_sha }}
+          fetch-depth: 0
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -59,7 +84,42 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
+      - name: Determine last built commit for image
+        id: last-built
+        run: |
+          revision=$(docker buildx imagetools inspect "${{ matrix.image_ref }}:latest" \
+            --format '{{ index .Image.Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)
+          if [ -n "$revision" ] && [ "$revision" != "<no value>" ] && git cat-file -e "${revision}^{commit}" 2>/dev/null; then
+            echo "sha=$revision" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=HEAD^" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check if shared build pipeline changed
+        id: pipeline-changed
+        # These files aren't tracked by turbo (outside any workspace package),
+        # so a change here must force a rebuild of every image regardless of
+        # turbo-ignore's per-package result.
+        run: |
+          if git diff --quiet "${{ steps.last-built.outputs.sha }}" -- .github/workflows/docker.yml .dockerignore; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check if build is needed
+        id: turbo-ignore
+        run: |
+          if [ "${{ inputs.build_all_images }}" = "true" ] || [ "${{ steps.pipeline-changed.outputs.changed }}" = "true" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          elif npx turbo-ignore "${{ matrix.package_name }}" --fallback="${{ steps.last-built.outputs.sha }}"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: ${{ env.is_dry_run == 'true' && 'Build (no push)' || 'Build and push' }}
+        if: steps.turbo-ignore.outputs.skip == 'false'
         id: docker-build
         uses: docker/build-push-action@v7
         env:
@@ -79,16 +139,19 @@ jobs:
             NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
           build-args: |
             CI=${CI}
-            APP_VERSION=${{ github.sha }}
+            APP_VERSION=${{ env.resolved_sha }}
+          labels: |
+            org.opencontainers.image.revision=${{ env.resolved_sha }}
           tags: |
             ${{ matrix.image_ref }}:latest
-            ${{ matrix.image_ref }}:${{ github.sha }}
-          push: true
+            ${{ matrix.image_ref }}:${{ env.resolved_sha }}
+          push: ${{ env.is_dry_run != 'true' }}
           provenance: mode=max
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Generate artifact attestation
+        if: steps.turbo-ignore.outputs.skip == 'false' && env.is_dry_run != 'true'
         uses: actions/attest@v4.2.2
         with:
           subject-name: ${{ matrix.image_ref }}

@@ -57,6 +57,28 @@ export async function createImageAttachmentsForConversation(
   return images.filter((img) => img !== undefined);
 }
 
+const DEFAULT_SVG_DENSITY = 72;
+const MAX_SVG_DENSITY = 100_000; // sharp's upper limit for vector rasterisation
+
+/**
+ * sharp rasterises SVGs at their intrinsic size, so small vector graphics can turn into tiny
+ * bitmaps that look blurry when displayed. Increase the density so the largest side is
+ * rasterised up to TRUNCATE_IMAGE_HEIGHT before any further resizing is applied.
+ */
+async function rasterizeSvgToPng(fileContent: Buffer): Promise<Buffer> {
+  const { width, height } = await sharp(fileContent).metadata();
+  const largestSide = Math.max(width ?? 0, height ?? 0);
+  const density =
+    largestSide > 0 && largestSide < TRUNCATE_IMAGE_HEIGHT
+      ? Math.min(
+          Math.round((TRUNCATE_IMAGE_HEIGHT / largestSide) * DEFAULT_SVG_DENSITY),
+          MAX_SVG_DENSITY,
+        )
+      : DEFAULT_SVG_DENSITY;
+
+  return sharp(fileContent, { density }).png().toBuffer();
+}
+
 export async function preprocessImage(
   fileContent: Buffer,
   type: string,
@@ -66,7 +88,7 @@ export async function preprocessImage(
   let processedType = type;
   if (type === 'svg') {
     try {
-      processedBuffer = await sharp(fileContent).png().toBuffer();
+      processedBuffer = await rasterizeSvgToPng(fileContent);
       processedType = 'png';
     } catch {
       throw new Error('Failed to convert SVG to PNG');

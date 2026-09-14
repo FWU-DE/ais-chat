@@ -1,9 +1,15 @@
 'use server';
 import { requireAdminAuth } from '@/auth/requireAdminAuth';
-import { getProjects, getSingleProject, createProject } from '@/services/project-service';
+import {
+  getProjects,
+  getSingleProject,
+  createProject,
+  deleteProject,
+} from '@/services/project-service';
 import { getApiKeys } from '@/services/api-key-service';
 import { Project } from '@/types/project';
 import { ApiKey } from '@/types/api-key';
+import { runServerAction } from '@shared/actions/run-server-action';
 
 export async function getProjectsAction(organizationId: string) {
   await requireAdminAuth();
@@ -46,4 +52,9 @@ export async function getApiKeysAction(
   await requireAdminAuth();
 
   return getApiKeys(organizationId, projectId);
+}
+
+export async function deleteProjectAction(organizationId: string, projectId: string) {
+  await requireAdminAuth();
+  return runServerAction('deleteProjectAction', deleteProject)(organizationId, projectId);
 }

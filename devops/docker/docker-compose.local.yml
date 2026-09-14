@@ -22,7 +22,7 @@ services:
       start_period: 30s
 
   valkey:
-    image: ghcr.io/valkey-io/valkey:9.1.1-alpine
+    image: ghcr.io/valkey-io/valkey:9.1.2-alpine
     restart: unless-stopped
     volumes:
       - valkey_data:/data
@@ -35,7 +35,7 @@ services:
       retries: 5
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.2-1
+    image: quay.io/keycloak/keycloak:26.7.3-0
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
@@ -78,7 +78,7 @@ services:
       retries: 5
 
   crawl4ai:
-    image: unclecode/crawl4ai:0.9.2
+    image: unclecode/crawl4ai:0.9.3
 
     environment:
       CRAWL4AI_API_TOKEN: ais-chat-crawl4ai-token
@@ -100,7 +100,7 @@ services:
       start_period: 40s
 
   xberg:
-    image: ghcr.io/xberg-io/xberg:1.0.14-core
+    image: ghcr.io/xberg-io/xberg:1.1.5-core
     environment:
       XBERG_MAX_UPLOAD_SIZE_MB: '50'
     ports:
@@ -116,7 +116,8 @@ services:
 
   mock-llm:
     build:
-      context: ./mock-llm
+      context: ../../services/mock-llm
+      dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - '6556:6556'
@@ -155,7 +156,7 @@ services:
         condition: service_healthy
 
   bifrost:
-    image: ghcr.io/maximhq/bifrost:v1.6.11
+    image: ghcr.io/maximhq/bifrost:v2.1.1
     restart: unless-stopped
     environment:
       BIFROST_ADMIN_USERNAME: admin
@@ -174,6 +175,40 @@ services:
       timeout: 2s
       retries: 10
       start_period: 2s
+
+  calculator:
+    build:
+      context: ../..
+      dockerfile: services/calculator/Dockerfile
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:8081:8080'
+    expose:
+      - '8080'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8080/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   bifrost_data:

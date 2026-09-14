@@ -1,5 +1,8 @@
 export function getImageContentType(type: string): string {
-  switch (type.toLowerCase()) {
+  const normalized = type.toLowerCase();
+  if (normalized.startsWith('image/')) return normalized;
+
+  switch (normalized) {
     case 'jpg':
     case 'jpeg':
       return 'image/jpeg';

@@ -43,7 +43,7 @@ export function ApplicationHeader({ userAndContext }: { userAndContext?: UserAnd
   );
 
   return (
-    <header className="flex flex-row gap-4 min-h-20 px-6 py-2 items-start sm:items-center justify-between">
+    <header className="flex flex-row gap-4 min-h-20 px-6 py-2 items-center justify-between">
       <ToggleSidebarButton />
       <div
         className="flex flex-col sm:flex-row flex-wrap gap-4 min-w-0 flex-1"

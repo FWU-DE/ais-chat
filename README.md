@@ -29,15 +29,15 @@ This guide helps you run AIS.chat using pre-built Docker images with minimal con
    - Create S3 bucket in RustFS
 
 3. **Access the applications:**
-   - **Chat-bot app**: http://localhost:3000
-   - **Admin app**: http://localhost:3001
+   - **Chat-bot app**: http://localhost:3000 (credentials: `teacher` / `password`)
+   - **Admin app**: http://localhost:3001 (credentials: `admin` / `password` or `editor` / `password`)
    - **API**: http://localhost:3002
    - **Keycloak**: http://localhost:8080 (credentials: `admin` / `admin`)
    - **RustFS Console**: http://localhost:9001 (S3-compatible storage, credentials: `rustfsadmin` / `RustFS-Admin-123456`)
 
 4. **Configure the application using ais-chat-admin:**
    - Navigate to the admin app at http://localhost:3001
-   - Login with teacher credentials (username: `teacher`, password: `password`)
+   - Login with admin credentials (username: `admin`, password: `password`)
    - In `ais-chat-api` section:
      - Create your LLM models
      - Create Projects (i.e., federal states) and assign the models to them.
@@ -49,7 +49,7 @@ This guide helps you run AIS.chat using pre-built Docker images with minimal con
 
 5. **Login with default credentials:**
 
-   Use any of the predefined users from the Keycloak realm configuration:
+   Open the chat-bot app at http://localhost:3000 and log in with any of the predefined users from the Keycloak realm configuration:
    - Username: `teacher` / Password: `password` (teacher)
    - See [ais-chat-local-realm.json](devops/docker/keycloak/ais-chat-local-realm.json) for all available users
 
@@ -57,6 +57,31 @@ This guide helps you run AIS.chat using pre-built Docker images with minimal con
 
 All services are preconfigured with sensible defaults in `devops/docker/docker-compose.yml`.
 To customize environment variables edit `devops/docker/docker-compose.yml` directly or create a `docker-compose.override.yml`.
+
+### Calculator arithmetic service
+
+The Compose setup includes a libqalculate HTTP service. In the production/self-hosted Compose file,
+calculator is reachable by the containerized chatbot through the internal calculator network and is also
+published on the local host at `http://127.0.0.1:8081` for local testing. Host clients should use
+the loopback port. The production calculator container has no external network access; the application
+and Keycloak share a network namespace in this Compose setup so the application can reach calculator.
+
+- `GET /healthz` returns `{"status":"success","result":"ok"}`.
+- `POST /v1/calculate` accepts `Content-Type: application/json` and a body such as
+  `{"expression":"2 + 2"}`. Successful responses contain `status: "success"` and the calculated string in `result`.
+- Requests are limited to an 8 KiB body, a 4096-character expression, 16 KiB worker output, and
+  a 2-second worker wall time. The pool runs up to 4 workers concurrently and queues up to 32
+  additional requests in FIFO order. Invalid requests return structured HTTP 400 JSON; a full
+  worker pool returns HTTP 429.
+
+Start it with the self-hosted stack using `docker compose -f devops/docker/docker-compose.yml up -d`.
+For source development, calculator starts with the normal local stack:
+`docker compose -f devops/docker/docker-compose.local.yml up -d --build`.
+The local calculator service explicitly joins the default Compose network so containerized local apps can
+use `http://calculator:8080`; apps run directly on the host must use `http://127.0.0.1:8081`.
+Enable **calculator** for the relevant federal state in AIS.chat Admin before using the chatbot tool.
+Focused service tests run with `pnpm --filter @ais-chat/calculator-service test` (type and lint checks use
+the corresponding `check-types` and `lint` scripts).
 
 ### Stopping and Cleanup
 

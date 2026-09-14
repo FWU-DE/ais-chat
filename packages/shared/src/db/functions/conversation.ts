@@ -34,12 +34,16 @@ export async function dbDeleteConversationByIdAndUserId({
       throw new Error('Could not delete the conversation');
     }
 
-    const filesToDelete = (
-      await tx
-        .select({ fileId: ConversationMessageFileMappingTable.fileId })
-        .from(ConversationMessageFileMappingTable)
-        .where(eq(ConversationMessageFileMappingTable.conversationId, conversationId))
-    ).map((f) => f.fileId);
+    const filesToDelete = Array.from(
+      new Set(
+        (
+          await tx
+            .select({ fileId: ConversationMessageFileMappingTable.fileId })
+            .from(ConversationMessageFileMappingTable)
+            .where(eq(ConversationMessageFileMappingTable.conversationId, conversationId))
+        ).map((f) => f.fileId),
+      ),
+    );
     await deleteFilesFromS3(filesToDelete);
     await tx
       .delete(ConversationMessageFileMappingTable)

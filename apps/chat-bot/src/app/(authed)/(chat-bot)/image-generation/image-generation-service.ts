@@ -5,16 +5,26 @@ import { dbGetModelByIdAndFederalStateId } from '@shared/db/functions/llm-model'
 import { sendRabbitmqEvent } from '@/rabbitmq/send';
 import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
 import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
-import { dbInsertChatContent, dbGetOrCreateConversation } from '@shared/db/functions/chat';
+import {
+  dbInsertChatContent,
+  dbGetOrCreateConversation,
+  dbGetConversationAndMessages,
+  dbDeleteRegeneratedConversationMessage,
+} from '@shared/db/functions/chat';
 import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
 import { logError } from '@shared/logging';
 import { generateImageWithBilling } from '@ais-chat/ai-core';
 import { LlmModelSelectModel } from '@shared/db/schema';
 import { ImageStyle } from '@shared/utils/chat';
 import { generateUUID } from '@shared/utils/uuid';
-import { uploadFileToS3, getReadOnlySignedUrl } from '@shared/s3';
+import { deleteFileFromS3, uploadFileToS3, getReadOnlySignedUrl } from '@shared/s3';
 import { cnanoid } from '@shared/random/randomService';
-import { linkFilesToConversation, dbInsertFile } from '@shared/db/functions/files';
+import {
+  dbDeleteFileAndDetachFromConversation,
+  dbDetachFilesFromConversationMessages,
+  linkFilesToConversation,
+  dbInsertFile,
+} from '@shared/db/functions/files';
 import { dbDeleteConversationByIdAndUserId } from '@shared/db/functions/conversation';
 import { NotFoundError } from '@shared/error';
 import { getAvailableImageModelsForFederalState } from '@shared/image-generation/image-generation-service';
@@ -70,6 +80,7 @@ export async function handleImageGeneration({
   federalStateId,
   options,
   inputFileIds = [],
+  conversationId: existingConversationId,
 }: {
   prompt: string;
   model: LlmModelSelectModel;
@@ -78,6 +89,7 @@ export async function handleImageGeneration({
   federalStateId: string;
   options: ImageGenerationOptions;
   inputFileIds?: string[];
+  conversationId?: string;
 }) {
   await checkIfImageModelIsAssignedToFederalState(model, federalStateId);
 
@@ -90,10 +102,32 @@ export async function handleImageGeneration({
   const inputImages = await fetchInputImages({ inputFileIds, userId });
 
   let conversationId: string | undefined;
+  let generatedFileId: string | undefined;
+  let generatedUserMessageId: string | undefined;
+  let generatedAssistantMessageId: string | undefined;
+  let baseOrderNumber = 0;
+  const isExistingConversation = existingConversationId !== undefined;
 
   try {
-    // Every image generation gets its own conversation
-    conversationId = await createImageConversation(prompt);
+    if (isExistingConversation) {
+      const existing = await dbGetConversationAndMessages({
+        conversationId: existingConversationId,
+        userId,
+      });
+      if (!existing || existing.conversation.type !== 'image-generation') {
+        throw new NotFoundError('Image generation conversation not found');
+      }
+      conversationId = existing.conversation.id;
+      baseOrderNumber = existing.messages.reduce(
+        (max, msg) => (msg.orderNumber > max ? msg.orderNumber : max),
+        0,
+      );
+    } else {
+      conversationId = await createImageConversation(prompt);
+    }
+
+    const userOrderNumber = baseOrderNumber + 1;
+    const assistantOrderNumber = baseOrderNumber + 2;
 
     // Construct the full prompt with style prompt if provided
     let fullPrompt = prompt;
@@ -108,13 +142,14 @@ export async function handleImageGeneration({
       userId: userId,
       content: prompt,
       modelName: model.name,
-      orderNumber: 1,
+      orderNumber: userOrderNumber,
       parameters: { imageStyle: style?.name, aspectRatio: options.aspectRatio },
     });
 
     if (!userMessage) {
       throw new Error('Failed to create user message');
     }
+    generatedUserMessageId = userMessage.id;
 
     if (inputFileIds.length > 0) {
       await linkFilesToConversation({
@@ -149,6 +184,7 @@ export async function handleImageGeneration({
       body: imageBuffer,
       contentType: 'image/png',
     });
+    generatedFileId = fileId;
 
     // Create file record in database
     await dbInsertFile({
@@ -164,7 +200,7 @@ export async function handleImageGeneration({
       conversationId: conversationId,
       role: 'assistant',
       content: '', // No content needed since we're using file attachment
-      orderNumber: 2,
+      orderNumber: assistantOrderNumber,
       modelName: model.name,
       parameters: style ? { imageStyle: style.name } : undefined,
       userId,
@@ -173,6 +209,7 @@ export async function handleImageGeneration({
     if (!assistantMessage) {
       throw new Error('Failed to create assistant message');
     }
+    generatedAssistantMessageId = assistantMessage.id;
 
     // Link the image file to the assistant message
     await linkFilesToConversation({
@@ -193,13 +230,40 @@ export async function handleImageGeneration({
       imageUrl: signedUrl,
       conversationId,
       fileId,
+      assistantMessageId: assistantMessage.id,
+      userMessageId: userMessage.id,
     };
   } catch (error) {
-    if (conversationId) {
+    if (generatedFileId !== undefined) {
+      await Promise.allSettled([
+        deleteFileFromS3({ key: `message_attachments/${generatedFileId}` }),
+        dbDeleteFileAndDetachFromConversation([generatedFileId]),
+      ]).then((results) => {
+        for (const result of results) {
+          if (result.status === 'rejected') {
+            logError('Error cleaning up generated image file:', result.reason);
+          }
+        }
+      });
+    }
+
+    if (conversationId !== undefined) {
       try {
-        await dbDeleteConversationByIdAndUserId({ conversationId, userId });
+        if (isExistingConversation) {
+          await dbDetachFilesFromConversationMessages(
+            [generatedUserMessageId, generatedAssistantMessageId].filter(
+              (messageId): messageId is string => messageId !== undefined,
+            ),
+          );
+          await dbDeleteRegeneratedConversationMessage({
+            conversationId,
+            orderNumber: baseOrderNumber,
+          });
+        } else {
+          await dbDeleteConversationByIdAndUserId({ conversationId, userId });
+        }
       } catch (deletionError) {
-        logError('Error deleting failed image conversation:', deletionError);
+        logError('Error cleaning up failed image generation:', deletionError);
       }
     }
     throw error instanceof Error

@@ -56,9 +56,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      # Starts all e2e container dependencies in the background using the same compose file as
-      # local dev. Later steps only block on the specific containers they actually need, once needed.
-      - name: Start e2e container dependencies (in background)
+      - name: Start e2e container dependencies
         run: docker compose -f devops/docker/docker-compose.local.yml up -d --build &
 
       - name: Setup pnpm
@@ -174,9 +172,9 @@ jobs:
             elapsed=$((elapsed + 1))
           done
 
-      - name: Wait for valkey and keycloak
+      - name: Wait for valkey, keycloak and remaining services
         run: |
-          docker compose -f devops/docker/docker-compose.local.yml up -d --wait valkey keycloak
+          docker compose -f devops/docker/docker-compose.local.yml up -d --wait valkey keycloak rabbitmq crawl4ai xberg calculator
           timeout=120
           elapsed=0
           until wget -qO- "${VIDIS_ISSUER_URI}/.well-known/openid-configuration" > /dev/null 2>&1; do

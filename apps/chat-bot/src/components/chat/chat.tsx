@@ -75,6 +75,7 @@ export default function Chat({
   const [pendingFileMapping, setPendingFileMapping] = useState<Map<string, PendingFileModel[]>>(
     new Map(),
   );
+  const pendingFileMappingRef = React.useRef(pendingFileMapping);
   const [files, setFiles] = useState<Map<string, LocalFileState>>(new Map());
   const [countOfFilesInChat, setCountOfFilesInChat] = useState(0);
   const queryClient = useQueryClient();
@@ -157,29 +158,29 @@ export default function Chat({
     const fetchData = async () => {
       const result = await refetchFileMapping(id);
       if (!result.success) return;
-      const newFileMapping = result.value;
-      setFileMapping(newFileMapping);
-
-      // Clean up pending files that now have DB entries
-      // This also revokes blob URLs to prevent memory leaks
-      setPendingFileMapping((prev) => {
-        const updated = new Map(prev);
-        for (const [messageId, files] of prev) {
-          if (newFileMapping.has(messageId)) {
-            // Revoke blob URLs before removing
-            for (const file of files) {
-              if (file.localUrl) {
-                URL.revokeObjectURL(file.localUrl);
-              }
-            }
-            updated.delete(messageId);
-          }
-        }
-        return updated;
-      });
+      setFileMapping(result.value);
     };
     void fetchData();
   }, [countOfFilesInChat, id, messages.length]);
+
+  useEffect(() => {
+    pendingFileMappingRef.current = pendingFileMapping;
+  }, [pendingFileMapping]);
+
+  // Blob URLs stay usable for the whole session, so they are kept once the files are persisted
+  // and only revoked on unmount.
+  useEffect(
+    () => () => {
+      for (const files of pendingFileMappingRef.current.values()) {
+        for (const file of files) {
+          if (file.localUrl !== undefined) {
+            URL.revokeObjectURL(file.localUrl);
+          }
+        }
+      }
+    },
+    [],
+  );
 
   async function customHandleSubmit(e: SyntheticEvent) {
     e.preventDefault();

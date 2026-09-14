@@ -145,6 +145,7 @@ const teacherUserAndContext = {
   userRole: 'teacher',
   federalState: {
     id: 'federal-state-1',
+    featureToggles: { isCalculatorEnabled: true },
   },
 };
 
@@ -250,6 +251,9 @@ describe('sendLearningScenarioMessage', () => {
       urls: ['https://scenario.example/context'],
       federalStateId: teacherUserAndContext.federalState.id,
     });
+    expect(mocks.buildToolsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ isCalculatorEnabled: true }),
+    );
   });
 
   it('forwards fileIds to shared file service', async () => {
@@ -293,9 +297,11 @@ describe('sendLearningScenarioMessage', () => {
       modelId: model.id,
     });
 
-    expect(mocks.isWebSearchEnabledForEntityMock).toHaveBeenCalledWith({
-      entity: learningScenario,
-    });
+    expect(mocks.isWebSearchEnabledForEntityMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entity: expect.objectContaining({ id: learningScenario.id }),
+      }),
+    );
     expect(mocks.buildToolsMock).toHaveBeenCalledWith(
       expect.objectContaining({
         allowWebTools: false,

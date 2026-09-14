@@ -417,7 +417,7 @@ export async function sendChatMessage({
       activeAssistant ?? { isWebSearchEnabled: true },
   });
 
-  const { stream, update, done, error: streamError } = createTextStream();
+  const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
 
   const tools = await buildTools({
     user,
@@ -431,6 +431,7 @@ export async function sendChatMessage({
     sourceUrls: ingestResult.processedUrls,
     allowWebTools,
     allowMundoSearch: true,
+    isCalculatorEnabled: user.federalState.featureToggles.isCalculatorEnabled,
     onWebSearchResults: (results) => {
       webSearchResults = results;
       update(
@@ -489,6 +490,47 @@ export async function sendChatMessage({
   const assistantMessageId = crypto.randomUUID();
   const assistantMessageOrderNumber = userMessageOrderNumber + 1;
 
+  async function persistUsage({
+    usage,
+    priceInCents,
+    modelUsages,
+  }: {
+    usage: TokenUsage;
+    priceInCents: number;
+    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+  }) {
+    if (modelUsages.length === 0) {
+      return;
+    }
+
+    // Agentic requests can invoke several models across iterations. Persist each usage
+    // entry separately so pricing and reporting stay associated with the serving model.
+    await Promise.all(
+      modelUsages.map((modelUsage) =>
+        dbInsertConversationUsage({
+          conversationId: activeConversation.id,
+          userId: user.id,
+          modelId: modelUsage.modelId,
+          completionTokens: modelUsage.usage.completionTokens,
+          promptTokens: modelUsage.usage.promptTokens,
+          costsInCent: modelUsage.priceInCents,
+        }),
+      ),
+    );
+
+    await sendRabbitmqEvent(
+      constructNewMessageEvent({
+        user,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        costsInCent: priceInCents,
+        provider: definedModel.provider,
+        anonymous: false,
+        conversation: activeConversation,
+      }),
+    );
+  }
+
   async function persistAssistantMessage({
     fullText,
     usage,
@@ -543,34 +585,7 @@ export async function sendChatMessage({
       });
     }
 
-    const { promptTokens, completionTokens } = usage;
-
-    // Agentic requests can invoke several models across iterations. Persist each usage
-    // entry separately so pricing and reporting stay associated with the serving model.
-    await Promise.all(
-      modelUsages.map((modelUsage) =>
-        dbInsertConversationUsage({
-          conversationId: activeConversation.id,
-          userId: user.id,
-          modelId: modelUsage.modelId,
-          completionTokens: modelUsage.usage.completionTokens,
-          promptTokens: modelUsage.usage.promptTokens,
-          costsInCent: modelUsage.priceInCents,
-        }),
-      ),
-    );
-
-    await sendRabbitmqEvent(
-      constructNewMessageEvent({
-        user,
-        promptTokens,
-        completionTokens,
-        costsInCent: priceInCents,
-        provider: definedModel.provider,
-        anonymous: false,
-        conversation: activeConversation,
-      }),
-    );
+    await persistUsage({ usage, priceInCents, modelUsages });
   }
 
   async function persistEmptyAssistantMessage() {
@@ -591,6 +606,7 @@ export async function sendChatMessage({
     messages: convertToAiCoreMessages(systemPrompt, messagesWithImages),
     toolRegistry: tools.toolRegistry,
     agentName: resolveAgentNameForTracing({ characterId, learningScenarioId, assistantId }),
+    abortSignal: generationSignal,
     onTextChunk: (delta: string) => {
       update(delta);
     },
@@ -609,10 +625,15 @@ export async function sendChatMessage({
         streamError(error instanceof Error ? error : new Error('Unknown error'));
       }
     },
-    onError: async (error: Error) => {
-      await persistEmptyAssistantMessage();
-
-      streamError(error);
+    onError: async (error: Error, billedUsage) => {
+      try {
+        await persistEmptyAssistantMessage();
+        await persistUsage(billedUsage);
+      } catch (persistenceError) {
+        logError('Error persisting failed agent loop usage:', persistenceError);
+      } finally {
+        streamError(error);
+      }
     },
   });
 

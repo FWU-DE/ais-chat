@@ -44,7 +44,7 @@ function createAzureClient(model: AiModel): {
 export function constructAzureResponsesStreamFn(model: AiModel): TextStreamFn {
   const { client, deployment } = createAzureClient(model);
 
-  return async function* getAzureTextStream({ messages, maxTokens }, onComplete) {
+  return async function* getAzureTextStream({ messages, maxTokens, abortSignal }, onComplete) {
     const response = await client.responses.create(
       {
         model: deployment,
@@ -55,6 +55,7 @@ export function constructAzureResponsesStreamFn(model: AiModel): TextStreamFn {
       },
       {
         path: `/openai/responses`,
+        ...(abortSignal ? { signal: abortSignal } : {}),
       },
     );
 
@@ -92,7 +93,13 @@ export function constructAzureResponsesStreamFn(model: AiModel): TextStreamFn {
 export function constructAzureResponsesAgenticStreamFn(model: AiModel): AgenticStreamFn {
   const { client, deployment } = createAzureClient(model);
 
-  return async function* getAzureTextStream({ messages, maxTokens, tools, toolChoice }) {
+  return async function* getAzureTextStream({
+    messages,
+    maxTokens,
+    tools,
+    toolChoice,
+    abortSignal,
+  }) {
     yield* streamOpenAICompatibleAgenticResponse({
       client,
       messages,
@@ -100,6 +107,7 @@ export function constructAzureResponsesAgenticStreamFn(model: AiModel): AgenticS
       maxTokens,
       tools,
       toolChoice,
+      abortSignal,
       providerName: 'Azure OpenAI',
       createOptions: {
         path: `/openai/responses`,
@@ -115,7 +123,7 @@ export function constructAzureResponsesAgenticStreamFn(model: AiModel): AgenticS
 export function constructAzureResponsesGenerationFn(model: AiModel): TextGenerationFn {
   const { client, deployment } = createAzureClient(model);
 
-  return async function getAzureTextGeneration({ messages, maxTokens }) {
+  return async function getAzureTextGeneration({ messages, maxTokens, abortSignal }) {
     const response = await client.responses.create(
       {
         model: deployment,
@@ -126,6 +134,7 @@ export function constructAzureResponsesGenerationFn(model: AiModel): TextGenerat
       },
       {
         path: `/openai/responses`,
+        ...(abortSignal ? { signal: abortSignal } : {}),
       },
     );
 

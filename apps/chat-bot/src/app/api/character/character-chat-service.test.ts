@@ -144,6 +144,7 @@ const teacherUserAndContext = {
   userRole: 'teacher',
   federalState: {
     id: 'federal-state-1',
+    featureToggles: { isCalculatorEnabled: true },
   },
 };
 
@@ -249,6 +250,9 @@ describe('sendCharacterMessage', () => {
       urls: ['https://character.example/context'],
       federalStateId: teacherUserAndContext.federalState.id,
     });
+    expect(mocks.buildToolsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ isCalculatorEnabled: true }),
+    );
   });
 
   it('forwards fileIds to shared file service', async () => {

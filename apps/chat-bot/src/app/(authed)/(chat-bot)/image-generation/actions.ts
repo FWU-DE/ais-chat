@@ -18,12 +18,14 @@ export async function generateImageAction({
   style,
   options,
   inputFileIds = [],
+  conversationId,
 }: {
   prompt: string;
   model: LlmModelSelectModel;
   style?: ImageStyle;
   options: ImageGenerationOptions;
   inputFileIds?: string[];
+  conversationId?: string;
 }) {
   const { user, federalState } = await requireAuth();
 
@@ -36,6 +38,7 @@ export async function generateImageAction({
     style,
     options,
     inputFileIds,
+    conversationId,
     userId: user.id,
     federalStateId: federalState.id,
   });

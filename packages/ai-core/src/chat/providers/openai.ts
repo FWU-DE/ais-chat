@@ -28,17 +28,20 @@ export function constructOpenAITextStreamFn(model: AiModel): TextStreamFn {
   const client = createOpenAIClient(model);
 
   return async function* getOpenAITextStream(
-    { messages, model: modelName, maxTokens, temperature },
+    { messages, model: modelName, maxTokens, temperature, abortSignal },
     onComplete,
   ) {
-    const stream = await client.chat.completions.create({
-      model: modelName,
-      messages: toOpenAIMessages(messages),
-      stream: true,
-      stream_options: { include_usage: true },
-      max_tokens: maxTokens,
-      temperature,
-    });
+    const stream = await client.chat.completions.create(
+      {
+        model: modelName,
+        messages: toOpenAIMessages(messages),
+        stream: true,
+        stream_options: { include_usage: true },
+        max_tokens: maxTokens,
+        temperature,
+      },
+      { signal: abortSignal },
+    );
 
     let usage: TokenUsage | undefined;
 
@@ -76,14 +79,18 @@ export function constructOpenAITextGenerationFn(model: AiModel): TextGenerationF
     model: modelName,
     maxTokens,
     temperature,
+    abortSignal,
   }) {
-    const response = await client.chat.completions.create({
-      model: modelName,
-      messages: toOpenAIMessages(messages),
-      stream: false,
-      max_tokens: maxTokens,
-      temperature,
-    });
+    const response = await client.chat.completions.create(
+      {
+        model: modelName,
+        messages: toOpenAIMessages(messages),
+        stream: false,
+        max_tokens: maxTokens,
+        temperature,
+      },
+      { signal: abortSignal },
+    );
 
     const text = response.choices[0]?.message?.content ?? '';
     const usage = response.usage;
@@ -113,6 +120,7 @@ export function constructOpenAIAgenticStreamFn(model: AiModel): AgenticStreamFn 
     temperature,
     tools,
     toolChoice,
+    abortSignal,
   }) {
     yield* streamOpenAICompatibleAgenticResponse({
       client,
@@ -122,6 +130,7 @@ export function constructOpenAIAgenticStreamFn(model: AiModel): AgenticStreamFn 
       temperature,
       tools,
       toolChoice,
+      abortSignal,
       providerName: 'OpenAI',
     });
   };

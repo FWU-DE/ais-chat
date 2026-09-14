@@ -13,7 +13,7 @@ services:
   # Override the standalone valkey with a cluster-enabled single node.
   # Announce 127.0.0.1 since the port is exported to the host — good enough for local dev.
   valkey:
-    image: ghcr.io/valkey-io/valkey:9.1.1-alpine
+    image: ghcr.io/valkey-io/valkey:9.1.2-alpine
     restart: unless-stopped
     command: >
       valkey-server
@@ -35,7 +35,7 @@ services:
   # One-shot container that bootstraps the single-node cluster.
   # --cluster-replicas 0 allows a single-node cluster with no replicas.
   valkey-cluster-init:
-    image: ghcr.io/valkey-io/valkey:9.1.1-alpine
+    image: ghcr.io/valkey-io/valkey:9.1.2-alpine
     restart: no
     depends_on:
       valkey:

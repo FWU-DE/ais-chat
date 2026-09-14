@@ -71,8 +71,13 @@ export function ChatBox({
   // Check both DB file mapping and pending files for this message
   const dbFiles = fileMapping?.get(children.id);
   const pendingFiles = pendingFileMapping?.get(children.id);
-  // Prefer DB files if available (they're persisted), otherwise use pending files
-  const allFiles = dbFiles ?? pendingFiles;
+  // Prefer DB files if available (they're persisted), otherwise use pending files.
+  // Reuse an already created blob URL so the image does not have to be fetched again.
+  const allFiles =
+    dbFiles?.map((file) => {
+      const localUrl = pendingFiles?.find((pendingFile) => pendingFile.id === file.id)?.localUrl;
+      return localUrl === undefined ? file : { ...file, localUrl };
+    }) ?? pendingFiles;
   const hasFiles = allFiles !== undefined && allFiles.length > 0;
 
   const parsedUrls =

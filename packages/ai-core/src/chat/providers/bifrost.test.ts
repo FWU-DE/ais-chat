@@ -114,6 +114,7 @@ describe('Bifrost chat provider', () => {
         max_output_tokens: 128,
         reasoning: { effort: 'low' },
       }),
+      expect.anything(),
     );
     expect(responsesCreateMock.mock.calls[0]?.[0]).not.toHaveProperty('temperature');
     expect(result).toEqual({
@@ -133,7 +134,10 @@ describe('Bifrost chat provider', () => {
 
     await generateText({ messages: [{ role: 'user', content: 'Hello' }], model: model.name });
 
-    expect(responsesCreateMock).toHaveBeenCalledWith(expect.objectContaining({ model: 'gpt-5' }));
+    expect(responsesCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ model: 'gpt-5' }),
+      expect.anything(),
+    );
   });
 
   it('strips the anthropic prefix from logical model names', async () => {
@@ -152,6 +156,7 @@ describe('Bifrost chat provider', () => {
 
     expect(responsesCreateMock).toHaveBeenCalledWith(
       expect.objectContaining({ model: 'claude-3-5-sonnet-v2@20241022' }),
+      expect.anything(),
     );
   });
 
@@ -182,7 +187,10 @@ describe('Bifrost chat provider', () => {
       }
 
       expect(chunks).toEqual(['Hello', ' world']);
-      expect(responsesCreateMock).toHaveBeenCalledWith(expect.objectContaining({ model: 'gpt-5' }));
+      expect(responsesCreateMock).toHaveBeenCalledWith(
+        expect.objectContaining({ model: 'gpt-5' }),
+        expect.anything(),
+      );
       expect(onComplete).toHaveBeenCalledWith({
         promptTokens: 4,
         completionTokens: 5,
@@ -217,6 +225,7 @@ describe('Bifrost chat provider', () => {
 
     expect(responsesCreateMock).toHaveBeenCalledWith(
       expect.objectContaining({ fallbacks: ['fallback'] }),
+      expect.anything(),
     );
     expect(result.modelId).toBe('model-fallback');
   });

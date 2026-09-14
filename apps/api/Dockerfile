@@ -3,7 +3,7 @@
 ARG APP_VERSION
 ARG CI=true
 
-FROM node:24.19.0-alpine AS base
+FROM node:24.21.0-alpine AS base
 ENV TURBO_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
@@ -19,14 +19,10 @@ WORKDIR /app
 COPY . .
 # setup pnpm and pnpm install in order to install turbo in the correct version
 RUN corepack enable && corepack prepare
-# Use a hoisted node_modules layout so runtime resolution works with our build output:
-# - tsup bundles internal workspace packages (e.g. @ais-chat/*) into the API bundle
-# - any third‑party deps imported by those bundled packages (e.g. drizzle-orm) must be resolvable
-#   from the API's module resolution paths, i.e. /app/node_modules when running in the container
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --dev --shamefully-hoist --prefer-offline
+    pnpm install --filter . --frozen-lockfile --dev --prefer-offline
 
-ARG CI=true
+ARG CI
 RUN CI=${CI} \
     pnpm turbo prune ais-chat-api --docker
 
@@ -43,6 +39,10 @@ COPY --from=pruner /app/out/json/ .
 
 # First install the dependencies (as they change less often)
 RUN corepack enable && corepack prepare
+# Use a hoisted node_modules layout so runtime resolution works with our build output:
+# - tsup bundles internal workspace packages (e.g. @ais-chat/*) into the API bundle
+# - any third‑party deps imported by those bundled packages (e.g. drizzle-orm) must be resolvable
+#   from the API's module resolution paths, i.e. /app/node_modules when running in the container
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --shamefully-hoist --prefer-offline
 
@@ -52,8 +52,7 @@ COPY --from=pruner /app/out/full/ .
 # Copy git history, required for sentry to determine release name
 COPY .git ./.git
 
-ARG CI=true
-
+ARG CI
 RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN \
     --mount=type=secret,id=SENTRY_ORG,env=SENTRY_ORG \
     --mount=type=secret,id=SENTRY_PROJECT,env=SENTRY_PROJECT \

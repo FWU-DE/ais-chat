@@ -1,5 +1,6 @@
 node_modules/
 .next/
+.turbo/
 e2e
 docs
 devops

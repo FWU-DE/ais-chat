@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useImageModels } from '../providers/image-model-provider';
 import { useImageStyle } from '../providers/image-style-provider';
-import { generateImageAction } from '@/app/(authed)/(chat-bot)/image-generation/actions';
 import { ImageGenerationInputBox } from './image-generation-input-box';
 import { ImageActionButtons } from './image-action-buttons';
 import { ImageGenerationError } from './image-generation-error';
@@ -11,18 +10,17 @@ import { ImageGenerationWarning } from './image-generation-warning';
 import { useTranslations } from 'next-intl';
 import LoadingAnimation from './loading-animation';
 import { ConversationMessageModel } from '@shared/db/types';
-import { getReadOnlySignedUrlAction } from '@/app/api/file-operations/actions';
 import { FileModel } from '@shared/db/schema';
-import { useQueryClient } from '@tanstack/react-query';
-import { logError } from '@shared/logging';
-import { ResponsibleAIError } from '@ais-chat/ai-core/errors';
 import Image from 'next/image';
-import { navigateWithoutRefresh } from '@/utils/navigation/router';
 import { useImageAspectRatio } from './image-aspect-ratio-provider';
 import { LocalFileState } from '../chat/send-message-form';
 import { defaultUploadFile } from '../chat/upload-file-button';
-import { isImageFile } from '@/utils/files/generic';
 import { ImageGenerationResult } from './image-generation-result';
+import { IMAGE_GENERATION_INPUT_LIMIT } from '@/configuration-text-inputs/const';
+import { ImageVersionSelect } from './image-version-select';
+import { useImageVersions } from './use-image-versions';
+import { useImageGeneration } from './use-image-generation';
+import { ImageAttachment } from '../chat/message-image-attachment';
 
 interface ImageGenerationChatProps {
   conversationId?: string;
@@ -39,69 +37,40 @@ export default function ImageGenerationChat({
   const { selectedStyle } = useImageStyle();
   const tImageGeneration = useTranslations('image-generation');
 
+  const { versions, selectedIndex, selectedVersion, setSelectedIndex, appendVersion } =
+    useImageVersions({ initialMessages, fileMapping });
+
   const [input, setInput] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [lastPrompt, setLastPrompt] = useState('');
-  const [displayedImage, setDisplayedImage] = useState<{
-    prompt: string;
-    imageUrl: string;
-    fileId: string;
-  } | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [files, setFiles] = useState<Map<string, LocalFileState>>(new Map());
-  const [submittedInputFiles, setSubmittedInputFiles] = useState<FileModel[]>([]);
-  const queryClient = useQueryClient();
   const imageRef = useRef<HTMLImageElement>(null);
-  // isImageReady indicates if the image is loaded and visible in the browser
   const [isImageReady, setIsImageReady] = useState(false);
 
   const { aspectRatio } = useImageAspectRatio();
 
+  const [pending, setPending] = useState<{
+    prompt: string;
+    attachedFiles: ImageAttachment[];
+  } | null>(null);
+
+  const { isGenerating, errorMessage, clearError, generate } = useImageGeneration({
+    initialConversationId: conversationId,
+    selectedModel,
+    selectedStyle,
+    aspectRatio,
+  });
+
   const modelSupportsImageInput = (selectedModel?.supportedImageFormats?.length ?? 0) > 0;
 
-  // Load the single image from initial messages and file attachments
-  useEffect(() => {
-    const loadImageFromFiles = async () => {
-      if (initialMessages.length >= 2 && fileMapping) {
-        const userMessage = initialMessages.find((msg) => msg.role === 'user');
-        const assistantMessage = initialMessages.find((msg) => msg.role === 'assistant');
+  const canAppendVersion = modelSupportsImageInput && selectedVersion !== null;
+  const maxFiles = canAppendVersion
+    ? IMAGE_GENERATION_INPUT_LIMIT - 1
+    : IMAGE_GENERATION_INPUT_LIMIT;
 
-        if (userMessage && assistantMessage) {
-          const userInputImages = (fileMapping.get(userMessage.id) ?? []).filter((file) =>
-            isImageFile(file.name),
-          );
-          setSubmittedInputFiles(userInputImages);
+  const showInputBox =
+    modelSupportsImageInput || (conversationId === undefined && selectedVersion === null);
 
-          // Get files attached to the assistant message
-          const attachedFiles = fileMapping.get(assistantMessage.id) || [];
-          const imageFile = attachedFiles.find((file) => file.type.startsWith('image/'));
-
-          if (imageFile) {
-            try {
-              // Generate signed URL for the image file
-              const signedUrl = await getReadOnlySignedUrlAction({
-                key: `message_attachments/${imageFile.id}`,
-                contentType: imageFile.type,
-                attachment: false,
-              });
-
-              if (signedUrl) {
-                setDisplayedImage({
-                  prompt: userMessage.content,
-                  imageUrl: signedUrl,
-                  fileId: imageFile.id,
-                });
-              }
-            } catch (error) {
-              logError('Error loading image from files:', error);
-            }
-          }
-        }
-      }
-    };
-
-    loadImageFromFiles();
-  }, [initialMessages, fileMapping]);
+  const showInputBoxBelowImage =
+    showInputBox && modelSupportsImageInput && selectedVersion !== null;
 
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInput(e.target.value);
@@ -115,10 +84,6 @@ export default function ImageGenerationChat({
     });
   }
 
-  function refetchConversations() {
-    void queryClient.invalidateQueries({ queryKey: ['conversations'] });
-  }
-
   async function customHandleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -126,9 +91,12 @@ export default function ImageGenerationChat({
       return;
     }
 
-    const currentPrompt = input.trim();
-    setLastPrompt(currentPrompt);
-    setErrorMessage(null);
+    const prompt = input.trim();
+    setInput('');
+    setFiles(new Map());
+
+    const inputImageFileId =
+      canAppendVersion && selectedVersion !== null ? selectedVersion.imageFileId : null;
 
     const processedFiles = modelSupportsImageInput
       ? Array.from(files.values()).filter(
@@ -136,98 +104,94 @@ export default function ImageGenerationChat({
             f.status === 'processed' && f.fileId !== undefined,
         )
       : [];
-    const inputFileIds = processedFiles.map((f) => f.fileId);
+    const uploadedFileIds = processedFiles.map((f) => f.fileId);
+    const inputFileIds =
+      inputImageFileId !== null && !uploadedFileIds.includes(inputImageFileId)
+        ? [inputImageFileId, ...uploadedFileIds]
+        : uploadedFileIds;
 
-    setSubmittedInputFiles(
-      processedFiles.map((f) => ({
-        id: f.fileId,
-        name: f.file.name,
-        type: f.file.type,
-        size: f.file.size,
-        createdAt: new Date(),
-        metadata: null,
-        userId: null,
-      })),
-    );
-    setIsGenerating(true);
-    setInput('');
-    setFiles(new Map());
+    const uploadedFileModels = processedFiles.map((f) => ({
+      id: f.fileId,
+      name: f.file.name,
+    }));
+    const inputImageFileModel =
+      inputImageFileId !== null
+        ? { id: inputImageFileId, name: tImageGeneration('generated-image-alt') }
+        : null;
+    const attachedFiles =
+      inputImageFileModel !== null
+        ? [inputImageFileModel, ...uploadedFileModels]
+        : uploadedFileModels;
 
-    const result = await generateImageAction({
-      prompt: currentPrompt,
-      model: selectedModel,
-      style: selectedStyle,
-      options: { aspectRatio },
-      inputFileIds,
-    });
-    if (result.success) {
-      // Update the displayed image
-      if (result.value.imageUrl) {
-        setIsImageReady(false);
-        setDisplayedImage({
-          prompt: currentPrompt,
-          imageUrl: result.value.imageUrl,
-          fileId: result.value.fileId,
-        });
-      }
+    setPending({ prompt, attachedFiles });
 
-      const newConversationId = result.value.conversationId;
-      if (conversationId === undefined || conversationId !== newConversationId) {
-        navigateWithoutRefresh(`/image-generation/d/${newConversationId}`);
-      }
-      refetchConversations();
-    } else {
-      const error = result.error;
-      if (ResponsibleAIError.is(error)) {
-        setErrorMessage(tImageGeneration('responsible-ai-error'));
-      } else {
-        setErrorMessage(tImageGeneration('generation-error'));
-      }
+    const generatedImage = await generate({ prompt, inputFileIds });
+    if (generatedImage !== null) {
+      setIsImageReady(false);
+      appendVersion({ ...generatedImage, attachedFiles });
     }
-    setIsGenerating(false);
   }
+
+  const inputBox = (
+    <>
+      <ImageGenerationInputBox
+        isLoading={isGenerating}
+        handleInputChange={handleInputChange}
+        customHandleSubmit={customHandleSubmit}
+        input={input}
+        files={files}
+        setFiles={setFiles}
+        handleDeattachFile={handleDeattachFile}
+        fileUploadFn={defaultUploadFile}
+        supportedImageFormats={selectedModel?.supportedImageFormats}
+        maxFiles={maxFiles}
+        isEditMode={showInputBoxBelowImage}
+      />
+      {files.size > 0 && !modelSupportsImageInput && (
+        <ImageGenerationWarning message={tImageGeneration('input-images-not-supported-warning')} />
+      )}
+    </>
+  );
 
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex-1 flex flex-col justify-start p-6 w-full mx-auto">
-        <ImageGenerationInputBox
-          isLoading={isGenerating}
-          handleInputChange={handleInputChange}
-          customHandleSubmit={customHandleSubmit}
-          input={input}
-          files={files}
-          setFiles={setFiles}
-          handleDeattachFile={handleDeattachFile}
-          fileUploadFn={defaultUploadFile}
-          supportedImageFormats={selectedModel?.supportedImageFormats}
-        />
-        {files.size > 0 && !modelSupportsImageInput && (
-          <ImageGenerationWarning
-            message={tImageGeneration('input-images-not-supported-warning')}
-          />
+        {versions.length > 1 && (
+          <div className="mb-3 w-3/4 mx-auto">
+            <ImageVersionSelect
+              count={versions.length}
+              selectedIndex={selectedIndex}
+              onChange={(index) => {
+                clearError();
+                setSelectedIndex(index);
+              }}
+              disabled={isGenerating}
+            />
+          </div>
         )}
-        <div className="w-3/4 mx-auto">
-          {isGenerating && (
-            <ImageGenerationResult prompt={lastPrompt} attachedFiles={submittedInputFiles}>
+        {showInputBox && !showInputBoxBelowImage && inputBox}
+        <div className="w-3/4 mx-auto mt-6 first:mt-0">
+          {isGenerating && pending !== null && (
+            <ImageGenerationResult prompt={pending.prompt} attachedFiles={pending.attachedFiles}>
               <LoadingAnimation />
             </ImageGenerationResult>
           )}
 
-          {errorMessage && !isGenerating && (
-            <ImageGenerationResult prompt={lastPrompt} attachedFiles={submittedInputFiles}>
+          {errorMessage && !isGenerating && pending !== null && (
+            <ImageGenerationResult prompt={pending.prompt} attachedFiles={pending.attachedFiles}>
               <ImageGenerationError message={errorMessage} />
             </ImageGenerationResult>
           )}
 
-          {displayedImage && !isGenerating && !errorMessage && (
+          {selectedVersion !== null && !isGenerating && !errorMessage && (
             <ImageGenerationResult
-              prompt={displayedImage.prompt}
-              attachedFiles={submittedInputFiles}
+              prompt={selectedVersion.prompt}
+              attachedFiles={selectedVersion.attachedFiles}
             >
               <Image
                 ref={imageRef}
-                src={displayedImage.imageUrl}
-                alt={displayedImage.prompt}
+                src={selectedVersion.imageUrl}
+                alt={selectedVersion.prompt}
                 data-testid="generated-image"
                 className="w-full rounded-xl"
                 width={800}
@@ -239,11 +203,12 @@ export default function ImageGenerationChat({
               />
               <ImageActionButtons
                 imageRef={imageRef}
-                fileId={displayedImage.fileId}
+                fileId={selectedVersion.imageFileId}
                 isImageReady={isImageReady}
               />
             </ImageGenerationResult>
           )}
+          {showInputBoxBelowImage && <div className="mt-6">{inputBox}</div>}
         </div>
       </div>
     </div>

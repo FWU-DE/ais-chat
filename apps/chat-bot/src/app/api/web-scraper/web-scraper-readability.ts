@@ -13,6 +13,11 @@ const headers = {
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
 };
 
+// An unread response body keeps its stream and internal buffers alive for the lifetime of the process.
+function discardBody(response: Response): void {
+  response.body?.cancel().catch(() => undefined);
+}
+
 /**
  * Checks if the URL is valid and then fetches the main content of the website.
  * Uses Mozilla's Readability to extract the main content.
@@ -45,18 +50,26 @@ export async function webScraperReadability(url: string): Promise<WebSource> {
   }
 
   if (!response.ok) {
+    discardBody(response);
     return defaultErrorSource(url);
   }
 
-  const buffer = Buffer.from(await response.clone().arrayBuffer());
+  let buffer: Buffer;
+  try {
+    buffer = Buffer.from(await response.arrayBuffer());
+  } catch (error) {
+    logError(`Failed to read response body for URL: ${url}`, error);
+    return defaultErrorSource(url);
+  }
+
   const isBinary = await isBinaryFile(buffer);
   if (isBinary) {
     logInfo(`Detected binary content for URL: ${url}`);
     return defaultErrorSource(url);
   }
 
-  // Extract title
-  const html = await response.clone().text();
+  // Matches Response.text(), which always decodes as UTF-8 regardless of the charset header
+  const html = new TextDecoder().decode(buffer);
   // Extract title from meta tags or Open Graph tags first, as they're more reliable
   const ogTitleMatch = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]*)"/i);
   const metaTitleMatch = html.match(/<meta[^>]*name="title"[^>]*content="([^"]*)"/i);
@@ -114,6 +127,8 @@ function extractArticleContent(html: string, url: string): string {
   } catch (error) {
     logError(`Error extracting content with Readability for URL: ${url}`, error);
     return '';
+  } finally {
+    doc?.window.close();
   }
 }
 
@@ -129,6 +144,7 @@ export async function isWebPage(url: string, timeout: number) {
     method: 'HEAD',
     signal: AbortSignal.timeout(timeout),
   });
+  discardBody(response);
 
   const contentType = response.headers.get('content-type');
 

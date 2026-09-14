@@ -1,6 +1,6 @@
 import { instrumentOpenAiClient } from '@sentry/core';
 import * as Sentry from '@sentry/core';
-import OpenAI from 'openai';
+import OpenAI, { toFile } from 'openai';
 import type { AiModel, ImageGenerationFn } from '../types';
 import { AiGenerationError, ProviderConfigurationError, ResponsibleAIError } from '../../errors';
 
@@ -65,7 +65,7 @@ function createAzureClient(model: AiModel): {
       baseURL: basePath,
       defaultQuery: {
         ...Object.fromEntries(searchParams.entries()),
-        'api-version': '2024-02-01',
+        'api-version': '2025-04-01-preview',
       },
     }),
   );
@@ -78,6 +78,7 @@ export function constructAzureImageGenerationFn(model: AiModel): ImageGeneration
 
   return async function getAzureImageGeneration(params: Parameters<ImageGenerationFn>[0]) {
     const { prompt } = params;
+    const inputImages = params.options?.inputImages ?? [];
     return Sentry.startSpan(
       {
         name: `generate_image ${model.name}`,
@@ -91,17 +92,36 @@ export function constructAzureImageGenerationFn(model: AiModel): ImageGeneration
       },
       async (span) => {
         try {
-          const result = await client.images.generate(
-            {
-              prompt,
-              size: '1024x1024',
-              n: 1,
-              quality: 'medium',
-            },
-            {
-              path: `/openai/deployments/${deployment}/images/generations`,
-            },
-          );
+          const size = params.options?.size ?? '1024x1024';
+          const result =
+            inputImages.length > 0
+              ? await client.images.edit(
+                  {
+                    prompt,
+                    size,
+                    n: 1,
+                    quality: 'medium',
+                    image: await Promise.all(
+                      inputImages.map((image) =>
+                        toFile(image.data, image.filename, { type: image.mimeType }),
+                      ),
+                    ),
+                  },
+                  {
+                    path: `/openai/deployments/${deployment}/images/edits`,
+                  },
+                )
+              : await client.images.generate(
+                  {
+                    prompt,
+                    size,
+                    n: 1,
+                    quality: 'medium',
+                  },
+                  {
+                    path: `/openai/deployments/${deployment}/images/generations`,
+                  },
+                );
 
           if (!result.data || result.data.length === 0) {
             throw new AiGenerationError('No image data received from Azure OpenAI');

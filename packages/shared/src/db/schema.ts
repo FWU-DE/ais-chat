@@ -233,6 +233,7 @@ export const federalStateFeatureTogglesSchema = z.object({
   isSharedPageLocaleDetectionEnabled: z.boolean().optional(),
   isImageGenerationEnabled: z.boolean().optional(),
   isWebSearchEnabled: z.boolean().optional(),
+  isCalculatorEnabled: z.boolean().optional(),
 });
 export type FederalStateFeatureToggles = z.infer<typeof federalStateFeatureTogglesSchema>;
 
@@ -1541,13 +1542,17 @@ export const ConversationMessageFileMappingTable = pgTable(
       .references(() => fileTable.id)
       .notNull(),
     conversationMessageId: uuid('conversationMessageId').notNull(),
-    // technically redundant but there files and conversations should be unique and it makes clean-up easier
+    // Redundant with conversationMessageId join, kept to make cleanup queries cheaper.
     conversationId: uuid('conversationId').notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index().on(table.conversationMessageId),
-    unique().on(table.conversationId, table.fileId),
+    index('conversation_message_file_mapping_conversation_id_index').on(table.conversationId),
+    unique('conversation_message_file_mapping_message_id_file_id_unique').on(
+      table.conversationMessageId,
+      table.fileId,
+    ),
     foreignKey({
       columns: [table.conversationMessageId],
       foreignColumns: [conversationMessageTable.id],

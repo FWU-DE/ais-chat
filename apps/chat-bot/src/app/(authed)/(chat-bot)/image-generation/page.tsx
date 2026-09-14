@@ -11,6 +11,7 @@ import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { ImageAspectRatioProvider } from '@/components/image-generation/image-aspect-ratio-provider';
+import { generateUUID } from '@shared/utils/uuid';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,11 @@ export default async function ImageGenerationPage() {
   });
 
   return (
-    <ImageModelsProvider models={imageModels} defaultImageModel={selectedModel}>
+    <ImageModelsProvider
+      key={generateUUID()}
+      models={imageModels}
+      defaultImageModel={selectedModel}
+    >
       <ImageStyleProvider>
         <ImageAspectRatioProvider>
           <DefaultPageLayout layoutConfig={{ layout: 'image' }}>

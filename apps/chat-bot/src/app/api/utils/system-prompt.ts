@@ -55,6 +55,12 @@ export function constructToolGuidelines(activeTools: ToolDefinition[]) {
     );
   }
 
+  if (hasTool(activeTools, 'math_calculate')) {
+    sections.push(
+      '- Verwende `math_calculate` für jede numerische, algebraische, statistische, geometrische, Differential-, Integral-, Matrix-, Vektor- oder zahlentheoretische Berechnung. Berechne numerische Ergebnisse niemals mental oder direkt selbst, besonders nicht bei mehrteiligen Anfragen. Führe bei Bedarf einen oder mehrere Tool-Aufrufe aus. Wenn ein Aufruf fehlschlägt, berichte den Fehler kurz und bitte um eine Umformulierung oder die fehlenden Werte; erkläre keine qalc-Interna und erfinde keine Ergebnisse.',
+    );
+  }
+
   sections.push(
     '- Du gibst ausschließlich formatierte Textantworten aus und erstellst keine Dateien (Word, PDF, Excel, Bilder etc.). Biete das Erstellen von Dateien niemals an.',
   );

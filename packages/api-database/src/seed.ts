@@ -37,7 +37,7 @@ const mockLlmBaseUrl = process.env.LLM_MOCK_BASE_URL ?? 'http://mock-llm:6556';
 
 // Mock LLM: OpenAI Responses-compatible server used as the default model in e2e tests.
 // Echoes prompts or drives deterministic tool calls — no real API calls.
-// See devops/docker/mock-llm/ for the server implementation.
+// See services/mock-llm/ for the server implementation.
 const mockLlm: LlmInsertModel = {
   organizationId: ORGANIZATION_ID,
   provider: 'bifrost',

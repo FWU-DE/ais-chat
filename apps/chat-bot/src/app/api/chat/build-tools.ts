@@ -6,6 +6,7 @@ import { buildWebScraperTool } from './tools/web-scraper-tool';
 import { buildRetrieveEntireFileTool } from './tools/retrieve-entire-file-tool';
 import { buildRetrieveTextChunksTool } from './tools/retrieve-text-chunks-tool';
 import { buildMundoSearchTool } from './tools/mundo-search-tool';
+import { buildMathCalculateTool } from './tools/math-calculate-tool';
 
 type BuildToolsParams = {
   user: UserAndContext;
@@ -19,6 +20,7 @@ type BuildToolsParams = {
   attachedLinks?: string[];
   allowWebTools: boolean;
   allowMundoSearch?: boolean;
+  isCalculatorEnabled?: boolean;
   onWebSearchResults?: (results: WebSearchResult[]) => void;
 };
 
@@ -38,9 +40,15 @@ export async function buildTools({
   attachedLinks = [],
   allowWebTools,
   allowMundoSearch,
+  isCalculatorEnabled = false,
   onWebSearchResults,
 }: BuildToolsParams): Promise<BuildToolsResult> {
   const toolRegistry: ToolRegistry = {};
+
+  if (isCalculatorEnabled) {
+    const calculatorTool = buildMathCalculateTool();
+    toolRegistry[calculatorTool.definition.name] = calculatorTool;
+  }
 
   if (allowWebTools) {
     const webSearchTool = await buildWebSearchTool({

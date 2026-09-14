@@ -224,6 +224,7 @@ function createUser(): UserAndContext {
         isShareTemplateWithSchoolEnabled: true,
         isImageGenerationEnabled: true,
         isWebSearchEnabled: true,
+        isCalculatorEnabled: true,
       },
     },
   } as UserAndContext;
@@ -372,6 +373,9 @@ describe('sendChatMessage', () => {
     const streamedText = await collectStream(result.stream);
 
     expect(mocks.buildToolsMock).toHaveBeenCalledTimes(1);
+    expect(mocks.buildToolsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ isCalculatorEnabled: true }),
+    );
     expect(mocks.extractUrlsMock).toHaveBeenCalledTimes(1);
     expect(mocks.ingestWebContentMock).toHaveBeenCalledTimes(1);
     expect(mocks.constructChatSystemPromptMock).toHaveBeenCalledWith(
@@ -389,6 +393,44 @@ describe('sendChatMessage', () => {
         }),
       ]),
     );
+  });
+
+  it('persists usage that was already billed when the generation fails', async () => {
+    mocks.runAgentLoopMock.mockImplementationOnce(
+      ({ onError }: Parameters<typeof runAgentLoop>[0]) => {
+        void onError(new Error('provider exploded'), {
+          usage: { promptTokens: 11, completionTokens: 22, totalTokens: 33 },
+          priceInCents: 44,
+          modelUsages: [
+            {
+              modelId: mainModel.id,
+              usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
+              priceInCents: 4,
+            },
+          ],
+        });
+      },
+    );
+
+    const { sendChatMessage } = await import('./chat-service');
+    const result = await sendChatMessage({
+      conversationId: conversation.id,
+      messages,
+      modelId: mainModel.id,
+      user: createUser(),
+    });
+
+    await expect(collectStream(result.stream)).rejects.toThrow('provider exploded');
+
+    expect(mocks.dbInsertConversationUsageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelId: mainModel.id,
+        promptTokens: 1,
+        completionTokens: 2,
+        costsInCent: 4,
+      }),
+    );
+    expect(mocks.sendRabbitmqEventMock).toHaveBeenCalled();
   });
 
   it('does not persist retrieve_entire_file tool calls or results', async () => {

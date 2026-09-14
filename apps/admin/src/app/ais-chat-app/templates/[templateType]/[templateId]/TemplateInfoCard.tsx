@@ -82,7 +82,7 @@ export function TemplateInfoCard({ template, onDataChanged }: TemplateInfoCardPr
             <span>{template.isDeleted ? 'Ja' : 'Nein'}</span>
             <Button
               type="button"
-              variant="outline"
+              variant={template.isDeleted ? 'outline' : 'destructive'}
               size="xs"
               disabled={isUpdatingDeletedState}
               onClick={handleToggleDeletedState}

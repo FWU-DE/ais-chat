@@ -65,6 +65,8 @@ export type GenerationOptions = {
   temperature?: number;
   tools?: ToolDefinition[];
   toolChoice?: 'auto' | 'none' | 'required';
+  /** Aborts the upstream provider request so a stalled stream cannot be retained indefinitely. */
+  abortSignal?: AbortSignal;
   /** Resolved server-side models used only by the Bifrost provider. */
   fallbackModels?: AiModel[];
 };
@@ -80,6 +82,8 @@ export type TokenUsage = {
   completionTokens: number;
   promptTokens: number;
   totalTokens: number;
+  /** Set when the provider never reported usage and the numbers were derived locally. */
+  estimated?: boolean;
 };
 
 export type ModelSelection = {
