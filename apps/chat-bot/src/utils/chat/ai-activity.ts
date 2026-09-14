@@ -1,6 +1,6 @@
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { ToolRegistration } from '@/app/api/chat/tools/types';
 import {
-  isAiActivityToolName,
   type AiActivityLink,
   type AiActivityStep,
   type AiActivityToolStep,
@@ -9,7 +9,7 @@ import {
 const MAX_DETAIL_LENGTH = 300;
 const MAX_LINKS = 10;
 
-function parseJsonRecord(value: string | undefined): unknown {
+export function parseJsonRecord(value: string | undefined): unknown {
   if (value === undefined || value.trim().length === 0) {
     return undefined;
   }
@@ -21,7 +21,7 @@ function parseJsonRecord(value: string | undefined): unknown {
   }
 }
 
-function readString(source: unknown, key: string): string | undefined {
+export function readString(source: unknown, key: string): string | undefined {
   if (source === null || typeof source !== 'object') {
     return undefined;
   }
@@ -30,7 +30,7 @@ function readString(source: unknown, key: string): string | undefined {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
-function truncate(value: string | undefined): string | undefined {
+export function truncate(value: string | undefined): string | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -38,7 +38,7 @@ function truncate(value: string | undefined): string | undefined {
   return value.length > MAX_DETAIL_LENGTH ? `${value.slice(0, MAX_DETAIL_LENGTH)}…` : value;
 }
 
-function toLinks(entries: unknown): AiActivityLink[] | undefined {
+export function toLinks(entries: unknown): AiActivityLink[] | undefined {
   if (!Array.isArray(entries)) {
     return undefined;
   }
@@ -59,86 +59,19 @@ function toLinks(entries: unknown): AiActivityLink[] | undefined {
 }
 
 /**
- * Builds the displayable step for a tool call. Returns null for tools that are not surfaced.
- */
-export function createToolActivityStep(toolCall: ToolCall): AiActivityToolStep | null {
-  if (!isAiActivityToolName(toolCall.name)) {
-    return null;
-  }
-
-  const args = parseJsonRecord(toolCall.arguments);
-  const step: AiActivityToolStep = { kind: 'tool', id: toolCall.id, tool: toolCall.name };
-
-  switch (toolCall.name) {
-    case 'web_search':
-    case 'mundo_search':
-      step.detail = truncate(readString(args, 'query'));
-      break;
-    case 'retrieve_text_chunks':
-      step.detail = truncate(readString(args, 'search'));
-      break;
-    case 'retrieve_entire_file':
-      step.detail = truncate(readString(args, 'fileName'));
-      break;
-    case 'math_calculate':
-      step.detail = truncate(readString(args, 'expression'));
-      break;
-    case 'web_scraper': {
-      const urls =
-        args !== null && typeof args === 'object' ? (args as { urls?: unknown }).urls : [];
-      step.links = toLinks(Array.isArray(urls) ? urls.map((url) => ({ url })) : []);
-      break;
-    }
-  }
-
-  return step;
-}
-
-/**
- * Enriches a tool step with the parts of the tool result that are shown to the user.
- * Only small display values are extracted — tool results themselves never reach the client.
- */
-export function applyToolResultToActivityStep(
-  step: AiActivityToolStep,
-  result: string,
-): AiActivityToolStep {
-  const parsed = parseJsonRecord(result);
-
-  switch (step.tool) {
-    case 'web_search': {
-      const links = toLinks(
-        parsed !== null && typeof parsed === 'object'
-          ? (parsed as { results?: unknown }).results
-          : undefined,
-      );
-      return links === undefined ? step : { ...step, links };
-    }
-    case 'web_scraper': {
-      const links = toLinks(parsed);
-      return links === undefined ? step : { ...step, links };
-    }
-    case 'math_calculate': {
-      const calculated = readString(parsed, 'result');
-      return calculated === undefined ? step : { ...step, result: truncate(calculated) };
-    }
-    default:
-      return step;
-  }
-}
-
-/**
  * Collects the activity of an agent run so it can be streamed to the client and persisted
  * with the assistant message.
  */
-export function createAiActivityCollector() {
+export function createAiActivityCollector(toolRegistry: Record<string, ToolRegistration>) {
   const steps: AiActivityStep[] = [];
   const stepsById = new Map<string, AiActivityToolStep>();
 
   return {
     addToolCalls(toolCalls: ToolCall[]): boolean {
-      const toolSteps = toolCalls
-        .map(createToolActivityStep)
-        .filter((step): step is AiActivityToolStep => step !== null);
+      const toolSteps = toolCalls.flatMap((toolCall) => {
+        const activity = toolRegistry[toolCall.name]?.activity;
+        return activity === undefined ? [] : [activity.createStep(toolCall)];
+      });
 
       if (toolSteps.length === 0) {
         return false;
@@ -159,7 +92,8 @@ export function createAiActivityCollector() {
         return false;
       }
 
-      const enrichedStep = applyToolResultToActivityStep(step, result);
+      const activity = toolRegistry[step.tool]?.activity;
+      const enrichedStep = activity?.applyResult?.(step, result) ?? step;
 
       if (enrichedStep === step) {
         return false;

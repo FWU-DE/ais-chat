@@ -1,6 +1,8 @@
 import { isIP } from 'node:net';
 import type { WebSource } from '@shared/db/types';
 import { webScraper } from '../../web-scraper/web-scraper';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
 
 type WebScraperToolResult = {
@@ -144,5 +146,25 @@ export function buildWebScraperTool({
     return JSON.stringify(results.map((r) => JSON.parse(r)));
   };
 
-  return { definition, handler };
+  return {
+    definition,
+    handler,
+    activity: {
+      createStep: (toolCall: ToolCall) => {
+        const args = parseJsonRecord(toolCall.arguments);
+        const urls =
+          args !== null && typeof args === 'object' ? (args as { urls?: unknown }).urls : [];
+        return {
+          kind: 'tool' as const,
+          id: toolCall.id,
+          tool: 'web_scraper' as const,
+          links: toLinks(Array.isArray(urls) ? urls.map((url) => ({ url })) : []),
+        };
+      },
+      applyResult: (step, result) => {
+        const links = toLinks(parseJsonRecord(result));
+        return links === undefined ? step : { ...step, links };
+      },
+    },
+  };
 }
