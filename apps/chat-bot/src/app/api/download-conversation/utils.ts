@@ -16,7 +16,7 @@ import { logError } from '@shared/logging';
 import { dbGetModelByName } from '@shared/db/functions/llm-model';
 import { getFileFromS3 } from '@shared/s3';
 import { getFileExtension, isImageFile } from '@/utils/files/generic';
-import { Readable } from 'stream';
+import { streamToBuffer } from '@/utils/files/image-data';
 import sharp from 'sharp';
 
 const USER_FULL_NAME = 'Nutzer/in';
@@ -295,16 +295,6 @@ async function getExportedImageSize({
     width: Math.round(width * scale),
     height: Math.round(height * scale),
   };
-}
-
-async function streamToBuffer(stream: Readable): Promise<Buffer> {
-  const chunks: Buffer[] = [];
-
-  for await (const chunk of stream) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  }
-
-  return Buffer.concat(chunks);
 }
 
 function buildDocxDocument({
