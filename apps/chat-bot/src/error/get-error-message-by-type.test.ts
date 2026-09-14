@@ -1,6 +1,8 @@
 import {
+  ApiKeyQuotaExceededError,
   EmptyResponseError,
   InvalidModelError,
+  ProviderRateLimitExceededError,
   ResponsibleAIError,
   SharedChatExpiredError,
   TokenPointsExceededError,
@@ -16,15 +18,22 @@ describe('getErrorMessageByType', () => {
     expect(getErrorMessageByType(new EmptyResponseError({ modelId: 'm' }))).toBe(
       'empty-response-error',
     );
+    expect(getErrorMessageByType(new ResponsibleAIError('Policy violation'))).toBe(
+      'responsible-ai-error',
+    );
+    expect(getErrorMessageByType(new ApiKeyQuotaExceededError('Quota exceeded'))).toBe(
+      'api-key-quota-error',
+    );
+    expect(getErrorMessageByType(new ProviderRateLimitExceededError('Rate limit'))).toBe(
+      'provider-rate-limit-error',
+    );
+    expect(getErrorMessageByType(new InvalidModelError('Invalid model'))).toBe(
+      'invalid-model-error',
+    );
   });
 
   it('returns not-found key for NotFoundError', () => {
     expect(getErrorMessageByType(new NotFoundError('Not found'))).toBe('not-found-error');
-  });
-
-  it('returns generic key for known but unmapped ai-core errors', () => {
-    expect(getErrorMessageByType(new ResponsibleAIError('Policy violation'))).toBe('generic-error');
-    expect(getErrorMessageByType(new InvalidModelError('Invalid model'))).toBe('generic-error');
   });
 
   it('returns generic key for unknown values', () => {

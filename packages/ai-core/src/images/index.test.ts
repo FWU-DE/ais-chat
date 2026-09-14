@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { generateImageWithBilling } from './index';
-import { AiGenerationError, InvalidModelError } from '../errors';
+import { AiGenerationError, InvalidModelError, ResponsibleAIError } from '../errors';
 import type { AiModel } from './types';
 
 // Mock all dependencies
@@ -144,6 +144,19 @@ describe('generateImageWithBilling', () => {
     ).rejects.toThrow('Image generation failed: Network error');
 
     expect(mockBillImageGenerationUsageToApiKey).not.toHaveBeenCalled();
+  });
+
+  it('should map explicit safety system rejections to ResponsibleAIError', async () => {
+    mockGetImageModelById.mockResolvedValue(mockModel);
+    mockHasAccessToModel.mockResolvedValue(true);
+    mockIsApiKeyOverQuota.mockResolvedValue(false);
+    mockGenerateImage.mockRejectedValue(
+      new Error('400 Your request was rejected by the safety system. Request ID: secret'),
+    );
+
+    await expect(
+      generateImageWithBilling('model-123', 'test prompt', 'api-key-123'),
+    ).rejects.toThrow(ResponsibleAIError);
   });
 
   it('should not wrap AiGenerationError errors', async () => {
