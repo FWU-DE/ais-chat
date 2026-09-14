@@ -198,6 +198,44 @@ describe('conversation-service', () => {
   });
 
   describe('getConversationMessageForExport', () => {
+    it('should return the selected message with related files', async () => {
+      const userId = generateUUID();
+      const conversationId = generateUUID();
+      const messageId = generateUUID();
+      const fileMapping = new Map([[messageId, [{ id: generateUUID(), name: 'image.png' }]]]);
+
+      (dbGetConversationById as MockedFunction<typeof dbGetConversationById>).mockResolvedValue({
+        id: conversationId,
+        userId,
+      } as ConversationModel);
+
+      const message = {
+        id: messageId,
+        role: 'user',
+        content: 'Hallo',
+        toolCallId: null,
+      };
+
+      (
+        dbGetConversationMessageById as MockedFunction<typeof dbGetConversationMessageById>
+      ).mockResolvedValue(message as never);
+      (dbGetRelatedFiles as MockedFunction<typeof dbGetRelatedFiles>).mockResolvedValue(
+        fileMapping as never,
+      );
+
+      const result = await getConversationMessageForExport({ conversationId, messageId, userId });
+
+      expect(dbGetRelatedFiles).toHaveBeenCalledWith(conversationId);
+      expect(result).toEqual({
+        conversation: {
+          id: conversationId,
+          userId,
+        },
+        message,
+        fileMapping,
+      });
+    });
+
     it('should reject tool result messages', async () => {
       const userId = generateUUID();
       const conversationId = generateUUID();
