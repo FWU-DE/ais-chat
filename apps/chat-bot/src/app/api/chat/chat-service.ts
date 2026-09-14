@@ -471,7 +471,6 @@ export async function sendChatMessage({
   }
 
   const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
-  const aiActivity = createAiActivityStream(update);
 
   const tools = await buildTools({
     user,
@@ -496,6 +495,7 @@ export async function sendChatMessage({
       );
     },
   });
+  const aiActivity = createAiActivityStream(update, tools.toolRegistry);
 
   // Build system prompt
   const systemPrompt = constructChatSystemPrompt({
