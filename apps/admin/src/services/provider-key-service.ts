@@ -8,10 +8,7 @@ import {
 import { llmModelSettingsSchema } from '@ais-chat/api-database/llm-model';
 import { logInfo } from '@shared/logging';
 import type { SaveProviderKey } from '@/types/provider-key';
-import {
-  syncBifrostProvidersForOrganization,
-  syncBifrostProvidersForOrganizationOrThrow,
-} from './bifrost-provider-sync-service';
+import { syncBifrostProvidersForOrganizationOrThrow } from './bifrost-provider-sync-service';
 import { runDeleteOrThrowError } from '@/utils/run-delete-or-throw-error';
 
 export async function getProviderKeys(organizationId: string) {
@@ -80,6 +77,6 @@ export async function deleteProviderKey(organizationId: string, providerKeyId: s
   );
   if (!deleted) throw new Error('Provider key not found');
 
-  await syncBifrostProvidersForOrganization(organizationId);
+  await syncBifrostProvidersForOrganizationOrThrow(organizationId);
   logInfo('Provider key was deleted successfully', { organizationId, providerKeyId });
 }

@@ -9,10 +9,7 @@ import {
 import { CreateLargeLanguageModel, UpdateLargeLanguageModel } from '../types/large-language-model';
 import { logInfo } from '@shared/logging';
 import { dbUpdateLlmModelsForAllFederalStates } from '@shared/db/functions/llm-model';
-import {
-  syncBifrostProvidersForOrganization,
-  syncBifrostProvidersForOrganizationOrThrow,
-} from './bifrost-provider-sync-service';
+import { syncBifrostProvidersForOrganizationOrThrow } from './bifrost-provider-sync-service';
 import { runDeleteOrThrowError } from '@/utils/run-delete-or-throw-error';
 
 export async function getLargeLanguageModels(organizationId: string) {
@@ -115,7 +112,7 @@ export async function deleteLargeLanguageModel(organizationId: string, modelId: 
   );
   if (!deleted) throw new Error('Model not found');
 
-  await syncBifrostProvidersForOrganization(organizationId);
+  await syncBifrostProvidersForOrganizationOrThrow(organizationId);
   await dbUpdateLlmModelsForAllFederalStates();
 
   logInfo('LLM was deleted successfully', { organizationId, modelId });
