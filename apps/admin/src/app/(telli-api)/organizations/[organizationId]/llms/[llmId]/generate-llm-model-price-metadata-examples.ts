@@ -4,30 +4,15 @@ import {
   type LlmModelPriceMetadata,
 } from '@ais-chat/shared-core/schemas/llm-model-price-metadata';
 
-// Human-readable labels for each variant, in schema order. The two `type:
-// 'image'` variants are disambiguated by their pricing model.
-const LLM_MODEL_PRICE_METADATA_VARIANT_LABELS = [
-  'Text',
-  'Bild (Preis pro Bild)',
-  'Bild (Token-basiert)',
-  'Embedding',
-  'Safety',
-] as const;
-
 /**
  * Generates one minimal example object per variant of
  * `llmModelPriceMetadataSchema`, for display in the admin UI so users know
  * which shape to paste into the `priceMetadata` JSON field.
  */
-export function generateLlmModelPriceMetadataExamples(): Array<{
-  label: string;
-  example: LlmModelPriceMetadata;
-}> {
-  const options = llmModelPriceMetadataSchema.def.options;
-  return options.map((option, index) => ({
-    label: LLM_MODEL_PRICE_METADATA_VARIANT_LABELS[index] ?? `Variante ${index + 1}`,
-    example: buildExampleFromShape(option.shape) as LlmModelPriceMetadata,
-  }));
+export function generateLlmModelPriceMetadataExamples(): LlmModelPriceMetadata[] {
+  return llmModelPriceMetadataSchema.def.options.map(
+    (option) => buildExampleFromShape(option.shape) as LlmModelPriceMetadata,
+  );
 }
 
 function buildExampleFromShape(shape: object): Record<string, unknown> {

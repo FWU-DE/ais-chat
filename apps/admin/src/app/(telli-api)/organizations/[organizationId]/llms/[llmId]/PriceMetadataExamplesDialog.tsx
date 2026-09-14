@@ -15,12 +15,12 @@ import { generateLlmModelPriceMetadataExamples } from './generate-llm-model-pric
 const examples = generateLlmModelPriceMetadataExamples();
 
 export function PriceMetadataExamplesDialog() {
-  const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
-  async function handleCopy(label: string, example: unknown) {
+  async function handleCopy(index: number, example: unknown) {
     await navigator.clipboard.writeText(JSON.stringify(example, null, 2));
-    setCopiedLabel(label);
-    setTimeout(() => setCopiedLabel((current) => (current === label ? null : current)), 1500);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex((current) => (current === index ? null : current)), 1500);
   }
 
   return (
@@ -35,20 +35,18 @@ export function PriceMetadataExamplesDialog() {
           <DialogTitle>Beispiele für Preis-Metadaten</DialogTitle>
         </DialogHeader>
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
-          {examples.map(({ label, example }) => (
-            <div key={label} className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{label}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleCopy(label, example)}
-                >
-                  {copiedLabel === label ? <CheckIcon /> : <CopyIcon />}
-                  Kopieren
-                </Button>
-              </div>
+          {examples.map((example, index) => (
+            <div key={index} className="flex flex-col gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="self-start"
+                onClick={() => handleCopy(index, example)}
+              >
+                {copiedIndex === index ? <CheckIcon /> : <CopyIcon />}
+                Kopieren
+              </Button>
               <pre className="bg-muted overflow-x-auto rounded-md p-3 text-xs">
                 {JSON.stringify(example, null, 2)}
               </pre>
