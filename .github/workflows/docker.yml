@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       build_all_images:
-        description: 'Build all images, ignoring turbo-ignore change detection'
+        description: 'Build all images, ignoring turbo change detection'
         type: boolean
         default: false
 
@@ -74,6 +74,16 @@ jobs:
           ref: ${{ env.resolved_sha }}
           fetch-depth: 0
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --filter . --frozen-lockfile
+
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -99,7 +109,7 @@ jobs:
         id: pipeline-changed
         # These files aren't tracked by turbo (outside any workspace package),
         # so a change here must force a rebuild of every image regardless of
-        # turbo-ignore's per-package result.
+        # turbo query affected's per-package result.
         run: |
           if git diff --quiet "${{ steps.last-built.outputs.sha }}" -- .github/workflows/docker.yml .dockerignore; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -112,7 +122,7 @@ jobs:
         run: |
           if [ "${{ inputs.build_all_images }}" = "true" ] || [ "${{ steps.pipeline-changed.outputs.changed }}" = "true" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
-          elif npx turbo-ignore "${{ matrix.package_name }}" --fallback="${{ steps.last-built.outputs.sha }}"; then
+          elif pnpm exec turbo query affected --packages "${{ matrix.package_name }}" --base "${{ steps.last-built.outputs.sha }}" --exit-code; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
