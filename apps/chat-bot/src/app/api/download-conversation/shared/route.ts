@@ -7,7 +7,7 @@ import { checkInviteCodeForExport } from '@shared/conversation/conversation-serv
 import { dbGetFilesInIds } from '@shared/db/functions/files';
 import { type FileModel } from '@shared/db/schema';
 import { ForbiddenError } from '@shared/error';
-import { isSharedChatFileMetadata, type SharedChatFileMetadata, verify } from '../../shared-chat';
+import { isSharedChatFileMetadata, verify } from '../../shared-chat';
 
 const requestSchema = z.object({
   messages: z.array(
@@ -96,15 +96,7 @@ async function getSharedChatFileMapping({
 
   const files = await dbGetFilesInIds(fileIds);
   verify.filesDoNotBelongToAnyUser(files);
-  const fileMetadata = verifySharedChatFilesBelongToSession({ files, inviteCode, sharedSessionId });
-
-  verify.sharedChatFileOwnershipBySession({
-    files,
-    inviteCode,
-    entityType: fileMetadata.entityType,
-    entityId: fileMetadata.entityId,
-    sharedSessionId,
-  });
+  verifySharedChatFilesBelongToSession({ files, inviteCode, sharedSessionId });
 
   const filesById = new Map(files.map((file) => [file.id, file]));
   const fileMapping = new Map<string, FileModel[]>();
@@ -130,8 +122,10 @@ function verifySharedChatFilesBelongToSession({
   files: FileModel[];
   inviteCode: string;
   sharedSessionId: string;
-}): SharedChatFileMetadata {
-  let firstFileMetadata: SharedChatFileMetadata | undefined;
+}): void {
+  if (files.length === 0) {
+    throw new ForbiddenError('Not authorized to access this file');
+  }
 
   for (const file of files) {
     if (
@@ -141,15 +135,7 @@ function verifySharedChatFilesBelongToSession({
     ) {
       throw new ForbiddenError('Not authorized to access this file');
     }
-
-    firstFileMetadata ??= file.metadata;
   }
-
-  if (firstFileMetadata === undefined) {
-    throw new ForbiddenError('Not authorized to access this file');
-  }
-
-  return firstFileMetadata;
 }
 
 function generateFileName({
