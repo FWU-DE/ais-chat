@@ -60,11 +60,11 @@ To customize environment variables edit `devops/docker/docker-compose.yml` direc
 
 ### Calculator arithmetic service
 
-The Compose setup includes a libqalculate HTTP service. In the production/self-hosted Compose file,
+The Compose setup includes a libqalculate HTTP service. In the self-hosted Compose file,
 calculator is reachable by the containerized chatbot through the internal calculator network and is also
 published on the local host at `http://127.0.0.1:8081` for local testing. Host clients should use
-the loopback port. The production calculator container has no external network access; the application
-and Keycloak share a network namespace in this Compose setup so the application can reach calculator.
+the loopback port. The application and Keycloak share a network namespace in this Compose setup so the
+application can reach calculator.
 
 - `GET /healthz` returns `{"status":"success","result":"ok"}`.
 - `POST /v1/calculate` accepts `Content-Type: application/json` and a body such as
