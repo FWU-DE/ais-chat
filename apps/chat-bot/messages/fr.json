@@ -47,9 +47,20 @@
       }
     }
   },
-  "websearch": {
-    "results": {
-      "title": "Sources Internet"
+  "ai-activity": {
+    "title": "Activité IA",
+    "toggle": "Afficher/masquer l’activité IA",
+    "show": "Afficher l’activité IA",
+    "open-source": "Ouvrir la source : {source}",
+    "steps": {
+      "analysis": "Analyse",
+      "done": "Terminé",
+      "web_search": "Recherche web",
+      "web_scraper": "Page web lue",
+      "retrieve_text_chunks": "Fichier lu",
+      "retrieve_entire_file": "Fichier entièrement lu",
+      "mundo_search": "Recherche dans Mundo",
+      "math_calculate": "Calcul effectué"
     }
   }
 }

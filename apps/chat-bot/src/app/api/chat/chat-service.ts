@@ -7,6 +7,7 @@ import {
 } from '@ais-chat/ai-core';
 import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
 import { getModelAndApiKeyWithResult, getAuxiliaryModel, getSafetyModel } from '../utils/utils';
+import { createAiActivityStream } from './ai-activity-stream';
 import { getChatModelSelection } from '../utils/model-circuit-breaker';
 import {
   dbGetConversationAndMessages,
@@ -470,6 +471,7 @@ export async function sendChatMessage({
   }
 
   const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
+  const aiActivity = createAiActivityStream(update);
 
   const tools = await buildTools({
     user,
@@ -585,6 +587,7 @@ export async function sendChatMessage({
         modelName: definedModel.name,
         conversationId: activeConversation.id,
         webSearchResults,
+        aiActivity: aiActivity.getSteps(),
       },
     ];
 
@@ -628,8 +631,11 @@ export async function sendChatMessage({
     onTextChunk: (delta: string) => {
       update(delta);
     },
+    onToolCalls: aiActivity.onToolCalls,
+    onToolResult: aiActivity.onToolResult,
     onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {
       try {
+        aiActivity.finish();
         await persistAssistantMessage({
           fullText,
           usage,
