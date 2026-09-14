@@ -174,6 +174,16 @@ export default function GenericSharedChat({
   const dialogStarted =
     messages.length > 0 || (dialogStartMode === 'explicit' && explicitDialogStarted);
 
+  function getPendingFileIds() {
+    return [
+      ...new Set(
+        Array.from(pendingFileMapping.values())
+          .flatMap((pendingFiles) => pendingFiles.map((pendingFile) => pendingFile.id))
+          .filter((id): id is string => id.trim() !== ''),
+      ),
+    ];
+  }
+
   async function customHandleSubmit(e: SyntheticEvent) {
     e.preventDefault();
 
@@ -181,9 +191,7 @@ export default function GenericSharedChat({
       reactivateAutoScrolling();
 
       const currentFiles = Array.from(files);
-      const previousFileIds = Array.from(pendingFileMapping.values())
-        .flatMap((pendingFiles) => pendingFiles.map((pendingFile) => pendingFile.id))
-        .filter((id): id is string => id.trim() !== '');
+      const previousFileIds = getPendingFileIds();
       const currentFileIds = currentFiles
         .map(([, file]) => file.fileId)
         .filter((id): id is string => id !== undefined && id.trim() !== '');
@@ -272,7 +280,7 @@ export default function GenericSharedChat({
   }, [inviteCode, sharedSessionId, messages, pendingFileMapping, status]);
 
   function handleReload() {
-    void reload();
+    void reload({ fileIds: getPendingFileIds(), sharedSessionId });
   }
 
   function handleRetry() {
@@ -301,7 +309,7 @@ export default function GenericSharedChat({
     }
 
     reactivateAutoScrolling();
-    void reload();
+    void reload({ fileIds: getPendingFileIds(), sharedSessionId });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -361,7 +369,7 @@ export default function GenericSharedChat({
                 messages={uiMessages}
                 isLoading={isLoading}
                 status={status}
-                reload={reload}
+                reload={handleReload}
                 assistantIcon={assistantIcon}
                 containerClassName="flex flex-col gap-4"
                 pendingFileMapping={pendingFileMapping}
