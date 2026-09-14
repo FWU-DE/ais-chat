@@ -151,6 +151,8 @@ export function constructGoogleSafetyCheckFn(model: AiModel): SafetyCheckFn {
 
       return parseSafetyResult(await response.json(), model.id);
     } catch (error) {
+      // ai-core cannot depend on the app logging package without creating a project cycle.
+      // Capture the sanitized provider failure directly instead.
       Sentry.captureException(error, {
         tags: { provider: 'google', operation: 'safety_check' },
       });
