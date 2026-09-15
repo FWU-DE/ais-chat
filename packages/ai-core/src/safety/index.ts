@@ -2,6 +2,7 @@ import { isKnownAiGenerationError, ResponsibleAIError } from '../errors';
 import { getSafetyModelByName } from '../models';
 import { checkSafety } from './providers';
 import type { SafetyMessage, SafetyResult } from './types';
+export { buildImageSafetyMessages } from './image';
 
 export { checkSafety } from './providers';
 export type { SafetyCheckArgs, SafetyImage, SafetyMessage, SafetyResult } from './types';

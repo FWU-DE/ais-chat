@@ -23,6 +23,17 @@ vi.mock('../models', () => ({
 
 vi.mock('../safety', () => ({
   checkInputSafety: vi.fn(),
+  buildImageSafetyMessages: vi.fn((prompt: string, inputImages = []) => [
+    {
+      role: 'user',
+      content: prompt,
+      images: inputImages.map((image: { mimeType: string; data: Buffer }) => ({
+        type: 'image' as const,
+        contentType: image.mimeType,
+        url: `data:${image.mimeType};base64,${image.data.toString('base64')}`,
+      })),
+    },
+  ]),
 }));
 
 import { generateImage } from './providers';
@@ -131,34 +142,6 @@ describe('generateImageWithBilling', () => {
     expect(mockCheckInputSafety.mock.invocationCallOrder[0]).toBeLessThan(
       mockGenerateImage.mock.invocationCallOrder[0]!,
     );
-  });
-
-  it('blocks input images that exceed the safety model limit', async () => {
-    mockGetImageModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
-
-    await expect(
-      generateImageWithBilling(
-        'model-123',
-        'test prompt',
-        'api-key-123',
-        {
-          size: '1024x1024',
-          inputImages: [
-            {
-              data: Buffer.alloc(8 * 1024 * 1024),
-              mimeType: 'image/png',
-              filename: 'large.png',
-            },
-          ],
-        },
-        'safety-model',
-      ),
-    ).rejects.toThrow(ResponsibleAIError);
-
-    expect(mockCheckInputSafety).not.toHaveBeenCalled();
-    expect(mockGenerateImage).not.toHaveBeenCalled();
   });
 
   it('should throw InvalidModelError when API key does not have access', async () => {

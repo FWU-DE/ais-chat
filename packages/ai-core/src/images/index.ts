@@ -1,17 +1,10 @@
 import { billImageGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
 import { generateImage } from './providers';
 import { hasAccessToModel } from '../api-keys/model-access';
-import {
-  ApiKeyQuotaExceededError,
-  InvalidModelError,
-  normalizeAiGenerationError,
-  ResponsibleAIError,
-} from '../errors';
+import { ApiKeyQuotaExceededError, InvalidModelError, normalizeAiGenerationError } from '../errors';
 import { getImageModelById, getImageModelByName } from '../models';
 import { ImageGenerationRequestOptions } from './types';
-import { checkInputSafety } from '../safety';
-
-const MAX_SAFETY_IMAGE_URL_LENGTH = 10 * 1024 * 1024;
+import { buildImageSafetyMessages, checkInputSafety } from '../safety';
 
 /**
  * Generates an image using the specified model and prompt, with access control and billing.
@@ -51,25 +44,9 @@ export async function generateImageWithBilling(
 
   try {
     if (safetyModelName) {
-      const safetyImages = (options?.inputImages ?? []).map((image) => ({
-        type: 'image' as const,
-        contentType: image.mimeType,
-        url: `data:${image.mimeType};base64,${image.data.toString('base64')}`,
-      }));
-
-      if (safetyImages.some((image) => image.url.length > MAX_SAFETY_IMAGE_URL_LENGTH)) {
-        throw new ResponsibleAIError('Input image is too large for the safety model');
-      }
-
       await checkInputSafety(
         safetyModelName,
-        [
-          {
-            role: 'user',
-            content: prompt,
-            images: safetyImages,
-          },
-        ],
+        buildImageSafetyMessages(prompt, options?.inputImages),
         apiKeyId,
       );
     }
