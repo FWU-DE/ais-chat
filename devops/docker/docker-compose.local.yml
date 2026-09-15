@@ -41,6 +41,7 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       CLIENT_NAME: ${VIDIS_CLIENT_ID:-ais-chat-dev-client}
       CLIENT_SECRET: ${VIDIS_CLIENT_SECRET:-ClientSecret}
+    # Custom entrypoint that auto-exports the realm(s) and users on shutdown
     entrypoint: /opt/keycloak/data/import/entrypoint.sh
     # Stop grace period is set to 2 minutes to allow Keycloak to export the realm and users on shutdown
     stop_grace_period: 2m
