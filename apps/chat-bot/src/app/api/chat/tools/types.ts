@@ -1,12 +1,16 @@
-import { type ToolDefinition, type ToolRegistry } from '@ais-chat/ai-core';
+import { type ToolDefinition, type ToolRegistry, type ToolRegistryEntry } from '@ais-chat/ai-core';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import type { UserAndContext } from '@/auth/types';
+import type { AiActivityToolStep } from '@/types/ai-activity';
 import type { FileModel, WebSearchModel, WebSearchResult } from '@shared/db/schema';
 
 export type { ToolDefinition, ToolRegistry };
 
-export type ToolRegistration = {
-  definition: ToolDefinition;
-  handler: (args: Record<string, unknown>) => Promise<string>;
+export type ToolRegistration = ToolRegistryEntry & {
+  activity?: {
+    createStep: (toolCall: ToolCall) => AiActivityToolStep;
+    applyResult?: (step: AiActivityToolStep, result: string) => AiActivityToolStep;
+  };
 };
 
 export type BuildToolsContext = {

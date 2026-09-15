@@ -5,6 +5,7 @@ import {
   runAgentLoop,
 } from '@ais-chat/ai-core';
 import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
+import { createAiActivityStream } from './ai-activity-stream';
 import { getModelAndApiKeyWithResult, getAuxiliaryModel } from '../utils/utils';
 import { getChatModelSelection } from '../utils/model-circuit-breaker';
 import {
@@ -442,6 +443,7 @@ export async function sendChatMessage({
       );
     },
   });
+  const aiActivity = createAiActivityStream(update, tools.toolRegistry);
 
   // Update last used model
   await dbUpdateLastUsedModelByUserId({ modelName: definedModel.name, userId: user.id });
@@ -567,6 +569,7 @@ export async function sendChatMessage({
         modelName: definedModel.name,
         conversationId: activeConversation.id,
         webSearchResults,
+        aiActivity: aiActivity.getSteps(),
       },
     ];
 
@@ -610,8 +613,11 @@ export async function sendChatMessage({
     onTextChunk: (delta: string) => {
       update(delta);
     },
+    onToolCalls: aiActivity.onToolCalls,
+    onToolResult: aiActivity.onToolResult,
     onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {
       try {
+        aiActivity.finish();
         await persistAssistantMessage({
           fullText,
           usage,

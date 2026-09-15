@@ -25,6 +25,7 @@ export default function CharacterSharedChat({
       id: message.id,
       role: message.role,
       content: message.content,
+      activitySteps: message.activitySteps,
     })) ??
     (character.initialMessage
       ? [{ id: 'initial-message', role: 'assistant', content: character.initialMessage }]
@@ -82,7 +83,7 @@ export default function CharacterSharedChat({
       dialogStartMode="derived"
       assistantIcon={assistantIcon}
       uploadFileFn={uploadSharedCharacterFile}
-      showWebSourcesInDialog
+      showActivityInDialog
     />
   );
 }

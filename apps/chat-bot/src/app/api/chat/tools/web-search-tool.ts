@@ -1,4 +1,6 @@
 import type { WebSearchResult } from '@shared/db/schema';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import { parseJsonRecord, readString, toLinks, truncate } from '@/utils/chat/ai-activity';
 import { resolveWebSearchConfig, searchWeb } from '../websearch';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
 
@@ -101,5 +103,28 @@ export async function buildWebSearchTool({
     return JSON.stringify(response);
   };
 
-  return { definition, handler };
+  return {
+    definition,
+    handler,
+    activity: {
+      createStep: (toolCall: ToolCall) => {
+        const args = parseJsonRecord(toolCall.arguments);
+        return {
+          kind: 'tool' as const,
+          id: toolCall.id,
+          tool: 'web_search' as const,
+          detail: truncate(readString(args, 'query')),
+        };
+      },
+      applyResult: (step, result) => {
+        const parsed = parseJsonRecord(result);
+        const links = toLinks(
+          parsed !== null && typeof parsed === 'object'
+            ? (parsed as { results?: unknown }).results
+            : undefined,
+        );
+        return links === undefined ? step : { ...step, links };
+      },
+    },
+  };
 }
