@@ -1,5 +1,9 @@
 import { eq, inArray, and } from 'drizzle-orm';
-import { llmModelApiKeyMappingTable, llmModelTable } from '../schema';
+import {
+  llmModelApiKeyMappingTable,
+  llmModelProviderKeyMappingTable,
+  llmModelTable,
+} from '../schema';
 import { db } from '../db';
 import { dbGetAllApiKeysByProjectId } from './api-key';
 import { dbGetOrganizationAndProjectsByOrganizationId } from './organization';
@@ -107,6 +111,26 @@ export async function dbUpdateLlmModel(
 
 export async function dbDeleteLlmModelById(id: string) {
   return (await db.delete(llmModelTable).where(eq(llmModelTable.id, id)).returning())[0];
+}
+
+export async function dbDeleteLlmModel(id: string, organizationId: string): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const [model] = await tx
+      .select({ id: llmModelTable.id })
+      .from(llmModelTable)
+      .where(and(eq(llmModelTable.id, id), eq(llmModelTable.organizationId, organizationId)))
+      .limit(1);
+    if (!model) return false;
+
+    await tx
+      .delete(llmModelProviderKeyMappingTable)
+      .where(eq(llmModelProviderKeyMappingTable.llmModelId, id));
+    await tx
+      .delete(llmModelApiKeyMappingTable)
+      .where(eq(llmModelApiKeyMappingTable.llmModelId, id));
+    await tx.delete(llmModelTable).where(eq(llmModelTable.id, id));
+    return true;
+  });
 }
 
 export async function dbGetModelsByIds({ modelIds }: { modelIds: string[] }) {

@@ -20,6 +20,7 @@ type ExpiredChatModalProps = {
   conversationMessages: Message[];
   title: string;
   inviteCode: string;
+  sharedSessionId: string;
   handleRetry: () => void;
 };
 
@@ -27,6 +28,7 @@ export default function ExpiredChatModal({
   conversationMessages,
   title,
   inviteCode,
+  sharedSessionId,
   handleRetry,
 }: ExpiredChatModalProps) {
   const t = useTranslations('sharing');
@@ -54,6 +56,7 @@ export default function ExpiredChatModal({
                 conversationMessages={conversationMessages}
                 disabled={false}
                 inviteCode={inviteCode}
+                sharedSessionId={sharedSessionId}
               />
             )}
             <Button onClick={handleRetry}>

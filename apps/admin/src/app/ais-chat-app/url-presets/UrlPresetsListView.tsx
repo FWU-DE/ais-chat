@@ -22,6 +22,7 @@ import {
   CardTitle,
 } from '@ui/components/card';
 import { Button } from '@ui/components/button';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
 import { AddUrlToPresetForm } from './AddUrlToPresetForm';
 import { Chip } from '@ui/components/chip';
 import { TrashSimpleIcon } from '@phosphor-icons/react';
@@ -36,6 +37,7 @@ function sortUrlPresets(presets: UrlPreset[]): UrlPreset[] {
 export function UrlPresetsListView() {
   const [urlPresets, setUrlPresets] = useState<UrlPreset[]>([]);
   const [isBusy, setIsBusy] = useState(false);
+  const { dialogProps: deleteDialogProps, confirm: confirmDelete } = useConfirmAlertDialog();
 
   const loadUrlPresets = async () => {
     startTransition(async () => {
@@ -162,9 +164,10 @@ export function UrlPresetsListView() {
             </CardTitle>
             <CardAction>
               <Button
+                type="button"
                 variant="destructive"
                 disabled={isBusy}
-                onClick={() => handleDeleteUrlPreset(preset.id)}
+                onClick={() => confirmDelete(() => handleDeleteUrlPreset(preset.id))}
               >
                 <TrashSimpleIcon />
                 Löschen
@@ -195,6 +198,13 @@ export function UrlPresetsListView() {
           </CardFooter>
         </Card>
       ))}
+      <ConfirmAlertDialog
+        title="Webseitenpaket löschen"
+        description="Möchten Sie dieses Webseitenpaket wirklich löschen?"
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        {...deleteDialogProps}
+      />
     </div>
   );
 }
