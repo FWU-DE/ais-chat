@@ -22,6 +22,7 @@ import { TrashSimpleIcon } from '@phosphor-icons/react';
 import { llmModelPriceMetadataSchema } from '@ais-chat/shared/db/schema';
 import { imageGenerationConfigSchema } from '@ais-chat/api-database/types';
 import { PriceMetadataExamplesDialog } from './PriceMetadataExamplesDialog';
+import { ImageGenerationConfigExampleDialog } from './ImageGenerationConfigExampleDialog';
 
 // Helper function to validate JSON
 const jsonStringSchema = z.string().refine((str) => {
@@ -292,10 +293,19 @@ export function LargeLanguageModelDetailView({
           <FormField
             name="imageGenerationConfig"
             label="Bildgenerierungs-Konfiguration"
-            description="JSON mit Konfiguration für die Bildgenerierung"
             control={control}
             type="textArea"
-          />
+          >
+            {(input) => (
+              <>
+                <FieldDescription>
+                  JSON mit Konfiguration für die Bildgenerierung{' '}
+                  <ImageGenerationConfigExampleDialog />
+                </FieldDescription>
+                {input}
+              </>
+            )}
+          </FormField>
 
           <FormField
             name="additionalParameters"
