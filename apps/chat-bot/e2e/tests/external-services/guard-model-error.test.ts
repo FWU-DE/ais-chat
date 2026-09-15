@@ -4,18 +4,6 @@ import { AUTH_FILES } from '../../utils/const';
 import { LLM_MODELS_FILE } from '../../utils/const';
 import { enterMessage } from '../../utils/chat';
 
-const guardModelEnvReady =
-  process.env.LLM_GOOGLE_PROJECT_ID !== undefined &&
-  process.env.LLM_GOOGLE_PROJECT_ID.trim() !== '' &&
-  process.env.LLM_GOOGLE_LOCATION !== undefined &&
-  process.env.LLM_GOOGLE_LOCATION.trim() !== '' &&
-  process.env.LLM_GOOGLE_AUTH_CREDENTIALS !== undefined &&
-  process.env.LLM_GOOGLE_AUTH_CREDENTIALS.trim() !== '' &&
-  process.env.LLM_LLAMA_GUARD_ENDPOINT_ID !== undefined &&
-  process.env.LLM_LLAMA_GUARD_ENDPOINT_ID.trim() !== '' &&
-  process.env.LLM_LLAMA_GUARD_ENDPOINT_HOST !== undefined &&
-  process.env.LLM_LLAMA_GUARD_ENDPOINT_HOST.trim() !== '';
-
 test.use({ storageState: AUTH_FILES.teacher });
 
 const externalServicesModels: string[] = JSON.parse(fs.readFileSync(LLM_MODELS_FILE, 'utf-8'));
@@ -24,8 +12,6 @@ const safetyEnabledModel =
   externalServicesModels.find((model) => model === 'GPT-5 nano') ?? externalServicesModels[0];
 
 test.describe('@external-services guard model handling', () => {
-  test.skip(!guardModelEnvReady, 'Guard model env is not configured in this environment');
-
   test('shows the ResponsibleAIError message in the chat UI', async ({ page }) => {
     await page.goto('/');
 
