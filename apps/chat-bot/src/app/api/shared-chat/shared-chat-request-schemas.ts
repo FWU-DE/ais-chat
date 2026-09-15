@@ -21,5 +21,8 @@ export const sharedChatUploadFormSchema = sharedChatCommonRequestSchema.extend({
 });
 
 export const sharedChatSignedUrlsRequestSchema = sharedChatCommonRequestSchema.extend({
-  fileIds: z.array(requiredNonEmptyString('fileIds must not contain empty values')).min(1),
+  fileIds: z
+    .array(requiredNonEmptyString('fileIds must not contain empty values'))
+    .min(1)
+    .max(100, 'fileIds must not contain more than 100 entries'),
 });

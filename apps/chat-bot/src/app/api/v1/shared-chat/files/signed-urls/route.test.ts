@@ -19,6 +19,13 @@ function buildRequest(body: unknown) {
   });
 }
 
+function buildRawRequest(body: string) {
+  return new NextRequest('https://example.com/api/v1/shared-chat/files/signed-urls', {
+    method: 'POST',
+    body,
+  });
+}
+
 const validBody = {
   inviteCode: 'invite-1',
   entityType: 'character',
@@ -59,6 +66,25 @@ describe('POST /api/v1/shared-chat/files/signed-urls', () => {
 
   it('returns 400 when fileIds is missing or empty', async () => {
     const response = await POST(buildRequest({ ...validBody, fileIds: [] }));
+
+    expect(response.status).toBe(400);
+    expect(getSharedChatReadOnlySignedUrls).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when fileIds exceeds the batch size limit', async () => {
+    const response = await POST(
+      buildRequest({
+        ...validBody,
+        fileIds: Array.from({ length: 101 }, (_, index) => `file-${index}`),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(getSharedChatReadOnlySignedUrls).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when the body is not valid JSON', async () => {
+    const response = await POST(buildRawRequest('not-json'));
 
     expect(response.status).toBe(400);
     expect(getSharedChatReadOnlySignedUrls).not.toHaveBeenCalled();
