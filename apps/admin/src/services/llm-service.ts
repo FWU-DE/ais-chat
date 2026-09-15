@@ -2,13 +2,15 @@ import {
   dbGetAllModelsByOrganizationId,
   dbCreateLlmModel,
   dbUpdateLlmModel,
+  dbDeleteLlmModel,
   dbGetOrganizationById,
   dbReplaceModelProviderKeyMappings,
 } from '@ais-chat/api-database';
 import { CreateLargeLanguageModel, UpdateLargeLanguageModel } from '../types/large-language-model';
 import { logInfo } from '@shared/logging';
 import { dbUpdateLlmModelsForAllFederalStates } from '@shared/db/functions/llm-model';
-import { syncBifrostProvidersForOrganization } from './bifrost-provider-sync-service';
+import { syncBifrostProvidersForOrganizationOrThrow } from './bifrost-provider-sync-service';
+import { runDeleteOrThrowError } from '@/utils/run-delete-or-throw-error';
 
 export async function getLargeLanguageModels(organizationId: string) {
   return dbGetAllModelsByOrganizationId(organizationId);
@@ -54,7 +56,7 @@ export async function createLargeLanguageModel(
     organizationId,
     providerKeys: data.providerKeys,
   });
-  await syncBifrostProvidersForOrganization(organizationId);
+  await syncBifrostProvidersForOrganizationOrThrow(organizationId);
   return model;
 }
 
@@ -96,11 +98,24 @@ export async function updateLargeLanguageModel(
     providerKeys: data.providerKeys,
   });
 
-  await syncBifrostProvidersForOrganization(organizationId);
+  await syncBifrostProvidersForOrganizationOrThrow(organizationId);
   await dbUpdateLlmModelsForAllFederalStates();
   if (!model) throw new Error('Failed to update model');
 
   logInfo('LLM was updated successfully', { organizationId, modelId, data });
 
   return model;
+}
+
+export async function deleteLargeLanguageModel(organizationId: string, modelId: string) {
+  const deleted = await runDeleteOrThrowError(
+    () => dbDeleteLlmModel(modelId, organizationId),
+    'Sprachmodell kann nicht gelöscht werden, da noch Daten damit verknüpft sind.',
+  );
+  if (!deleted) throw new Error('Model not found');
+
+  await syncBifrostProvidersForOrganizationOrThrow(organizationId);
+  await dbUpdateLlmModelsForAllFederalStates();
+
+  logInfo('LLM was deleted successfully', { organizationId, modelId });
 }

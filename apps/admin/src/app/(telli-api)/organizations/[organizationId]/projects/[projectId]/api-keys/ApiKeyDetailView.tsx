@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/components/card';
 import { Button } from '@ui/components/button';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
 import { FormField } from '@ui/components/form/form-field';
 import {
   Select,
@@ -16,7 +17,7 @@ import {
   SelectValue,
 } from '@ui/components/select';
 import { ApiKey } from '@/types/api-key';
-import { createApiKeyAction, updateApiKeyAction } from './actions';
+import { createApiKeyAction, deleteApiKeyAction, updateApiKeyAction } from './actions';
 import { ROUTES } from '@/consts/routes';
 import { logError } from '@shared/logging';
 import React, { useState } from 'react';
@@ -24,6 +25,7 @@ import { Input } from '@ui/components/input';
 import { Label } from '@ui/components/label';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@ui/components/field';
 import { FormErrorDisplay } from '@/components/FormErrorDisplay';
+import { TrashSimpleIcon } from '@phosphor-icons/react';
 
 const apiKeyFormSchema = z.object({
   name: z.string().min(1, 'Name ist erforderlich'),
@@ -49,6 +51,7 @@ export function ApiKeyDetailView({
 }: ApiKeyDetailViewProps) {
   const router = useRouter();
   const isCreate = mode === 'create';
+  const { dialogProps: deleteDialogProps, confirm: confirmDelete } = useConfirmAlertDialog();
   const [createdApiKey, setCreatedApiKey] = useState<{ plainKey: string; name: string } | null>(
     null,
   );
@@ -142,6 +145,18 @@ export function ApiKeyDetailView({
     setCreatedApiKey(null);
     router.push(ROUTES.api.projectDetails(organizationId, projectId));
   };
+
+  async function handleDelete() {
+    if (!apiKey) return;
+
+    const result = await deleteApiKeyAction(organizationId, projectId, apiKey.id);
+    if (result.success) {
+      toast.success('API-Schlüssel erfolgreich gelöscht');
+      router.push(ROUTES.api.projectDetails(organizationId, projectId));
+    } else {
+      toast.error(result.error.message);
+    }
+  }
 
   // Show the created API key with plainKey
   if (createdApiKey) {
@@ -279,6 +294,16 @@ export function ApiKeyDetailView({
           </div>
 
           <div className="flex gap-3 justify-end pt-4">
+            {!isCreate && (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={isSubmitting}
+                onClick={() => confirmDelete(handleDelete)}
+              >
+                <TrashSimpleIcon /> Löschen
+              </Button>
+            )}
             <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
               Abbrechen
             </Button>
@@ -288,6 +313,13 @@ export function ApiKeyDetailView({
           </div>
         </form>
       </CardContent>
+      <ConfirmAlertDialog
+        title="API-Schlüssel löschen"
+        description="Möchten Sie diesen API-Schlüssel wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        {...deleteDialogProps}
+      />
     </Card>
   );
 }

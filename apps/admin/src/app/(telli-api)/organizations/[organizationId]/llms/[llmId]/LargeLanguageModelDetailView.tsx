@@ -7,18 +7,18 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/components/card';
 import { Button } from '@ui/components/button';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
 import { FormField } from '@ui/components/form/form-field';
 import { FormFieldCheckbox } from '@ais-chat/ui/components/form/form-field-checkbox';
 import { LargeLanguageModel } from '@/types/large-language-model';
-import { createLLMAction, updateLLMAction } from './actions';
+import { createLLMAction, deleteLLMAction, updateLLMAction } from './actions';
 import { ROUTES } from '@/consts/routes';
 import { FormErrorDisplay } from '@/components/FormErrorDisplay';
-import { isBifrostProviderSyncError } from '@ais-chat/api-database/bifrost-provider-sync/error';
-import { logError } from '@shared/logging';
 import type { ProviderKey } from '@/types/provider-key';
 import { Checkbox } from '@ui/components/checkbox';
 import { Field, FieldError, FieldLabel } from '@ui/components/field';
 import { Input } from '@ui/components/input';
+import { TrashSimpleIcon } from '@phosphor-icons/react';
 
 // Helper function to validate JSON
 const jsonStringSchema = z.string().refine((str) => {
@@ -69,6 +69,7 @@ export function LargeLanguageModelDetailView({
 }: LargeLanguageModelDetailViewProps) {
   const router = useRouter();
   const isCreate = mode === 'create';
+  const { dialogProps: deleteDialogProps, confirm: confirmDelete } = useConfirmAlertDialog();
   const assignments = new Map(
     providerKeys.flatMap((providerKey) =>
       providerKey.models
@@ -133,42 +134,48 @@ export function LargeLanguageModelDetailView({
       return;
     }
 
-    try {
-      const payload = {
-        ...data,
-        providerKeys: data.providerKeys
-          .filter(({ selected }) => selected)
-          .map(({ providerKeyId, upstreamModelName }) => ({
-            providerKeyId,
-            upstreamModelName: upstreamModelName.trim() || data.name,
-          })),
-      };
-      if (isCreate) {
-        const newModel = await createLLMAction(organizationId, payload);
+    const payload = {
+      ...data,
+      providerKeys: data.providerKeys
+        .filter(({ selected }) => selected)
+        .map(({ providerKeyId, upstreamModelName }) => ({
+          providerKeyId,
+          upstreamModelName: upstreamModelName.trim() || data.name,
+        })),
+    };
+    if (isCreate) {
+      const result = await createLLMAction(organizationId, payload);
+      if (result.success) {
         toast.success('Sprachmodell erfolgreich erstellt');
-        router.push(ROUTES.api.llmDetails(organizationId, newModel.id));
-      } else if (model) {
-        await updateLLMAction(organizationId, model.id, payload);
+        router.push(ROUTES.api.llmDetails(organizationId, result.value.id));
+      } else {
+        toast.error(result.error.message);
+      }
+    } else if (model) {
+      const result = await updateLLMAction(organizationId, model.id, payload);
+      if (result.success) {
         toast.success('Sprachmodell erfolgreich aktualisiert');
+      } else {
+        toast.error(result.error.message);
       }
-    } catch (error) {
-      logError('Error saving model', error);
-      if (isBifrostProviderSyncError(error)) {
-        toast.error('Fehler beim Aktualisieren des Sprachmodells in Bifrost');
-        return;
-      }
-
-      toast.error(
-        isCreate
-          ? 'Fehler beim Erstellen des Sprachmodells'
-          : 'Fehler beim Aktualisieren des Sprachmodells',
-      );
     }
   }
 
   const handleCancel = () => {
     router.push(ROUTES.api.llms(organizationId));
   };
+
+  async function handleDelete() {
+    if (!model) return;
+
+    const result = await deleteLLMAction(organizationId, model.id);
+    if (result.success) {
+      toast.success('Sprachmodell erfolgreich gelöscht');
+      router.push(ROUTES.api.llms(organizationId));
+    } else {
+      toast.error(result.error.message);
+    }
+  }
 
   return (
     <Card>
@@ -369,6 +376,16 @@ export function LargeLanguageModelDetailView({
           </div>
 
           <div className="flex gap-3 justify-end pt-4">
+            {!isCreate && (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={isSubmitting}
+                onClick={() => confirmDelete(handleDelete)}
+              >
+                <TrashSimpleIcon /> Löschen
+              </Button>
+            )}
             <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
               Abbrechen
             </Button>
@@ -378,6 +395,13 @@ export function LargeLanguageModelDetailView({
           </div>
         </form>
       </CardContent>
+      <ConfirmAlertDialog
+        title="Sprachmodell löschen"
+        description="Möchten Sie dieses Sprachmodell wirklich löschen? Alle zugehörigen Provider- und API-Key-Zuordnungen werden ebenfalls entfernt."
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        {...deleteDialogProps}
+      />
     </Card>
   );
 }

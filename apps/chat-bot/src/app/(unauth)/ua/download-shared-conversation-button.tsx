@@ -8,6 +8,7 @@ import { type ChatMessage as Message } from '@/types/chat';
 import { Button } from '@ui/components/button';
 import { BoxArrowDownIcon } from '@phosphor-icons/react';
 import { downloadFileFromBlob, extractFilenameFromResponse } from '@/utils/files/blob-download';
+import { loadSharedChat } from '@/utils/shared-chat-storage';
 
 type DownloadConversationButtonProps = {
   conversationMessages: Message[];
@@ -18,6 +19,7 @@ type DownloadConversationButtonProps = {
   characterName?: string;
   showText?: boolean;
   inviteCode: string;
+  sharedSessionId?: string;
 };
 
 type DownloadSharedConversationParams = {
@@ -25,6 +27,7 @@ type DownloadSharedConversationParams = {
   sharedConversationName?: string;
   characterName?: string;
   inviteCode: string;
+  sharedSessionId?: string;
 };
 
 export async function fetchSharedConversationDownload({
@@ -32,17 +35,28 @@ export async function fetchSharedConversationDownload({
   sharedConversationName,
   characterName,
   inviteCode,
+  sharedSessionId,
 }: DownloadSharedConversationParams) {
+  const storedChat = loadSharedChat(inviteCode);
+  const filesByMessageId = new Map(
+    storedChat?.messages.map((message) => [message.id, message.files]) ?? [],
+  );
+  const messagesWithFiles = conversationMessages.map((message) => ({
+    ...message,
+    files: filesByMessageId.get(message.id)?.map((file) => ({ id: file.id })) ?? [],
+  }));
+
   const response = await fetch(`/api/download-conversation/shared`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      messages: conversationMessages,
+      messages: messagesWithFiles,
       characterName,
       sharedConversationName,
       inviteCode,
+      sharedSessionId,
     }),
   });
 
@@ -66,6 +80,7 @@ export default function DownloadSharedConversationButton({
   characterName,
   showText = true,
   inviteCode,
+  sharedSessionId,
 }: DownloadConversationButtonProps) {
   const [isLoading, setIsLoading] = React.useState(false);
   const isMountedRef = React.useRef(true);
@@ -96,6 +111,7 @@ export default function DownloadSharedConversationButton({
         sharedConversationName,
         characterName,
         inviteCode,
+        sharedSessionId,
       });
 
       downloadFileFromBlob(blob, fileName);

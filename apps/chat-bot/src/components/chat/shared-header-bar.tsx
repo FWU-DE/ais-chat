@@ -31,6 +31,7 @@ export function SharedChatHeader({
   imageSource,
   dialogStarted,
   inviteCode,
+  sharedSessionId,
 }: {
   chatActive: boolean;
   hasMessages: boolean;
@@ -41,6 +42,7 @@ export function SharedChatHeader({
   imageSource?: string;
   dialogStarted: boolean;
   inviteCode: string;
+  sharedSessionId?: string;
 }) {
   const { isBelow } = useBreakpoints();
   const tCommon = useTranslations('common');
@@ -75,6 +77,7 @@ export function SharedChatHeader({
             conversationMessages: messages,
             sharedConversationName: title,
             inviteCode,
+            sharedSessionId,
           });
 
           downloadFileFromBlob(blob, fileName);
@@ -127,6 +130,7 @@ export function SharedChatHeader({
             sharedConversationName={title}
             showText={false}
             inviteCode={inviteCode}
+            sharedSessionId={sharedSessionId}
           />
           <ProfileMenu userAndContext={undefined} />
         </>

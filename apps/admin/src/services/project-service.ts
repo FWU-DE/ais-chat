@@ -3,8 +3,10 @@ import {
   dbGetProjectById,
   dbCreateProject,
   dbGetOrganizationById,
+  dbDeleteProject,
 } from '@ais-chat/api-database';
 import { logInfo } from '@shared/logging';
+import { runDeleteOrThrowError } from '@/utils/run-delete-or-throw-error';
 
 export async function getProjects(organizationId: string) {
   const organization = await dbGetOrganizationById(organizationId);
@@ -32,4 +34,14 @@ export async function createProject(
 
   if (!project) throw new Error('Failed to create project');
   return project;
+}
+
+export async function deleteProject(organizationId: string, projectId: string) {
+  const deleted = await runDeleteOrThrowError(
+    () => dbDeleteProject(organizationId, projectId),
+    'Projekt kann nicht gelöscht werden, da noch Daten damit verknüpft sind.',
+  );
+  if (!deleted) throw new Error('Project not found');
+
+  logInfo('Project was deleted successfully', { organizationId, projectId });
 }

@@ -59,7 +59,6 @@
     "drizzle-zod": "0.8.3",
     "he": "1.2.0",
     "import-in-the-middle": "3.4.0",
-    "ioredis": "6.0.0",
     "isbinaryfile": "6.0.0",
     "jose": "6.2.12",
     "jsdom": "30.0.1",
