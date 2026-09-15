@@ -88,6 +88,12 @@ export type SharedChatViewProps = {
   assistantIcon?: ReactNode;
   uploadFileFn?: (file: File, sharedSessionId: string) => Promise<{ fileId: string }>;
   /**
+   * Resolves temporary, read-only URLs for a batch of previously uploaded file
+   * attachments in a single call. Used to restore image previews after a page
+   * reload, since blob URLs created at upload time do not survive across reloads.
+   */
+  getFileUrlsFn?: (fileIds: string[], sharedSessionId: string) => Promise<Record<string, string>>;
+  /**
    * When true, web search results are shown in a modal dialog
    * triggered from the message icons row instead of the inline panel above
    * the message.
@@ -114,6 +120,7 @@ export default function GenericSharedChat({
   enableFloatingText = false,
   assistantIcon,
   uploadFileFn,
+  getFileUrlsFn,
   showWebSourcesInDialog,
 }: SharedChatViewProps) {
   const tCommon = useTranslations('common');
@@ -310,6 +317,62 @@ export default function GenericSharedChat({
 
     reactivateAutoScrolling();
     void reload({ fileIds: getPendingFileIds(), sharedSessionId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // Restored attachments only carry id/name/type/size (no localUrl), since the
+    // blob URL created at upload time does not survive a reload. Resolve signed
+    // URLs for all restored images in a single batched call so a long chat
+    // history doesn't cause an HTTP/DB request per attachment.
+    if (getFileUrlsFn === undefined) return;
+
+    const missingImageFiles = Array.from(pendingFileMapping.entries()).flatMap(
+      ([messageId, pendingFiles]) =>
+        pendingFiles
+          .filter((file) => file.localUrl === undefined && isImageFile(file.name))
+          .map((file) => ({ messageId, fileId: file.id })),
+    );
+
+    if (missingImageFiles.length === 0) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      let urlsByFileId: Record<string, string>;
+      try {
+        urlsByFileId = await getFileUrlsFn(
+          [...new Set(missingImageFiles.map(({ fileId }) => fileId))],
+          sharedSessionId,
+        );
+      } catch (error) {
+        logError('Failed to resolve shared chat file urls', error);
+        return;
+      }
+
+      if (cancelled) return;
+
+      setPendingFileMapping((prev) => {
+        const next = new Map(prev);
+        for (const { messageId, fileId } of missingImageFiles) {
+          const url = urlsByFileId[fileId];
+          if (url === undefined) continue;
+
+          const pendingFiles = next.get(messageId);
+          if (pendingFiles === undefined) continue;
+          next.set(
+            messageId,
+            pendingFiles.map((file) => (file.id === fileId ? { ...file, localUrl: url } : file)),
+          );
+        }
+        return next;
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // Only run once on mount to hydrate restored attachments.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
