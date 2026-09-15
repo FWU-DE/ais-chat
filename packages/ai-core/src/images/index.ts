@@ -4,14 +4,14 @@ import { hasAccessToModel } from '../api-keys/model-access';
 import {
   ApiKeyQuotaExceededError,
   InvalidModelError,
-  normalizeAiGenerationError,
   ResponsibleAIError,
+  normalizeAiGenerationError,
 } from '../errors';
 import { getImageModelById, getImageModelByName } from '../models';
 import { ImageGenerationRequestOptions } from './types';
-import { checkInputSafety } from '../safety';
+import { buildImageSafetyMessages, checkInputSafety } from '../safety';
 
-const MAX_SAFETY_IMAGE_URL_LENGTH = 10 * 1024 * 1024;
+const MAX_SAFETY_IMAGE_URL_LENGTH = 8 * 1024 * 1024;
 
 /**
  * Generates an image using the specified model and prompt, with access control and billing.
@@ -63,13 +63,7 @@ export async function generateImageWithBilling(
 
       await checkInputSafety(
         safetyModelName,
-        [
-          {
-            role: 'user',
-            content: prompt,
-            images: safetyImages,
-          },
-        ],
+        buildImageSafetyMessages(prompt, options?.inputImages),
         apiKeyId,
       );
     }

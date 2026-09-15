@@ -23,6 +23,17 @@ vi.mock('../models', () => ({
 
 vi.mock('../safety', () => ({
   checkInputSafety: vi.fn(),
+  buildImageSafetyMessages: vi.fn((prompt: string, inputImages = []) => [
+    {
+      role: 'user',
+      content: prompt,
+      images: inputImages.map((image: { mimeType: string; data: Buffer }) => ({
+        type: 'image' as const,
+        contentType: image.mimeType,
+        url: `data:${image.mimeType};base64,${image.data.toString('base64')}`,
+      })),
+    },
+  ]),
 }));
 
 import { generateImage } from './providers';
