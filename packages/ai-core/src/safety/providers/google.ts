@@ -133,6 +133,7 @@ export function constructGoogleSafetyCheckFn(model: AiModel): SafetyCheckFn {
           Authorization: `Bearer ${accessToken.token}`,
           'Content-Type': 'application/json',
         },
+        signal: AbortSignal.timeout(5000),
         body: JSON.stringify({
           instances: [
             {
