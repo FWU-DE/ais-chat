@@ -1,22 +1,45 @@
-import { hasAccessToModel } from '../api-keys/model-access';
-import { InvalidModelError } from '../errors';
-import { getSafetyModelById, getSafetyModelByName } from '../models';
+import { isKnownAiGenerationError, ResponsibleAIError } from '../errors';
+import { getSafetyModelByName } from '../models';
 import { checkSafety } from './providers';
+import type { SafetyMessage, SafetyResult } from './types';
 
 export { checkSafety } from './providers';
-export type { SafetyResult } from './types';
+export type { SafetyCheckArgs, SafetyImage, SafetyMessage, SafetyResult } from './types';
 
-export async function checkTextSafety(modelId: string, text: string, apiKeyId: string) {
-  const model = await getSafetyModelById(modelId);
-  if (!(await hasAccessToModel(apiKeyId, model))) {
-    throw new InvalidModelError(`API key does not have access to the safety model: ${model.name}`);
+export function interpretSafetyResult(result: SafetyResult): void {
+  if (result.safe) {
+    return;
   }
 
-  // TODO: Add image inputs once the deployed Llama Guard endpoint supports them.
-  return checkSafety(model, text);
+  throw new ResponsibleAIError('Input was blocked by the safety model');
 }
 
-export async function checkTextSafetyByName(modelName: string, text: string, apiKeyId: string) {
+export async function checkInputSafety(
+  modelName: string,
+  messages: SafetyMessage[],
+  apiKeyId: string,
+): Promise<void> {
+  let result;
+  try {
+    result = await checkTextSafetyByName(modelName, messages, apiKeyId);
+  } catch (error) {
+    if (isKnownAiGenerationError(error)) {
+      throw error;
+    }
+
+    throw new ResponsibleAIError(
+      `Safety check failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+
+  interpretSafetyResult(result);
+}
+
+export async function checkTextSafetyByName(
+  modelName: string,
+  messages: SafetyMessage[],
+  apiKeyId: string,
+) {
   const model = await getSafetyModelByName(modelName, apiKeyId);
-  return checkTextSafety(model.id, text, apiKeyId);
+  return checkSafety(model, messages);
 }
