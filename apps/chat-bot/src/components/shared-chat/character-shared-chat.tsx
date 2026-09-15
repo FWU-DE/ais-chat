@@ -8,7 +8,7 @@ import { AssistantIcon } from '../chat/assistant-icon';
 import GenericSharedChat from './generic-shared-chat';
 import { reductionBreakpoint } from '@/utils/tailwind/layout';
 import { loadSharedChat } from '@/utils/shared-chat-storage';
-import { fetchSharedChatFileUrl } from '@/utils/shared-chat-files';
+import { fetchSharedChatFileUrls } from '@/utils/shared-chat-files';
 import { z } from 'zod';
 
 /**
@@ -73,9 +73,12 @@ export default function CharacterSharedChat({
     };
   }
 
-  function getSharedCharacterFileUrl(fileId: string, sharedSessionId: string): Promise<string> {
-    return fetchSharedChatFileUrl({
-      fileId,
+  function getSharedCharacterFileUrls(
+    fileIds: string[],
+    sharedSessionId: string,
+  ): Promise<Record<string, string>> {
+    return fetchSharedChatFileUrls({
+      fileIds,
       inviteCode,
       entityType: 'character',
       entityId: id,
@@ -93,7 +96,7 @@ export default function CharacterSharedChat({
       dialogStartMode="derived"
       assistantIcon={assistantIcon}
       uploadFileFn={uploadSharedCharacterFile}
-      getFileUrlFn={getSharedCharacterFileUrl}
+      getFileUrlsFn={getSharedCharacterFileUrls}
       showWebSourcesInDialog
     />
   );
