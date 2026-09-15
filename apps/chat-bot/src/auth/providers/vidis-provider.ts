@@ -1,8 +1,15 @@
 import { dbGetUserById } from '@ais-chat/shared/db/functions/user';
 import { env } from '@/env';
-import { customFetch } from 'next-auth';
+import { createRemoteJWKSet } from 'jose';
+import { customFetch as nextAuthCustomFetch } from 'next-auth';
 import type { Account, NextAuthConfig, Profile } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
+import {
+  allowInsecureRequests,
+  customFetch as oauthCustomFetch,
+  discoveryRequest,
+  processDiscoveryResponse,
+} from 'oauth4webapi';
 import { vidisAccountSchema, vidisProfileSchema } from './vidis-schema';
 export { validateAndSyncVidisUser } from './validate-and-sync-vidis-user';
 
@@ -69,6 +76,36 @@ async function cachedDiscoveryFetch(...args: Parameters<typeof fetch>): ReturnTy
   });
 }
 
+let vidisJwks: ReturnType<typeof createRemoteJWKSet> | undefined;
+
+/**
+ * Resolve VIDIS's JWKS (JSON Web Key Set) via the OIDC discovery document, used to verify
+ * the signature of tokens issued by VIDIS (e.g. backchannel logout tokens).
+ * Discovery is performed with `oauth4webapi` (the OIDC client library next-auth itself uses
+ * internally), which validates the discovery document against the issuer.
+ * The resulting key set is cached for the lifetime of the process; `createRemoteJWKSet`
+ * itself caches and rate-limits the underlying JWKS fetches.
+ */
+export async function getVidisJwks() {
+  if (!vidisJwks) {
+    const issuer = new URL(env.vidisIssuerUri);
+    const discoveryResponse = await discoveryRequest(issuer, {
+      [allowInsecureRequests]: env.vidisAllowInsecureDiscovery,
+      [oauthCustomFetch]: cachedDiscoveryFetch,
+    });
+    const authorizationServer = await processDiscoveryResponse(issuer, discoveryResponse);
+    if (!authorizationServer.jwks_uri) {
+      throw new Error('VIDIS discovery document does not provide a jwks_uri');
+    }
+    const jwksUri = new URL(authorizationServer.jwks_uri);
+    if (jwksUri.protocol !== 'https:' && !env.vidisAllowInsecureDiscovery) {
+      throw new Error('Refusing to fetch VIDIS JWKS over an insecure connection');
+    }
+    vidisJwks = createRemoteJWKSet(jwksUri);
+  }
+  return vidisJwks;
+}
+
 export const vidisConfig = {
   id: 'vidis',
   name: 'vidis',
@@ -80,5 +117,5 @@ export const vidisConfig = {
   clientId: env.vidisClientId,
   clientSecret: env.vidisClientSecret,
   issuer: env.vidisIssuerUri,
-  [customFetch]: cachedDiscoveryFetch,
+  [nextAuthCustomFetch]: cachedDiscoveryFetch,
 } satisfies NextAuthConfig['providers'][number];

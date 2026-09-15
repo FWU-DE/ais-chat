@@ -20,6 +20,7 @@ jobs:
       VIDIS_CLIENT_ID: ais-chat-e2e-client
       VIDIS_CLIENT_SECRET: ClientSecret-e2e
       VIDIS_ISSUER_URI: http://localhost:8080/realms/ais-chat-local
+      VIDIS_ALLOW_INSECURE_DISCOVERY: true
       KEYCLOAK_CLIENT_ID: ais-chat-e2e-client
       KEYCLOAK_CLIENT_SECRET: ClientSecret-e2e
       KEYCLOAK_ISSUER: http://localhost:8080/realms/ais-chat-local

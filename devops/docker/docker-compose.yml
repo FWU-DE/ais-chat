@@ -250,6 +250,8 @@ services:
       VIDIS_CLIENT_SECRET: ClientSecret
       VIDIS_BASE_URI: http://localhost:8080/realms/ais-chat-local
       VIDIS_ISSUER_URI: http://localhost:8080/realms/ais-chat-local
+      # Local keycloak is served over plain HTTP
+      VIDIS_ALLOW_INSECURE_DISCOVERY: true
 
       # Databases
       DATABASE_URL: postgresql://admin:test1234@postgres:5432/app_db
