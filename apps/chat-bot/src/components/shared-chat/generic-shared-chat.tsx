@@ -338,10 +338,7 @@ export default function GenericSharedChat({
           sharedSessionId={sharedSessionId}
         />
         <div ref={containerRef} className="relative flex min-h-0 flex-1 flex-col items-center">
-          <div
-            ref={scrollRef}
-            className="min-h-0 w-full flex-1 max-w-5xl overflow-y-auto p-4 pb-20"
-          >
+          <div ref={scrollRef} className="min-h-0 w-full flex-1 max-w-5xl overflow-y-auto p-4">
             {hasExerciseDescription && (
               <FloatingText
                 learningContext={exerciseDescription ?? ''}
@@ -386,7 +383,7 @@ export default function GenericSharedChat({
               />
             )}
           </div>
-          <div className="w-full max-w-5xl shrink-0 mx-auto px-4 pb-4">
+          <div className="w-full max-w-5xl shrink-0 mx-auto p-4">
             {showChatInputBox && (
               <div className="flex flex-col">
                 <ChatInputBox
