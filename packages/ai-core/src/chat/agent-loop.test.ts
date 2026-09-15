@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { runAgentLoop } from './agent-loop';
 import type { Message, TokenUsage, StreamEvent } from './types';
 import { InvalidModelError, ProviderConfigurationError } from '../errors';
+import { getTextModelById } from '../models';
 
 // Mock the generateAgenticStreamWithBilling import
 const mockGenerateAgenticStreamWithBilling = vi.fn();
@@ -10,6 +11,10 @@ const mockCheckTextSafety = vi.fn();
 vi.mock('./agentic-stream', () => ({
   generateAgenticStreamWithBilling: (...args: unknown[]) =>
     mockGenerateAgenticStreamWithBilling(...args),
+}));
+
+vi.mock('../models', () => ({
+  getTextModelById: vi.fn().mockResolvedValue({ safetyFilterEnabled: true }),
 }));
 
 vi.mock('../safety', () => ({
@@ -34,6 +39,7 @@ vi.mock('@sentry/core', () => ({
 }));
 
 describe('agent-loop', () => {
+  const mockGetTextModelById = vi.mocked(getTextModelById);
   const usage: TokenUsage = {
     promptTokens: 10,
     completionTokens: 20,
@@ -46,6 +52,7 @@ describe('agent-loop', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCheckTextSafety.mockResolvedValue({ safe: true });
+    mockGetTextModelById.mockResolvedValue({ safetyFilterEnabled: true } as never);
   });
 
   it('checks the supplied safety model once with user and assistant context, excluding system and tool messages', async () => {
@@ -85,6 +92,30 @@ describe('agent-loop', () => {
       ],
       'test-key',
     );
+  });
+
+  it('skips the safety pre-check when every selected model disables it', async () => {
+    mockGetTextModelById.mockResolvedValue({ safetyFilterEnabled: false } as never);
+    mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+      yield { type: 'text', delta: 'Done' } satisfies StreamEvent;
+    });
+
+    runAgentLoop({
+      modelSelection: {
+        modelIds: ['test-model'],
+        modelName: 'Test Model',
+      },
+      apiKeyId: 'test-key',
+      safetyModelName: 'safety-model',
+      messages: [{ role: 'user', content: 'Test query' }],
+      agentName: 'Test Agent',
+      onTextChunk: vi.fn(),
+      onComplete: vi.fn(),
+      onError: vi.fn(),
+    });
+
+    await vi.waitFor(() => expect(mockGenerateAgenticStreamWithBilling).toHaveBeenCalled());
+    expect(mockCheckTextSafety).not.toHaveBeenCalled();
   });
 
   it('checks safety once before multiple tool iterations', async () => {

@@ -45,6 +45,7 @@ export async function createLargeLanguageModel(
     isNew: data.isNew,
     isDeleted: data.isDeleted,
     useBifrost: data.useBifrost,
+    safetyFilterEnabled: data.safetyFilterEnabled,
   });
 
   logInfo('LLM was created successfully', { organizationId, data });
@@ -88,6 +89,7 @@ export async function updateLargeLanguageModel(
     isNew: data.isNew,
     isDeleted: data.isDeleted,
     useBifrost: data.useBifrost,
+    safetyFilterEnabled: data.safetyFilterEnabled,
   });
 
   await dbReplaceModelProviderKeyMappings({
@@ -98,10 +100,10 @@ export async function updateLargeLanguageModel(
 
   await syncBifrostProvidersForOrganizationOrThrow(organizationId);
   await dbUpdateLlmModelsForAllFederalStates();
+  if (!model) throw new Error('Failed to update model');
 
   logInfo('LLM was updated successfully', { organizationId, modelId, data });
 
-  if (!model) throw new Error('Failed to update model');
   return model;
 }
 

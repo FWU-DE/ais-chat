@@ -62,6 +62,7 @@ export const llmModelTable = pgTable(
       .default({}),
     isNew: boolean('is_new').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
+    safetyFilterEnabled: boolean('safety_filter_enabled').notNull().default(true),
   },
   (table) => [index().on(table.organizationId)],
 );
