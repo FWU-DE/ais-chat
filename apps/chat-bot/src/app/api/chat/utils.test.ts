@@ -232,6 +232,18 @@ describe('determineImageAttachmentTypeForModel', () => {
     expect(determineImageAttachmentTypeForModel(model)).toBe('url');
   });
 
+  it('should return "base64" for gemini model names routed through bifrost', () => {
+    const model = { ...openAiModel, name: 'gemini-2.5-flash-lite', provider: 'bifrost' };
+
+    expect(determineImageAttachmentTypeForModel(model)).toBe('base64');
+  });
+
+  it('should return "base64" for models with the google provider', () => {
+    const model = { ...openAiModel, provider: 'google' };
+
+    expect(determineImageAttachmentTypeForModel(model)).toBe('base64');
+  });
+
   it('should return "base64" for a non-anthropic model when IMAGE_ATTACHMENT_MODE=base64', () => {
     mutableImageAttachmentEnv.imageAttachmentMode = 'base64';
     const model = openAiModel;
