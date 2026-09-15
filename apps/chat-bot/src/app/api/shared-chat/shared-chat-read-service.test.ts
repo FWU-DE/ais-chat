@@ -81,6 +81,7 @@ describe('getSharedChatReadOnlySignedUrl', () => {
     });
     expect(mocks.getReadOnlySignedUrlMock).toHaveBeenCalledWith({
       key: 'message_attachments/file-1',
+      attachment: false,
     });
   });
 

@@ -45,5 +45,6 @@ export async function getSharedChatReadOnlySignedUrl({
     sharedSessionId,
   });
 
-  return getReadOnlySignedUrl({ key: `message_attachments/${file.id}` });
+  // attachment: false so the browser renders the image inline instead of downloading it
+  return getReadOnlySignedUrl({ key: `message_attachments/${file.id}`, attachment: false });
 }

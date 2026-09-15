@@ -103,7 +103,12 @@ export function ChatBox({
         {imageFiles.length > 0 && (
           <div className="flex flex-row gap-2 overflow-auto">
             {imageFiles.map((file) => (
-              <MessageImageAttachment file={file} key={file.id} />
+              // The authenticated scaled-image fallback only works for files owned by the current user (fileMapping).
+              <MessageImageAttachment
+                file={file}
+                key={file.id}
+                allowFallbackUrl={fileMapping !== undefined}
+              />
             ))}
           </div>
         )}

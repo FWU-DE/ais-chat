@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { LearningScenarioWithShareDataModel } from '@shared/db/schema';
 import GenericSharedChat from './generic-shared-chat';
 import { loadSharedChat } from '@/utils/shared-chat-storage';
+import { fetchSharedChatFileUrl } from '@/utils/shared-chat-files';
 import { z } from 'zod';
 
 export default function LearningScenarioSharedChat({
@@ -56,6 +57,19 @@ export default function LearningScenarioSharedChat({
     };
   }
 
+  function getSharedLearningScenarioFileUrl(
+    fileId: string,
+    sharedSessionId: string,
+  ): Promise<string> {
+    return fetchSharedChatFileUrl({
+      fileId,
+      inviteCode,
+      entityType: 'learningScenario',
+      entityId: id,
+      sharedSessionId,
+    });
+  }
+
   return (
     <GenericSharedChat
       headerT={t}
@@ -68,6 +82,7 @@ export default function LearningScenarioSharedChat({
       exerciseDescription={sharedSchoolChat.studentExercise}
       exerciseTitle={t('exercise-title')}
       uploadFileFn={uploadSharedLearningScenarioFile}
+      getFileUrlFn={getSharedLearningScenarioFileUrl}
     />
   );
 }
