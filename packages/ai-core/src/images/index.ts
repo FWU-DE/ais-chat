@@ -50,7 +50,7 @@ export async function generateImageWithBilling(
   }
 
   try {
-    if (safetyModelName && model.safetyFilterEnabled !== false) {
+    if (safetyModelName && model.safetyFilterEnabled) {
       const safetyImages = (options?.inputImages ?? []).map((image) => ({
         type: 'image' as const,
         contentType: image.mimeType,

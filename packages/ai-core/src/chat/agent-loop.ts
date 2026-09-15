@@ -102,7 +102,7 @@ export function runAgentLoop({
       const selectedModels = safetyModelName
         ? await Promise.all(modelSelection.modelIds.map((modelId) => getTextModelById(modelId)))
         : [];
-      if (safetyModelName && selectedModels.some((model) => model.safetyFilterEnabled !== false)) {
+      if (safetyModelName && selectedModels.some((model) => model.safetyFilterEnabled)) {
         const safetyMessages = messages
           .filter((message) => message.role === 'user' || message.role === 'assistant')
           .map((message) => ({
