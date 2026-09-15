@@ -38,8 +38,9 @@ export function verifySharedChatFileOwnershipBySession({
   sharedSessionId: SharedSessionId;
 }): void {
   for (const fileMetadata of files.map((file) => file.metadata)) {
+    // Fail closed: null/malformed metadata must not bypass the ownership check.
     if (
-      isSharedChatFileMetadata(fileMetadata) &&
+      !isSharedChatFileMetadata(fileMetadata) ||
       !isSharedChatFileOwnedBySession({
         fileMetadata,
         inviteCode,

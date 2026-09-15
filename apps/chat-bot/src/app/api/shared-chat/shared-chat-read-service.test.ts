@@ -53,6 +53,8 @@ describe('getSharedChatReadOnlySignedUrl', () => {
     mocks.dbGetFilesInIdsMock.mockResolvedValue([
       {
         id: 'file-1',
+        name: 'photo.png',
+        type: 'png',
         metadata: {
           inviteCode: 'invite',
           entityType: 'character',
@@ -82,13 +84,47 @@ describe('getSharedChatReadOnlySignedUrl', () => {
     expect(mocks.getReadOnlySignedUrlMock).toHaveBeenCalledWith({
       key: 'message_attachments/file-1',
       attachment: false,
+      contentType: 'image/png',
     });
+  });
+
+  it('throws when the file is not an image', async () => {
+    mocks.dbGetFilesInIdsMock.mockResolvedValue([
+      {
+        id: 'file-1',
+        name: 'notes.pdf',
+        type: 'pdf',
+        metadata: {
+          inviteCode: 'invite',
+          entityType: 'character',
+          entityId: 'character-1',
+          sessionId: 'session-1',
+        },
+        userId: null,
+      },
+    ]);
+
+    const { getSharedChatReadOnlySignedUrl } = await import('./shared-chat-read-service');
+
+    await expect(
+      getSharedChatReadOnlySignedUrl({
+        inviteCode: 'invite',
+        entityType: 'character',
+        entityId: 'character-1',
+        fileId: 'file-1',
+        sharedSessionId: 'session-1',
+      }),
+    ).rejects.toThrow('Only image attachments can be accessed through this endpoint');
+
+    expect(mocks.getReadOnlySignedUrlMock).not.toHaveBeenCalled();
   });
 
   it('throws when file belongs to an authenticated user', async () => {
     mocks.dbGetFilesInIdsMock.mockResolvedValue([
       {
         id: 'file-1',
+        name: 'photo.png',
+        type: 'png',
         userId: 'user-1',
       },
     ]);
@@ -110,6 +146,8 @@ describe('getSharedChatReadOnlySignedUrl', () => {
     mocks.dbGetFilesInIdsMock.mockResolvedValue([
       {
         id: 'file-1',
+        name: 'photo.png',
+        type: 'png',
         metadata: {
           inviteCode: 'invite',
           entityType: 'character',

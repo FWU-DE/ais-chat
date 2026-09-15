@@ -8,11 +8,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
   try {
     const { fileId } = await params;
     const searchParams = Object.fromEntries(req.nextUrl.searchParams);
-    const parseResult = sharedChatSignedUrlRequestSchema.parse({ ...searchParams, fileId });
+    const parseResult = sharedChatSignedUrlRequestSchema.safeParse({ ...searchParams, fileId });
 
-    await requireValidInviteCode(parseResult.inviteCode);
+    if (!parseResult.success) {
+      return NextResponse.json({ error: 'Invalid request parameters' }, { status: 400 });
+    }
 
-    const url = await getSharedChatReadOnlySignedUrl(parseResult);
+    await requireValidInviteCode(parseResult.data.inviteCode);
+
+    const url = await getSharedChatReadOnlySignedUrl(parseResult.data);
 
     return NextResponse.json({ url });
   } catch (error) {

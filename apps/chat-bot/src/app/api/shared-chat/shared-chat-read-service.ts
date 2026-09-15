@@ -1,6 +1,8 @@
 import { dbGetFilesInIds } from '@shared/db/functions/files';
 import { ForbiddenError, NotFoundError } from '@shared/error';
 import { getReadOnlySignedUrl } from '@shared/s3';
+import { isImageFile } from '@/utils/files/generic';
+import { getImageContentType } from '@/utils/files/image-data';
 import { verify } from '.';
 import { getSharedChatEntity } from './shared-chat-get-entity';
 
@@ -36,6 +38,10 @@ export async function getSharedChatReadOnlySignedUrl({
     throw new NotFoundError('File not found');
   }
 
+  if (!isImageFile(file.name)) {
+    throw new ForbiddenError('Only image attachments can be accessed through this endpoint');
+  }
+
   verify.filesDoNotBelongToAnyUser([file]);
   verify.sharedChatFileOwnershipBySession({
     files,
@@ -45,6 +51,12 @@ export async function getSharedChatReadOnlySignedUrl({
     sharedSessionId,
   });
 
-  // attachment: false so the browser renders the image inline instead of downloading it
-  return getReadOnlySignedUrl({ key: `message_attachments/${file.id}`, attachment: false });
+  // attachment: false so the browser renders the image inline instead of downloading it.
+  // The stored object's Content-Type is the raw file extension (see uploadMessageAttachment),
+  // so override it with a proper image MIME type here.
+  return getReadOnlySignedUrl({
+    key: `message_attachments/${file.id}`,
+    attachment: false,
+    contentType: getImageContentType(file.type),
+  });
 }
