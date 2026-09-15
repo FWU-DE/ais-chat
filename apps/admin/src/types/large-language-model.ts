@@ -1,3 +1,5 @@
+import { LlmModelPriceMetadata } from '@ais-chat/shared/db/schema';
+
 export type LargeLanguageModel = {
   id: string;
   provider: string;
@@ -5,7 +7,7 @@ export type LargeLanguageModel = {
   displayName: string;
   description: string;
   setting: object;
-  priceMetadata: object;
+  priceMetadata: LlmModelPriceMetadata;
   organizationId: string;
   createdAt: Date;
   supportedImageFormats: string[];
@@ -21,7 +23,7 @@ export type CreateLargeLanguageModel = {
   name: string;
   displayName: string;
   description?: string;
-  priceMetadata?: string;
+  priceMetadata: string;
   supportedImageFormats?: string;
   imageGenerationConfig?: string;
   additionalParameters?: string;
@@ -36,7 +38,7 @@ export type UpdateLargeLanguageModel = {
   name: string;
   displayName: string;
   description?: string;
-  priceMetadata?: string;
+  priceMetadata: string;
   supportedImageFormats?: string;
   imageGenerationConfig?: string;
   additionalParameters?: string;

@@ -16,9 +16,12 @@ import { ROUTES } from '@/consts/routes';
 import { FormErrorDisplay } from '@/components/FormErrorDisplay';
 import type { ProviderKey } from '@/types/provider-key';
 import { Checkbox } from '@ui/components/checkbox';
-import { Field, FieldError, FieldLabel } from '@ui/components/field';
+import { Field, FieldDescription, FieldError, FieldLabel } from '@ui/components/field';
 import { Input } from '@ui/components/input';
 import { TrashSimpleIcon } from '@phosphor-icons/react';
+import { llmModelPriceMetadataSchema } from '@ais-chat/shared/db/schema';
+import { imageGenerationConfigSchema } from '@ais-chat/api-database/types';
+import { PriceMetadataExamplesDialog } from './PriceMetadataExamplesDialog';
 
 // Helper function to validate JSON
 const jsonStringSchema = z.string().refine((str) => {
@@ -31,13 +34,56 @@ const jsonStringSchema = z.string().refine((str) => {
   }
 }, 'Muss ein gültiges JSON-Format sein');
 
+// Builds a Zod schema for a JSON-encoded textarea that must parse into a
+// value matching `shape`, instead of just checking for *some* valid JSON.
+function createJsonStringSchema<T>(
+  shape: z.ZodType<T>,
+  invalidShapeMessage: string,
+  { allowEmpty = true }: { allowEmpty?: boolean } = {},
+) {
+  return z.string().superRefine((str, ctx) => {
+    if (!str.trim()) {
+      if (!allowEmpty) {
+        ctx.addIssue({ code: 'custom', message: 'Dieses Feld ist erforderlich' });
+      }
+      return;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(str);
+    } catch {
+      ctx.addIssue({ code: 'custom', message: 'Muss ein gültiges JSON-Format sein' });
+      return;
+    }
+    if (!shape.safeParse(parsed).success) {
+      ctx.addIssue({ code: 'custom', message: invalidShapeMessage });
+    }
+  });
+}
+
+const priceMetadataSchema = createJsonStringSchema(
+  llmModelPriceMetadataSchema,
+  'Muss einer der bekannten Preis-Formen entsprechen (siehe Beispiele). Ein leeres Objekt ist nicht gültig.',
+  { allowEmpty: false },
+);
+
+const supportedImageFormatsSchema = createJsonStringSchema(
+  z.array(z.string()),
+  'Muss ein JSON-Array mit unterstützten Bild-Dateiendungen sein (z. B. ["png", "jpeg"])',
+);
+
+const imageGenerationConfigFormSchema = createJsonStringSchema(
+  imageGenerationConfigSchema,
+  'Muss eine gültige Bildgenerierungs-Konfiguration sein',
+);
+
 const llmFormSchema = z.object({
   name: z.string().min(1, 'Name ist erforderlich'),
   displayName: z.string().min(1, 'Anzeigename ist erforderlich'),
   description: z.string().optional().default(''),
-  priceMetadata: jsonStringSchema.optional().default(''),
-  supportedImageFormats: jsonStringSchema.optional().default(''),
-  imageGenerationConfig: jsonStringSchema.optional().default(''),
+  priceMetadata: priceMetadataSchema,
+  supportedImageFormats: supportedImageFormatsSchema.optional().default(''),
+  imageGenerationConfig: imageGenerationConfigFormSchema.optional().default(''),
   additionalParameters: jsonStringSchema.optional().default(''),
   isNew: z.boolean().default(false),
   isDeleted: z.boolean().default(false),
@@ -91,7 +137,9 @@ export function LargeLanguageModelDetailView({
           description: model.description,
           priceMetadata: JSON.stringify(model.priceMetadata, null, 2),
           supportedImageFormats: JSON.stringify(model.supportedImageFormats, null, 2),
-          imageGenerationConfig: JSON.stringify(model.imageGenerationConfig, null, 2),
+          imageGenerationConfig: model.imageGenerationConfig
+            ? JSON.stringify(model.imageGenerationConfig, null, 2)
+            : '',
           additionalParameters: JSON.stringify(model.additionalParameters, null, 2),
           isNew: model.isNew,
           isDeleted: model.isDeleted,
@@ -219,11 +267,19 @@ export function LargeLanguageModelDetailView({
 
           <FormField
             name="priceMetadata"
-            label="Preis-Metadaten"
-            description="JSON mit Preisinformationen"
+            label="Preis-Metadaten *"
             control={control}
             type="textArea"
-          />
+          >
+            {(input) => (
+              <>
+                <FieldDescription>
+                  JSON mit Preisinformationen <PriceMetadataExamplesDialog />
+                </FieldDescription>
+                {input}
+              </>
+            )}
+          </FormField>
 
           <FormField
             name="supportedImageFormats"
