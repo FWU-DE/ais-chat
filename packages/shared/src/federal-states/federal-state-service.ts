@@ -9,6 +9,7 @@ import {
   dbGetFederalStates,
   dbUpdateFederalState,
   dbInsertFederalState,
+  dbDeleteFederalState,
 } from '@shared/db/functions/federal-state';
 import { FederalStateModel } from '@shared/federal-states/types';
 import { encrypt } from '@shared/db/crypto';
@@ -66,6 +67,13 @@ export async function createFederalState(
     throw new Error('Failed to create federal state');
   }
   return transformToModel(inserted);
+}
+
+export async function deleteFederalState(federalStateId: string): Promise<void> {
+  const deleted = await dbDeleteFederalState(federalStateId);
+  if (!deleted) {
+    throw new Error(`Failed to delete federal state with id ${federalStateId}`);
+  }
 }
 
 function transformToModel(federalState: FederalStateSelectModel): FederalStateModel {

@@ -6,8 +6,10 @@ import {
   createApiKey,
   updateApiKey,
   getSingleApiKey,
+  deleteApiKey,
 } from '@/services/api-key-service';
 import { ApiKey, ApiKeyWithPlainKey, CreateApiKey, UpdateApiKey } from '@/types/api-key';
+import { runServerAction } from '@shared/actions/run-server-action';
 
 export async function getApiKeysAction(
   organizationId: string,
@@ -63,4 +65,13 @@ export async function updateApiKeyAction(
   } catch {
     throw new Error('Fehler beim Aktualisieren des API-Schlüssels');
   }
+}
+
+export async function deleteApiKeyAction(
+  organizationId: string,
+  projectId: string,
+  apiKeyId: string,
+) {
+  await requireAdminAuth();
+  return runServerAction('deleteApiKeyAction', deleteApiKey)(organizationId, projectId, apiKeyId);
 }
