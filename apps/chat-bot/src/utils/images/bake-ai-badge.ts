@@ -1,7 +1,7 @@
 export const AI_BADGE_SIZE_PX = 56;
 export const AI_BADGE_PADDING_PX = 28;
 
-export async function bakeAIBadge(sourceUrl: string, badgeSrc: string): Promise<Blob> {
+export async function bakeAiBadge(sourceUrl: string, badgeSrc: string): Promise<Blob> {
   const [sourceImage, badgeImage] = await Promise.all([loadImage(sourceUrl), loadImage(badgeSrc)]);
 
   const canvas = document.createElement('canvas');

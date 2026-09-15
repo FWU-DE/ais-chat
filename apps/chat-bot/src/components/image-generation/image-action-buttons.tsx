@@ -8,7 +8,7 @@ import { logError } from '@shared/logging';
 import { Button } from '@ui/components/button';
 import { Switch } from '@ui/components/switch';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
-import { bakeAIBadge } from '@/utils/images/bake-ai-badge';
+import { bakeAiBadge } from '@/utils/images/bake-ai-badge';
 import aiBadge from '@/assets/ai-badge.png';
 
 interface ImageActionButtonsProps {
@@ -38,7 +38,7 @@ export function ImageActionButtons({
 
       // construct ClipboardItem with a Promise for Safari compatibility
       const blobPromise: Promise<Blob> = showAiBadge
-        ? bakeAIBadge(img.currentSrc, aiBadge.src)
+        ? bakeAiBadge(img.currentSrc, aiBadge.src)
         : new Promise<Blob>((resolve, reject) => {
             // Create a canvas in memory without adding it to the DOM
             const canvas = document.createElement('canvas');
@@ -84,7 +84,7 @@ export function ImageActionButtons({
 
       let blob: Blob;
       if (showAiBadge) {
-        blob = await bakeAIBadge(img.currentSrc, aiBadge.src);
+        blob = await bakeAiBadge(img.currentSrc, aiBadge.src);
       } else {
         const response = await fetch(img.currentSrc);
         if (!response.ok) {
@@ -131,8 +131,6 @@ export function ImageActionButtons({
           checked={showAiBadge}
           onCheckedChange={onShowAiBadgeChange}
           disabled={!isImageReady}
-          aria-label={t('ai-badge-toggle-label')}
-          data-testid="ai-badge-toggle"
         />
         <span>{t('ai-badge-toggle-label')}</span>
       </label>
