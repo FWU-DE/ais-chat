@@ -468,7 +468,8 @@
     "copy-prompt-tooltip": "Prompt kopieren",
     "version-option-label": "Version {n}",
     "version-select-aria-label": "Version auswählen",
-    "generated-image-alt": "Generiertes Bild"
+    "generated-image-alt": "Generiertes Bild",
+    "ai-badge-toggle-label": "KI-Kennzeichnung"
   },
   "authentication": {
     "login-error": {
