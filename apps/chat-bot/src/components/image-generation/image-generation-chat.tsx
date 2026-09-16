@@ -21,6 +21,8 @@ import { ImageVersionSelect } from './image-version-select';
 import { useImageVersions } from './use-image-versions';
 import { useImageGeneration } from './use-image-generation';
 import { ImageAttachment } from '../chat/message-image-attachment';
+import aiBadge from '@/assets/ai-badge.png';
+import { AI_BADGE_PADDING_PX, AI_BADGE_SIZE_PX } from '@/utils/images/bake-ai-badge';
 
 interface ImageGenerationChatProps {
   conversationId?: string;
@@ -44,6 +46,8 @@ export default function ImageGenerationChat({
   const [files, setFiles] = useState<Map<string, LocalFileState>>(new Map());
   const imageRef = useRef<HTMLImageElement>(null);
   const [isImageReady, setIsImageReady] = useState(false);
+  const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
+  const [showAiBadge, setShowAiBadge] = useState(false);
 
   const { aspectRatio } = useImageAspectRatio();
 
@@ -188,23 +192,48 @@ export default function ImageGenerationChat({
               prompt={selectedVersion.prompt}
               attachedFiles={selectedVersion.attachedFiles}
             >
-              <Image
-                ref={imageRef}
-                src={selectedVersion.imageUrl}
-                alt={selectedVersion.prompt}
-                data-testid="generated-image"
-                className="w-full rounded-xl"
-                width={800}
-                height={800}
-                loading="eager"
-                unoptimized
-                crossOrigin="anonymous" // Needed for clipboard copy to work
-                onLoad={() => setIsImageReady(true)}
-              />
+              <div className="relative">
+                <Image
+                  ref={imageRef}
+                  src={selectedVersion.imageUrl}
+                  alt={selectedVersion.prompt}
+                  data-testid="generated-image"
+                  className="w-full rounded-xl"
+                  width={800}
+                  height={800}
+                  loading="eager"
+                  unoptimized
+                  crossOrigin="anonymous" // Needed for clipboard copy to work
+                  onLoad={(e) => {
+                    setIsImageReady(true);
+                    setImageSize({
+                      width: e.currentTarget.naturalWidth,
+                      height: e.currentTarget.naturalHeight,
+                    });
+                  }}
+                />
+                {showAiBadge && isImageReady && imageSize !== null && (
+                  <Image
+                    src={aiBadge}
+                    alt=""
+                    aria-hidden
+                    className="absolute aspect-square pointer-events-none"
+                    style={{
+                      width: `${(AI_BADGE_SIZE_PX / imageSize.width) * 100}%`,
+                      right: `${(AI_BADGE_PADDING_PX / imageSize.width) * 100}%`,
+                      bottom: `${(AI_BADGE_PADDING_PX / imageSize.height) * 100}%`,
+                    }}
+                    width={AI_BADGE_SIZE_PX}
+                    height={AI_BADGE_SIZE_PX}
+                  />
+                )}
+              </div>
               <ImageActionButtons
                 imageRef={imageRef}
                 fileId={selectedVersion.imageFileId}
                 isImageReady={isImageReady}
+                showAiBadge={showAiBadge}
+                onShowAiBadgeChange={setShowAiBadge}
               />
             </ImageGenerationResult>
           )}
