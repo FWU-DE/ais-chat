@@ -67,6 +67,15 @@
         "attributes": {}
       },
       {
+        "id": "8aee8fe6-d2e2-4a52-882a-36fc07431d66",
+        "name": "Editor",
+        "description": "Access to templates and suspensions in the AIS.chat admin UI",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "6fc3475c-8e9c-4dff-8638-af38f032c8f5",
+        "attributes": {}
+      },
+      {
         "id": "20a8d018-9f53-446e-b020-042d5e60be76",
         "name": "offline_access",
         "description": "${role_offline-access}",
@@ -509,6 +518,35 @@
       "disableableCredentialTypes": [],
       "requiredActions": [],
       "realmRoles": ["Admin", "default-roles-ais-chat-admin-local"],
+      "notBefore": 0,
+      "groups": []
+    },
+    {
+      "id": "0dc19928-de32-44fe-976c-62fca8109aa3",
+      "username": "editor",
+      "firstName": "Editor",
+      "lastName": "Editor",
+      "email": "editor@example.com",
+      "emailVerified": true,
+      "attributes": {
+        "federal_state": ["DE-TEST"]
+      },
+      "enabled": true,
+      "createdTimestamp": 1789543570056,
+      "totp": false,
+      "credentials": [
+        {
+          "id": "f2691da3-3da7-4cc7-87c8-0c5b1beb8473",
+          "type": "password",
+          "userLabel": "My password",
+          "createdDate": 1789543588034,
+          "secretData": "{\"value\":\"PEc5g7Bc/3wIpVmK3ULdCuAYV67ii+ZykyIk82IND40=\",\"salt\":\"/bSRW6dsYzUO5P5k+Pi/Ng==\",\"additionalParameters\":{}}",
+          "credentialData": "{\"hashIterations\":5,\"algorithm\":\"argon2\",\"additionalParameters\":{\"hashLength\":[\"32\"],\"memory\":[\"7168\"],\"type\":[\"id\"],\"version\":[\"1.3\"],\"parallelism\":[\"1\"]}}"
+        }
+      ],
+      "disableableCredentialTypes": [],
+      "requiredActions": [],
+      "realmRoles": ["Editor", "default-roles-ais-chat-admin-local"],
       "notBefore": 0,
       "groups": []
     }
