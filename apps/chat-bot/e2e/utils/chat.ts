@@ -13,11 +13,15 @@ export async function enterMessage(page: Page, message: string) {
   await page.getByTestId('chat-input').fill(message);
 }
 
-export async function sendMessage(page: Page, message: string) {
+export async function sendMessage(
+  page: Page,
+  message: string,
+  options: { expectedError?: string } = {},
+) {
   await test.step('send message and wait for response', async () => {
     const loadingSpinner = page.getByAltText('Ladeanimation');
     const reloadButton = page.getByLabel('Reload');
-    const errorText = page.getByText('Ein Fehler ist aufgetreten');
+    const errorBox = page.getByRole('button', { name: 'Erneut versuchen' });
 
     await enterMessage(page, message);
     const waitForLoadingSpinner = loadingSpinner.waitFor();
@@ -25,17 +29,19 @@ export async function sendMessage(page: Page, message: string) {
     // Wait for the loading spinner to appear after sending the message
     await waitForLoadingSpinner;
 
-    // Agentic tool calls can keep the loading spinner visible while they execute, so
-    // wait for the terminal response state instead of treating spinner removal as
-    // the start of streaming.
+    if (options.expectedError !== undefined) {
+      await errorBox.waitFor({ timeout: 20_000 });
+      await expect(page.getByText(options.expectedError, { exact: true })).toBeVisible();
+      return;
+    }
+
+    // Either the response finishes successfully and shows the Reload button,
+    // or an error message appears and the test should fail.
     await Promise.race([
-      reloadButton.waitFor({ timeout: 80_000 }),
-      errorText.waitFor({ timeout: 80_000 }).then(
-        () => {
-          throw new Error('Error message appeared after sending message');
-        },
-        () => new Promise<never>(() => {}),
-      ),
+      reloadButton.waitFor({ timeout: 20_000 }),
+      errorBox.waitFor({ timeout: 20_000 }).then(() => {
+        throw new Error('Error message appeared after sending message');
+      }),
     ]);
   });
 }
