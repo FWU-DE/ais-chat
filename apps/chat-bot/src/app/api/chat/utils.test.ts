@@ -238,10 +238,10 @@ describe('determineImageAttachmentTypeForModel', () => {
     expect(determineImageAttachmentTypeForModel(model)).toBe('base64');
   });
 
-  it('should return "base64" for models with the google provider', () => {
+  it('should not return "base64" for a google provider model unless its name requires it', () => {
     const model = { ...openAiModel, provider: 'google' };
 
-    expect(determineImageAttachmentTypeForModel(model)).toBe('base64');
+    expect(determineImageAttachmentTypeForModel(model)).toBe('url');
   });
 
   it('should return "base64" for a non-anthropic model when IMAGE_ATTACHMENT_MODE=base64', () => {
