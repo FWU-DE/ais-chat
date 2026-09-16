@@ -20,6 +20,10 @@ import {
 } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 import {
+  llmModelPriceMetadataSchema,
+  type LlmModelPriceMetadata,
+} from '@ais-chat/shared-core/schemas/llm-model-price-metadata';
+import {
   conversationRoleSchema,
   conversationTypeSchema,
   imageAspectRatioPresetSchema,
@@ -33,30 +37,7 @@ export type DesignConfiguration = {
   secondaryTextColor: string;
 };
 
-export const llmModelPriceMetadataSchema = z.union([
-  z.object({
-    type: z.literal('text'),
-    completionTokenPrice: z.number(),
-    promptTokenPrice: z.number(),
-  }),
-  z.object({
-    type: z.literal('image'),
-    pricePerImageInCent: z.number(),
-  }),
-  z.object({
-    type: z.literal('image'),
-    inputTextTokenPrice: z.number(),
-    outputTextTokenPrice: z.number().optional(),
-    outputImageTokenPrice: z.number(),
-  }),
-  z.object({
-    type: z.literal('embedding'),
-    promptTokenPrice: z.number(),
-  }),
-]);
-
-export type LlmModelPriceMetadata = z.infer<typeof llmModelPriceMetadataSchema>;
-
+export { llmModelPriceMetadataSchema, type LlmModelPriceMetadata };
 import { isNull, sql } from 'drizzle-orm';
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod';
 import { ToolCall } from '@ais-chat/ai-core/chat/types';
@@ -709,6 +690,7 @@ export const staticModelRoleSchema = z.enum([
   'strong-auxiliary',
   'auxiliary-fallback',
   'default-image',
+  'safety',
 ]);
 export type StaticModelRole = z.infer<typeof staticModelRoleSchema>;
 export const staticModelsConfigurationSchema = z.object({
@@ -718,6 +700,7 @@ export const staticModelsConfigurationSchema = z.object({
   'strong-auxiliary': z.string().uuid(),
   'auxiliary-fallback': z.string().uuid(),
   'default-image': z.string().uuid(),
+  safety: z.string().uuid().optional(),
 });
 export type StaticModelsConfiguration = z.infer<typeof staticModelsConfigurationSchema>;
 

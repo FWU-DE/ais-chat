@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   deleteFileFromS3: vi.fn(),
   fetchInputImages: vi.fn(),
   generateImageWithBilling: vi.fn(),
+  getSafetyModel: vi.fn(),
   getReadOnlySignedUrl: vi.fn(),
   getAvailableImageModelsForFederalState: vi.fn(),
   getUser: vi.fn(),
@@ -58,6 +59,7 @@ vi.mock('@/auth/utils', () => ({
   getUser: mocks.getUser,
   userHasCompletedTraining: mocks.userHasCompletedTraining,
 }));
+vi.mock('@/app/api/utils/utils', () => ({ getSafetyModel: mocks.getSafetyModel }));
 vi.mock('@/utils/vidis/access', () => ({ checkProductAccess: mocks.checkProductAccess }));
 vi.mock('@shared/db/functions/federal-state', () => ({
   dbGetFederalStateWithDecryptedApiKeyWithResult:
@@ -123,6 +125,7 @@ function prepareExistingConversation() {
     data: [Buffer.from('image').toString('base64')],
     priceInCents: 1,
   });
+  mocks.getSafetyModel.mockResolvedValue(undefined);
   mocks.dbInsertChatContent
     .mockResolvedValueOnce({ id: 'new-user-message' })
     .mockResolvedValueOnce({ id: 'new-assistant-message' });
@@ -136,6 +139,8 @@ describe('handleImageGeneration', () => {
   });
 
   it('persists a second version and attaches the selected generated image to its prompt', async () => {
+    mocks.getSafetyModel.mockResolvedValue({ name: 'safety-model' });
+
     const result = await handleImageGeneration({
       prompt: 'Make it blue',
       model: imageModel,
@@ -151,6 +156,13 @@ describe('handleImageGeneration', () => {
       conversationId: 'conversation-id',
       fileIds: ['previous-generated-file'],
     });
+    expect(mocks.generateImageWithBilling).toHaveBeenCalledWith(
+      imageModel.id,
+      'Make it blue',
+      'api-key-id',
+      { inputImages: [], size: '1024x1024' },
+      'safety-model',
+    );
     expect(mocks.dbInsertChatContent).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({ orderNumber: 3, role: 'user' }),

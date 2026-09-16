@@ -354,7 +354,7 @@ export default function Chat({
             />
           )}
         </div>
-        <div className="w-full pb-4 px-4 mx-auto">
+        <div className="p-4">
           <div className="relative flex flex-col">
             {input.length === 0 && messages.length === 0 && (
               <PromptSuggestions

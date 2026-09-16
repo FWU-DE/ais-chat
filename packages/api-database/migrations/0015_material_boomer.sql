@@ -1,0 +1,1 @@
+ALTER TABLE "llm_model" ADD COLUMN "safety_filter_enabled" boolean DEFAULT true NOT NULL;

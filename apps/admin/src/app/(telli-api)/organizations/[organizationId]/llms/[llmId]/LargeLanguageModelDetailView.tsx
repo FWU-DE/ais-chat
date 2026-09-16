@@ -7,18 +7,22 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/components/card';
 import { Button } from '@ui/components/button';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
 import { FormField } from '@ui/components/form/form-field';
 import { FormFieldCheckbox } from '@ais-chat/ui/components/form/form-field-checkbox';
 import { LargeLanguageModel } from '@/types/large-language-model';
-import { createLLMAction, updateLLMAction } from './actions';
+import { createLLMAction, deleteLLMAction, updateLLMAction } from './actions';
 import { ROUTES } from '@/consts/routes';
 import { FormErrorDisplay } from '@/components/FormErrorDisplay';
-import { isBifrostProviderSyncError } from '@ais-chat/api-database/bifrost-provider-sync/error';
-import { logError } from '@shared/logging';
 import type { ProviderKey } from '@/types/provider-key';
 import { Checkbox } from '@ui/components/checkbox';
-import { Field, FieldError, FieldLabel } from '@ui/components/field';
+import { Field, FieldDescription, FieldError, FieldLabel } from '@ui/components/field';
 import { Input } from '@ui/components/input';
+import { TrashSimpleIcon } from '@phosphor-icons/react';
+import { llmModelPriceMetadataSchema } from '@ais-chat/shared/db/schema';
+import { imageGenerationConfigSchema } from '@ais-chat/api-database/types';
+import { PriceMetadataExamplesDialog } from './PriceMetadataExamplesDialog';
+import { ImageGenerationConfigExampleDialog } from './ImageGenerationConfigExampleDialog';
 
 // Helper function to validate JSON
 const jsonStringSchema = z.string().refine((str) => {
@@ -31,17 +35,61 @@ const jsonStringSchema = z.string().refine((str) => {
   }
 }, 'Muss ein gültiges JSON-Format sein');
 
+// Builds a Zod schema for a JSON-encoded textarea that must parse into a
+// value matching `shape`, instead of just checking for *some* valid JSON.
+function createJsonStringSchema<T>(
+  shape: z.ZodType<T>,
+  invalidShapeMessage: string,
+  { allowEmpty = true }: { allowEmpty?: boolean } = {},
+) {
+  return z.string().superRefine((str, ctx) => {
+    if (!str.trim()) {
+      if (!allowEmpty) {
+        ctx.addIssue({ code: 'custom', message: 'Dieses Feld ist erforderlich' });
+      }
+      return;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(str);
+    } catch {
+      ctx.addIssue({ code: 'custom', message: 'Muss ein gültiges JSON-Format sein' });
+      return;
+    }
+    if (!shape.safeParse(parsed).success) {
+      ctx.addIssue({ code: 'custom', message: invalidShapeMessage });
+    }
+  });
+}
+
+const priceMetadataSchema = createJsonStringSchema(
+  llmModelPriceMetadataSchema,
+  'Muss einer der bekannten Preis-Formen entsprechen (siehe Beispiele). Ein leeres Objekt ist nicht gültig.',
+  { allowEmpty: false },
+);
+
+const supportedImageFormatsSchema = createJsonStringSchema(
+  z.array(z.string()),
+  'Muss ein JSON-Array mit unterstützten Bild-Dateiendungen sein (z. B. ["png", "jpeg"])',
+);
+
+const imageGenerationConfigFormSchema = createJsonStringSchema(
+  imageGenerationConfigSchema,
+  'Muss eine gültige Bildgenerierungs-Konfiguration sein',
+);
+
 const llmFormSchema = z.object({
   name: z.string().min(1, 'Name ist erforderlich'),
   displayName: z.string().min(1, 'Anzeigename ist erforderlich'),
   description: z.string().optional().default(''),
-  priceMetadata: jsonStringSchema.optional().default(''),
-  supportedImageFormats: jsonStringSchema.optional().default(''),
-  imageGenerationConfig: jsonStringSchema.optional().default(''),
+  priceMetadata: priceMetadataSchema,
+  supportedImageFormats: supportedImageFormatsSchema.optional().default(''),
+  imageGenerationConfig: imageGenerationConfigFormSchema.optional().default(''),
   additionalParameters: jsonStringSchema.optional().default(''),
   isNew: z.boolean().default(false),
   isDeleted: z.boolean().default(false),
   useBifrost: z.boolean().default(true),
+  safetyFilterEnabled: z.boolean().default(true),
   providerKeys: z.array(
     z.object({
       providerKeyId: z.string(),
@@ -68,6 +116,7 @@ export function LargeLanguageModelDetailView({
 }: LargeLanguageModelDetailViewProps) {
   const router = useRouter();
   const isCreate = mode === 'create';
+  const { dialogProps: deleteDialogProps, confirm: confirmDelete } = useConfirmAlertDialog();
   const assignments = new Map(
     providerKeys.flatMap((providerKey) =>
       providerKey.models
@@ -89,11 +138,14 @@ export function LargeLanguageModelDetailView({
           description: model.description,
           priceMetadata: JSON.stringify(model.priceMetadata, null, 2),
           supportedImageFormats: JSON.stringify(model.supportedImageFormats, null, 2),
-          imageGenerationConfig: JSON.stringify(model.imageGenerationConfig, null, 2),
+          imageGenerationConfig: model.imageGenerationConfig
+            ? JSON.stringify(model.imageGenerationConfig, null, 2)
+            : '',
           additionalParameters: JSON.stringify(model.additionalParameters, null, 2),
           isNew: model.isNew,
           isDeleted: model.isDeleted,
           useBifrost: model.useBifrost,
+          safetyFilterEnabled: model.safetyFilterEnabled,
           providerKeys: providerKeys.map((providerKey) => ({
             providerKeyId: providerKey.id,
             selected: assignments.has(providerKey.id),
@@ -114,6 +166,7 @@ export function LargeLanguageModelDetailView({
           isNew: false,
           isDeleted: false,
           useBifrost: true,
+          safetyFilterEnabled: true,
           providerKeys: providerKeys.map((providerKey) => ({
             providerKeyId: providerKey.id,
             selected: false,
@@ -130,42 +183,48 @@ export function LargeLanguageModelDetailView({
       return;
     }
 
-    try {
-      const payload = {
-        ...data,
-        providerKeys: data.providerKeys
-          .filter(({ selected }) => selected)
-          .map(({ providerKeyId, upstreamModelName }) => ({
-            providerKeyId,
-            upstreamModelName: upstreamModelName.trim() || data.name,
-          })),
-      };
-      if (isCreate) {
-        const newModel = await createLLMAction(organizationId, payload);
+    const payload = {
+      ...data,
+      providerKeys: data.providerKeys
+        .filter(({ selected }) => selected)
+        .map(({ providerKeyId, upstreamModelName }) => ({
+          providerKeyId,
+          upstreamModelName: upstreamModelName.trim() || data.name,
+        })),
+    };
+    if (isCreate) {
+      const result = await createLLMAction(organizationId, payload);
+      if (result.success) {
         toast.success('Sprachmodell erfolgreich erstellt');
-        router.push(ROUTES.api.llmDetails(organizationId, newModel.id));
-      } else if (model) {
-        await updateLLMAction(organizationId, model.id, payload);
+        router.push(ROUTES.api.llmDetails(organizationId, result.value.id));
+      } else {
+        toast.error(result.error.message);
+      }
+    } else if (model) {
+      const result = await updateLLMAction(organizationId, model.id, payload);
+      if (result.success) {
         toast.success('Sprachmodell erfolgreich aktualisiert');
+      } else {
+        toast.error(result.error.message);
       }
-    } catch (error) {
-      logError('Error saving model', error);
-      if (isBifrostProviderSyncError(error)) {
-        toast.error('Fehler beim Aktualisieren des Sprachmodells in Bifrost');
-        return;
-      }
-
-      toast.error(
-        isCreate
-          ? 'Fehler beim Erstellen des Sprachmodells'
-          : 'Fehler beim Aktualisieren des Sprachmodells',
-      );
     }
   }
 
   const handleCancel = () => {
     router.push(ROUTES.api.llms(organizationId));
   };
+
+  async function handleDelete() {
+    if (!model) return;
+
+    const result = await deleteLLMAction(organizationId, model.id);
+    if (result.success) {
+      toast.success('Sprachmodell erfolgreich gelöscht');
+      router.push(ROUTES.api.llms(organizationId));
+    } else {
+      toast.error(result.error.message);
+    }
+  }
 
   return (
     <Card>
@@ -209,11 +268,19 @@ export function LargeLanguageModelDetailView({
 
           <FormField
             name="priceMetadata"
-            label="Preis-Metadaten"
-            description="JSON mit Preisinformationen"
+            label="Preis-Metadaten *"
             control={control}
             type="textArea"
-          />
+          >
+            {(input) => (
+              <>
+                <FieldDescription>
+                  JSON mit Preisinformationen <PriceMetadataExamplesDialog />
+                </FieldDescription>
+                {input}
+              </>
+            )}
+          </FormField>
 
           <FormField
             name="supportedImageFormats"
@@ -226,10 +293,19 @@ export function LargeLanguageModelDetailView({
           <FormField
             name="imageGenerationConfig"
             label="Bildgenerierungs-Konfiguration"
-            description="JSON mit Konfiguration für die Bildgenerierung"
             control={control}
             type="textArea"
-          />
+          >
+            {(input) => (
+              <>
+                <FieldDescription>
+                  JSON mit Konfiguration für die Bildgenerierung{' '}
+                  <ImageGenerationConfigExampleDialog />
+                </FieldDescription>
+                {input}
+              </>
+            )}
+          </FormField>
 
           <FormField
             name="additionalParameters"
@@ -257,6 +333,13 @@ export function LargeLanguageModelDetailView({
             name="useBifrost"
             label="Bifrost verwenden"
             description="Bifrost ermöglicht mehrere Provider-Keys und automatische Provider-Auswahl. Für direkte Provider-Aufrufe muss genau ein aktivierter Provider-Key zugewiesen sein."
+            control={control}
+          />
+
+          <FormFieldCheckbox
+            name="safetyFilterEnabled"
+            label="Sicherheitsprüfung aktivieren"
+            description="Führt vor der Antwort die konfigurierte Sicherheitsmodell-Prüfung durch. Provider-eigene Sicherheitsfunktionen werden dadurch nicht verändert."
             control={control}
           />
 
@@ -359,6 +442,16 @@ export function LargeLanguageModelDetailView({
           </div>
 
           <div className="flex gap-3 justify-end pt-4">
+            {!isCreate && (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={isSubmitting}
+                onClick={() => confirmDelete(handleDelete)}
+              >
+                <TrashSimpleIcon /> Löschen
+              </Button>
+            )}
             <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
               Abbrechen
             </Button>
@@ -368,6 +461,13 @@ export function LargeLanguageModelDetailView({
           </div>
         </form>
       </CardContent>
+      <ConfirmAlertDialog
+        title="Sprachmodell löschen"
+        description="Möchten Sie dieses Sprachmodell wirklich löschen? Alle zugehörigen Provider- und API-Key-Zuordnungen werden ebenfalls entfernt."
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        {...deleteDialogProps}
+      />
     </Card>
   );
 }

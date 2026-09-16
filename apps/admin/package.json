@@ -19,6 +19,7 @@
   "dependencies": {
     "@ais-chat/api-database": "workspace:*",
     "@ais-chat/shared": "workspace:*",
+    "@ais-chat/shared-core": "workspace:*",
     "@ais-chat/ui": "workspace:*",
     "@aws-sdk/client-s3": "3.1127.0",
     "@aws-sdk/s3-request-presigner": "3.1127.0",

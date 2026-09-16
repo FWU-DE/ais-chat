@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+export {
+  llmModelPriceMetadataSchema,
+  type LlmModelPriceMetadata,
+} from '@ais-chat/shared-core/schemas/llm-model-price-metadata';
+
 export const imageSizeSchema = z.union([z.literal('auto'), z.string().regex(/^\d+x\d+$/)]);
 
 export const imageGenerationConfigSchema = z.object({
@@ -11,31 +16,3 @@ export const imageGenerationConfigSchema = z.object({
 });
 
 export type ImageGenerationConfig = z.infer<typeof imageGenerationConfigSchema>;
-
-export const llmModelPriceMetadataSchema = z.union([
-  z.object({
-    type: z.literal('text'),
-    completionTokenPrice: z.number(),
-    promptTokenPrice: z.number(),
-  }),
-  z.object({
-    type: z.literal('image'),
-    pricePerImageInCent: z.number(),
-  }),
-  z.object({
-    type: z.literal('image'),
-    inputTextTokenPrice: z.number(),
-    outputTextTokenPrice: z.number().optional(),
-    outputImageTokenPrice: z.number(),
-  }),
-  z.object({
-    type: z.literal('embedding'),
-    promptTokenPrice: z.number(),
-  }),
-  z.object({
-    type: z.literal('safety'),
-    promptTokenPrice: z.number(),
-  }),
-]);
-
-export type LlmModelPriceMetadata = z.infer<typeof llmModelPriceMetadataSchema>;

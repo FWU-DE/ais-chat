@@ -1,9 +1,17 @@
 import { billImageGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
 import { generateImage } from './providers';
 import { hasAccessToModel } from '../api-keys/model-access';
-import { ApiKeyQuotaExceededError, InvalidModelError, normalizeAiGenerationError } from '../errors';
+import {
+  ApiKeyQuotaExceededError,
+  InvalidModelError,
+  ResponsibleAIError,
+  normalizeAiGenerationError,
+} from '../errors';
 import { getImageModelById, getImageModelByName } from '../models';
 import { ImageGenerationRequestOptions } from './types';
+import { buildImageSafetyMessages, checkInputSafety } from '../safety';
+
+const MAX_SAFETY_IMAGE_URL_LENGTH = 8 * 1024 * 1024;
 
 /**
  * Generates an image using the specified model and prompt, with access control and billing.
@@ -23,6 +31,7 @@ export async function generateImageWithBilling(
   prompt: string,
   apiKeyId: string,
   options?: ImageGenerationRequestOptions,
+  safetyModelName?: string,
 ) {
   const model = await getImageModelById(modelId);
 
@@ -41,6 +50,24 @@ export async function generateImageWithBilling(
   }
 
   try {
+    if (safetyModelName && model.safetyFilterEnabled) {
+      const safetyImages = (options?.inputImages ?? []).map((image) => ({
+        type: 'image' as const,
+        contentType: image.mimeType,
+        url: `data:${image.mimeType};base64,${image.data.toString('base64')}`,
+      }));
+
+      if (safetyImages.some((image) => image.url.length > MAX_SAFETY_IMAGE_URL_LENGTH)) {
+        throw new ResponsibleAIError('Input image is too large for the safety model');
+      }
+
+      await checkInputSafety(
+        safetyModelName,
+        buildImageSafetyMessages(prompt, options?.inputImages),
+        apiKeyId,
+      );
+    }
+
     const imageResponse = await generateImage(model, prompt, options);
 
     const priceInCents = await billImageGenerationUsageToApiKey(
@@ -72,8 +99,15 @@ export async function generateImageByNameWithBilling(
   prompt: string,
   apiKeyId: string,
   options?: ImageGenerationRequestOptions,
+  safetyModelName?: string,
 ) {
   const model = await getImageModelByName(modelName, apiKeyId);
-  const result = await generateImageWithBilling(model.id, prompt, apiKeyId, options);
+  const result = await generateImageWithBilling(
+    model.id,
+    prompt,
+    apiKeyId,
+    options,
+    safetyModelName,
+  );
   return { ...result, model };
 }

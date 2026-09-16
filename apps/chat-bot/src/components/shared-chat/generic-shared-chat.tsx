@@ -174,6 +174,16 @@ export default function GenericSharedChat({
   const dialogStarted =
     messages.length > 0 || (dialogStartMode === 'explicit' && explicitDialogStarted);
 
+  function getPendingFileIds() {
+    return [
+      ...new Set(
+        Array.from(pendingFileMapping.values())
+          .flatMap((pendingFiles) => pendingFiles.map((pendingFile) => pendingFile.id))
+          .filter((id): id is string => id.trim() !== ''),
+      ),
+    ];
+  }
+
   async function customHandleSubmit(e: SyntheticEvent) {
     e.preventDefault();
 
@@ -181,9 +191,7 @@ export default function GenericSharedChat({
       reactivateAutoScrolling();
 
       const currentFiles = Array.from(files);
-      const previousFileIds = Array.from(pendingFileMapping.values())
-        .flatMap((pendingFiles) => pendingFiles.map((pendingFile) => pendingFile.id))
-        .filter((id): id is string => id.trim() !== '');
+      const previousFileIds = getPendingFileIds();
       const currentFileIds = currentFiles
         .map(([, file]) => file.fileId)
         .filter((id): id is string => id !== undefined && id.trim() !== '');
@@ -272,7 +280,7 @@ export default function GenericSharedChat({
   }, [inviteCode, sharedSessionId, messages, pendingFileMapping, status]);
 
   function handleReload() {
-    void reload();
+    void reload({ fileIds: getPendingFileIds(), sharedSessionId });
   }
 
   function handleRetry() {
@@ -301,7 +309,7 @@ export default function GenericSharedChat({
     }
 
     reactivateAutoScrolling();
-    void reload();
+    void reload({ fileIds: getPendingFileIds(), sharedSessionId });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -312,6 +320,7 @@ export default function GenericSharedChat({
           conversationMessages={uiMessages}
           title={entity.name}
           inviteCode={inviteCode}
+          sharedSessionId={sharedSessionId}
           handleRetry={handleRetry}
         />
       )}
@@ -326,12 +335,10 @@ export default function GenericSharedChat({
           dialogStarted={dialogStarted}
           imageSource={avatarPictureUrl}
           inviteCode={inviteCode}
+          sharedSessionId={sharedSessionId}
         />
         <div ref={containerRef} className="relative flex min-h-0 flex-1 flex-col items-center">
-          <div
-            ref={scrollRef}
-            className="min-h-0 w-full flex-1 max-w-5xl overflow-y-auto p-4 pb-20"
-          >
+          <div ref={scrollRef} className="min-h-0 w-full flex-1 max-w-5xl overflow-y-auto p-4">
             {hasExerciseDescription && (
               <FloatingText
                 learningContext={exerciseDescription ?? ''}
@@ -361,7 +368,7 @@ export default function GenericSharedChat({
                 messages={uiMessages}
                 isLoading={isLoading}
                 status={status}
-                reload={reload}
+                reload={handleReload}
                 assistantIcon={assistantIcon}
                 containerClassName="flex flex-col gap-4"
                 pendingFileMapping={pendingFileMapping}
@@ -376,7 +383,7 @@ export default function GenericSharedChat({
               />
             )}
           </div>
-          <div className="w-full max-w-5xl shrink-0 mx-auto px-4 pb-4">
+          <div className="w-full max-w-5xl shrink-0 mx-auto p-4">
             {showChatInputBox && (
               <div className="flex flex-col">
                 <ChatInputBox

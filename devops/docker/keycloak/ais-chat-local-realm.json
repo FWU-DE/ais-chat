@@ -756,7 +756,7 @@
         "realm_client": "false",
         "oidc.ciba.grant.enabled": "false",
         "backchannel.logout.session.required": "true",
-        "backchannel.logout.url": "http://10.255.255.254:3000/api/auth/backchannel-logout",
+        "backchannel.logout.url": "${BACKCHANNEL_LOGOUT_URL}",
         "client_credentials.use_refresh_token": "false",
         "require.pushed.authorization.requests": "false",
         "request.object.encryption.enc": "any",

@@ -15,10 +15,10 @@ This guide helps you run AIS.chat using pre-built Docker images with minimal con
 
 ### Quick Start
 
-1. **Start all services:**
+1. **Start all services (pulling the latest images):**
 
    ```sh
-   docker compose -f devops/docker/docker-compose.yml up -d
+   docker compose -f devops/docker/docker-compose.yml up -d --pull always
    ```
 
 2. **Wait for initialization**
@@ -60,11 +60,11 @@ To customize environment variables edit `devops/docker/docker-compose.yml` direc
 
 ### Calculator arithmetic service
 
-The Compose setup includes a libqalculate HTTP service. In the production/self-hosted Compose file,
+The Compose setup includes a libqalculate HTTP service. In the self-hosted Compose file,
 calculator is reachable by the containerized chatbot through the internal calculator network and is also
 published on the local host at `http://127.0.0.1:8081` for local testing. Host clients should use
-the loopback port. The production calculator container has no external network access; the application
-and Keycloak share a network namespace in this Compose setup so the application can reach calculator.
+the loopback port. The application and Keycloak share a network namespace in this Compose setup so the
+application can reach calculator.
 
 - `GET /healthz` returns `{"status":"success","result":"ok"}`.
 - `POST /v1/calculate` accepts `Content-Type: application/json` and a body such as
@@ -146,7 +146,7 @@ For detailed variable documentation and values for local development with docker
 For local development spin up all required services using docker compose:
 
 ```sh
-docker compose -f devops/docker/docker-compose.local.yml up -d --build
+docker compose -f devops/docker/docker-compose.local.yml up -d --build --pull always
 ```
 
 To remove all data and start from scratch, you can stop and remove the container and its volume.
@@ -156,10 +156,10 @@ This will delete your database and keycloak configuration.
 docker compose -f devops/docker/docker-compose.local.yml down -v
 ```
 
-To delete only the keycloak data, shutdown all containers and delete the volume:
+To delete only the keycloak data, stop and remove the keycloak container and its ownership-fix sidecar, then delete the volume:
 
 ```sh
-docker compose -f devops/docker/docker-compose.local.yml down
+docker compose -f devops/docker/docker-compose.local.yml rm -fsv keycloak fix-keycloak-volume-ownership
 docker volume rm ais-chat_keycloak_data
 ```
 
