@@ -1,6 +1,7 @@
 import {
   FinishReason,
   FunctionCallingConfigMode,
+  createPartFromBase64,
   createPartFromText,
   createPartFromUri,
 } from '@google/genai';
@@ -55,7 +56,7 @@ function buildGoogleParts(message: Message): Part[] {
       continue;
     }
 
-    parts.push(createPartFromUri(attachment.url, attachment.contentType));
+    parts.push(createGoogleImagePart(attachment.url, attachment.contentType));
   }
 
   if (parts.length === 0) {
@@ -63,6 +64,14 @@ function buildGoogleParts(message: Message): Part[] {
   }
 
   return parts;
+}
+
+function createGoogleImagePart(url: string, contentType: string): Part {
+  const base64DataUrl = /^data:image\/[a-z0-9.+-]+;base64,(.+)$/i.exec(url);
+  const base64Data = base64DataUrl?.[1];
+  return base64Data !== undefined
+    ? createPartFromBase64(base64Data, contentType)
+    : createPartFromUri(url, contentType);
 }
 
 function buildGoogleGenerateContentParameters({
