@@ -2,6 +2,7 @@ import {
   type Message as AiCoreMessage,
   type TokenUsage,
   TokenPointsExceededError,
+  ResponsibleAIError,
   runAgentLoop,
 } from '@ais-chat/ai-core';
 import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
@@ -62,6 +63,7 @@ import {
 import { deepEqual } from '@/utils/object';
 import { resolveAgentNameForTracing } from '../utils/agent-name';
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
+import { checkTextInputSafety } from '@ais-chat/ai-core/chat/safety';
 
 // Exports for testing
 export { handleRegenerationProcessing, prepareMessageForProcessing };
@@ -418,6 +420,55 @@ export async function sendChatMessage({
       activeAssistant ?? { isWebSearchEnabled: true },
   });
 
+  // Update last used model
+  await dbUpdateLastUsedModelByUserId({ modelName: definedModel.name, userId: user.id });
+
+  // Use DB messages as source of truth — they include intermediate tool call/result
+  // messages from the agent loop that the client doesn't track
+  const fullMessages: ChatMessage[] = isRegeneration
+    ? convertMessageModelToMessage(activeConversationMessages)
+    : [...convertMessageModelToMessage(activeConversationMessages), userMessage];
+
+  // Prune messages
+  const prunedMessages = limitChatHistory(
+    annotateMessageAttachmentNames(fullMessages, relatedFileEntities),
+  );
+
+  // Check if the model supports images based on supportedImageFormats
+  const modelSupportsImages =
+    definedModel.supportedImageFormats !== null && definedModel.supportedImageFormats.length > 0;
+
+  const imageAttachmentType = determineImageAttachmentTypeForModel(definedModel);
+
+  // attach the image url to each of the image files within relatedFileEntities
+  const extractedImages = await createImageAttachmentsForConversation(
+    relatedFileEntities,
+    imageAttachmentType,
+  );
+
+  // Format messages with images if the model supports vision
+  const messagesWithImages = enrichMessagesWithImageData(
+    prunedMessages,
+    extractedImages,
+    modelSupportsImages,
+    imageAttachmentType,
+  );
+  
+
+  try {
+    await checkTextInputSafety({
+      modelSelection,
+      safetyModelName: safetyModel?.name,
+      messages: convertToAiCoreMessages('', messagesWithImages),
+      apiKeyId,
+    });
+  } catch (error) {
+    if (ResponsibleAIError.is(error)) {
+      return createErrorResult(error);
+    }
+    throw error;
+  }
+
   const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
 
   const tools = await buildTools({
@@ -444,20 +495,6 @@ export async function sendChatMessage({
     },
   });
 
-  // Update last used model
-  await dbUpdateLastUsedModelByUserId({ modelName: definedModel.name, userId: user.id });
-
-  // Use DB messages as source of truth — they include intermediate tool call/result
-  // messages from the agent loop that the client doesn't track
-  const fullMessages: ChatMessage[] = isRegeneration
-    ? convertMessageModelToMessage(activeConversationMessages)
-    : [...convertMessageModelToMessage(activeConversationMessages), userMessage];
-
-  // Prune messages
-  const prunedMessages = limitChatHistory(
-    annotateMessageAttachmentNames(fullMessages, relatedFileEntities),
-  );
-
   // Build system prompt
   const systemPrompt = constructChatSystemPrompt({
     character: activeCharacter,
@@ -467,26 +504,6 @@ export async function sendChatMessage({
     federalState: user.federalState,
     activeToolDefinitions: Object.values(tools.toolRegistry).map((entry) => entry.definition),
   });
-
-  // Check if the model supports images based on supportedImageFormats
-  const modelSupportsImages =
-    definedModel.supportedImageFormats !== null && definedModel.supportedImageFormats.length > 0;
-
-  const imageAttachmentType = determineImageAttachmentTypeForModel(definedModel);
-
-  // attach the image url to each of the image files within relatedFileEntities
-  const extractedImages = await createImageAttachmentsForConversation(
-    relatedFileEntities,
-    imageAttachmentType,
-  );
-
-  // Format messages with images if the model supports vision
-  const messagesWithImages = enrichMessagesWithImageData(
-    prunedMessages,
-    extractedImages,
-    modelSupportsImages,
-    imageAttachmentType,
-  );
 
   const assistantMessageId = crypto.randomUUID();
   const assistantMessageOrderNumber = userMessageOrderNumber + 1;
@@ -604,7 +621,6 @@ export async function sendChatMessage({
   runAgentLoop({
     modelSelection,
     apiKeyId,
-    safetyModelName: safetyModel?.name,
     messages: convertToAiCoreMessages(systemPrompt, messagesWithImages),
     toolRegistry: tools.toolRegistry,
     agentName: resolveAgentNameForTracing({ characterId, learningScenarioId, assistantId }),
