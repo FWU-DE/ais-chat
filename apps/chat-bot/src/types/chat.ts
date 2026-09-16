@@ -1,4 +1,8 @@
-import type { SharedChatExpiredError, TokenPointsExceededError } from '@ais-chat/ai-core/errors';
+import type {
+  ResponsibleAIError,
+  SharedChatExpiredError,
+  TokenPointsExceededError,
+} from '@ais-chat/ai-core/errors';
 import type { NotFoundError } from '@shared/error';
 import type { WebSearchResult } from '@shared/db/schema';
 import type { ChatAttachment } from '@ais-chat/ai-core';
@@ -69,7 +73,7 @@ export type SendMessageResult = {
  * Creates a SendMessageResult with a serialized error.
  */
 export function createErrorResult(
-  error: TokenPointsExceededError | SharedChatExpiredError | NotFoundError,
+  error: TokenPointsExceededError | SharedChatExpiredError | ResponsibleAIError | NotFoundError,
 ): SendMessageResult {
   return {
     stream: new ReadableStream<string>({

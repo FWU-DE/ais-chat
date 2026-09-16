@@ -2,6 +2,7 @@ import {
   TokenPointsExceededError,
   SharedChatExpiredError,
   runAgentLoop,
+  ResponsibleAIError,
   type TokenUsage,
 } from '@ais-chat/ai-core';
 import { NotFoundError } from '@shared/error';
@@ -41,6 +42,7 @@ import {
   sharedLearningScenarioChatHasReachedTokenPointsLimit,
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
+import { checkTextInputSafety } from '@ais-chat/ai-core/chat/safety';
 
 /**
  * Server Action to send a learning scenario message and stream the response.
@@ -146,38 +148,9 @@ export async function sendLearningScenarioMessage({
     federalStateId: teacherUserAndContext.federalState.id,
   });
 
-  const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
-  const assistantMessageId = crypto.randomUUID();
-
   const allowWebTools = isWebSearchEnabledForEntity({
     featureToggles: teacherUserAndContext.federalState.featureToggles,
     entity: learningScenario,
-  });
-
-  const tools = await buildTools({
-    user: teacherUserAndContext,
-    learningScenarioId: learningScenario.id,
-    webSearchSettings: learningScenario,
-    relatedFileEntities,
-    attachedLinks: learningScenario.attachedLinks,
-    sourceUrls: processedUrls,
-    allowWebTools,
-    allowMundoSearch: false,
-    isCalculatorEnabled: teacherUserAndContext.federalState.featureToggles.isCalculatorEnabled,
-    onWebSearchResults: (results) => {
-      update(
-        encodeChatStreamEvent({
-          type: 'web_search_results',
-          webSearchResults: results,
-        }),
-      );
-    },
-  });
-
-  // Build system prompt
-  const systemPrompt = constructLearningScenarioSystemPrompt({
-    learningScenario: learningScenario,
-    activeToolDefinitions: Object.values(tools.toolRegistry).map((entry) => entry.definition),
   });
 
   // Prune messages
@@ -204,6 +177,49 @@ export async function sendLearningScenarioMessage({
     modelSupportsImages,
     imageAttachmentType,
   );
+
+  try {
+    await checkTextInputSafety({
+      modelSelection,
+      safetyModelName: safetyModel?.name,
+      messages: convertToAiCoreMessages('', messagesWithImages),
+      apiKeyId,
+    });
+  } catch (error) {
+    if (ResponsibleAIError.is(error)) {
+      return createErrorResult(error);
+    }
+    throw error;
+  }
+
+  const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
+  const assistantMessageId = crypto.randomUUID();
+
+  const tools = await buildTools({
+    user: teacherUserAndContext,
+    learningScenarioId: learningScenario.id,
+    webSearchSettings: learningScenario,
+    relatedFileEntities,
+    attachedLinks: learningScenario.attachedLinks,
+    sourceUrls: processedUrls,
+    allowWebTools,
+    allowMundoSearch: false,
+    isCalculatorEnabled: teacherUserAndContext.federalState.featureToggles.isCalculatorEnabled,
+    onWebSearchResults: (results) => {
+      update(
+        encodeChatStreamEvent({
+          type: 'web_search_results',
+          webSearchResults: results,
+        }),
+      );
+    },
+  });
+
+  // Build system prompt
+  const systemPrompt = constructLearningScenarioSystemPrompt({
+    learningScenario: learningScenario,
+    activeToolDefinitions: Object.values(tools.toolRegistry).map((entry) => entry.definition),
+  });
 
   const persistUsage = async ({
     usage,
@@ -247,7 +263,6 @@ export async function sendLearningScenarioMessage({
   runAgentLoop({
     modelSelection,
     apiKeyId,
-    safetyModelName: safetyModel?.name,
     messages: convertToAiCoreMessages(systemPrompt, messagesWithImages),
     toolRegistry: tools.toolRegistry,
     agentName: resolveAgentNameForTracing({ learningScenarioId: learningScenario.id }),
