@@ -1,9 +1,7 @@
 import { logError } from '@shared/logging';
 import { withTrustedOrigin } from '@shared/utils/with-trusted-origin';
 import { NextRequest, NextResponse } from 'next/server';
-
-const SESSION_COOKIE_NAME = 'authjs.session-token';
-const SECURE_SESSION_COOKIE_NAME = `__Secure-${SESSION_COOKIE_NAME}`; // Used when site is served over HTTPS
+import { SECURE_SESSION_COOKIE_NAME, SESSION_COOKIE_NAME } from '@/auth/cookies';
 
 /**
  * This route is called by the IDP after logout.
