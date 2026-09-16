@@ -333,9 +333,9 @@ services:
       AUTH_SECRET: ais-chat-default-secret-please-change-in-production-use-openssl-rand-base64-32
 
       # Keycloak
-      KEYCLOAK_CLIENT_ID: ais-chat-dev-client
+      KEYCLOAK_CLIENT_ID: ais-chat-admin-dev-client
       KEYCLOAK_CLIENT_SECRET: ClientSecret
-      KEYCLOAK_ISSUER: http://localhost:8080/realms/ais-chat-local
+      KEYCLOAK_ISSUER: http://localhost:8080/realms/ais-chat-admin-local
 
       # AIS.chat app
       DATABASE_URL: postgresql://admin:test1234@postgres:5432/app_db
