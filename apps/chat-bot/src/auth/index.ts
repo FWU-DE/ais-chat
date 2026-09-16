@@ -9,7 +9,7 @@ import { UserAndContext, userAndContextSchema } from './types';
 import { logDebug, logError, logInfo, logWarning } from '@shared/logging';
 import { sessionBlockList } from './session';
 import { generateErrorUrl } from '@shared/auth/authentication-service';
-import { ACTIVE_SESSION_COOKIE_NAME } from './cookies';
+import { AUTH_COOKIES } from './cookies';
 
 declare module 'next-auth' {
   interface Session {
@@ -24,11 +24,7 @@ const SESSION_LIFETIME_SECONDS = 60 * 60 * 8;
 
 const result = NextAuth({
   providers: [vidisConfig],
-  cookies: {
-    sessionToken: {
-      name: ACTIVE_SESSION_COOKIE_NAME,
-    },
-  },
+  cookies: AUTH_COOKIES,
   jwt: {
     maxAge: SESSION_LIFETIME_SECONDS,
   },

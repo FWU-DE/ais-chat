@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { env } from '@/consts/env';
 import { withTrustedOrigin } from '@shared/utils/with-trusted-origin';
 import { AdminRole, getAdminRoleFromClaims } from '@/auth/roles';
-import { ACTIVE_SESSION_COOKIE_NAME } from '@/auth/cookies';
+import { AUTH_COOKIES } from '@/auth/cookies';
 
 function getClaimsFromToken(token: string): Record<string, unknown> {
   const payload = token.split('.')[1];
@@ -40,11 +40,7 @@ const keycloakProvider = KeycloakProvider({
 
 const result = NextAuth({
   providers: [keycloakProvider],
-  cookies: {
-    sessionToken: {
-      name: ACTIVE_SESSION_COOKIE_NAME,
-    },
-  },
+  cookies: AUTH_COOKIES,
   trustHost: true,
   callbacks: {
     async signIn() {
