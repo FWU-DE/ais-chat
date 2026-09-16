@@ -196,6 +196,7 @@ jobs:
         run: pnpm --filter ais-chat-app e2e
         env:
           CI: true
+          E2E_GUARD_TEXT_MODEL: GPT-5 nano
           E2E_TEXT_MODEL_1: Mock LLM
           E2E_TEXT_MODEL_2: Mock LLM (2)
 
