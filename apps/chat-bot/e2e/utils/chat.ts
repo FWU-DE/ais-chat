@@ -13,11 +13,15 @@ export async function enterMessage(page: Page, message: string) {
   await page.getByTestId('chat-input').fill(message);
 }
 
-export async function sendMessage(page: Page, message: string) {
+export async function sendMessage(
+  page: Page,
+  message: string,
+  options: { expectedError?: string } = {},
+) {
   await test.step('send message and wait for response', async () => {
     const loadingSpinner = page.getByAltText('Ladeanimation');
     const reloadButton = page.getByLabel('Reload');
-    const errorText = page.getByText('Ein Fehler ist aufgetreten');
+    const errorBox = page.getByRole('button', { name: 'Erneut versuchen' });
 
     await enterMessage(page, message);
     const waitForLoadingSpinner = loadingSpinner.waitFor();
@@ -27,11 +31,17 @@ export async function sendMessage(page: Page, message: string) {
     // Wait for the loading spinner to disappear, which indicates that the response has started streaming
     await loadingSpinner.waitFor({ state: 'detached', timeout: 60_000 });
 
+    if (options.expectedError !== undefined) {
+      await errorBox.waitFor({ timeout: 20_000 });
+      await expect(page.getByText(options.expectedError, { exact: true })).toBeVisible();
+      return;
+    }
+
     // Either the response finishes successfully and shows the Reload button,
     // or an error message appears and the test should fail.
     await Promise.race([
       reloadButton.waitFor({ timeout: 20_000 }),
-      errorText.waitFor({ timeout: 20_000 }).then(() => {
+      errorBox.waitFor({ timeout: 20_000 }).then(() => {
         throw new Error('Error message appeared after sending message');
       }),
     ]);
