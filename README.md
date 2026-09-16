@@ -15,10 +15,10 @@ This guide helps you run AIS.chat using pre-built Docker images with minimal con
 
 ### Quick Start
 
-1. **Start all services:**
+1. **Start all services (pulling the latest images):**
 
    ```sh
-   docker compose -f devops/docker/docker-compose.yml up -d
+   docker compose -f devops/docker/docker-compose.yml up -d --pull always
    ```
 
 2. **Wait for initialization**
@@ -146,7 +146,7 @@ For detailed variable documentation and values for local development with docker
 For local development spin up all required services using docker compose:
 
 ```sh
-docker compose -f devops/docker/docker-compose.local.yml up -d --build
+docker compose -f devops/docker/docker-compose.local.yml up -d --build --pull always
 ```
 
 To remove all data and start from scratch, you can stop and remove the container and its volume.
@@ -156,10 +156,10 @@ This will delete your database and keycloak configuration.
 docker compose -f devops/docker/docker-compose.local.yml down -v
 ```
 
-To delete only the keycloak data, shutdown all containers and delete the volume:
+To delete only the keycloak data, stop and remove the keycloak container and its ownership-fix sidecar, then delete the volume:
 
 ```sh
-docker compose -f devops/docker/docker-compose.local.yml down
+docker compose -f devops/docker/docker-compose.local.yml rm -fsv keycloak fix-keycloak-volume-ownership
 docker volume rm ais-chat_keycloak_data
 ```
 
