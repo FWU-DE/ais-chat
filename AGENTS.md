@@ -133,6 +133,9 @@ docker compose -f devops/docker/docker-compose.local.yml up -d  # Local services
 docker compose -f devops/docker/monitoring.yml up -d            # Observability stack
 ```
 
+- `devops/docker/docker-compose.yml` is the self-hosted Compose file (see README.md); do not call it "production" or "standalone compose".
+- `devops/docker/docker-compose.local.yml` is the local development Compose file.
+
 ### Verification Process
 
 After making any file changes:

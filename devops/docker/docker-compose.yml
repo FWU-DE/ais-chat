@@ -14,9 +14,7 @@ services:
       CLIENT_SECRET: ClientSecret
       # ais-chat-app shares keycloak's netns (network_mode: service:keycloak), so it's accessible on localhost.
       BACKCHANNEL_LOGOUT_URL: http://localhost:3000/api/auth/backchannel-logout
-    entrypoint: /opt/keycloak/data/import/entrypoint.sh
-    # Stop grace period is set to 2 minutes to allow Keycloak to export the realm and users on shutdown
-    stop_grace_period: 2m
+    command: start-dev --import-realm --db dev-file
     volumes:
       - keycloak_data:/opt/keycloak/data/h2
       - ./keycloak:/opt/keycloak/data/import
