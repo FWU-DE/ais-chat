@@ -8,8 +8,6 @@ import { logError } from '@shared/logging';
 import { Button } from '@ui/components/button';
 import { Switch } from '@ui/components/switch';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
-import { bakeAiBadge } from '@/utils/images/bake-ai-badge';
-import aiBadge from '@/assets/ai-badge.png';
 
 interface ImageActionButtonsProps {
   imageRef: React.RefObject<HTMLImageElement | null>;
@@ -37,35 +35,33 @@ export function ImageActionButtons({
       }
 
       // construct ClipboardItem with a Promise for Safari compatibility
-      const blobPromise: Promise<Blob> = showAiBadge
-        ? bakeAiBadge(img.currentSrc, aiBadge.src)
-        : new Promise<Blob>((resolve, reject) => {
-            // Create a canvas in memory without adding it to the DOM
-            const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
+      const blobPromise = new Promise<Blob>((resolve, reject) => {
+        // Create a canvas in memory without adding it to the DOM
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
 
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-              reject(new Error('Could not get canvas context'));
-              return;
-            }
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
 
-            try {
-              ctx.drawImage(img, 0, 0);
-            } catch (drawError) {
-              reject(drawError);
-              return;
-            }
+        try {
+          ctx.drawImage(img, 0, 0);
+        } catch (drawError) {
+          reject(drawError);
+          return;
+        }
 
-            canvas.toBlob((blob) => {
-              if (blob) {
-                resolve(blob);
-              } else {
-                reject(new Error('Failed to create image blob'));
-              }
-            }, 'image/png');
-          });
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to create image blob'));
+          }
+        }, 'image/png');
+      });
 
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })]);
       toast.success(t('copy-image-success'));
@@ -82,16 +78,11 @@ export function ImageActionButtons({
         throw new Error('Image not loaded');
       }
 
-      let blob: Blob;
-      if (showAiBadge) {
-        blob = await bakeAiBadge(img.currentSrc, aiBadge.src);
-      } else {
-        const response = await fetch(img.currentSrc);
-        if (!response.ok) {
-          throw new Error('Failed to fetch image for download');
-        }
-        blob = await response.blob();
+      const response = await fetch(img.currentSrc);
+      if (!response.ok) {
+        throw new Error('Failed to fetch image for download');
       }
+      const blob = await response.blob();
 
       downloadFileFromBlob(blob, `AIS.chat-Bild-${fileId}.png`);
     } catch (error) {
