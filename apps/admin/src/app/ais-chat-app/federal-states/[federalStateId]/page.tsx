@@ -3,6 +3,7 @@ import { getFederalStateByIdAction } from './actions';
 import { FederalStateView } from './FederalStateDetailView';
 import { Sidebar, SidebarItem } from '@/components/navigation/Sidebar';
 import { ROUTES } from '@/consts/routes';
+import FederalStateAutoForm from './FederalStateAutoForm';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,7 @@ export default async function Page(
   props: PageProps<'/ais-chat-app/federal-states/[federalStateId]'>,
 ) {
   const { federalStateId } = await props.params;
+  const searchParams = await props.searchParams;
   const federalState = await getFederalStateByIdAction(federalStateId);
 
   return (
@@ -20,7 +22,13 @@ export default async function Page(
           <SidebarItem label="Guthaben Codes" href={ROUTES.app.vouchers(federalStateId)} />
         </Sidebar>
       }
-      page={<FederalStateView federalState={federalState} />}
+      page={
+        searchParams?.auto === 'true' ? (
+          <FederalStateAutoForm federalState={federalState} />
+        ) : (
+          <FederalStateView federalState={federalState} />
+        )
+      }
     />
   );
 }

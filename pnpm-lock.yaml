@@ -46,6 +46,12 @@ importers:
       '@ais-chat/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@autoform/react':
+        specifier: 5.0.0
+        version: 5.0.0(@hookform/resolvers@5.9.1(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.87.0(react@19.2.8))(zod@4.5.4))(react-hook-form@7.87.0(react@19.2.8))(react@19.2.8)
+      '@autoform/zod':
+        specifier: 6.0.0
+        version: 6.0.0(zod@4.5.4)
       '@aws-sdk/client-s3':
         specifier: 3.1127.0
         version: 3.1127.0
@@ -1037,6 +1043,32 @@ packages:
         optional: true
       nodemailer:
         optional: true
+
+  '@autoform/core@4.0.0':
+    resolution: {integrity: sha512-tzsI15WyRwYMkJArRWFRq/6PJOt6aheHvJNB79P4aEBbOx87Vkqk51iDlcFR157e078BSNSW8P9awPutlgDR4w==}
+    engines: {node: '>=18'}
+
+  '@autoform/react@5.0.0':
+    resolution: {integrity: sha512-wjlhqOGrybReBjIBgOVLecv8wQSshywH3/MjGSWOo7U95bAJ6hUe8bU6ap7fW7C3g3hVChJ6BPPee4q71t2Blg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@hookform/resolvers': ^3.9.0 || ^4 || ^5
+      '@tanstack/react-form': ^1
+      react: ^17 || ^18 || ^19
+      react-hook-form: ^7
+    peerDependenciesMeta:
+      '@hookform/resolvers':
+        optional: true
+      '@tanstack/react-form':
+        optional: true
+      react-hook-form:
+        optional: true
+
+  '@autoform/zod@6.0.0':
+    resolution: {integrity: sha512-JCNC2Pem0T9ydDIBVNnh3goPXTBc744LJFy7kEtvQUYyhq66SxYBZeg6vb7DVL32Gt3Rx+MUizttwlzKqU/zPg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.0 || ^4.0.0
 
   '@aws-sdk/checksums@3.1000.29':
     resolution: {integrity: sha512-Dtu0gr4dnATZAPwEYbpCsG+MpLM7OAliy2gTepEFQwl1vZ6DL3QMH2FveMa3HLvPsOdhJsPRB3KtxVhph9T75A==}
@@ -10214,6 +10246,20 @@ snapshots:
       oauth4webapi: 3.8.8
       preact: 10.24.3
       preact-render-to-string: 6.5.11(preact@10.24.3)
+
+  '@autoform/core@4.0.0': {}
+
+  '@autoform/react@5.0.0(@hookform/resolvers@5.9.1(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.87.0(react@19.2.8))(zod@4.5.4))(react-hook-form@7.87.0(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@autoform/core': 4.0.0
+      react: 19.2.8
+    optionalDependencies:
+      '@hookform/resolvers': 5.9.1(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.87.0(react@19.2.8))(zod@4.5.4)
+      react-hook-form: 7.87.0(react@19.2.8)
+
+  '@autoform/zod@6.0.0(zod@4.5.4)':
+    dependencies:
+      zod: 4.5.4
 
   '@aws-sdk/checksums@3.1000.29':
     dependencies:

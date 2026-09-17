@@ -21,6 +21,8 @@
     "@ais-chat/shared": "workspace:*",
     "@ais-chat/shared-core": "workspace:*",
     "@ais-chat/ui": "workspace:*",
+    "@autoform/react": "5.0.0",
+    "@autoform/zod": "6.0.0",
     "@aws-sdk/client-s3": "3.1127.0",
     "@aws-sdk/s3-request-presigner": "3.1127.0",
     "@hookform/resolvers": "5.9.1",
