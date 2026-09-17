@@ -72,6 +72,11 @@ export default function ImageGenerationChat({
     };
   }, [showAiBadge, sourceUrl]);
 
+  useEffect(() => {
+    if (bakedEntry === null) return;
+    return () => URL.revokeObjectURL(bakedEntry.objectUrl);
+  }, [bakedEntry]);
+
   const displaySrc =
     showAiBadge && bakedEntry !== null && bakedEntry.sourceUrl === sourceUrl
       ? bakedEntry.objectUrl
