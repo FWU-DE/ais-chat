@@ -2,7 +2,6 @@ import { Readability } from '@mozilla/readability';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import { WEB_SCRAPE_RESULT_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
 import { defaultErrorSource } from '@/components/chat/sources/const';
-import { getTranslations } from 'next-intl/server';
 import he from 'he';
 import { logDebug, logError, logInfo, logWarning } from '@shared/logging';
 import { isBinaryFile } from 'isbinaryfile';
@@ -25,7 +24,6 @@ function discardBody(response: Response): void {
  * @returns A summary of the most important information from the page.
  */
 export async function webScraperReadability(url: string): Promise<WebSource> {
-  const t = await getTranslations('websearch');
   let response: Response;
 
   try {
@@ -75,8 +73,7 @@ export async function webScraperReadability(url: string): Promise<WebSource> {
   const metaTitleMatch = html.match(/<meta[^>]*name="title"[^>]*content="([^"]*)"/i);
 
   // Use the first available title source
-  const rawTitle =
-    ogTitleMatch?.[1]?.trim() || metaTitleMatch?.[1]?.trim() || t('placeholders.unknown-title');
+  const rawTitle = ogTitleMatch?.[1]?.trim() || metaTitleMatch?.[1]?.trim() || '';
   // decode html special characters like &amp; etc.
   const title = he.decode(rawTitle);
 

@@ -652,6 +652,13 @@
       "when": 1789132062236,
       "tag": "0092_plain_satana",
       "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1789140000000,
+      "tag": "0093_backfill_legacy_ai_activity",
+      "breakpoints": true
     }
   ]
 }

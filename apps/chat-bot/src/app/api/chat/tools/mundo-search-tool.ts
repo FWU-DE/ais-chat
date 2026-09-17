@@ -11,7 +11,7 @@ import {
   type MundoSearchResult,
 } from '../mundo-search';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { parseJsonRecord, readString, truncate } from '@/utils/chat/ai-activity';
+import { parseJsonRecord, readString, toLinks, truncate } from '@/utils/chat/ai-activity';
 import type { ToolDefinition, ToolRegistration } from './types';
 
 type MundoSearchToolResponse = {
@@ -96,6 +96,23 @@ export function buildMundoSearchTool(): ToolRegistration {
           tool: 'mundo_search' as const,
           detail: truncate(readString(args, 'query')),
         };
+      },
+      applyResult: (step, result) => {
+        const parsed = parseJsonRecord(result);
+        const rawResults =
+          parsed !== null && typeof parsed === 'object'
+            ? (parsed as { results?: unknown }).results
+            : undefined;
+        const links = toLinks(
+          Array.isArray(rawResults)
+            ? rawResults.map((entry) => ({
+                title: readString(entry, 'title'),
+                url: readString(entry, 'url'),
+              }))
+            : undefined,
+        );
+
+        return links === undefined ? step : { ...step, links };
       },
     },
   };

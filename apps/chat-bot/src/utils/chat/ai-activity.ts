@@ -50,7 +50,16 @@ export function toLinks(entries: unknown): AiActivityLink[] | undefined {
         return undefined;
       }
 
-      return { title: readString(entry, 'title') ?? url, url };
+      try {
+        const parsedUrl = new URL(url);
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+          return undefined;
+        }
+
+        return { title: readString(entry, 'title') ?? url, url: parsedUrl.toString() };
+      } catch {
+        return undefined;
+      }
     })
     .filter((link): link is AiActivityLink => link !== undefined)
     .slice(0, MAX_LINKS);
