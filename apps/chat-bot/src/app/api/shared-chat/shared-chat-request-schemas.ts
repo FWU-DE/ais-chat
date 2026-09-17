@@ -20,6 +20,8 @@ export const sharedChatUploadFormSchema = sharedChatCommonRequestSchema.extend({
   }),
 });
 
-export const sharedChatSignedUrlRequestSchema = sharedChatCommonRequestSchema.extend({
+export const sharedChatImageRequestSchema = sharedChatCommonRequestSchema.extend({
   fileId: requiredNonEmptyString('fileId is required'),
+  width: z.coerce.number().int().positive().max(1000),
+  height: z.coerce.number().int().positive().max(1000),
 });

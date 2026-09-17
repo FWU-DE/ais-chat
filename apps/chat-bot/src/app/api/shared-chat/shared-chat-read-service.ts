@@ -1,10 +1,9 @@
 import { dbGetFilesInIds } from '@shared/db/functions/files';
 import { ForbiddenError, NotFoundError } from '@shared/error';
-import { getReadOnlySignedUrl } from '@shared/s3';
 import { verify } from '.';
 import { getSharedChatEntity } from './shared-chat-get-entity';
 
-export async function getSharedChatReadOnlySignedUrl({
+export async function verifySharedChatImageAccess({
   inviteCode,
   entityType,
   entityId,
@@ -16,7 +15,7 @@ export async function getSharedChatReadOnlySignedUrl({
   entityId: string;
   fileId: string;
   sharedSessionId: string;
-}): Promise<string> {
+}): Promise<void> {
   if (sharedSessionId.trim() === '') {
     throw new ForbiddenError('Not authorized to access this file');
   }
@@ -38,12 +37,10 @@ export async function getSharedChatReadOnlySignedUrl({
 
   verify.filesDoNotBelongToAnyUser([file]);
   verify.sharedChatFileOwnershipBySession({
-    files,
+    files: [file],
     inviteCode,
     entityType,
     entityId,
     sharedSessionId,
   });
-
-  return getReadOnlySignedUrl({ key: `message_attachments/${file.id}` });
 }

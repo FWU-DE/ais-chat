@@ -75,9 +75,11 @@ describe('verifySharedChatFileOwnershipBySession', () => {
     );
   });
 
-  it('does not throw when metadata is null', () => {
+  it('throws when metadata is null', () => {
     const files = [{ metadata: null }];
 
-    expect(() => verifySharedChatFileOwnershipBySession({ files, ...context })).not.toThrow();
+    expect(() => verifySharedChatFileOwnershipBySession({ files, ...context })).toThrow(
+      'Not authorized to access this file',
+    );
   });
 });

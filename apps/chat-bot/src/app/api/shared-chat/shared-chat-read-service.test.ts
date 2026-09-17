@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   getSharedChatEntityMock: vi.fn(),
   dbGetFilesInIdsMock: vi.fn(),
-  getReadOnlySignedUrlMock: vi.fn(),
 }));
 
 vi.mock('./shared-chat-get-entity', () => ({
@@ -12,10 +11,6 @@ vi.mock('./shared-chat-get-entity', () => ({
 
 vi.mock('@shared/db/functions/files', () => ({
   dbGetFilesInIds: mocks.dbGetFilesInIdsMock,
-}));
-
-vi.mock('@shared/s3', () => ({
-  getReadOnlySignedUrl: mocks.getReadOnlySignedUrlMock,
 }));
 
 beforeEach(() => {
@@ -28,15 +23,14 @@ beforeEach(() => {
     suspended: false,
     manuallyStoppedAt: null,
   });
-  mocks.getReadOnlySignedUrlMock.mockResolvedValue('https://signed.example/file');
 });
 
-describe('getSharedChatReadOnlySignedUrl', () => {
+describe('verifySharedChatImageAccess', () => {
   it('throws when shared session id is empty', async () => {
-    const { getSharedChatReadOnlySignedUrl } = await import('./shared-chat-read-service');
+    const { verifySharedChatImageAccess } = await import('./shared-chat-read-service');
 
     await expect(
-      getSharedChatReadOnlySignedUrl({
+      verifySharedChatImageAccess({
         inviteCode: 'invite',
         entityType: 'character',
         entityId: 'character-1',
@@ -49,80 +43,86 @@ describe('getSharedChatReadOnlySignedUrl', () => {
     expect(mocks.dbGetFilesInIdsMock).not.toHaveBeenCalled();
   });
 
-  it('returns signed url for anonymous shared file after invite validation', async () => {
+  it('accepts an image owned by the shared session', async () => {
     mocks.dbGetFilesInIdsMock.mockResolvedValue([
       {
         id: 'file-1',
+        userId: null,
         metadata: {
           inviteCode: 'invite',
           entityType: 'character',
           entityId: 'character-1',
           sessionId: 'session-1',
         },
-        userId: null,
       },
     ]);
 
-    const { getSharedChatReadOnlySignedUrl } = await import('./shared-chat-read-service');
+    const { verifySharedChatImageAccess } = await import('./shared-chat-read-service');
 
-    const signedUrl = await getSharedChatReadOnlySignedUrl({
-      inviteCode: 'invite',
-      entityType: 'character',
-      entityId: 'character-1',
-      fileId: 'file-1',
-      sharedSessionId: 'session-1',
-    });
-
-    expect(signedUrl).toBe('https://signed.example/file');
-    expect(mocks.getSharedChatEntityMock).toHaveBeenCalledWith({
-      inviteCode: 'invite',
-      entityType: 'character',
-      entityId: 'character-1',
-    });
-    expect(mocks.getReadOnlySignedUrlMock).toHaveBeenCalledWith({
-      key: 'message_attachments/file-1',
-    });
+    await expect(
+      verifySharedChatImageAccess({
+        inviteCode: 'invite',
+        entityType: 'character',
+        entityId: 'character-1',
+        fileId: 'file-1',
+        sharedSessionId: 'session-1',
+      }),
+    ).resolves.toBeUndefined();
   });
 
-  it('throws when file belongs to an authenticated user', async () => {
+  it('rejects missing files', async () => {
+    mocks.dbGetFilesInIdsMock.mockResolvedValue([]);
+    const { verifySharedChatImageAccess } = await import('./shared-chat-read-service');
+
+    await expect(
+      verifySharedChatImageAccess({
+        inviteCode: 'invite',
+        entityType: 'character',
+        entityId: 'character-1',
+        fileId: 'file-1',
+        sharedSessionId: 'session-1',
+      }),
+    ).rejects.toThrow('File not found');
+  });
+
+  it('rejects files belonging to a user', async () => {
     mocks.dbGetFilesInIdsMock.mockResolvedValue([
       {
         id: 'file-1',
         userId: 'user-1',
+        metadata: null,
       },
     ]);
-
-    const { getSharedChatReadOnlySignedUrl } = await import('./shared-chat-read-service');
+    const { verifySharedChatImageAccess } = await import('./shared-chat-read-service');
 
     await expect(
-      getSharedChatReadOnlySignedUrl({
+      verifySharedChatImageAccess({
         inviteCode: 'invite',
-        entityType: 'learningScenario',
-        entityId: 'learning-scenario-1',
+        entityType: 'character',
+        entityId: 'character-1',
         fileId: 'file-1',
         sharedSessionId: 'session-1',
       }),
     ).rejects.toThrow('Not authorized to use one or more files');
   });
 
-  it('throws when shared session id does not match file metadata', async () => {
+  it('rejects files from another shared session', async () => {
     mocks.dbGetFilesInIdsMock.mockResolvedValue([
       {
         id: 'file-1',
+        userId: null,
         metadata: {
           inviteCode: 'invite',
           entityType: 'character',
           entityId: 'character-1',
           sessionId: 'other-session',
         },
-        userId: null,
       },
     ]);
-
-    const { getSharedChatReadOnlySignedUrl } = await import('./shared-chat-read-service');
+    const { verifySharedChatImageAccess } = await import('./shared-chat-read-service');
 
     await expect(
-      getSharedChatReadOnlySignedUrl({
+      verifySharedChatImageAccess({
         inviteCode: 'invite',
         entityType: 'character',
         entityId: 'character-1',
