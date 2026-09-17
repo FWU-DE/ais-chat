@@ -127,18 +127,6 @@
     "untitled-conversation": "Neue Konversation",
     "search-clear": "Suche löschen"
   },
-  "websearch": {
-    "placeholders": {
-      "loading": "Titel wird geladen...",
-      "unknown-title": "Titel unbekannt"
-    },
-    "action": {
-      "delete": "Link entfernen"
-    },
-    "toasts": {
-      "error-loading-page": "Verarbeitung des Links fehlgeschlagen"
-    }
-  },
   "ai-activity": {
     "title": "KI-Aktivität",
     "toggle": "KI-Aktivität ein-/ausblenden",
