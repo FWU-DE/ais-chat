@@ -129,15 +129,13 @@ export function ChatBox({
       </div>
     ) : null;
 
-  const maybeAiActivity =
+  const AiActivity =
     activitySteps.length > 0 && !showActivityInDialog ? (
       <AiActivityPanel steps={activitySteps} panelId={`assistant-ai-activity-${children.id}`} />
     ) : null;
 
   const margin =
-    allFiles !== undefined || userWebSources.length > 0 || maybeAiActivity !== null
-      ? 'm-0 mt-4'
-      : 'm-4';
+    allFiles !== undefined || userWebSources.length > 0 || AiActivity !== null ? 'm-0 mt-4' : 'm-4';
 
   const maybeShowMessageIcons =
     isLastNonUser && status !== 'streaming' ? (
@@ -172,6 +170,7 @@ export function ChatBox({
 
   return (
     <>
+      {AiActivity}
       <div key={index} className={cn('w-full', userClassName, margin)}>
         <div aria-label={`${children.role} message ${Math.floor(index / 2 + 1)}`}>
           <div className={cn('flex min-w-0', isAtLeast.sm ? 'flex-row' : 'flex-col')}>
@@ -182,7 +181,6 @@ export function ChatBox({
                 children.role === 'assistant' && 'w-full min-w-0',
               )}
             >
-              {maybeAiActivity}
               {messageContent}
               {maybeShowMessageIcons}
             </div>

@@ -194,6 +194,12 @@ export function runAgentLoop({
               break;
             }
 
+            if (iterationText.length > 0) {
+              fullText += iterationText;
+              onTextChunk(iterationText);
+              iterationTextPublished = true;
+            }
+
             loopMessages.push({
               role: 'assistant',
               content: iterationText,
