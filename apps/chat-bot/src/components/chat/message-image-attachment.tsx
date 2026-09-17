@@ -16,10 +16,10 @@ type MessageImageAttachmentProps = {
   height?: number;
   className?: string;
   /**
-   * Whether falling back to `/api/files/[fileId]/scaled-image` is valid when no
-   * `localUrl` is set. That route only works for files owned by the current
-   * authenticated user, so shared-chat (anonymous) callers must set this to
-   * `false` and wait for a resolved signed URL instead.
+   * Whether the regular authenticated-file fallback is valid when no `localUrl`
+   * is set. Shared-chat renders can intentionally disable this because anonymous
+   * viewers must resolve a shared-chat-scoped image URL instead of the
+   * authenticated `/api/files/[fileId]/scaled-image` route.
    */
   allowFallbackUrl?: boolean;
 };
