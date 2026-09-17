@@ -545,29 +545,19 @@ describe('agent-loop', () => {
     const onComplete = vi.fn();
     const onError = vi.fn();
 
-    // Iteration 1: Emit 4 tool calls (exceeds MAX_TOOL_CALLS_PER_ITERATION = 2)
+    // Iteration 1: Emit 10 tool calls (exceeds MAX_TOOL_CALLS_PER_ITERATION = 8)
     // Iteration 2: Return final text with no more tool calls
     let callCount = 0;
     mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
       callCount++;
       if (callCount === 1) {
         yield { type: 'text', delta: 'Response text.' } satisfies StreamEvent;
-        yield {
-          type: 'tool_call',
-          call: { id: 'call_1', name: 'tool1', arguments: '{}' },
-        } satisfies StreamEvent;
-        yield {
-          type: 'tool_call',
-          call: { id: 'call_2', name: 'tool2', arguments: '{}' },
-        } satisfies StreamEvent;
-        yield {
-          type: 'tool_call',
-          call: { id: 'call_3', name: 'tool3', arguments: '{}' },
-        } satisfies StreamEvent;
-        yield {
-          type: 'tool_call',
-          call: { id: 'call_4', name: 'tool4', arguments: '{}' },
-        } satisfies StreamEvent;
+        for (let toolIndex = 1; toolIndex <= 10; toolIndex++) {
+          yield {
+            type: 'tool_call',
+            call: { id: `call_${toolIndex}`, name: `tool${toolIndex}`, arguments: '{}' },
+          } satisfies StreamEvent;
+        }
         yield { type: 'finish', usage } satisfies StreamEvent;
       } else {
         yield { type: 'text', delta: 'Final answer.' } satisfies StreamEvent;
@@ -575,24 +565,18 @@ describe('agent-loop', () => {
       }
     });
 
-    const toolRegistry = {
-      tool1: {
-        definition: { name: 'tool1', description: '', parameters: {} },
-        handler: async () => 'result1',
-      },
-      tool2: {
-        definition: { name: 'tool2', description: '', parameters: {} },
-        handler: async () => 'result2',
-      },
-      tool3: {
-        definition: { name: 'tool3', description: '', parameters: {} },
-        handler: async () => 'result3',
-      },
-      tool4: {
-        definition: { name: 'tool4', description: '', parameters: {} },
-        handler: async () => 'result4',
-      },
-    };
+    const toolRegistry = Object.fromEntries(
+      Array.from({ length: 10 }, (_, index) => {
+        const toolNumber = index + 1;
+        return [
+          `tool${toolNumber}`,
+          {
+            definition: { name: `tool${toolNumber}`, description: '', parameters: {} },
+            handler: async () => `result${toolNumber}`,
+          },
+        ];
+      }),
+    );
 
     runAgentLoop({
       modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
@@ -615,23 +599,24 @@ describe('agent-loop', () => {
     // Find the first assistant message with tool calls (iteration 1)
     const firstAssistant = agentLoopMessages.find((msg: Message) => msg.role === 'assistant');
     expect(firstAssistant).toBeDefined();
-    expect(firstAssistant.toolCalls).toHaveLength(4);
+    expect(firstAssistant.toolCalls).toHaveLength(10);
 
     // Find tool result messages after the first assistant message
     const firstAssistantIndex = agentLoopMessages.indexOf(firstAssistant);
     const toolResultMessages = agentLoopMessages.slice(
       firstAssistantIndex + 1,
-      firstAssistantIndex + 5,
+      firstAssistantIndex + 11,
     );
-    expect(toolResultMessages).toHaveLength(4);
+    expect(toolResultMessages).toHaveLength(10);
 
-    // First two tool calls should execute normally
+    // The first eight tool calls should execute normally.
     expect(toolResultMessages[0].content).toBe('result1');
     expect(toolResultMessages[1].content).toBe('result2');
+    expect(toolResultMessages[7].content).toBe('result8');
 
-    // Last two should get budget error
-    expect(toolResultMessages[2].content).toContain('Tool call budget exceeded');
-    expect(toolResultMessages[3].content).toContain('Tool call budget exceeded');
+    // The last two should get budget errors.
+    expect(toolResultMessages[8].content).toContain('Tool call budget exceeded');
+    expect(toolResultMessages[9].content).toContain('Tool call budget exceeded');
   });
 
   describe('Sentry instrumentation', () => {

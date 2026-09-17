@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { runAgentLoop } from '@ais-chat/ai-core';
 import type { ChatMessage } from '@/types/chat';
 import type { UserAndContext } from '@/auth/types';
+import { decodeChatStreamEvent } from '@/utils/streaming';
 
 const webSearchResults = [
   {
@@ -256,6 +257,25 @@ async function collectStream(stream: ReadableStream<string>) {
   return chunks.join('');
 }
 
+async function collectTextStream(stream: ReadableStream<string>) {
+  const reader = stream.getReader();
+  const chunks: string[] = [];
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (value !== undefined && decodeChatStreamEvent(value) === null) {
+        chunks.push(value);
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return chunks.join('');
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 
@@ -380,7 +400,7 @@ describe('sendChatMessage', () => {
       user: createUser(),
     });
 
-    const streamedText = await collectStream(result.stream);
+    const streamedText = await collectTextStream(result.stream);
 
     expect(mocks.buildToolsMock).toHaveBeenCalledTimes(1);
     expect(mocks.buildToolsMock).toHaveBeenCalledWith(
