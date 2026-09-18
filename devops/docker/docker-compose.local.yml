@@ -61,7 +61,7 @@ services:
 
   # keycloak runs with uid 1000, but docker creates volumes with root as owner; use a one-shot container to fix the permission
   fix-keycloak-volume-ownership:
-    image: alpine:3.24.1
+    image: alpine:3.24.2
     restart: no
     entrypoint: /bin/sh -c "chown 1000 /keycloak"
     volumes:
@@ -153,7 +153,7 @@ services:
 
   # One-shot init container to create the S3 bucket used by ais-chat on rustfs
   rustfs-init:
-    image: alpine:3.24.1
+    image: alpine:3.24.2
     restart: no
     entrypoint: /bin/sh -c "apk add --no-cache s3cmd && s3cmd --access_key=rustfsadmin --secret_key=RustFS-Admin-123456 --host=rustfs:9000 --host-bucket='rustfs:9000/%(bucket)' --region=eu-de --no-ssl --no-check-certificate mb s3://ais-chat"
     depends_on:
