@@ -1816,6 +1816,10 @@ export const templateRequestStatusSchema = z.enum([
   'revoked',
   'changeRequired',
 ]);
+export const templateRequestStatus = pgEnum(
+  'template_request_status',
+  templateRequestStatusSchema.enum,
+);
 
 export const CommunityTemplateRequestTable = pgTable(
   'community_template_request',
@@ -1832,12 +1836,7 @@ export const CommunityTemplateRequestTable = pgTable(
     updatedBy: text('updated_by'),
     editorUpdatedAt: timestamp('editor_updated_at', { mode: 'date', withTimezone: true }),
     editorUpdatedBy: text('editor_updated_by'),
-    state: pgEnum(
-      'template_request_status',
-      templateRequestStatusSchema.enum,
-    )('status')
-      .notNull()
-      .default('created'),
+    state: templateRequestStatus('status').notNull().default('created'),
     note: text('note').notNull().default(''),
   },
   (table) => [
@@ -1856,8 +1855,8 @@ export const CommunityTemplateRequestSelectSchema = createSelectSchema(
   CommunityTemplateRequestTable,
 ).extend({
   createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date().optional(),
-  editorUpdatedAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().nullable(),
+  editorUpdatedAt: z.coerce.date().nullable(),
 });
 export const CommunityTemplateRequestInsertSchema = createInsertSchema(
   CommunityTemplateRequestTable,
@@ -1877,8 +1876,8 @@ export const CommunityTemplateRequestUpdateSchema = createUpdateSchema(
     createdBy: true,
   })
   .extend({
-    updatedAt: z.coerce.date().optional(),
-    editorUpdatedAt: z.coerce.date().optional(),
+    updatedAt: z.coerce.date().nullable(),
+    editorUpdatedAt: z.coerce.date().nullable(),
   });
 
 export type CommunityTemplateRequestSelectModel = z.infer<
@@ -1916,7 +1915,7 @@ export const CommunityTemplateRequestMessageInsertSchema = createInsertSchema(
   createdAt: true,
 });
 
-export const CommunityTemplateRequestMessageSelectModel = z.infer<
+export type CommunityTemplateRequestMessageSelectModel = z.infer<
   typeof CommunityTemplateRequestMessageSelectSchema
 >;
 export type CommunityTemplateRequestMessageInsertModel = z.infer<

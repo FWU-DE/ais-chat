@@ -1,5 +1,5 @@
 {
-  "id": "4c16e33f-1936-42c7-a06a-d97f891be064",
+  "id": "f11e7374-1e22-41ae-a837-1959ce8a95e0",
   "prevId": "a5ec6f9b-b706-427e-8d04-6e5a20f85191",
   "version": "7",
   "dialect": "postgresql",
@@ -3798,6 +3798,16 @@
         "violence_or_extremist_content",
         "sexualized_content",
         "other"
+      ]
+    },
+    "public.template_request_status": {
+      "name": "template_request_status",
+      "schema": "public",
+      "values": [
+        "created",
+        "approved",
+        "revoked",
+        "changeRequired"
       ]
     },
     "public.tool_call_name": {

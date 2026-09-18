@@ -1,3 +1,4 @@
+CREATE TYPE "public"."template_request_status" AS ENUM('created', 'approved', 'revoked', 'changeRequired');--> statement-breakpoint
 CREATE TABLE "community_template_request_message" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"template_request_id" uuid NOT NULL,
