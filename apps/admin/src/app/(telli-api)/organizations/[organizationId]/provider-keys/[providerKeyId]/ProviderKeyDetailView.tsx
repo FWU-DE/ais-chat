@@ -3,6 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@ui/components/button';
@@ -169,6 +170,19 @@ export function ProviderKeyDetailView({
         cancelLabel="Abbrechen"
         {...deleteDialogProps}
       />
+
+      {providerKey?.models.length && (
+        <CardContent>
+          <h3 className="mb-3 text-lg font-medium">Zugeordnete Modelle</h3>
+          {providerKey.models.map(({ model }) => (
+            <Button key={model.id} variant="link" asChild>
+              <Link href={ROUTES.api.llmDetails(organizationId, model.id)}>
+                {model.displayName}
+              </Link>
+            </Button>
+          ))}
+        </CardContent>
+      )}
     </Card>
   );
 }
