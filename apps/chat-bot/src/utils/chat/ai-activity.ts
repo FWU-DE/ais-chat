@@ -67,10 +67,6 @@ export function toLinks(entries: unknown): AiActivityLink[] | undefined {
   return links.length > 0 ? links : undefined;
 }
 
-/**
- * Collects the activity of an agent run so it can be streamed to the client and persisted
- * with the assistant message.
- */
 export function createAiActivityCollector(toolRegistry: Record<string, ToolRegistration>) {
   const steps: AiActivityStep[] = [];
   const stepsById = new Map<string, AiActivityToolStep>();

@@ -151,7 +151,6 @@ type ConversationMessageWebSearchResult = {
   favicon: string;
 };
 
-/** Displayable steps of an agent run, shown as "KI-Aktivität" above the assistant answer. */
 type ConversationMessageAiActivityStep =
   | { kind: 'analysis' }
   | { kind: 'done' }

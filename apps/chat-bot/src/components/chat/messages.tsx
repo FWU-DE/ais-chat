@@ -19,9 +19,7 @@ interface MessagesProps {
   fileMapping?: Map<string, FileModel[]>;
   pendingFileMapping?: Map<string, PendingFileModel[]>;
   webSourceMapping?: Map<string, WebSource[]>;
-  /** Activity of the generation that is currently running, shown next to the loading animation. */
   activitySteps?: AiActivityStep[];
-  showActivityInDialog?: boolean;
 }
 
 export function Messages({
@@ -36,7 +34,6 @@ export function Messages({
   pendingFileMapping,
   webSourceMapping,
   activitySteps,
-  showActivityInDialog,
 }: MessagesProps) {
   return (
     <div className={containerClassName}>
@@ -53,7 +50,6 @@ export function Messages({
           assistantIcon={assistantIcon}
           webSources={message.role === 'user' ? webSourceMapping?.get(message.id) : undefined}
           status={status}
-          showActivityInDialog={showActivityInDialog}
         >
           {message}
         </ChatBox>

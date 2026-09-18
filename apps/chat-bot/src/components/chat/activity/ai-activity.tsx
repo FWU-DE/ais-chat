@@ -15,13 +15,6 @@ import {
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Button } from '@ui/components/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@ui/components/dialog';
 import { cn } from '@/utils/tailwind';
 import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
 
@@ -138,9 +131,6 @@ function ActivityStepList({ steps }: { steps: AiActivityStep[] }) {
   );
 }
 
-/**
- * Collapsed by default on every render — the open state is intentionally not persisted.
- */
 export function AiActivityPanel({ steps, panelId }: { steps: AiActivityStep[]; panelId: string }) {
   const t = useTranslations('ai-activity');
   const [isOpen, setIsOpen] = useState(false);
@@ -175,32 +165,5 @@ export function AiActivityPanel({ steps, panelId }: { steps: AiActivityStep[]; p
         </div>
       )}
     </div>
-  );
-}
-
-/** Dialog variant used in dialog partner chats, where the activity must not take over the layout. */
-export function AiActivityDialog({ steps }: { steps: AiActivityStep[] }) {
-  const t = useTranslations('ai-activity');
-
-  if (steps.length === 0) {
-    return null;
-  }
-
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button title={t('show')} aria-label={t('show')} variant="ghost" size="icon">
-          <SparkleIcon className="size-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent showCloseButton>
-        <DialogHeader>
-          <DialogTitle>{t('title')}</DialogTitle>
-        </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto p-1">
-          <ActivityStepList steps={steps} />
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }

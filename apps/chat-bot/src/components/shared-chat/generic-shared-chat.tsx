@@ -89,11 +89,6 @@ export type SharedChatViewProps = {
    */
   assistantIcon?: ReactNode;
   uploadFileFn?: (file: File, sharedSessionId: string) => Promise<{ fileId: string }>;
-  /**
-   * When true, the AI activity is shown in a modal dialog triggered from the
-   * message icons row instead of the inline panel above the message.
-   */
-  showActivityInDialog?: boolean;
 };
 
 /**
@@ -116,7 +111,6 @@ export default function GenericSharedChat({
   enableFloatingText = false,
   assistantIcon,
   uploadFileFn,
-  showActivityInDialog,
 }: SharedChatViewProps) {
   const tCommon = useTranslations('common');
   const tCustomChat = useTranslations('custom-chat.shared');
@@ -385,7 +379,6 @@ export default function GenericSharedChat({
                 containerClassName="flex flex-col gap-4"
                 pendingFileMapping={pendingFileMapping}
                 activitySteps={chat.activitySteps}
-                showActivityInDialog={showActivityInDialog}
               />
             )}
             {/* If there is a TokenPointsExceededError or SharedChatExpiredError we show a dialog instead */}

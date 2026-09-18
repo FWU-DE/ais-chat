@@ -37,7 +37,6 @@ type RunAgentLoopParams = {
   /** Tears down the upstream provider stream when the client goes away or the generation times out. */
   abortSignal?: AbortSignal;
   onTextChunk: (delta: string) => void;
-  /** Called once per iteration with the tool calls that are about to be executed. */
   onToolCalls?: (calls: ToolCall[]) => void;
   onToolResult?: (result: { toolCallId: string; name: string; result: string }) => void;
   onComplete: (result: {

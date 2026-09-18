@@ -130,7 +130,6 @@
   "ai-activity": {
     "title": "KI-Aktivität",
     "toggle": "KI-Aktivität ein-/ausblenden",
-    "show": "KI-Aktivität anzeigen",
     "open-source": "Quelle öffnen: {source}",
     "steps": {
       "analysis": "Analyse",

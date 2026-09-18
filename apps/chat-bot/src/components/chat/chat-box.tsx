@@ -12,7 +12,7 @@ import { isImageFile } from '@/utils/files/generic';
 import { type UIMessage, type ChatStatus } from '@/types/chat';
 import { ReactNode } from 'react';
 import { WebSource } from '@shared/db/types';
-import { AiActivityDialog, AiActivityPanel } from './activity/ai-activity';
+import { AiActivityPanel } from './activity/ai-activity';
 import DownloadConversationMessageButton from './download-conversation-message-button';
 import { utils } from '@shared/utils';
 import DisplayFileAttachment from './display-file-attachment';
@@ -33,7 +33,6 @@ export function ChatBox({
   conversationId,
   characterName,
   status,
-  showActivityInDialog = false,
 }: {
   assistantIcon?: ReactNode;
   children: UIMessage;
@@ -47,7 +46,6 @@ export function ChatBox({
   conversationId?: string;
   characterName?: string;
   status: ChatStatus;
-  showActivityInDialog?: boolean;
 }) {
   const tCommon = useTranslations('common');
   const { isAtLeast } = useBreakpoints();
@@ -130,7 +128,7 @@ export function ChatBox({
     ) : null;
 
   const AiActivity =
-    activitySteps.length > 0 && !showActivityInDialog ? (
+    activitySteps.length > 0 ? (
       <AiActivityPanel steps={activitySteps} panelId={`assistant-ai-activity-${children.id}`} />
     ) : null;
 
@@ -160,9 +158,6 @@ export function ChatBox({
             <ReloadIcon className="w-5 h-5" />
           </div>
         </button>
-        {activitySteps.length > 0 && showActivityInDialog && (
-          <AiActivityDialog steps={activitySteps} />
-        )}
       </div>
     ) : null;
 
