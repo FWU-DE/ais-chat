@@ -8,9 +8,7 @@ import type {
   ToolRegistry,
 } from './types';
 import { EmptyResponseError } from '../errors';
-import { checkInputSafety } from '../safety';
-import { isChatImageAttachment } from './types';
-import { getTextModelById } from '../models';
+import { checkTextInputSafety } from './safety';
 
 export const MAX_AGENTIC_ITERATIONS = 3;
 export const MAX_TOOL_CALLS_PER_ITERATION = 2;
@@ -99,19 +97,7 @@ export function runAgentLoop({
       });
 
     try {
-      const selectedModels = safetyModelName
-        ? await Promise.all(modelSelection.modelIds.map((modelId) => getTextModelById(modelId)))
-        : [];
-      if (safetyModelName && selectedModels.some((model) => model.safetyFilterEnabled)) {
-        const safetyMessages = messages
-          .filter((message) => message.role === 'user' || message.role === 'assistant')
-          .map((message) => ({
-            role: (message.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
-            content: message.content,
-            images: message.attachments?.filter(isChatImageAttachment),
-          }));
-        await checkInputSafety(safetyModelName, safetyMessages, apiKeyId);
-      }
+      await checkTextInputSafety({ modelSelection, safetyModelName, messages, apiKeyId });
 
       await Sentry.startSpan(
         {
