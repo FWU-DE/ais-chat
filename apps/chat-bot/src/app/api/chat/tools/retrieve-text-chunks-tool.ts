@@ -3,6 +3,8 @@ import { ingestWebContent } from '../../rag/ingestWebContent';
 import { retrieveChunksByQuery } from '../../rag/rag-service';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
 import { dbGetAllChunks } from '@shared/db/functions/files';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import { parseJsonRecord, readString, truncate } from '@/utils/chat/ai-activity';
 
 type SemanticFileSearchChunkResult = {
   fileName: string | null;
@@ -124,5 +126,19 @@ export function buildRetrieveTextChunksTool({
     );
   };
 
-  return { definition, handler };
+  return {
+    definition,
+    handler,
+    activity: {
+      createStep: (toolCall: ToolCall) => {
+        const args = parseJsonRecord(toolCall.arguments);
+        return {
+          kind: 'tool' as const,
+          id: toolCall.id,
+          tool: 'retrieve_text_chunks' as const,
+          detail: truncate(readString(args, 'search')),
+        };
+      },
+    },
+  };
 }

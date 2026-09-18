@@ -1,6 +1,8 @@
 import { RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT } from '@/configuration-text-inputs/const';
 import { dbGetExtractedFileContent } from '@shared/db/functions/files';
 import type { FileModel } from '@shared/db/schema';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import { parseJsonRecord, readString, truncate } from '@/utils/chat/ai-activity';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
 
 type RetrieveEntireFileToolResponse = {
@@ -103,5 +105,19 @@ export function buildRetrieveEntireFileTool({
     return formatEntireFileForTool(matchedFile);
   };
 
-  return { definition, handler };
+  return {
+    definition,
+    handler,
+    activity: {
+      createStep: (toolCall: ToolCall) => {
+        const args = parseJsonRecord(toolCall.arguments);
+        return {
+          kind: 'tool' as const,
+          id: toolCall.id,
+          tool: 'retrieve_entire_file' as const,
+          detail: truncate(readString(args, 'fileName')),
+        };
+      },
+    },
+  };
 }

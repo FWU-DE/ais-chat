@@ -3,6 +3,7 @@ import { ChatBox, type PendingFileModel } from './chat-box';
 import LoadingAnimation from './loading-animation';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
+import type { AiActivityStep } from '@/types/ai-activity';
 
 // Re-export for consumers that import from this file
 export type { ChatStatus, PendingFileModel };
@@ -18,7 +19,7 @@ interface MessagesProps {
   fileMapping?: Map<string, FileModel[]>;
   pendingFileMapping?: Map<string, PendingFileModel[]>;
   webSourceMapping?: Map<string, WebSource[]>;
-  showWebSourcesInDialog?: boolean;
+  activitySteps?: AiActivityStep[];
 }
 
 export function Messages({
@@ -32,7 +33,7 @@ export function Messages({
   fileMapping,
   pendingFileMapping,
   webSourceMapping,
-  showWebSourcesInDialog,
+  activitySteps,
 }: MessagesProps) {
   return (
     <div className={containerClassName}>
@@ -49,13 +50,12 @@ export function Messages({
           assistantIcon={assistantIcon}
           webSources={message.role === 'user' ? webSourceMapping?.get(message.id) : undefined}
           status={status}
-          showWebSourcesInDialog={showWebSourcesInDialog}
         >
           {message}
         </ChatBox>
       ))}
 
-      {isLoading && <LoadingAnimation />}
+      {isLoading && <LoadingAnimation activitySteps={activitySteps} />}
     </div>
   );
 }

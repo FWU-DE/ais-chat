@@ -103,6 +103,7 @@ export default function Chat({
     reload,
     stop,
     status,
+    activitySteps,
     error,
   } = useMainChat({
     conversationId: id,
@@ -344,7 +345,7 @@ export default function Chat({
               fileMapping={fileMapping}
               pendingFileMapping={pendingFileMapping}
               webSourceMapping={webSourceMapping}
-              showWebSourcesInDialog={character !== undefined}
+              activitySteps={activitySteps}
             />
           )}
           {error && (
