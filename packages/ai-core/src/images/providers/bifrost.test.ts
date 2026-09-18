@@ -91,6 +91,7 @@ describe('constructBifrostImageGenerationFn', () => {
       prompt: 'a cat',
       n: 1,
       size: 'auto',
+      quality: 'medium',
     });
     expect(result).toEqual({
       data: ['base64-bifrost-image'],
@@ -226,6 +227,7 @@ describe('constructBifrostImageGenerationFn', () => {
           prompt: 'make it cyberpunk',
           n: 1,
           size: '1024x1024',
+          quality: 'medium',
           image: expect.any(Array),
         }),
       );
