@@ -1808,3 +1808,117 @@ export const urlPresetTable = pgTable('url_preset', {
   orderNumber: integer('order_number').notNull().default(0),
   urls: text('urls').array().notNull(),
 });
+
+/**** Community Templates *****/
+export const templateRequestStatusSchema = z.enum([
+  'created',
+  'approved',
+  'revoked',
+  'changeRequired',
+]);
+
+export const CommunityTemplateRequestTable = pgTable(
+  'community_template_request',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    assistantId: uuid('assistant_id').references(() => assistantTable.id, { onDelete: 'cascade' }),
+    characterId: uuid('character_id').references(() => characterTable.id, { onDelete: 'cascade' }),
+    learningScenarioId: uuid('learning_scenario_id').references(() => learningScenarioTable.id, {
+      onDelete: 'cascade',
+    }),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    createdBy: text('created_by').notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true }),
+    updatedBy: text('updated_by'),
+    editorUpdatedAt: timestamp('editor_updated_at', { mode: 'date', withTimezone: true }),
+    editorUpdatedBy: text('editor_updated_by'),
+    state: pgEnum(
+      'template_request_status',
+      templateRequestStatusSchema.enum,
+    )('status')
+      .notNull()
+      .default('created'),
+    note: text('note').notNull().default(''),
+  },
+  (table) => [
+    check(
+      'community_template_request_exactly_one_target_ck',
+      sql`((${table.assistantId} IS NOT NULL)::int + (${table.characterId} IS NOT NULL)::int + (${table.learningScenarioId} IS NOT NULL)::int) = 1`,
+    ),
+    index().on(table.assistantId),
+    index().on(table.characterId),
+    index().on(table.learningScenarioId),
+    index().on(table.state),
+  ],
+);
+
+export const CommunityTemplateRequestSelectSchema = createSelectSchema(
+  CommunityTemplateRequestTable,
+).extend({
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date().optional(),
+  editorUpdatedAt: z.coerce.date().optional(),
+});
+export const CommunityTemplateRequestInsertSchema = createInsertSchema(
+  CommunityTemplateRequestTable,
+).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  updatedBy: true,
+  editorUpdatedAt: true,
+  editorUpdatedBy: true,
+});
+export const CommunityTemplateRequestUpdateSchema = createUpdateSchema(
+  CommunityTemplateRequestTable,
+)
+  .omit({
+    createdAt: true,
+    createdBy: true,
+  })
+  .extend({
+    updatedAt: z.coerce.date().optional(),
+    editorUpdatedAt: z.coerce.date().optional(),
+  });
+
+export type CommunityTemplateRequestSelectModel = z.infer<
+  typeof CommunityTemplateRequestSelectSchema
+>;
+export type CommunityTemplateRequestInsertModel = z.infer<
+  typeof CommunityTemplateRequestInsertSchema
+>;
+export type CommunityTemplateRequestUpdateModel = z.infer<
+  typeof CommunityTemplateRequestUpdateSchema
+>;
+
+export const CommunityTemplateRequestMessageTable = pgTable(
+  'community_template_request_message',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    templateRequestId: uuid('template_request_id')
+      .references(() => CommunityTemplateRequestTable.id, { onDelete: 'cascade' })
+      .notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    createdBy: text('created_by').notNull(),
+    title: text('title').notNull().default(''),
+    message: text('message').notNull().default(''),
+  },
+  (table) => [index().on(table.templateRequestId)],
+);
+
+export const CommunityTemplateRequestMessageSelectSchema = createSelectSchema(
+  CommunityTemplateRequestMessageTable,
+).extend({ createdAt: z.coerce.date() });
+export const CommunityTemplateRequestMessageInsertSchema = createInsertSchema(
+  CommunityTemplateRequestMessageTable,
+).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const CommunityTemplateRequestMessageSelectModel = z.infer<
+  typeof CommunityTemplateRequestMessageSelectSchema
+>;
+export type CommunityTemplateRequestMessageInsertModel = z.infer<
+  typeof CommunityTemplateRequestMessageInsertSchema
+>;
