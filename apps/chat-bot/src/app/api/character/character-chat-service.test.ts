@@ -15,6 +15,11 @@ const mocks = vi.hoisted(() => ({
   dbGetCharacterByIdAndInviteCodeMock: vi.fn(),
   dbUpdateTokenUsageByCharacterChatIdMock: vi.fn(),
   dbGetRelatedCharacterFilesMock: vi.fn(),
+  dbGetOrCreateConversationMock: vi.fn(),
+  dbGetConversationAndMessagesMock: vi.fn(),
+  dbInsertChatContentMock: vi.fn(),
+  dbInsertChatContentBatchMock: vi.fn(),
+  dbInsertConversationUsageMock: vi.fn(),
   sendRabbitmqEventMock: vi.fn(),
   constructNewMessageEventMock: vi.fn(),
   constructTokenBudgetExceededEventMock: vi.fn(),
@@ -71,6 +76,17 @@ vi.mock('@shared/db/functions/character', () => ({
 
 vi.mock('@shared/db/functions/files', () => ({
   dbGetRelatedCharacterFiles: mocks.dbGetRelatedCharacterFilesMock,
+}));
+
+vi.mock('@shared/db/functions/chat', () => ({
+  dbGetOrCreateConversation: mocks.dbGetOrCreateConversationMock,
+  dbGetConversationAndMessages: mocks.dbGetConversationAndMessagesMock,
+  dbInsertChatContent: mocks.dbInsertChatContentMock,
+  dbInsertChatContentBatch: mocks.dbInsertChatContentBatchMock,
+}));
+
+vi.mock('@shared/db/functions/token-usage', () => ({
+  dbInsertConversationUsage: mocks.dbInsertConversationUsageMock,
 }));
 
 vi.mock('@/rabbitmq/send', () => ({
@@ -165,6 +181,13 @@ const messages: ChatMessage[] = [
   },
 ];
 
+const conversation = {
+  id: '00000000-0000-4000-8000-000000000001',
+  characterId: character.id,
+  learningScenarioId: null,
+  assistantId: null,
+};
+
 async function collectStream(stream: ReadableStream<string>) {
   const reader = stream.getReader();
   const chunks: string[] = [];
@@ -198,6 +221,11 @@ beforeEach(() => {
   mocks.sharedCharacterChatHasReachedTokenPointsLimitMock.mockResolvedValue(false);
   mocks.userHasReachedTokenPointsLimitMock.mockResolvedValue(false);
   mocks.dbGetRelatedCharacterFilesMock.mockResolvedValue([]);
+  mocks.dbGetOrCreateConversationMock.mockResolvedValue(conversation);
+  mocks.dbGetConversationAndMessagesMock.mockResolvedValue({ conversation, messages: [] });
+  mocks.dbInsertChatContentMock.mockResolvedValue(undefined);
+  mocks.dbInsertChatContentBatchMock.mockResolvedValue(undefined);
+  mocks.dbInsertConversationUsageMock.mockResolvedValue(undefined);
   mocks.combineSharedRelatedFilesMock.mockResolvedValue([]);
   mocks.ingestWebContentMock.mockResolvedValue({ processedUrls: [], errorUrls: [] });
   mocks.isWebSearchEnabledForEntityMock.mockReturnValue(true);
@@ -320,5 +348,24 @@ describe('sendCharacterMessage', () => {
         allowWebTools: false,
       }),
     );
+  });
+
+  it('rejects a conversation belonging to another character', async () => {
+    const { sendCharacterMessage } = await import('./character-chat-service');
+    mocks.dbGetOrCreateConversationMock.mockResolvedValueOnce({
+      ...conversation,
+      characterId: 'another-character',
+    });
+
+    await expect(
+      sendCharacterMessage({
+        characterId: character.id,
+        inviteCode: 'invite-code',
+        messages,
+        modelId: model.id,
+      }),
+    ).rejects.toThrow('Conversation not found');
+
+    expect(mocks.dbGetConversationAndMessagesMock).not.toHaveBeenCalled();
   });
 });

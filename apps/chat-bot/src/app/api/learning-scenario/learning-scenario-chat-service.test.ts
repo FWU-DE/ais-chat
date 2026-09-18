@@ -15,6 +15,11 @@ const mocks = vi.hoisted(() => ({
   dbGetLearningScenarioByIdAndInviteCodeMock: vi.fn(),
   dbUpdateTokenUsageBySharedLearningScenarioIdMock: vi.fn(),
   dbGetRelatedLearningScenarioFilesMock: vi.fn(),
+  dbGetOrCreateConversationMock: vi.fn(),
+  dbGetConversationAndMessagesMock: vi.fn(),
+  dbInsertChatContentMock: vi.fn(),
+  dbInsertChatContentBatchMock: vi.fn(),
+  dbInsertConversationUsageMock: vi.fn(),
   sendRabbitmqEventMock: vi.fn(),
   constructNewMessageEventMock: vi.fn(),
   constructTokenBudgetExceededEventMock: vi.fn(),
@@ -72,6 +77,17 @@ vi.mock('@shared/db/functions/learning-scenario', () => ({
 
 vi.mock('@shared/db/functions/files', () => ({
   dbGetRelatedLearningScenarioFiles: mocks.dbGetRelatedLearningScenarioFilesMock,
+}));
+
+vi.mock('@shared/db/functions/chat', () => ({
+  dbGetOrCreateConversation: mocks.dbGetOrCreateConversationMock,
+  dbGetConversationAndMessages: mocks.dbGetConversationAndMessagesMock,
+  dbInsertChatContent: mocks.dbInsertChatContentMock,
+  dbInsertChatContentBatch: mocks.dbInsertChatContentBatchMock,
+}));
+
+vi.mock('@shared/db/functions/token-usage', () => ({
+  dbInsertConversationUsage: mocks.dbInsertConversationUsageMock,
 }));
 
 vi.mock('@/rabbitmq/send', () => ({
@@ -166,6 +182,13 @@ const messages: ChatMessage[] = [
   },
 ];
 
+const conversation = {
+  id: '00000000-0000-4000-8000-000000000002',
+  characterId: null,
+  learningScenarioId: learningScenario.id,
+  assistantId: null,
+};
+
 async function collectStream(stream: ReadableStream<string>) {
   const reader = stream.getReader();
   const chunks: string[] = [];
@@ -199,6 +222,11 @@ beforeEach(() => {
   mocks.sharedLearningScenarioChatHasReachedTokenPointsLimitMock.mockResolvedValue(false);
   mocks.userHasReachedTokenPointsLimitMock.mockResolvedValue(false);
   mocks.dbGetRelatedLearningScenarioFilesMock.mockResolvedValue([]);
+  mocks.dbGetOrCreateConversationMock.mockResolvedValue(conversation);
+  mocks.dbGetConversationAndMessagesMock.mockResolvedValue({ conversation, messages: [] });
+  mocks.dbInsertChatContentMock.mockResolvedValue(undefined);
+  mocks.dbInsertChatContentBatchMock.mockResolvedValue(undefined);
+  mocks.dbInsertConversationUsageMock.mockResolvedValue(undefined);
   mocks.combineSharedRelatedFilesMock.mockResolvedValue([]);
   mocks.ingestWebContentMock.mockResolvedValue({ processedUrls: [], errorUrls: [] });
   mocks.isWebSearchEnabledForEntityMock.mockReturnValue(true);
@@ -317,5 +345,24 @@ describe('sendLearningScenarioMessage', () => {
         allowWebTools: false,
       }),
     );
+  });
+
+  it('rejects a conversation belonging to another learning scenario', async () => {
+    const { sendLearningScenarioMessage } = await import('./learning-scenario-chat-service');
+    mocks.dbGetOrCreateConversationMock.mockResolvedValueOnce({
+      ...conversation,
+      learningScenarioId: 'another-learning-scenario',
+    });
+
+    await expect(
+      sendLearningScenarioMessage({
+        learningScenarioId: learningScenario.id,
+        inviteCode: 'invite-code',
+        messages,
+        modelId: model.id,
+      }),
+    ).rejects.toThrow('Conversation not found');
+
+    expect(mocks.dbGetConversationAndMessagesMock).not.toHaveBeenCalled();
   });
 });

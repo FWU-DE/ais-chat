@@ -31,7 +31,10 @@ import {
   getChatTitle,
   limitChatHistory,
 } from './utils';
-import { convertMessageModelToMessage } from '@/utils/chat/messages';
+import {
+  convertMessageModelToMessage,
+  filterPersistedAgentLoopMessages,
+} from '@/utils/chat/messages';
 import { logError } from '@shared/logging';
 import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
 import { extractUrls } from '../utils/extract-urls';
@@ -72,44 +75,6 @@ type CustomChatIds = {
   learningScenarioId?: string | undefined;
   assistantId?: string | undefined;
 };
-
-function filterPersistedAgentLoopMessages(agentLoopMessages: AiCoreMessage[]) {
-  const excludedToolCallIds = new Set<string>();
-
-  return agentLoopMessages.flatMap((message) => {
-    if (message.role === 'assistant' && message.toolCalls?.length) {
-      const retainedToolCalls = message.toolCalls.filter((toolCall) => {
-        if (toolCall.name === 'retrieve_entire_file') {
-          excludedToolCallIds.add(toolCall.id);
-          return false;
-        }
-
-        return true;
-      });
-
-      if (retainedToolCalls.length === 0 && message.content.trim().length === 0) {
-        return [];
-      }
-
-      return [
-        {
-          ...message,
-          toolCalls: retainedToolCalls.length > 0 ? retainedToolCalls : undefined,
-        },
-      ];
-    }
-
-    if (
-      message.role === 'tool' &&
-      message.toolCallId &&
-      excludedToolCallIds.has(message.toolCallId)
-    ) {
-      return [];
-    }
-
-    return [message];
-  });
-}
 
 function ensureConversationCustomChatIdsMatch({
   incomingIds,
@@ -615,8 +580,12 @@ export async function sendChatMessage({
     onTextChunk: (delta: string) => {
       update(delta);
     },
-    onToolCalls: aiActivity.onToolCalls,
-    onToolResult: aiActivity.onToolResult,
+    onToolCalls: (toolCalls) => {
+      aiActivity.onToolCalls(toolCalls);
+    },
+    onToolResult: ({ toolCallId, result }) => {
+      aiActivity.onToolResult({ toolCallId, result });
+    },
     onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {
       try {
         aiActivity.finish();
