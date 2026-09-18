@@ -52,7 +52,6 @@ export type UseChatReturn = {
   ) => Promise<void>;
   isLoading: boolean;
   status: ChatStatus;
-  /** Activity steps of the generation that is currently running. */
   activitySteps: AiActivityStep[];
   error: Error | null;
   reload: (context?: ChatRequestContext) => Promise<void>;

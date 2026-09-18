@@ -5,11 +5,9 @@ import { useTranslations } from 'next-intl';
 import type { AiActivityStep } from '@/types/ai-activity';
 import { getAiActivityStepTitle } from './ai-activity';
 
-/** Steps can follow each other quickly; keep each one readable before showing the next. */
 const MIN_STEP_DISPLAY_MS = 3000;
 
 /**
- * Title of the step the agent is currently working on, updated at most every
  * {@link MIN_STEP_DISPLAY_MS} milliseconds.
  */
 export function useCurrentActivityLabel(steps: AiActivityStep[]): string | undefined {

@@ -84,7 +84,6 @@ export default function CharacterSharedChat({
       dialogStartMode="derived"
       assistantIcon={assistantIcon}
       uploadFileFn={uploadSharedCharacterFile}
-      showActivityInDialog
     />
   );
 }

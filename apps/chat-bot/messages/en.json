@@ -50,7 +50,6 @@
   "ai-activity": {
     "title": "AI activity",
     "toggle": "Show/hide AI activity",
-    "show": "Show AI activity",
     "open-source": "Open source: {source}",
     "steps": {
       "analysis": "Analysis",
