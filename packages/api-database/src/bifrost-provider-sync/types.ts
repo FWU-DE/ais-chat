@@ -54,7 +54,7 @@ export type BifrostProviderConfig = {
 export type BifrostProviderConfigFields = Omit<BifrostProviderConfig, 'provider' | 'keys'>;
 
 export type BifrostProviderResponse = Omit<BifrostProviderConfig, 'provider' | 'keys'> & {
-  name?: BifrostProvider;
+  name?: string;
   concurrency_and_buffer_size?: {
     concurrency?: number;
     buffer_size?: number;
