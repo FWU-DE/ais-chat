@@ -27,6 +27,7 @@ import {
   ToolDefinition,
 } from '../types';
 import { AnthropicVertex, ClientOptions } from '@anthropic-ai/vertex-sdk';
+import { isLlmProvider } from '@ais-chat/api-database/llm-model';
 import { AiGenerationError, ProviderRateLimitExceededError } from '../../errors';
 import { ParsedMessage } from '@anthropic-ai/sdk';
 import { instrumentAnthropicAiClient } from '@sentry/core';
@@ -247,7 +248,7 @@ function createAnthropicClient(options: ClientOptions): AnthropicVertex {
  * @returns
  */
 function getConfigurationByModel(model: AiModel): ClientOptions {
-  if (model.setting.provider !== 'google') {
+  if (!isLlmProvider(model.setting, 'google')) {
     throw new Error('Invalid model configuration for Google Anthropic');
   }
 

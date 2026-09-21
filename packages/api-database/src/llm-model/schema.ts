@@ -36,11 +36,46 @@ export const llmModelSettingsBifrostSchema = z.object({
   provider: z.literal(llmModelProviderSchema.enum.bifrost),
 });
 
+const RESERVED_LLM_PROVIDER_NAMES: readonly string[] = llmModelProviderSchema.options;
+
+// Registers an arbitrary Bifrost-native provider (e.g. a provider Bifrost supports out of the
+// box that isn't one of the types above) using the exact id Bifrost expects, with no
+// custom-provider wrapper.
+export const llmModelSettingsBifrostNativeSchema = z.object({
+  provider: z
+    .string()
+    .min(1)
+    .refine((value) => !RESERVED_LLM_PROVIDER_NAMES.includes(value), {
+      message: `Provider must not be one of the reserved values: ${RESERVED_LLM_PROVIDER_NAMES.join(', ')}`,
+    }),
+  apiKey: z.string(),
+  baseUrl: z.string().optional(),
+});
+
 export const llmModelSettingsSchema = llmModelSettingsIonos
   .or(llmModelSettingsOpenAiSchema)
   .or(llmModelSettingsAzureSchema)
   .or(llmModelSettingsGoogleSchema)
-  .or(llmModelSettingsBifrostSchema);
+  .or(llmModelSettingsBifrostSchema)
+  .or(llmModelSettingsBifrostNativeSchema);
 
 export type LlmProviderKeySettings = z.infer<typeof llmModelSettingsSchema>;
 export type LlmModelProviderSettings = LlmProviderKeySettings;
+export type LlmProviderKeyBifrostNativeSettings = z.infer<
+  typeof llmModelSettingsBifrostNativeSchema
+>;
+
+// `provider` is a free string on the Bifrost-native variant, so a plain `settings.provider !== x`
+// check can't narrow it out. Use these type guards instead.
+export function isLlmProvider<TProvider extends string>(
+  settings: LlmProviderKeySettings,
+  provider: TProvider,
+): settings is Extract<LlmProviderKeySettings, { provider: TProvider }> {
+  return settings.provider === provider;
+}
+
+export function isBifrostNativeSettings(
+  settings: LlmProviderKeySettings,
+): settings is LlmProviderKeyBifrostNativeSettings {
+  return !RESERVED_LLM_PROVIDER_NAMES.includes(settings.provider);
+}

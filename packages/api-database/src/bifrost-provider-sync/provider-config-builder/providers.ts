@@ -1,40 +1,17 @@
 import type { LlmProviderKeyWithModels } from '../../functions';
-import { DEFAULT_IONOS_BASE_URL, DEFAULT_OPENAI_BASE_URL } from '../../llm-model';
-import type { BifrostKey, BifrostProvider, BifrostProviderConfig } from '../types';
-import { getOrigin } from './utils';
-
-function buildKey(
-  provider: BifrostProvider,
-  providerKey: LlmProviderKeyWithModels,
-  value: string,
-  extra?: Partial<BifrostKey>,
-): BifrostKey {
-  const activeMappings = providerKey.models.filter(({ model }) => !model.isDeleted);
-  const modelMappings = activeMappings.flatMap(({ model, upstreamModelName }) => {
-    const bifrostModelName = getBifrostModelName(model.name);
-    const bifrostUpstreamModelName = getBifrostModelName(upstreamModelName);
-    return [[bifrostModelName, bifrostUpstreamModelName]] as const;
-  });
-  return {
-    name: providerKey.name.toLowerCase(),
-    value,
-    models: [...new Set(modelMappings.map(([modelName]) => modelName))].sort(),
-    aliases: Object.fromEntries(modelMappings),
-    weight: providerKey.weight,
-    enabled: providerKey.isEnabled,
-    ...extra,
-  };
-}
-
-function getBifrostModelName(modelName: string): string {
-  return modelName.replace(/^anthropic\//, '');
-}
+import { DEFAULT_OPENAI_BASE_URL, isLlmProvider, isBifrostNativeSettings } from '../../llm-model';
+import type { BifrostProviderConfig } from '../types';
+import {
+  buildCustomOpenAiProviderId,
+  buildOpenAiCompatibleProviderConfig,
+} from './openai-compatible';
+import { buildKey, getOrigin } from './utils';
 
 export function buildAzureProviderConfig(
   providerKey: LlmProviderKeyWithModels,
 ): BifrostProviderConfig | undefined {
+  if (!isLlmProvider(providerKey.settings, 'azure')) return undefined;
   const settings = providerKey.settings;
-  if (settings.provider !== 'azure') return undefined;
   const endpoint = getOrigin(settings.baseUrl);
   if (!endpoint) return undefined;
   return {
@@ -50,49 +27,41 @@ export function buildAzureProviderConfig(
 export function buildOpenAiProviderConfig(
   providerKey: LlmProviderKeyWithModels,
 ): BifrostProviderConfig | undefined {
+  if (!isLlmProvider(providerKey.settings, 'openai')) return undefined;
   const settings = providerKey.settings;
-  if (settings.provider !== 'openai') return undefined;
-  return {
-    provider: 'openai',
-    ...(settings.baseUrl !== DEFAULT_OPENAI_BASE_URL
-      ? {
-          network_config: {
-            base_url: settings.baseUrl,
-            ...(isMockLlmBaseUrl(settings.baseUrl) ? { allow_private_network: true } : {}),
-          },
-        }
-      : {}),
-    keys: [buildKey('openai', providerKey, settings.apiKey)],
-  };
+  if (settings.baseUrl === DEFAULT_OPENAI_BASE_URL) {
+    return {
+      provider: 'openai',
+      keys: [buildKey('openai', providerKey, settings.apiKey)],
+    };
+  }
+  return buildOpenAiCompatibleProviderConfig(
+    buildCustomOpenAiProviderId(providerKey.name),
+    providerKey,
+    settings.apiKey,
+    settings.baseUrl,
+  );
 }
 
 export function buildIonosProviderConfig(
   providerKey: LlmProviderKeyWithModels,
 ): BifrostProviderConfig | undefined {
+  if (!isLlmProvider(providerKey.settings, 'ionos')) return undefined;
   const settings = providerKey.settings;
-  if (settings.provider !== 'ionos') return undefined;
-  return {
-    provider: 'ionos',
-    network_config: { base_url: getOrigin(settings.baseUrl) ?? getOrigin(DEFAULT_IONOS_BASE_URL) },
-    custom_provider_config: {
-      base_provider_type: 'openai',
-      allowed_requests: {
-        list_models: true,
-        chat_completion: true,
-        chat_completion_stream: true,
-        embedding: true,
-        image_generation: true,
-      },
-    },
-    keys: [buildKey('ionos', providerKey, settings.apiKey)],
-  };
+  return buildOpenAiCompatibleProviderConfig(
+    'ionos',
+    providerKey,
+    settings.apiKey,
+    settings.baseUrl,
+  );
 }
 
 export function buildVertexProviderConfig(
   providerKey: LlmProviderKeyWithModels,
 ): BifrostProviderConfig | undefined {
+  if (!isLlmProvider(providerKey.settings, 'google')) return undefined;
   const settings = providerKey.settings;
-  if (settings.provider !== 'google' || settings.authCredentials === undefined) return undefined;
+  if (settings.authCredentials === undefined) return undefined;
   const authCredentials =
     typeof settings.authCredentials === 'string'
       ? settings.authCredentials
@@ -111,10 +80,16 @@ export function buildVertexProviderConfig(
   };
 }
 
-function isMockLlmBaseUrl(baseUrl: string): boolean {
-  try {
-    return new URL(baseUrl).port === '6556';
-  } catch {
-    return false;
-  }
+// Registers an arbitrary Bifrost-native provider using its exact id, with no custom-provider
+// wrapper. Used for provider keys whose `settings.provider` isn't one of our reserved values.
+export function buildBifrostNativeProviderConfig(
+  providerKey: LlmProviderKeyWithModels,
+): BifrostProviderConfig | undefined {
+  if (!isBifrostNativeSettings(providerKey.settings)) return undefined;
+  const settings = providerKey.settings;
+  return {
+    provider: settings.provider,
+    ...(settings.baseUrl ? { network_config: { base_url: settings.baseUrl } } : {}),
+    keys: [buildKey(settings.provider, providerKey, settings.apiKey)],
+  };
 }

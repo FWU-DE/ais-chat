@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { llmModelSettingsGoogleSchema } from './schema';
+import { llmModelSettingsBifrostNativeSchema, llmModelSettingsGoogleSchema } from './schema';
 
 describe('llmModelSettingsGoogleSchema', () => {
   it('accepts a string or object authCredentials value', () => {
@@ -32,6 +32,27 @@ describe('llmModelSettingsGoogleSchema', () => {
         projectId: 'project-id',
         location: 'europe-west3',
         authCredentials: 123,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('llmModelSettingsBifrostNativeSchema', () => {
+  it('accepts an arbitrary provider name', () => {
+    expect(
+      llmModelSettingsBifrostNativeSchema.safeParse({
+        provider: 'acme',
+        apiKey: 'sk-1',
+        baseUrl: 'https://acme.example/api',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects reserved provider names', () => {
+    expect(
+      llmModelSettingsBifrostNativeSchema.safeParse({
+        provider: 'openai',
+        apiKey: 'sk-1',
       }).success,
     ).toBe(false);
   });

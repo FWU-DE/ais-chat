@@ -9,7 +9,7 @@ import {
 import { listBifrostVirtualKeys, updateBifrostVirtualKeyProviders } from './virtual-key-client';
 import type { BifrostVirtualKey } from './types';
 
-const MANAGED_PROVIDERS = new Set<string>(BIFROST_PROVIDERS);
+const NATIVE_BIFROST_PROVIDERS = new Set<string>(BIFROST_PROVIDERS);
 
 /**
  * Ensures every Bifrost virtual key can access the providers/models we currently sync.
@@ -51,6 +51,11 @@ export async function ensureBifrostVirtualKeyProviderAccess({
     ]),
   );
 
+  const managedProviders = new Set<string>([
+    ...NATIVE_BIFROST_PROVIDERS,
+    ...allowedModelsByProvider.keys(),
+  ]);
+
   const virtualKeys = await listBifrostVirtualKeys({
     bifrostAdminUrl,
     bifrostAdminUsername,
@@ -68,6 +73,7 @@ export async function ensureBifrostVirtualKeyProviderAccess({
         bifrostAdminPassword,
         virtualKey,
         allowedModelsByProvider,
+        managedProviders,
         logger,
       });
     } catch (error) {
@@ -92,6 +98,7 @@ async function syncVirtualKeyProviderAccess({
   bifrostAdminPassword,
   virtualKey,
   allowedModelsByProvider,
+  managedProviders,
   logger,
 }: {
   bifrostAdminUrl: string;
@@ -99,11 +106,12 @@ async function syncVirtualKeyProviderAccess({
   bifrostAdminPassword?: string;
   virtualKey: BifrostVirtualKey;
   allowedModelsByProvider: Map<string, string[]>;
+  managedProviders: Set<string>;
   logger?: BifrostProviderSyncLogger;
 }): Promise<void> {
   const managedProviderConfigs = buildManagedProviderConfigs(virtualKey, allowedModelsByProvider);
   const existingManagedProviderConfigs = virtualKey.provider_configs.filter((providerConfig) =>
-    MANAGED_PROVIDERS.has(providerConfig.provider),
+    managedProviders.has(providerConfig.provider),
   );
 
   if (haveEqualProviderAccess(managedProviderConfigs, existingManagedProviderConfigs)) {
@@ -111,7 +119,7 @@ async function syncVirtualKeyProviderAccess({
   }
 
   const untouchedProviderConfigs = virtualKey.provider_configs.filter(
-    (providerConfig) => !MANAGED_PROVIDERS.has(providerConfig.provider),
+    (providerConfig) => !managedProviders.has(providerConfig.provider),
   );
 
   await updateBifrostVirtualKeyProviders({
