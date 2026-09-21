@@ -180,7 +180,7 @@
         },
         "created_by_id": {
           "name": "created_by_id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
