@@ -1,6 +1,8 @@
-export type BifrostProvider = 'azure' | 'openai' | 'vertex' | 'ionos';
+export const BIFROST_PROVIDERS = ['azure', 'openai', 'vertex', 'ionos'] as const;
 
-export const BIFROST_PROVIDERS: BifrostProvider[] = ['azure', 'openai', 'vertex', 'ionos'];
+// Bifrost's native providers, plus arbitrary custom provider ids we derive for openai-compatible
+// upstreams with a non-default base URL (see `buildCustomOpenAiProviderId`).
+export type BifrostProvider = (typeof BIFROST_PROVIDERS)[number] | (string & {});
 
 export type BifrostSecret =
   | string
@@ -50,8 +52,6 @@ export type BifrostProviderConfig = {
   };
   keys: BifrostKey[];
 };
-
-export type BifrostProviderConfigFields = Omit<BifrostProviderConfig, 'provider' | 'keys'>;
 
 export type BifrostProviderResponse = Omit<BifrostProviderConfig, 'provider' | 'keys'> & {
   name?: string;

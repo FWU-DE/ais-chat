@@ -5,7 +5,7 @@ import {
   dbGetProviderKeysWithModelsByOrganizationId,
   dbUpdateProviderKey,
 } from '@ais-chat/api-database';
-import { llmModelSettingsSchema } from '@ais-chat/api-database/llm-model';
+import { llmModelSettingsSchema, isLlmProvider } from '@ais-chat/api-database/llm-model';
 import { logInfo } from '@shared/logging';
 import type { SaveProviderKey } from '@/types/provider-key';
 import { syncBifrostProvidersForOrganizationOrThrow } from './bifrost-provider-sync-service';
@@ -20,7 +20,7 @@ function parseSettings(provider: string, value: string) {
   if (settings.provider !== provider) {
     throw new Error('The settings provider must match the selected provider');
   }
-  if (settings.provider !== 'azure') return settings;
+  if (!isLlmProvider(settings, 'azure')) return settings;
   return { ...settings, baseUrl: new URL(settings.baseUrl).origin };
 }
 

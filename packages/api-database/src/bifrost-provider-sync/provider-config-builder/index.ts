@@ -2,6 +2,7 @@ import type { LlmProviderKeyWithModels } from '../../functions';
 import type { BifrostProvider, BifrostProviderConfig, BifrostProviderSyncLogger } from '../types';
 import {
   buildAzureProviderConfig,
+  buildBifrostNativeProviderConfig,
   buildIonosProviderConfig,
   buildOpenAiProviderConfig,
   buildVertexProviderConfig,
@@ -14,16 +15,7 @@ export function buildBifrostProviderConfigs(
   const configs = providerKeys.flatMap((providerKey) => {
     if (!providerKey.isEnabled || providerKey.models.every(({ model }) => model.isDeleted))
       return [];
-    const provider = getBifrostProvider(providerKey.provider);
-    if (!provider) {
-      logger?.warning?.('Skipping unsupported provider for Bifrost sync', {
-        provider: providerKey.provider,
-        providerKeyId: providerKey.id,
-      });
-      return [];
-    }
-
-    const config = buildProviderConfig(provider, providerKey);
+    const config = buildProviderConfig(getBifrostProvider(providerKey.provider), providerKey);
     return config ? [config] : [];
   });
 
@@ -52,9 +44,12 @@ function buildProviderConfig(
   if (provider === 'openai') return buildOpenAiProviderConfig(providerKey);
   if (provider === 'ionos') return buildIonosProviderConfig(providerKey);
   if (provider === 'vertex') return buildVertexProviderConfig(providerKey);
+  return buildBifrostNativeProviderConfig(providerKey);
 }
 
-function getBifrostProvider(provider: string): BifrostProvider | undefined {
+// Falls through to the arbitrary provider name for any value not in our reserved set.
+function getBifrostProvider(provider: string): BifrostProvider {
   if (provider === 'azure' || provider === 'openai' || provider === 'ionos') return provider;
   if (provider === 'google' || provider === 'vertex') return 'vertex';
+  return provider;
 }
