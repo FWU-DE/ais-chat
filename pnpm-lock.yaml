@@ -173,6 +173,9 @@ importers:
       '@ais-chat/shared-core':
         specifier: workspace:*
         version: link:../../packages/shared-core
+      '@dotenvx/dotenvx':
+        specifier: 2.24.1
+        version: 2.24.1
       '@fastify/cors':
         specifier: 11.3.0
         version: 11.3.0
@@ -227,9 +230,6 @@ importers:
       '@t3-oss/env-core':
         specifier: 0.13.11
         version: 0.13.11(typescript@6.0.3)(zod@4.6.4)
-      dotenv:
-        specifier: 17.4.2
-        version: 17.4.2
       fastify:
         specifier: 5.12.4
         version: 5.12.4
