@@ -11,7 +11,7 @@ import { FormField } from '@ui/components/form/form-field';
 const editFormSchema = z.object({
   name: z.string().trim().min(1, 'Name ist erforderlich'),
   orderNumber: z
-    .number({ message: 'Die Ordnungsnummer muss eine nicht-negative ganze Zahl sein' })
+    .number({ error: 'Die Ordnungsnummer muss eine nicht-negative ganze Zahl sein' })
     .int('Die Nummer muss eine nicht-negative ganze Zahl sein')
     .nonnegative('Die Nummer muss eine nicht-negative ganze Zahl sein'),
 });
