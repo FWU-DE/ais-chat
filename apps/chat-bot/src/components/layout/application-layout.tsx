@@ -32,7 +32,7 @@ export function ApplicationLayout({
 
   return (
     <HeaderExtensionProvider>
-      <ChatOverlayRootContext.Provider value={overlayRoot}>
+      <ChatOverlayRootContext value={overlayRoot}>
         <div className="relative flex flex-col h-dvh w-dvw overflow-hidden bg-background-2">
           {infoBanners !== undefined && <ActiveInfoBanners infoBanners={infoBanners} />}
           <ApplicationHeader userAndContext={userAndContext} />
@@ -46,7 +46,7 @@ export function ApplicationLayout({
             <div ref={overlayRootRef} className="pointer-events-none absolute inset-0" />
           </div>
         </div>
-      </ChatOverlayRootContext.Provider>
+      </ChatOverlayRootContext>
     </HeaderExtensionProvider>
   );
 }

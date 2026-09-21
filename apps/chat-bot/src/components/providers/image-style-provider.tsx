@@ -52,9 +52,9 @@ export function ImageStyleProvider({
   );
 
   return (
-    <ImageStyleContext.Provider value={{ styles, selectedStyle, setSelectedStyle }}>
+    <ImageStyleContext value={{ styles, selectedStyle, setSelectedStyle }}>
       {children}
-    </ImageStyleContext.Provider>
+    </ImageStyleContext>
   );
 }
 

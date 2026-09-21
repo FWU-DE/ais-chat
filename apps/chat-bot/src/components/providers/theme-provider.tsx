@@ -37,12 +37,12 @@ export function ThemeProvider({
   }, [containerRef]);
 
   return (
-    <ThemeContext.Provider value={{ designConfiguration }}>
+    <ThemeContext value={{ designConfiguration }}>
       <PortalContainerProvider container={container}>
         <div ref={setContainerRef} style={constructRootLayoutStyle({ designConfiguration })}>
           {children}
         </div>
       </PortalContainerProvider>
-    </ThemeContext.Provider>
+    </ThemeContext>
   );
 }

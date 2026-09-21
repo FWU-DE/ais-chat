@@ -11,9 +11,7 @@ type ConversationProviderProps = {
 const ConversationContext = React.createContext<ConversationModel | undefined>(undefined);
 
 export function ConversationProvider({ conversation, children }: ConversationProviderProps) {
-  return (
-    <ConversationContext.Provider value={conversation}>{children}</ConversationContext.Provider>
-  );
+  return <ConversationContext value={conversation}>{children}</ConversationContext>;
 }
 
 export function useConversation(): ConversationModel | undefined {
