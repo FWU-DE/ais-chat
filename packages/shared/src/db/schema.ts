@@ -1811,10 +1811,10 @@ export const urlPresetTable = pgTable('url_preset', {
 
 /**** Community Templates *****/
 export const templateRequestStatusSchema = z.enum([
-  'created',
+  'submitted',
   'approved',
-  'revoked',
-  'changeRequired',
+  'rejected',
+  'cancelled',
 ]);
 export const templateRequestStatus = pgEnum(
   'template_request_status',
@@ -1831,12 +1831,8 @@ export const CommunityTemplateRequestTable = pgTable(
       onDelete: 'cascade',
     }),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-    createdBy: text('created_by').notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true }),
-    updatedBy: text('updated_by'),
-    editorUpdatedAt: timestamp('editor_updated_at', { mode: 'date', withTimezone: true }),
-    editorUpdatedBy: text('editor_updated_by'),
-    state: templateRequestStatus('status').notNull().default('created'),
+    createdBy: uuid('created_by').notNull(),
+    state: templateRequestStatus('status').notNull().default('submitted'),
     note: text('note').notNull().default(''),
   },
   (table) => [
@@ -1855,30 +1851,19 @@ export const CommunityTemplateRequestSelectSchema = createSelectSchema(
   CommunityTemplateRequestTable,
 ).extend({
   createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date().nullable(),
-  editorUpdatedAt: z.coerce.date().nullable(),
 });
 export const CommunityTemplateRequestInsertSchema = createInsertSchema(
   CommunityTemplateRequestTable,
 ).omit({
   id: true,
   createdAt: true,
-  updatedAt: true,
-  updatedBy: true,
-  editorUpdatedAt: true,
-  editorUpdatedBy: true,
 });
 export const CommunityTemplateRequestUpdateSchema = createUpdateSchema(
   CommunityTemplateRequestTable,
-)
-  .omit({
-    createdAt: true,
-    createdBy: true,
-  })
-  .extend({
-    updatedAt: z.coerce.date().nullable(),
-    editorUpdatedAt: z.coerce.date().nullable(),
-  });
+).omit({
+  createdAt: true,
+  createdBy: true,
+});
 
 export type CommunityTemplateRequestSelectModel = z.infer<
   typeof CommunityTemplateRequestSelectSchema
@@ -1890,34 +1875,53 @@ export type CommunityTemplateRequestUpdateModel = z.infer<
   typeof CommunityTemplateRequestUpdateSchema
 >;
 
-export const CommunityTemplateRequestMessageTable = pgTable(
-  'community_template_request_message',
+export const templateRequestEventTypeSchema = z.enum([
+  'submit',
+  'approve',
+  'reject',
+  'cancel',
+  'user_message',
+  'editor_message',
+]);
+export const templateRequestEventType = pgEnum(
+  'template_request_event_type',
+  templateRequestEventTypeSchema.enum,
+);
+export const templateRequestCreatorRoleSchema = z.enum(['user', 'editor']);
+export const templateRequestCreatorRole = pgEnum(
+  'template_request_creator_role',
+  templateRequestCreatorRoleSchema.enum,
+);
+export const CommunityTemplateRequestEventTable = pgTable(
+  'community_template_request_events',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     templateRequestId: uuid('template_request_id')
       .references(() => CommunityTemplateRequestTable.id, { onDelete: 'cascade' })
       .notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-    createdBy: text('created_by').notNull(),
-    title: text('title').notNull().default(''),
+    createdById: text('created_by_id').notNull(),
+    createdByName: text('created_by_name'),
+    createdByRole: templateRequestCreatorRole('created_by_role').notNull(),
+    eventType: templateRequestEventType('event_type').notNull(),
     message: text('message').notNull().default(''),
   },
   (table) => [index().on(table.templateRequestId)],
 );
 
-export const CommunityTemplateRequestMessageSelectSchema = createSelectSchema(
-  CommunityTemplateRequestMessageTable,
+export const CommunityTemplateRequestEventSelectSchema = createSelectSchema(
+  CommunityTemplateRequestEventTable,
 ).extend({ createdAt: z.coerce.date() });
-export const CommunityTemplateRequestMessageInsertSchema = createInsertSchema(
-  CommunityTemplateRequestMessageTable,
+export const CommunityTemplateRequestEventInsertSchema = createInsertSchema(
+  CommunityTemplateRequestEventTable,
 ).omit({
   id: true,
   createdAt: true,
 });
 
-export type CommunityTemplateRequestMessageSelectModel = z.infer<
-  typeof CommunityTemplateRequestMessageSelectSchema
+export type CommunityTemplateRequestEventSelectModel = z.infer<
+  typeof CommunityTemplateRequestEventSelectSchema
 >;
-export type CommunityTemplateRequestMessageInsertModel = z.infer<
-  typeof CommunityTemplateRequestMessageInsertSchema
+export type CommunityTemplateRequestEventInsertModel = z.infer<
+  typeof CommunityTemplateRequestEventInsertSchema
 >;
