@@ -177,7 +177,7 @@ export function ProviderKeyDetailView({
           {providerKey.models.map(({ model }) => (
             <Button key={model.id} variant="link" asChild>
               <Link href={ROUTES.api.llmDetails(organizationId, model.id)}>
-                {model.displayName}
+                {model.displayName || model.name}
               </Link>
             </Button>
           ))}
