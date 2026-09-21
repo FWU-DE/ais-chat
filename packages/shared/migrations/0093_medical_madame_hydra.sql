@@ -13,8 +13,11 @@ CREATE TABLE "community_template_request_events" (
 --> statement-breakpoint
 ALTER TABLE "community_template_request_message" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 DROP TABLE "community_template_request_message" CASCADE;--> statement-breakpoint
+ALTER TABLE "community_template_request" ALTER COLUMN "status" DROP DEFAULT;--> statement-breakpoint
+ALTER TABLE "community_template_request" ALTER COLUMN "status" SET DATA TYPE text;--> statement-breakpoint
 DROP TYPE "public"."template_request_status";--> statement-breakpoint
 CREATE TYPE "public"."template_request_status" AS ENUM('submitted', 'approved', 'rejected', 'cancelled');--> statement-breakpoint
+ALTER TABLE "community_template_request" ALTER COLUMN "status" SET DATA TYPE "public"."template_request_status" USING "status"::"public"."template_request_status";--> statement-breakpoint
 ALTER TABLE "community_template_request" ALTER COLUMN "created_by" SET DATA TYPE uuid;--> statement-breakpoint
 ALTER TABLE "community_template_request" ALTER COLUMN "status" SET DEFAULT 'submitted';--> statement-breakpoint
 ALTER TABLE "community_template_request_events" ADD CONSTRAINT "community_template_request_events_template_request_id_community_template_request_id_fk" FOREIGN KEY ("template_request_id") REFERENCES "public"."community_template_request"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
