@@ -21,6 +21,7 @@ interface MessagesProps {
   pendingFileMapping?: Map<string, PendingFileModel[]>;
   webSourceMapping?: Map<string, WebSource[]>;
   activitySteps?: AiActivityStep[];
+  showActivityDialog?: boolean;
 }
 
 export function Messages({
@@ -35,6 +36,7 @@ export function Messages({
   pendingFileMapping,
   webSourceMapping,
   activitySteps = [],
+  showActivityDialog = false,
 }: MessagesProps) {
   return (
     <div className={containerClassName}>
@@ -51,12 +53,13 @@ export function Messages({
           assistantIcon={assistantIcon}
           webSources={message.role === 'user' ? webSourceMapping?.get(message.id) : undefined}
           status={status}
+          showActivityDialog={showActivityDialog}
         >
           {message}
         </ChatBox>
       ))}
       {isLoading && <LoadingAnimation activitySteps={activitySteps} />}
-      {isLoading && activitySteps.length > 0 && (
+      {isLoading && !showActivityDialog && activitySteps.length > 0 && (
         <AiActivityPanel steps={activitySteps} panelId="live-ai-activity" />
       )}
     </div>

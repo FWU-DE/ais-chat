@@ -346,6 +346,7 @@ export default function Chat({
               pendingFileMapping={pendingFileMapping}
               webSourceMapping={webSourceMapping}
               activitySteps={activitySteps}
+              showActivityDialog={character !== undefined}
             />
           )}
           {error && (

@@ -15,6 +15,13 @@ import {
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Button } from '@ui/components/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@ui/components/dialog';
 import { truncate } from '@/utils/chat/ai-activity';
 import { cn } from '@/utils/tailwind';
 import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
@@ -121,7 +128,7 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
   );
 }
 
-function ActivityStepList({ steps }: { steps: AiActivityStep[] }) {
+export function ActivityStepList({ steps }: { steps: AiActivityStep[] }) {
   return (
     <ul className="flex flex-col">
       {steps.map((step, index) => (
@@ -132,6 +139,38 @@ function ActivityStepList({ steps }: { steps: AiActivityStep[] }) {
         />
       ))}
     </ul>
+  );
+}
+
+export function AiActivityDialog({ steps }: { steps: AiActivityStep[] }) {
+  const t = useTranslations('ai-activity');
+
+  if (steps.length === 0) {
+    return null;
+  }
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="text-primary"
+          title={t('toggle')}
+          aria-label={t('toggle')}
+        >
+          <SparkleIcon className="size-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="gap-5" showCloseButton>
+        <DialogHeader>
+          <DialogTitle>{t('title')}</DialogTitle>
+        </DialogHeader>
+        <div className="min-h-0 overflow-y-auto">
+          <ActivityStepList steps={steps} />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
