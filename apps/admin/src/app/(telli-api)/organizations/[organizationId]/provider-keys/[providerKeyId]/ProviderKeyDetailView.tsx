@@ -171,7 +171,7 @@ export function ProviderKeyDetailView({
         {...deleteDialogProps}
       />
 
-      {providerKey?.models.length && (
+      {!!providerKey?.models.length && (
         <CardContent>
           <h3 className="mb-3 text-lg font-medium">Zugeordnete Modelle</h3>
           {providerKey.models.map(({ model }) => (
