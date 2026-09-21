@@ -128,7 +128,7 @@ export function ChatBox({
     ) : null;
 
   const AiActivity =
-    activitySteps.length > 0 ? (
+    activitySteps.length > 0 && !(isLoading && isLastNonUser) ? (
       <AiActivityPanel steps={activitySteps} panelId={`assistant-ai-activity-${children.id}`} />
     ) : null;
 

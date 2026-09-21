@@ -15,6 +15,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Button } from '@ui/components/button';
+import { truncate } from '@/utils/chat/ai-activity';
 import { cn } from '@/utils/tailwind';
 import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
 
@@ -66,9 +67,12 @@ function StepDetail({ step }: { step: Extract<AiActivityStep, { kind: 'tool' }> 
     step.tool === 'math_calculate'
       ? [step.detail, step.result].filter((part) => part !== undefined).join(' = ')
       : step.detail;
+  const visibleDetail = truncate(detail);
 
-  return detail === undefined || detail.length === 0 ? null : (
-    <span className="min-w-0 text-sm text-black/50">{detail}</span>
+  return visibleDetail === undefined || visibleDetail.length === 0 ? null : (
+    <span title={detail} className="min-w-0 truncate text-sm text-black/50">
+      {visibleDetail}
+    </span>
   );
 }
 

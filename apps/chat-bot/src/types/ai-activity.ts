@@ -1,16 +1,17 @@
 import { z } from 'zod';
+import { TOOL_NAMES } from './tool-names';
 
 /**
  * Tools whose calls are surfaced to the user in the "KI-Aktivität" section.
  * Calls of any other tool are not displayed.
  */
 export const AI_ACTIVITY_TOOL_NAMES = [
-  'web_search',
-  'web_scraper',
-  'retrieve_text_chunks',
-  'retrieve_entire_file',
-  'mundo_search',
-  'math_calculate',
+  TOOL_NAMES.webSearch,
+  TOOL_NAMES.webScraper,
+  TOOL_NAMES.retrieveTextChunks,
+  TOOL_NAMES.retrieveEntireFile,
+  TOOL_NAMES.mundoSearch,
+  TOOL_NAMES.mathCalculate,
 ] as const;
 
 export type AiActivityToolName = (typeof AI_ACTIVITY_TOOL_NAMES)[number];

@@ -22,12 +22,16 @@ export function parseJsonRecord(value: string | undefined): unknown {
 }
 
 export function readString(source: unknown, key: string): string | undefined {
+  const value = readValue(source, key);
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+export function readValue(source: unknown, key: string): unknown {
   if (source === null || typeof source !== 'object') {
     return undefined;
   }
 
-  const value = (source as Record<string, unknown>)[key];
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+  return (source as Record<string, unknown>)[key];
 }
 
 export function truncate(value: string | undefined): string | undefined {

@@ -500,7 +500,7 @@ describe('sendChatMessage', () => {
     expect(mocks.sendRabbitmqEventMock).toHaveBeenCalled();
   });
 
-  it('does not persist retrieve_entire_file tool calls or results', async () => {
+  it('persists retrieve_entire_file tool calls and results', async () => {
     mocks.runAgentLoopMock.mockImplementationOnce(
       ({ onComplete }: Parameters<typeof runAgentLoop>[0]) => {
         void onComplete({
@@ -559,16 +559,23 @@ describe('sendChatMessage', () => {
       orderNumber: number;
     }>;
 
-    expect(insertedMessages).toHaveLength(3);
+    expect(insertedMessages).toHaveLength(4);
     expect(insertedMessages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           role: 'assistant',
-          toolCalls: [
+          toolCalls: expect.arrayContaining([
+            expect.objectContaining({
+              name: 'retrieve_entire_file',
+            }),
             expect.objectContaining({
               name: 'web_search',
             }),
-          ],
+          ]),
+        }),
+        expect.objectContaining({
+          role: 'tool',
+          toolCallId: 'call-retrieve-entire-file',
         }),
         expect.objectContaining({
           role: 'tool',
@@ -577,21 +584,6 @@ describe('sendChatMessage', () => {
         expect.objectContaining({
           role: 'assistant',
           id: result.messageId,
-        }),
-      ]),
-    );
-
-    expect(insertedMessages).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          toolCallId: 'call-retrieve-entire-file',
-        }),
-        expect.objectContaining({
-          toolCalls: expect.arrayContaining([
-            expect.objectContaining({
-              name: 'retrieve_entire_file',
-            }),
-          ]),
         }),
       ]),
     );

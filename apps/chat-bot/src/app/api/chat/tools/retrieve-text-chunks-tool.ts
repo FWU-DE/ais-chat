@@ -1,10 +1,15 @@
 import { VECTOR_SEARCH_LIMIT } from '@/configuration-text-inputs/const';
+import { z } from 'zod';
 import { ingestWebContent } from '../../rag/ingestWebContent';
 import { retrieveChunksByQuery } from '../../rag/rag-service';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
 import { dbGetAllChunks } from '@shared/db/functions/files';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { parseJsonRecord, readString, truncate } from '@/utils/chat/ai-activity';
+import { TOOL_NAMES } from '@/types/tool-names';
+
+const retrieveTextChunksArgsSchema = z.object({
+  search: z.string(),
+});
 
 type SemanticFileSearchChunkResult = {
   fileName: string | null;
@@ -58,7 +63,7 @@ export function buildRetrieveTextChunksTool({
   );
 
   const definition: ToolDefinition = {
-    name: 'retrieve_text_chunks',
+    name: TOOL_NAMES.retrieveTextChunks,
     description:
       'Retrieve relevant text chunks from the attached sources. ' +
       `${attachedFileDescriptions.length > 0 ? `Available files right now: ${attachedFileDescriptions.join(', ')}.` : ''} ` +
@@ -81,6 +86,7 @@ export function buildRetrieveTextChunksTool({
   };
 
   const handler = async (args: Record<string, unknown>) => {
+    const parsed = retrieveTextChunksArgsSchema.safeParse(args);
     let processedSourceUrls = attachedSourceUrls;
 
     if (attachedSourceUrls.length > 0) {
@@ -92,7 +98,7 @@ export function buildRetrieveTextChunksTool({
       processedSourceUrls = processedUrls;
     }
 
-    const search = typeof args.search === 'string' ? args.search : '';
+    const search = parsed.success ? parsed.data.search : '';
 
     // Fetch at most VECTOR_SEARCH_LIMIT + 1 chunks to cheaply check whether
     // the total fits within the limit without pulling the full dataset.
@@ -131,12 +137,10 @@ export function buildRetrieveTextChunksTool({
     handler,
     activity: {
       createStep: (toolCall: ToolCall) => {
-        const args = parseJsonRecord(toolCall.arguments);
         return {
-          kind: 'tool' as const,
+          kind: 'tool',
           id: toolCall.id,
-          tool: 'retrieve_text_chunks' as const,
-          detail: truncate(readString(args, 'search')),
+          tool: TOOL_NAMES.retrieveTextChunks,
         };
       },
     },

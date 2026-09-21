@@ -1,9 +1,15 @@
 import { RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT } from '@/configuration-text-inputs/const';
+import { z } from 'zod';
 import { dbGetExtractedFileContent } from '@shared/db/functions/files';
 import type { FileModel } from '@shared/db/schema';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { parseJsonRecord, readString, truncate } from '@/utils/chat/ai-activity';
+import { parseJsonRecord } from '@/utils/chat/ai-activity';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
+import { TOOL_NAMES } from '@/types/tool-names';
+
+const retrieveEntireFileArgsSchema = z.object({
+  fileName: z.string(),
+});
 
 type RetrieveEntireFileToolResponse = {
   fileName: string | null;
@@ -56,7 +62,7 @@ export function buildRetrieveEntireFileTool({
   );
 
   const definition: ToolDefinition = {
-    name: 'retrieve_entire_file',
+    name: TOOL_NAMES.retrieveEntireFile,
     description: `Retrieve the full content of one attached file by name. Available files right now: ${attachedFileDescriptions.join(', ') || 'none'}. Use this tool when you need the full text of a specific attached file instead of only relevant excerpts. The returned content is capped at ${RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT} characters.`,
     parameters: {
       type: 'object',
@@ -72,7 +78,8 @@ export function buildRetrieveEntireFileTool({
   };
 
   const handler = async (args: Record<string, unknown>) => {
-    const fileName = typeof args.fileName === 'string' ? args.fileName.trim() : '';
+    const parsed = retrieveEntireFileArgsSchema.safeParse(args);
+    const fileName = parsed.success ? parsed.data.fileName.trim() : '';
 
     if (fileName.length === 0) {
       const response: RetrieveEntireFileToolResponse = {
@@ -110,12 +117,12 @@ export function buildRetrieveEntireFileTool({
     handler,
     activity: {
       createStep: (toolCall: ToolCall) => {
-        const args = parseJsonRecord(toolCall.arguments);
+        const parsed = retrieveEntireFileArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
         return {
-          kind: 'tool' as const,
+          kind: 'tool',
           id: toolCall.id,
-          tool: 'retrieve_entire_file' as const,
-          detail: truncate(readString(args, 'fileName')),
+          tool: TOOL_NAMES.retrieveEntireFile,
+          detail: parsed.success ? parsed.data.fileName.trim() : undefined,
         };
       },
     },

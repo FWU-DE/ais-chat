@@ -1,9 +1,11 @@
 import { isIP } from 'node:net';
+import { z } from 'zod';
 import type { WebSource } from '@shared/db/types';
 import { webScraper } from '../../web-scraper/web-scraper';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
+import { TOOL_NAMES } from '@/types/tool-names';
 
 type WebScraperToolResult = {
   title: string | null;
@@ -13,6 +15,10 @@ type WebScraperToolResult = {
 };
 
 const MAX_WEB_SCRAPER_URLS = 5;
+
+const webScraperArgsSchema = z.object({
+  urls: z.array(z.string()),
+});
 
 function formatWebScrapedContentForTool(result: WebSource) {
   const title = result.name?.trim() || null;
@@ -78,7 +84,7 @@ export function buildWebScraperTool({
   const attachedSourceUrls = sourceUrls.length > 0 ? sourceUrls : attachedLinks;
 
   const definition: ToolDefinition = {
-    name: 'web_scraper',
+    name: TOOL_NAMES.webScraper,
     description:
       `Fetch and extract the main text from one or more URLs (max ${MAX_WEB_SCRAPER_URLS}). Use this tool when the user gives you webpage URLs or when you can derive concrete URLs yourself, for example to scrape documentation pages or other known targets. Use web_search instead when you need to discover relevant pages or compare multiple sources.` +
       (attachedSourceUrls.length > 0
@@ -104,7 +110,8 @@ export function buildWebScraperTool({
   };
 
   const handler = async (args: Record<string, unknown>) => {
-    const urls = Array.isArray(args.urls) ? args.urls : [];
+    const parsed = webScraperArgsSchema.safeParse(args);
+    const urls = parsed.success ? parsed.data.urls : [];
 
     if (urls.length === 0) {
       return 'Error: Missing URLs.';
@@ -151,14 +158,12 @@ export function buildWebScraperTool({
     handler,
     activity: {
       createStep: (toolCall: ToolCall) => {
-        const args = parseJsonRecord(toolCall.arguments);
-        const urls =
-          args !== null && typeof args === 'object' ? (args as { urls?: unknown }).urls : [];
+        const parsed = webScraperArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
         return {
-          kind: 'tool' as const,
+          kind: 'tool',
           id: toolCall.id,
-          tool: 'web_scraper' as const,
-          links: toLinks(Array.isArray(urls) ? urls.map((url) => ({ url })) : []),
+          tool: TOOL_NAMES.webScraper,
+          links: toLinks(parsed.success ? parsed.data.urls.map((url) => ({ url })) : []),
         };
       },
       applyResult: (step, result) => {

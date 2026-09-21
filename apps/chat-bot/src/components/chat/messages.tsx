@@ -1,5 +1,6 @@
 import { type UIMessage, type ChatStatus } from '@/types/chat';
 import { ChatBox, type PendingFileModel } from './chat-box';
+import { AiActivityPanel } from './activity/ai-activity';
 import LoadingAnimation from './loading-animation';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
@@ -33,7 +34,7 @@ export function Messages({
   fileMapping,
   pendingFileMapping,
   webSourceMapping,
-  activitySteps,
+  activitySteps = [],
 }: MessagesProps) {
   return (
     <div className={containerClassName}>
@@ -54,8 +55,10 @@ export function Messages({
           {message}
         </ChatBox>
       ))}
-
       {isLoading && <LoadingAnimation activitySteps={activitySteps} />}
+      {isLoading && activitySteps.length > 0 && (
+        <AiActivityPanel steps={activitySteps} panelId="live-ai-activity" />
+      )}
     </div>
   );
 }

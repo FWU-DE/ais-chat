@@ -7,7 +7,7 @@ import type { FileModel, WebSearchModel, WebSearchResult } from '@shared/db/sche
 export type { ToolDefinition, ToolRegistry };
 
 export type ToolRegistration = ToolRegistryEntry & {
-  activity?: {
+  activity: {
     createStep: (toolCall: ToolCall) => AiActivityToolStep;
     applyResult?: (step: AiActivityToolStep, result: string) => AiActivityToolStep;
   };

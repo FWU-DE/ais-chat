@@ -1,1 +1,0 @@
-ALTER TABLE "conversation_message" ADD COLUMN "ai_activity" json;

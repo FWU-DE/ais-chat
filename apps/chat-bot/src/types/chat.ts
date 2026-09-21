@@ -56,7 +56,6 @@ export type ChatMessage = {
   createdAt?: Date;
   attachments?: ChatAttachment[];
   webSearchResults?: WebSearchResult[];
-  /** Tool steps the agent performed before answering, shown as "KI-Aktivität". */
   activitySteps?: AiActivityStep[];
   toolCalls?: ToolCall[];
   toolCallId?: string;

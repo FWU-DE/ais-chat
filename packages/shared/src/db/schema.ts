@@ -151,18 +151,6 @@ type ConversationMessageWebSearchResult = {
   favicon: string;
 };
 
-type ConversationMessageAiActivityStep =
-  | { kind: 'analysis' }
-  | { kind: 'done' }
-  | {
-      kind: 'tool';
-      id: string;
-      tool: string;
-      detail?: string;
-      result?: string;
-      links?: Array<{ title: string; url: string }>;
-    };
-
 export const conversationMessageTable = pgTable(
   'conversation_message',
   {
@@ -181,7 +169,6 @@ export const conversationMessageTable = pgTable(
     deletedAt: timestamp('deleted_at', { mode: 'date', withTimezone: true }),
     parameters: json('parameters').$type<ConversationMessageParameters>(),
     webSearchResults: json('web_search_results').$type<ConversationMessageWebSearchResult[]>(),
-    aiActivity: json('ai_activity').$type<ConversationMessageAiActivityStep[]>(),
     toolCalls: json('tool_calls').$type<ToolCall[]>(),
     toolCallId: text('tool_call_id'),
   },
@@ -214,7 +201,6 @@ export type ConversationMessageSelectModel = z.infer<typeof conversationMessageS
 export type ConversationMessageInsertModel = z.infer<typeof conversationMessageInsertSchema>;
 export type ConversationMessageUpdateModel = z.infer<typeof conversationMessageUpdateSchema>;
 export type WebSearchResult = ConversationMessageWebSearchResult;
-export type ConversationMessageAiActivity = ConversationMessageAiActivityStep[];
 
 /**
  * Schema for table federal_state
