@@ -1900,7 +1900,7 @@ export const CommunityTemplateRequestEventTable = pgTable(
       .references(() => CommunityTemplateRequestTable.id, { onDelete: 'cascade' })
       .notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-    createdById: text('created_by_id').notNull(),
+    createdById: uuid('created_by_id').notNull(),
     createdByName: text('created_by_name'),
     createdByRole: templateRequestCreatorRole('created_by_role').notNull(),
     eventType: templateRequestEventType('event_type').notNull(),

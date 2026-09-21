@@ -4,7 +4,7 @@ CREATE TABLE "community_template_request_events" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"template_request_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"created_by_id" text NOT NULL,
+	"created_by_id" uuid NOT NULL,
 	"created_by_name" text,
 	"created_by_role" "template_request_creator_role" NOT NULL,
 	"event_type" "template_request_event_type" NOT NULL,
