@@ -70,6 +70,61 @@ export async function syncBifrostProvider({
   );
 }
 
+/**
+ * Retrieves every provider currently configured in Bifrost.
+ */
+export async function listBifrostProviders({
+  bifrostAdminUrl,
+  bifrostAdminUsername,
+  bifrostAdminPassword,
+  logger,
+}: {
+  bifrostAdminUrl: string;
+  bifrostAdminUsername?: string;
+  bifrostAdminPassword?: string;
+  logger?: BifrostProviderSyncLogger;
+}): Promise<BifrostProviderResponse[]> {
+  const response = await assertBifrostResponse(
+    bifrostFetch({
+      bifrostAdminUrl,
+      bifrostAdminUsername,
+      bifrostAdminPassword,
+      path: '/api/providers',
+      init: { method: 'GET' },
+    }),
+    logger,
+  );
+  const providers = (await response.json()) as { providers?: BifrostProviderResponse[] };
+  return providers.providers ?? [];
+}
+
+/**
+ * Removes a provider entirely from Bifrost. Tolerates the provider already being gone (404).
+ */
+export async function deleteBifrostProvider({
+  bifrostAdminUrl,
+  bifrostAdminUsername,
+  bifrostAdminPassword,
+  provider,
+  logger,
+}: {
+  bifrostAdminUrl: string;
+  bifrostAdminUsername?: string;
+  bifrostAdminPassword?: string;
+  provider: string;
+  logger?: BifrostProviderSyncLogger;
+}): Promise<void> {
+  const response = await bifrostFetch({
+    bifrostAdminUrl,
+    bifrostAdminUsername,
+    bifrostAdminPassword,
+    path: `/api/providers/${provider}`,
+    init: { method: 'DELETE' },
+  });
+  if (response.status === 404) return;
+  await assertBifrostResponse(Promise.resolve(response), logger);
+}
+
 async function deleteBifrostProviderKey({
   bifrostAdminUrl,
   bifrostAdminUsername,
