@@ -3,12 +3,15 @@ import type { AiModel, SpeechGenerationFn } from '../types';
 import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { createGoogleClient, formatGoogleError } from '../../google-client';
 
-// Gemini TTS always emits 24 kHz mono signed 16-bit little-endian PCM.
-const SAMPLE_RATE = 24000;
-const CHANNELS = 1;
-const BITS_PER_SAMPLE = 16;
-
 function pcmToWav(pcm: Buffer): Buffer {
+  // Gemini TTS generates 24 kHz mono signed 16-bit little-endian PCM.
+  // https://ai.google.dev/gemini-api/docs/speech-generation
+  const SAMPLE_RATE = 24000; // samples per second
+  const CHANNELS = 1;
+  const BITS_PER_SAMPLE = 16;
+
+  // Reinterpret the raw PCM bytes as 16-bit samples. Length is in samples, not
+  // bytes, so divide by 2 (each 16-bit sample spans 2 bytes).
   const samples = new Int16Array(pcm.buffer, pcm.byteOffset, pcm.byteLength / 2);
   const wav = new WaveFile();
   wav.fromScratch(CHANNELS, SAMPLE_RATE, String(BITS_PER_SAMPLE), samples);
