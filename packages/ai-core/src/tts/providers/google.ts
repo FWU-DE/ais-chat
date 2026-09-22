@@ -1,7 +1,7 @@
 import { WaveFile } from 'wavefile';
 import type { AiModel, SpeechGenerationFn } from '../types';
 import { AiGenerationError, ProviderConfigurationError } from '../../errors';
-import { createGoogleClient } from '../../google-client';
+import { createGoogleClient, formatGoogleError } from '../../google-client';
 
 // Gemini TTS always emits 24 kHz mono signed 16-bit little-endian PCM.
 const SAMPLE_RATE = 24000;
@@ -15,15 +15,15 @@ function pcmToWav(pcm: Buffer): Buffer {
   return Buffer.from(wav.toBuffer());
 }
 
-export function constructVertexSpeechGenerationFn(model: AiModel): SpeechGenerationFn {
+export function constructGoogleSpeechGenerationFn(model: AiModel): SpeechGenerationFn {
   if (model.setting.provider !== 'google') {
-    throw new ProviderConfigurationError('Invalid model configuration for Vertex TTS');
+    throw new ProviderConfigurationError('Invalid model configuration for Google');
   }
 
   const { client } = createGoogleClient(model);
   const modelName = model.name;
 
-  return async function getVertexSpeech({ text, voice }) {
+  return async function getGoogleSpeech({ text, voice }) {
     let response;
     try {
       response = await client.models.generateContent({
@@ -37,9 +37,7 @@ export function constructVertexSpeechGenerationFn(model: AiModel): SpeechGenerat
         },
       });
     } catch (error) {
-      throw new AiGenerationError(
-        `Vertex TTS generateContent failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      throw new AiGenerationError(formatGoogleError('Google Vertex AI Speech', error));
     }
 
     const parts = response.candidates?.[0]?.content?.parts ?? [];
