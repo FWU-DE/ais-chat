@@ -136,7 +136,7 @@ describe('buildBifrostNativeProviderConfig', () => {
     expect(config?.network_config?.base_url).toBe('https://acme.example/api');
   });
 
-  test('omits network_config when no base URL is set', () => {
+  test('sends an explicit empty network_config when no base URL is set, to clear a previously-configured one', () => {
     const config = buildBifrostNativeProviderConfig(
       providerKey({
         name: 'groq',
@@ -144,7 +144,7 @@ describe('buildBifrostNativeProviderConfig', () => {
       }),
     );
 
-    expect(config?.network_config).toBeUndefined();
+    expect(config?.network_config).toEqual({ base_url: undefined });
   });
 
   test('returns undefined for reserved provider names', () => {

@@ -1,5 +1,9 @@
 import z from 'zod';
-import { DEFAULT_IONOS_BASE_URL, DEFAULT_OPENAI_BASE_URL } from './const';
+import {
+  CUSTOM_OPENAI_PROVIDER_SUFFIX,
+  DEFAULT_IONOS_BASE_URL,
+  DEFAULT_OPENAI_BASE_URL,
+} from './const';
 
 export const defaultLlmProviderProps = z.object({
   name: z.string(),
@@ -36,7 +40,21 @@ export const llmModelSettingsBifrostSchema = z.object({
   provider: z.literal(llmModelProviderSchema.enum.bifrost),
 });
 
-const RESERVED_LLM_PROVIDER_NAMES: readonly string[] = llmModelProviderSchema.options;
+// `vertex` is Bifrost's provider id for a `google`-typed key (see `getBifrostProvider`), not a
+// valid value for `settings.provider` itself. Names ending in `CUSTOM_OPENAI_PROVIDER_SUFFIX` are
+// reserved too, so they can't collide with a generated `openai`-custom-base-URL provider id (see
+// `isCustomOpenAiProviderId`).
+const RESERVED_LLM_PROVIDER_NAMES: readonly string[] = [
+  ...llmModelProviderSchema.options,
+  'vertex',
+];
+
+function isReservedProviderName(provider: string): boolean {
+  return (
+    RESERVED_LLM_PROVIDER_NAMES.includes(provider) ||
+    provider.endsWith(CUSTOM_OPENAI_PROVIDER_SUFFIX)
+  );
+}
 
 // Registers an arbitrary Bifrost-native provider (e.g. a provider Bifrost supports out of the
 // box that isn't one of the types above) using the exact id Bifrost expects, with no
@@ -45,8 +63,8 @@ export const llmModelSettingsBifrostNativeSchema = z.object({
   provider: z
     .string()
     .min(1)
-    .refine((value) => !RESERVED_LLM_PROVIDER_NAMES.includes(value), {
-      message: `Provider must not be one of the reserved values: ${RESERVED_LLM_PROVIDER_NAMES.join(', ')}`,
+    .refine((value) => !isReservedProviderName(value), {
+      message: `Provider must not be one of the reserved values (${RESERVED_LLM_PROVIDER_NAMES.join(', ')}) or end with "${CUSTOM_OPENAI_PROVIDER_SUFFIX}"`,
     }),
   apiKey: z.string(),
   baseUrl: z.string().optional(),
@@ -77,5 +95,5 @@ export function isLlmProvider<TProvider extends string>(
 export function isBifrostNativeSettings(
   settings: LlmProviderKeySettings,
 ): settings is LlmProviderKeyBifrostNativeSettings {
-  return !RESERVED_LLM_PROVIDER_NAMES.includes(settings.provider);
+  return !isReservedProviderName(settings.provider);
 }

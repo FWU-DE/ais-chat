@@ -1,4 +1,5 @@
 import type { LlmProviderKeyWithModels } from '../../functions';
+import { CUSTOM_OPENAI_PROVIDER_SUFFIX } from '../../llm-model';
 import type { BifrostProviderConfig } from '../types';
 import { buildKey, stripTrailingV1 } from './utils';
 
@@ -10,7 +11,6 @@ type AllowedRequests = NonNullable<
 // "Custom provider cannot be same as a standard provider". Suffixing guarantees no collision with
 // any current or future built-in name, matching the convention Bifrost's own docs use
 // (`openai-custom`, `openai-production`, ...).
-const CUSTOM_OPENAI_PROVIDER_SUFFIX = '-custom';
 
 /**
  * Derives a stable Bifrost provider id for an `openai`-typed provider key that uses a non-default
