@@ -53,6 +53,16 @@ export function buildIonosProviderConfig(
     providerKey,
     settings.apiKey,
     settings.baseUrl,
+    // Ionos doesn't support the Responses API.
+    {
+      list_models: true,
+      chat_completion: true,
+      chat_completion_stream: true,
+      responses: false,
+      responses_stream: false,
+      embedding: true,
+      image_generation: true,
+    },
   );
 }
 

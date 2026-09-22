@@ -42,10 +42,12 @@ export type BifrostProviderConfig = {
     // https://docs.getbifrost.ai/providers/custom-providers#allowed-request-types
     // Bifrost's officially supported provider endpoint matrix:
     // https://docs.getbifrost.ai/providers/supported-providers/overview
-    allowed_requests: {
+    allowed_requests?: {
       list_models: boolean;
       chat_completion: boolean;
       chat_completion_stream: boolean;
+      responses: boolean;
+      responses_stream: boolean;
       embedding: boolean;
       image_generation: boolean;
     };

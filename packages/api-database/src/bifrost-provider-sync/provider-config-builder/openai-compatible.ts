@@ -2,6 +2,10 @@ import type { LlmProviderKeyWithModels } from '../../functions';
 import type { BifrostProviderConfig } from '../types';
 import { buildKey, stripTrailingV1 } from './utils';
 
+type AllowedRequests = NonNullable<
+  BifrostProviderConfig['custom_provider_config']
+>['allowed_requests'];
+
 // Bifrost rejects a custom provider whose id matches one of its ~30 built-in provider names with
 // "Custom provider cannot be same as a standard provider". Suffixing guarantees no collision with
 // any current or future built-in name, matching the convention Bifrost's own docs use
@@ -36,6 +40,7 @@ export function buildOpenAiCompatibleProviderConfig(
   providerKey: LlmProviderKeyWithModels,
   apiKey: string,
   baseUrl: string,
+  allowedRequests?: AllowedRequests,
 ): BifrostProviderConfig {
   return {
     provider: providerId,
@@ -45,13 +50,7 @@ export function buildOpenAiCompatibleProviderConfig(
     },
     custom_provider_config: {
       base_provider_type: 'openai',
-      allowed_requests: {
-        list_models: true,
-        chat_completion: true,
-        chat_completion_stream: true,
-        embedding: true,
-        image_generation: true,
-      },
+      ...(allowedRequests ? { allowed_requests: allowedRequests } : {}),
     },
     keys: [buildKey(providerId, providerKey, apiKey)],
   };
