@@ -1,7 +1,10 @@
-import { WaveFile } from 'wavefile';
+import { createRequire } from 'module';
 import type { AiModel, SpeechGenerationFn } from '../types';
 import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { createGoogleClient, formatGoogleError } from '../../google-client';
+
+// wavefile is CommonJS, so require it at runtime.
+const { WaveFile } = createRequire(import.meta.url)('wavefile') as typeof import('wavefile');
 
 function pcmToWav(pcm: Buffer): Buffer {
   // Gemini TTS generates 24 kHz mono signed 16-bit little-endian PCM.
