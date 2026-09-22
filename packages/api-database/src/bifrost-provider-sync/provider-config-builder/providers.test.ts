@@ -50,13 +50,6 @@ describe('buildOpenAiProviderConfig', () => {
     expect(config?.provider).toBe('ionos-custom');
     expect(config?.custom_provider_config).toEqual({
       base_provider_type: 'openai',
-      allowed_requests: {
-        list_models: true,
-        chat_completion: true,
-        chat_completion_stream: true,
-        embedding: true,
-        image_generation: true,
-      },
     });
     expect(config?.network_config?.base_url).toBe('https://ionos.example');
   });
@@ -103,6 +96,18 @@ describe('buildIonosProviderConfig', () => {
 
     expect(config?.provider).toBe('ionos');
     expect(config?.custom_provider_config?.base_provider_type).toBe('openai');
+  });
+
+  test('does not enable the Responses API, unlike the generic openai-compatible config', () => {
+    const config = buildIonosProviderConfig(
+      providerKey({
+        name: 'ionos',
+        settings: { provider: 'ionos', apiKey: 'sk-1', baseUrl: 'https://ionos.example/v1' },
+      }),
+    );
+
+    expect(config?.custom_provider_config?.allowed_requests?.responses).toBe(false);
+    expect(config?.custom_provider_config?.allowed_requests?.responses_stream).toBe(false);
   });
 
   test('strips the path from the base URL, keeping only the origin', () => {
