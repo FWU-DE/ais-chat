@@ -1872,6 +1872,7 @@ export const CommunityTemplateRequestUpdateSchema = createUpdateSchema(
     createdBy: true,
   })
   .extend({
+    id: z.uuid(),
     state: templateRequestStatusSchema,
   });
 
