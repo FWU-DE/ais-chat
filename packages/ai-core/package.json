@@ -30,6 +30,7 @@
     "js-tiktoken": "1.0.21",
     "openai": "7.15.0",
     "openaiv4": "npm:openai@4.104.0",
+    "wavefile": "11.0.0",
     "zod": "4.6.4"
   },
   "devDependencies": {
