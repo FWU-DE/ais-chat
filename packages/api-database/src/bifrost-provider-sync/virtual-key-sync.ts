@@ -20,9 +20,13 @@ const MANAGED_PROVIDERS = new Set<string>(BIFROST_PROVIDERS);
  * organizations' active models (not just the organization that triggered the current sync),
  * so syncing one organization's models can't narrow another organization's provider access.
  *
- * Provider configs for providers this codebase doesn't manage (e.g. `anthropic`) are left
- * untouched. Model lists are explicit (not `"*"`) so access doesn't depend on Bifrost's Model
- * Catalog / list-models sync, which can fail for custom or mocked providers.
+ * Provider configs for providers not in `BIFROST_PROVIDERS` are left untouched here. Model
+ * lists are explicit (not `"*"`) so access doesn't depend on Bifrost's Model Catalog /
+ * list-models sync, which can fail for custom or mocked providers.
+ *
+ * Note: `deleteStaleManagedProviders` (in `index.ts`) can remove a provider from Bifrost
+ * entirely if it isn't currently configured, regardless of `BIFROST_PROVIDERS` membership -
+ * this function only concerns itself with virtual keys' `provider_configs` entries.
  */
 export async function ensureBifrostVirtualKeyProviderAccess({
   bifrostAdminUrl,
