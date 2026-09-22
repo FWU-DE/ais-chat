@@ -13,9 +13,10 @@ function pcmToWav(pcm: Buffer): Buffer {
   const CHANNELS = 1;
   const BITS_PER_SAMPLE = 16;
 
-  // Reinterpret the raw PCM bytes as 16-bit samples. Length is in samples, not
-  // bytes, so divide by 2 (each 16-bit sample spans 2 bytes).
-  const samples = new Int16Array(pcm.buffer, pcm.byteOffset, pcm.byteLength / 2);
+  // Reinterpret the raw PCM bytes as 16-bit samples.
+  // Put into aligned array to handle potential odd byte lengths.
+  const samples = new Int16Array(Math.floor(pcm.byteLength / 2));
+  new Uint8Array(samples.buffer).set(pcm.subarray(0, samples.length * 2));
   const wav = new WaveFile();
   wav.fromScratch(CHANNELS, SAMPLE_RATE, String(BITS_PER_SAMPLE), samples);
   return Buffer.from(wav.toBuffer());
