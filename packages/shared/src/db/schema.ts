@@ -1820,6 +1820,7 @@ export const templateRequestStatus = pgEnum(
   'template_request_status',
   templateRequestStatusSchema.enum,
 );
+export type TemplateRequestStatus = z.infer<typeof templateRequestStatusSchema>;
 
 export const CommunityTemplateRequestTable = pgTable(
   'community_template_request',
@@ -1851,19 +1852,28 @@ export const CommunityTemplateRequestSelectSchema = createSelectSchema(
   CommunityTemplateRequestTable,
 ).extend({
   createdAt: z.coerce.date(),
+  state: templateRequestStatusSchema,
 });
 export const CommunityTemplateRequestInsertSchema = createInsertSchema(
   CommunityTemplateRequestTable,
-).omit({
-  id: true,
-  createdAt: true,
-});
+)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    state: templateRequestStatusSchema,
+  });
 export const CommunityTemplateRequestUpdateSchema = createUpdateSchema(
   CommunityTemplateRequestTable,
-).omit({
-  createdAt: true,
-  createdBy: true,
-});
+)
+  .omit({
+    createdAt: true,
+    createdBy: true,
+  })
+  .extend({
+    state: templateRequestStatusSchema,
+  });
 
 export type CommunityTemplateRequestSelectModel = z.infer<
   typeof CommunityTemplateRequestSelectSchema
@@ -1911,13 +1921,22 @@ export const CommunityTemplateRequestEventTable = pgTable(
 
 export const CommunityTemplateRequestEventSelectSchema = createSelectSchema(
   CommunityTemplateRequestEventTable,
-).extend({ createdAt: z.coerce.date() });
+).extend({
+  createdAt: z.coerce.date(),
+  createdByRole: templateRequestCreatorRoleSchema,
+  eventType: templateRequestEventTypeSchema,
+});
 export const CommunityTemplateRequestEventInsertSchema = createInsertSchema(
   CommunityTemplateRequestEventTable,
-).omit({
-  id: true,
-  createdAt: true,
-});
+)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    createdByRole: templateRequestCreatorRoleSchema,
+    eventType: templateRequestEventTypeSchema,
+  });
 
 export type CommunityTemplateRequestEventSelectModel = z.infer<
   typeof CommunityTemplateRequestEventSelectSchema
