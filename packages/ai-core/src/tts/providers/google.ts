@@ -1,4 +1,6 @@
-import { WaveFile } from 'wavefile';
+import pkg from 'wavefile';
+
+const { WaveFile } = pkg;
 import type { AiModel, SpeechGenerationFn } from '../types';
 import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { createGoogleClient, formatGoogleError } from '../../google-client';
