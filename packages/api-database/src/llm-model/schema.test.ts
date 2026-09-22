@@ -56,4 +56,22 @@ describe('llmModelSettingsBifrostNativeSchema', () => {
       }).success,
     ).toBe(false);
   });
+
+  it('rejects "vertex", which is Bifrost\'s provider id for a "google"-typed key', () => {
+    expect(
+      llmModelSettingsBifrostNativeSchema.safeParse({
+        provider: 'vertex',
+        apiKey: 'sk-1',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects a name ending in the generated openai-custom-provider suffix', () => {
+    expect(
+      llmModelSettingsBifrostNativeSchema.safeParse({
+        provider: 'groq-custom',
+        apiKey: 'sk-1',
+      }).success,
+    ).toBe(false);
+  });
 });

@@ -99,7 +99,10 @@ export function buildBifrostNativeProviderConfig(
   const settings = providerKey.settings;
   return {
     provider: settings.provider,
-    ...(settings.baseUrl ? { network_config: { base_url: settings.baseUrl } } : {}),
+    // Always present (even with `base_url: undefined`, dropped by `JSON.stringify`), so an update
+    // explicitly clears a previously-configured base URL instead of the sync falling back to
+    // Bifrost's existing network_config for this provider (see `getUpdateProviderPayload`).
+    network_config: { base_url: settings.baseUrl },
     keys: [buildKey(settings.provider, providerKey, settings.apiKey)],
   };
 }
