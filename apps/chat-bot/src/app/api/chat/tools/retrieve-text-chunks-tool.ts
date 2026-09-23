@@ -7,7 +7,7 @@ import { dbGetAllChunks } from '@shared/db/functions/files';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { TOOL_NAMES } from '@/types/tool-names';
 
-const retrieveTextChunksArgsSchema = z.object({
+export const retrieveTextChunksArgsSchema = z.object({
   search: z.string(),
 });
 

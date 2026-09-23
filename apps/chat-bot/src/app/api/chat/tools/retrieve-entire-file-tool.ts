@@ -7,7 +7,7 @@ import { parseJsonRecord } from '@/utils/chat/ai-activity';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
 import { TOOL_NAMES } from '@/types/tool-names';
 
-const retrieveEntireFileArgsSchema = z.object({
+export const retrieveEntireFileArgsSchema = z.object({
   fileName: z.string(),
 });
 

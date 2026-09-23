@@ -7,6 +7,12 @@ import {
 } from '@/types/ai-activity';
 import { parseJsonRecord, readString, readValue, toLinks } from './ai-activity';
 import { TOOL_NAMES } from '@/types/tool-names';
+import { webSearchArgsSchema } from '@/app/api/chat/tools/web-search-tool';
+import { webScraperArgsSchema } from '@/app/api/chat/tools/web-scraper-tool';
+import { retrieveTextChunksArgsSchema } from '@/app/api/chat/tools/retrieve-text-chunks-tool';
+import { retrieveEntireFileArgsSchema } from '@/app/api/chat/tools/retrieve-entire-file-tool';
+import { mundoSearchArgsSchema } from '@/app/api/chat/tools/mundo-search-tool';
+import { expressionSchema } from '@/app/api/chat/tools/math-calculate-tool';
 
 function createActivityStep(
   toolCall: NonNullable<ConversationMessageModel['toolCalls']>[number],
@@ -16,16 +22,41 @@ function createActivityStep(
   }
 
   const args = parseJsonRecord(toolCall.arguments);
-  const detail =
-    readString(args, 'query') ??
-    readString(args, 'search') ??
-    readString(args, 'fileName') ??
-    readString(args, 'expression');
-  const urls = readValue(args, 'urls');
-  const links =
-    toolCall.name === 'web_scraper' && Array.isArray(urls)
-      ? toLinks(urls.map((url) => ({ url })))
-      : undefined;
+  let detail: string | undefined;
+  let links: ReturnType<typeof toLinks>;
+
+  switch (toolCall.name) {
+    case TOOL_NAMES.webSearch: {
+      const parsed = webSearchArgsSchema.safeParse(args);
+      detail = parsed.success ? parsed.data.query : undefined;
+      break;
+    }
+    case TOOL_NAMES.mundoSearch: {
+      const parsed = mundoSearchArgsSchema.safeParse(args);
+      detail = parsed.success ? parsed.data.query : undefined;
+      break;
+    }
+    case TOOL_NAMES.retrieveTextChunks: {
+      const parsed = retrieveTextChunksArgsSchema.safeParse(args);
+      detail = parsed.success ? parsed.data.search : undefined;
+      break;
+    }
+    case TOOL_NAMES.retrieveEntireFile: {
+      const parsed = retrieveEntireFileArgsSchema.safeParse(args);
+      detail = parsed.success ? parsed.data.fileName : undefined;
+      break;
+    }
+    case TOOL_NAMES.mathCalculate: {
+      const parsed = expressionSchema.safeParse(args);
+      detail = parsed.success ? parsed.data.expression : undefined;
+      break;
+    }
+    case TOOL_NAMES.webScraper: {
+      const parsed = webScraperArgsSchema.safeParse(args);
+      links = parsed.success ? toLinks(parsed.data.urls.map((url) => ({ url }))) : undefined;
+      break;
+    }
+  }
 
   return {
     kind: 'tool',

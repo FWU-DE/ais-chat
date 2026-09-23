@@ -186,7 +186,7 @@ export function AiActivityPanel({ steps, panelId }: { steps: AiActivityStep[]; p
     <div className="flex w-full flex-col items-start gap-3">
       <Button
         variant="ghost"
-        className="h-auto gap-1 rounded-full bg-black/10 px-3 py-1 text-sm text-main-900 hover:bg-black/15"
+        className="h-auto gap-1 rounded-full bg-main-black/10 px-3 py-1 text-sm text-main-900 hover:bg-black/15"
         onClick={() => setIsOpen((current) => !current)}
         aria-expanded={isOpen}
         aria-controls={panelId}

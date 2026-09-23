@@ -6,7 +6,7 @@ import { resolveWebSearchConfig, searchWeb } from '../websearch';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
 import { TOOL_NAMES } from '@/types/tool-names';
 
-const webSearchArgsSchema = z.object({
+export const webSearchArgsSchema = z.object({
   query: z.string(),
 });
 

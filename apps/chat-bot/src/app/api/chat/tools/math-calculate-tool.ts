@@ -9,7 +9,7 @@ import { parseJsonRecord } from '@/utils/chat/ai-activity';
 import type { ToolDefinition, ToolRegistration } from './types';
 import { TOOL_NAMES } from '@/types/tool-names';
 
-const expressionSchema = z.object({
+export const expressionSchema = z.object({
   expression: z.string().trim().min(1).max(CALCULATOR_MAX_EXPRESSION_LENGTH),
 });
 

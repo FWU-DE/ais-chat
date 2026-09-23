@@ -16,7 +16,7 @@ import { parseJsonRecord, readString, toLinks } from '@/utils/chat/ai-activity';
 import type { ToolDefinition, ToolRegistration } from './types';
 import { TOOL_NAMES } from '@/types/tool-names';
 
-const mundoSearchArgsSchema = z.object({
+export const mundoSearchArgsSchema = z.object({
   query: z.string(),
   classLevel: z.string().nullable().optional(),
   subject: z.string().nullable().optional(),

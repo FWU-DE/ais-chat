@@ -16,7 +16,7 @@ type WebScraperToolResult = {
 
 const MAX_WEB_SCRAPER_URLS = 5;
 
-const webScraperArgsSchema = z.object({
+export const webScraperArgsSchema = z.object({
   urls: z.array(z.string()),
 });
 
