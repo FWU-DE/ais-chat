@@ -124,6 +124,32 @@ describe('constructAzureImageGenerationFn', () => {
     });
   });
 
+  it('should default input_image_tokens to 0 when Azure omits image_tokens for a text-only prompt', async () => {
+    generateMock.mockResolvedValue({
+      data: [{ b64_json: 'base64-azure-image' }],
+      output_format: 'png',
+      usage: {
+        input_tokens_details: {
+          text_tokens: 26,
+        },
+        output_tokens_details: {
+          image_tokens: 1056,
+          text_tokens: 448,
+        },
+      },
+    });
+
+    const generateImage = constructAzureImageGenerationFn(model);
+    const result = await generateImage({ prompt: 'a duck with a hat', model: model.name });
+
+    expect(result.usage).toEqual({
+      input_text_tokens: 26,
+      input_image_tokens: 0,
+      output_text_tokens: 448,
+      output_image_tokens: 1056,
+    });
+  });
+
   it.each(['content_policy_violation', 'ResponsibleAIPolicyViolation'])(
     'should map %s to ResponsibleAIError',
     async (code) => {
