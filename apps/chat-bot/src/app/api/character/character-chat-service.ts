@@ -22,8 +22,6 @@ import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exce
 import { constructCharacterSystemPrompt } from './system-prompt';
 import {
   convertToAiCoreMessages,
-  determineImageAttachmentTypeForModel,
-  enrichMessagesWithImageData,
   getMostRecentUserMessage,
   limitChatHistory,
   annotateMessageAttachmentNames,
@@ -32,17 +30,16 @@ import { logError } from '@shared/logging';
 import { buildTools } from '../chat/build-tools';
 import { isWebSearchEnabledForEntity } from '../chat/websearch';
 import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
-import { createImageAttachmentsForConversation } from '../file-operations/preprocess-image';
 import { ingestWebContent } from '../rag/ingestWebContent';
 import { resolveAgentNameForTracing } from '../utils/agent-name';
 import { extractUrls } from '../utils/extract-urls';
+import { prepareAgentMessages } from '../chat/prepare-agent-messages';
 import { combineSharedRelatedFiles } from '../shared-chat/shared-chat-file-service';
 import {
   sharedCharacterChatHasReachedTokenPointsLimit,
   sharedChatHasExpired,
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
-import { checkTextInputSafety } from '@ais-chat/ai-core/chat/safety';
 
 /**
  * Sends a character chat message and streams the response.
@@ -153,32 +150,14 @@ export async function sendCharacterMessage({
     annotateMessageAttachmentNames(messages, relatedFileEntities),
   );
 
-  // Check if the model supports images based on supportedImageFormats
-  const modelSupportsImages =
-    definedModel.supportedImageFormats !== null && definedModel.supportedImageFormats.length > 0;
-
-  const imageAttachmentType = determineImageAttachmentTypeForModel(definedModel);
-
-  // attach the image url to each of the image files within relatedFileEntities
-  const extractedImages = await createImageAttachmentsForConversation(
-    relatedFileEntities,
-    imageAttachmentType,
-  );
-
-  // Format messages with images if the model supports vision
-  const messagesWithImages = enrichMessagesWithImageData(
-    prunedMessages,
-    extractedImages,
-    modelSupportsImages,
-    imageAttachmentType,
-  );
-
-  // TODO: Remove this special handling for text input safety once TD-1604 (centralized error handling for chats) is done
+  let messagesWithImages: ChatMessage[];
   try {
-    await checkTextInputSafety({
+    messagesWithImages = await prepareAgentMessages({
+      messages: prunedMessages,
+      relatedFileEntities,
+      model: definedModel,
       modelSelection,
       safetyModelName: safetyModel?.name,
-      messages: convertToAiCoreMessages('', messagesWithImages),
       apiKeyId,
     });
   } catch (error) {
