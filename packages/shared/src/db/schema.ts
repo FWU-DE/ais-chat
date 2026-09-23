@@ -1841,9 +1841,11 @@ export const CommunityTemplateRequestTable = pgTable(
       'community_template_request_exactly_one_target_ck',
       sql`((${table.assistantId} IS NOT NULL)::int + (${table.characterId} IS NOT NULL)::int + (${table.learningScenarioId} IS NOT NULL)::int) = 1`,
     ),
-    index().on(table.assistantId),
-    index().on(table.characterId),
-    index().on(table.learningScenarioId),
+    uniqueIndex('community_template_request_assistant_id_unique').on(table.assistantId),
+    uniqueIndex('community_template_request_character_id_unique').on(table.characterId),
+    uniqueIndex('community_template_request_learning_scenario_id_unique').on(
+      table.learningScenarioId,
+    ),
     index().on(table.state),
   ],
 );
