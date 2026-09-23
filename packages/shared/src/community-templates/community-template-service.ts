@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { UserModel } from '@shared/auth/user-model';
 import { verifySuspensionState, verifyWriteAccess } from '@shared/auth/authorization-service';
 import { db } from '@shared/db';
@@ -23,15 +23,14 @@ export type CommunityTemplateRequestWithEvents = CommunityTemplateRequestSelectM
 };
 
 /**
- * Retrieves the latest community template request for a given character.
+ * Retrieves the community template request for a given character.
  * Returns undefined if no request exists.
  */
-async function getLatestCharacterTemplateRequest(characterId: string) {
+async function getCharacterTemplateRequest(characterId: string) {
   const [request] = await db
     .select()
     .from(CommunityTemplateRequestTable)
     .where(eq(CommunityTemplateRequestTable.characterId, characterId))
-    .orderBy(desc(CommunityTemplateRequestTable.createdAt), desc(CommunityTemplateRequestTable.id))
     .limit(1);
 
   return request;
@@ -92,28 +91,20 @@ export async function createCommunityTemplateRequest({
 }): Promise<CommunityTemplateRequestWithEvents | null> {
   await verifyCharacterTemplateRequestAccess(characterId, user);
 
-  const latestRequest = await getLatestCharacterTemplateRequest(characterId);
+  const existingRequest = await getCharacterTemplateRequest(characterId);
 
-  // two cases:
-  // case 1: there is no existing request
-  // case 2: there is an existing request
-
-  // case 1:
-  // create a new request event with event type 'submitted'
-  await db.transaction(async (tx) => {
-    const createdRequest = await dbInsertTemplateRequest(
-      { characterId, createdBy: user.id, state: 'submitted' },
-      tx,
-    );
-    await dbInsertTemplateRequestEvent(createSubmitEvent(createdRequest.id, user.id), tx);
-  });
-
-  // case 2:
-  // update existing request and create new event with status 'submitted'
-  if (latestRequest) {
+  if (existingRequest) {
     await db.transaction(async (tx) => {
-      await dbUpdateTemplateRequest({ id: latestRequest.id, state: 'submitted' }, tx);
-      await dbInsertTemplateRequestEvent(createSubmitEvent(latestRequest.id, user.id), tx);
+      await dbUpdateTemplateRequest({ id: existingRequest.id, state: 'submitted' }, tx);
+      await dbInsertTemplateRequestEvent(createSubmitEvent(existingRequest.id, user.id), tx);
+    });
+  } else {
+    await db.transaction(async (tx) => {
+      const createdRequest = await dbInsertTemplateRequest(
+        { characterId, createdBy: user.id, state: 'submitted' },
+        tx,
+      );
+      await dbInsertTemplateRequestEvent(createSubmitEvent(createdRequest.id, user.id), tx);
     });
   }
 
@@ -138,11 +129,11 @@ export async function cancelCommunityTemplateRequest({
 }): Promise<CommunityTemplateRequestWithEvents | null> {
   await verifyCharacterTemplateRequestAccess(characterId, user);
 
-  const latestRequest = await getLatestCharacterTemplateRequest(characterId);
-  if (!latestRequest) {
+  const existingRequest = await getCharacterTemplateRequest(characterId);
+  if (!existingRequest) {
     throw new NotFoundError('No community template request found for this character');
   }
-  await verifyTemplateRequestOwnership({ templateRequest: latestRequest, user });
+  await verifyTemplateRequestOwnership({ templateRequest: existingRequest, user });
 
   // two cases
   // case 1: the request is already submitted and the entity is already shared with the community.
@@ -153,12 +144,12 @@ export async function cancelCommunityTemplateRequest({
   // Todo: case 1 missing
 
   // case 2
-  const cancelledEvent = createCancelEvent(latestRequest.id, user.id);
+  const cancelledEvent = createCancelEvent(existingRequest.id, user.id);
   await db.transaction(async (tx) => {
     await dbInsertTemplateRequestEvent(cancelledEvent, tx);
     await dbUpdateTemplateRequest(
       {
-        id: latestRequest.id,
+        id: existingRequest.id,
         state: templateRequestStatusSchema.enum.cancelled,
       },
       tx,
