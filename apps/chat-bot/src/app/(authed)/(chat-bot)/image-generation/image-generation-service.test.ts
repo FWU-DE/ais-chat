@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LlmModelSelectModel } from '@shared/db/schema';
+import { NotFoundError } from '@shared/error';
 
 const mocks = vi.hoisted(() => ({
   checkProductAccess: vi.fn(),
@@ -199,5 +200,20 @@ describe('handleImageGeneration', () => {
       conversationId: 'conversation-id',
       orderNumber: 2,
     });
+  });
+
+  it('throws NotFoundError when the model is not available for the federal state', async () => {
+    await expect(
+      handleImageGeneration({
+        prompt: 'Make it blue',
+        modelId: 'unassigned-model-id',
+        userId: 'user-id',
+        federalStateId: 'DE-TEST',
+        options: { aspectRatio: 'quadratic' },
+        conversationId: 'conversation-id',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundError);
+
+    expect(mocks.generateImageWithBilling).not.toHaveBeenCalled();
   });
 });
