@@ -8,9 +8,11 @@ import type {
   ToolRegistry,
 } from './types';
 import { EmptyResponseError } from '../errors';
+import { generateAgenticStreamWithBilling } from './agentic-stream';
+import { env } from '../env';
 
-export const MAX_AGENTIC_ITERATIONS = 3;
-export const MAX_TOOL_CALLS_PER_ITERATION = 2;
+export const MAX_AGENTIC_ITERATIONS = env.maxAgenticIterations;
+export const MAX_TOOL_CALLS_PER_ITERATION = env.maxToolCallsPerIteration;
 
 const toolCallDuration = metrics
   .getMeter('ais-chat.tools', '0.0.1')
@@ -32,6 +34,8 @@ type RunAgentLoopParams = {
   /** Tears down the upstream provider stream when the client goes away or the generation times out. */
   abortSignal?: AbortSignal;
   onTextChunk: (delta: string) => void;
+  onToolCalls?: (calls: ToolCall[]) => void;
+  onToolResult?: (result: { toolCallId: string; name: string; result: string }) => void;
   onComplete: (result: {
     fullText: string;
     usage: TokenUsage;
@@ -62,12 +66,12 @@ export function runAgentLoop({
   agentName,
   abortSignal,
   onTextChunk,
+  onToolCalls,
+  onToolResult,
   onComplete,
   onError,
 }: RunAgentLoopParams): void {
   void (async () => {
-    const { generateAgenticStreamWithBilling } = await import('./agentic-stream');
-
     let fullText = '';
     let totalUsage: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
     let totalPriceInCents = 0;
@@ -114,6 +118,7 @@ export function runAgentLoop({
             const pendingToolCalls: ToolCall[] = [];
             const overBudgetToolCalls: ToolCall[] = [];
             let iterationText = '';
+            let iterationTextPublished = false;
 
             // Add separator before starting a new iteration if the previous iteration produced text
             if (iteration > 0 && fullText && !fullText.endsWith('\n\n')) {
@@ -145,11 +150,12 @@ export function runAgentLoop({
                 : { abortSignal },
             );
 
+            let streamCompleted = false;
+
             try {
               for await (const event of stream) {
                 if (event.type === 'text') {
                   iterationText += event.delta;
-                  onTextChunk(event.delta);
                 } else if (event.type === 'tool_call') {
                   if (pendingToolCalls.length < MAX_TOOL_CALLS_PER_ITERATION) {
                     // On last iteration, tools are disabled but model might still emit tool calls
@@ -161,17 +167,34 @@ export function runAgentLoop({
                   }
                 }
               }
+              streamCompleted = true;
             } finally {
-              // An interrupted stream still produced text; keep it instead of discarding it.
-              fullText += iterationText;
+              if (!streamCompleted && iterationText.length > 0) {
+                // Preserve partial output when the provider stream is interrupted.
+                fullText += iterationText;
+                onTextChunk(iterationText);
+                iterationTextPublished = true;
+              }
             }
 
             if (pendingToolCalls.length === 0 && overBudgetToolCalls.length === 0) {
+              fullText += iterationText;
+              onTextChunk(iterationText);
               break;
             }
 
             if (abortSignal?.aborted) {
+              if (!iterationTextPublished && iterationText.length > 0) {
+                fullText += iterationText;
+                onTextChunk(iterationText);
+              }
               break;
+            }
+
+            if (iterationText.length > 0) {
+              fullText += iterationText;
+              onTextChunk(iterationText);
+              iterationTextPublished = true;
             }
 
             loopMessages.push({
@@ -179,6 +202,10 @@ export function runAgentLoop({
               content: iterationText,
               toolCalls: [...pendingToolCalls, ...overBudgetToolCalls],
             });
+
+            if (pendingToolCalls.length > 0) {
+              onToolCalls?.(pendingToolCalls);
+            }
 
             const toolResults = await Promise.all([
               ...pendingToolCalls.map((toolCall) =>
@@ -222,6 +249,8 @@ export function runAgentLoop({
                       });
                     }
 
+                    onToolResult?.({ toolCallId: toolCall.id, name: toolCall.name, result });
+
                     return { toolCallId: toolCall.id, result };
                   },
                 ),
@@ -234,6 +263,11 @@ export function runAgentLoop({
 
             for (const { toolCallId, result } of toolResults) {
               loopMessages.push({ role: 'tool', content: result, toolCallId });
+            }
+
+            if (abortSignal?.aborted && !iterationTextPublished && iterationText.length > 0) {
+              fullText += iterationText;
+              onTextChunk(iterationText);
             }
           }
 

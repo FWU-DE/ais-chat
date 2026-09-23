@@ -13,6 +13,7 @@ import {
 } from '@ais-chat/ai-core/chat/types';
 import z from 'zod';
 import { isToolRelatedMessage } from '@shared/utils/tool-related-message';
+import { aiActivityStepSchema, type AiActivityStep } from './ai-activity';
 
 /**
  * Serialized error that can be safely transmitted across the Server Action boundary.
@@ -39,6 +40,7 @@ export const chatMessageSchema = z.object({
   createdAt: z.coerce.date().optional(),
   attachments: z.array(z.any()).optional(),
   webSearchResults: z.array(z.any()).optional(),
+  activitySteps: z.array(aiActivityStepSchema).optional(),
   toolCalls: z.array(z.any()).optional(),
   toolCallId: z.string().optional(),
 });
@@ -54,6 +56,7 @@ export type ChatMessage = {
   createdAt?: Date;
   attachments?: ChatAttachment[];
   webSearchResults?: WebSearchResult[];
+  activitySteps?: AiActivityStep[];
   toolCalls?: ToolCall[];
   toolCallId?: string;
 };
