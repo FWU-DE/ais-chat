@@ -36,6 +36,7 @@ const buildToolsOutput = {
 
 const mocks = vi.hoisted(() => ({
   runAgentLoopMock: vi.fn(),
+  checkTextInputSafetyMock: vi.fn(),
   buildToolsMock: vi.fn(),
   isWebSearchEnabledForEntityMock: vi.fn(),
   constructChatSystemPromptMock: vi.fn(),
@@ -78,6 +79,16 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@ais-chat/ai-core', () => ({
   runAgentLoop: mocks.runAgentLoopMock,
   TokenPointsExceededError: class TokenPointsExceededError extends Error {},
+  ResponsibleAIError: class ResponsibleAIError extends Error {
+    static is(error: unknown): error is Error {
+      return Boolean(
+        error &&
+        typeof error === 'object' &&
+        'name' in error &&
+        error.name === 'ResponsibleAIError',
+      );
+    }
+  },
 }));
 
 vi.mock('./build-tools', () => ({
@@ -86,6 +97,10 @@ vi.mock('./build-tools', () => ({
 
 vi.mock('./websearch', () => ({
   isWebSearchEnabledForEntity: mocks.isWebSearchEnabledForEntityMock,
+}));
+
+vi.mock('@ais-chat/ai-core/chat/safety', () => ({
+  checkTextInputSafety: mocks.checkTextInputSafetyMock,
 }));
 
 vi.mock('@shared/users/usage', () => ({
@@ -314,6 +329,7 @@ beforeEach(() => {
   mocks.logErrorMock.mockImplementation(() => undefined);
   mocks.isWebSearchEnabledForEntityMock.mockReturnValue(true);
   mocks.buildToolsMock.mockResolvedValue(buildToolsOutput as never);
+  mocks.checkTextInputSafetyMock.mockResolvedValue(undefined);
   mocks.runAgentLoopMock.mockImplementation(
     ({ onTextChunk, onComplete, toolRegistry }: Parameters<typeof runAgentLoop>[0]) => {
       expect(toolRegistry).toEqual(buildToolsOutput.toolRegistry);
@@ -338,6 +354,27 @@ beforeEach(() => {
 });
 
 describe('sendChatMessage', () => {
+  it('returns responsible AI errors before creating the response stream', async () => {
+    const safetyError = new Error('Input was blocked by the safety model');
+    safetyError.name = 'ResponsibleAIError';
+    mocks.checkTextInputSafetyMock.mockRejectedValueOnce(safetyError);
+
+    const { sendChatMessage } = await import('./chat-service');
+    const result = await sendChatMessage({
+      conversationId: conversation.id,
+      messages,
+      modelId: mainModel.id,
+      user: createUser(),
+    });
+
+    expect(result.error).toEqual({
+      name: 'ResponsibleAIError',
+      message: 'Input was blocked by the safety model',
+    });
+    expect(mocks.buildToolsMock).not.toHaveBeenCalled();
+    expect(mocks.runAgentLoopMock).not.toHaveBeenCalled();
+  });
+
   it('passes attachment annotations to the model without persisting them', async () => {
     const file = { id: 'upload-1', name: 'upload.pdf', conversationMessageId: 'message-3' };
     mocks.dbGetAttachedFileByEntityIdMock.mockResolvedValue([file]);

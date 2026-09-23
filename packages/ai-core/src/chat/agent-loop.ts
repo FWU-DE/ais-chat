@@ -8,9 +8,6 @@ import type {
   ToolRegistry,
 } from './types';
 import { EmptyResponseError } from '../errors';
-import { checkInputSafety } from '../safety';
-import { isChatImageAttachment } from './types';
-import { getTextModelById } from '../models';
 
 export const MAX_AGENTIC_ITERATIONS = 3;
 export const MAX_TOOL_CALLS_PER_ITERATION = 2;
@@ -29,7 +26,6 @@ function logError(message: string, error: unknown) {
 type RunAgentLoopParams = {
   modelSelection: ModelSelection;
   apiKeyId: string;
-  safetyModelName?: string;
   messages: AiCoreMessage[];
   toolRegistry?: ToolRegistry;
   agentName: string;
@@ -61,7 +57,6 @@ type RunAgentLoopParams = {
 export function runAgentLoop({
   modelSelection,
   apiKeyId,
-  safetyModelName,
   messages,
   toolRegistry,
   agentName,
@@ -99,20 +94,6 @@ export function runAgentLoop({
       });
 
     try {
-      const selectedModels = safetyModelName
-        ? await Promise.all(modelSelection.modelIds.map((modelId) => getTextModelById(modelId)))
-        : [];
-      if (safetyModelName && selectedModels.some((model) => model.safetyFilterEnabled)) {
-        const safetyMessages = messages
-          .filter((message) => message.role === 'user' || message.role === 'assistant')
-          .map((message) => ({
-            role: (message.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
-            content: message.content,
-            images: message.attachments?.filter(isChatImageAttachment),
-          }));
-        await checkInputSafety(safetyModelName, safetyMessages, apiKeyId);
-      }
-
       await Sentry.startSpan(
         {
           op: 'gen_ai.invoke_agent',
