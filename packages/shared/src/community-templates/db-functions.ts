@@ -7,7 +7,7 @@ import {
   CommunityTemplateRequestUpdateModel,
 } from '@shared/db/schema';
 import { PgTransactionObject } from '@shared/db/types';
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 
 /**
  * Inserts a new community template request in database.
@@ -62,7 +62,10 @@ export async function dbGetTemplateRequestWithEvents(characterId: string) {
       CommunityTemplateRequestEventTable,
       eq(CommunityTemplateRequestEventTable.templateRequestId, CommunityTemplateRequestTable.id),
     )
-    .orderBy(CommunityTemplateRequestTable.createdAt);
+    .orderBy(
+      CommunityTemplateRequestTable.createdAt,
+      desc(CommunityTemplateRequestEventTable.createdAt),
+    );
 
   const [firstRow] = requestWithEvents;
   if (!firstRow) {
