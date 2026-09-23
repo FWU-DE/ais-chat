@@ -1,4 +1,4 @@
-import { config } from 'dotenv';
+import { config } from '@dotenvx/dotenvx';
 import path from 'node:path';
 
 // Unlike Next.js (chat-bot/admin), Fastify does not auto-load .env files.
