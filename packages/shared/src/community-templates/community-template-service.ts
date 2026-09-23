@@ -141,7 +141,7 @@ export async function cancelCommunityTemplateRequest({
   // case 2: the request is not yet submitted and the entity is not shared with the community.
   // --> we can simply cancel the request without changing the entity's access_level.
 
-  // Todo: case 1 missing
+  // Todo TD-1605: case 1 missing
 
   // case 2
   const cancelledEvent = createCancelEvent(existingRequest.id, user.id);
