@@ -122,7 +122,8 @@ export async function dbGetAllApiKeysByProjectId(organizationId: string, project
 export async function dbGetAllApiKeysByOrganizationId(organizationId: string) {
   return await db
     .select({
-      ...getTableColumns(apiKeyTable),
+      id: apiKeyTable.id,
+      name: apiKeyTable.name,
       projectName: projectTable.name,
     })
     .from(apiKeyTable)

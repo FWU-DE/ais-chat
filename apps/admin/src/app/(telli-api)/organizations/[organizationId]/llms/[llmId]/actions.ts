@@ -34,7 +34,10 @@ export async function deleteLLMAction(organizationId: string, modelId: string) {
 
 export async function getLlmApiKeyAssignmentsDataAction(organizationId: string, modelId: string) {
   await requireAdminAuth();
-  return getLlmApiKeyAssignmentsData(organizationId, modelId);
+  return runServerAction('getLlmApiKeyAssignmentsDataAction', getLlmApiKeyAssignmentsData)(
+    organizationId,
+    modelId,
+  );
 }
 
 export async function saveApiKeysForModelAction(

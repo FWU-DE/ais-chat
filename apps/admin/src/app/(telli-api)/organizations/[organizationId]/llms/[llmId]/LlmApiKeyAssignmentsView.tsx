@@ -23,9 +23,10 @@ export type LlmApiKeyAssignmentsViewProps = {
   modelId: string;
 };
 
-type OrganizationApiKey = Awaited<
-  ReturnType<typeof getLlmApiKeyAssignmentsDataAction>
->['apiKeys'][number];
+type OrganizationApiKey = Extract<
+  Awaited<ReturnType<typeof getLlmApiKeyAssignmentsDataAction>>,
+  { success: true }
+>['value']['apiKeys'][number];
 
 export function LlmApiKeyAssignmentsView({
   organizationId,
@@ -34,20 +35,25 @@ export function LlmApiKeyAssignmentsView({
   const [apiKeys, setApiKeys] = useState<OrganizationApiKey[]>([]);
   const [assignedApiKeyIds, setAssignedApiKeyIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const loadData = useCallback(async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const { apiKeys, assignedApiKeyIds } = await getLlmApiKeyAssignmentsDataAction(
-        organizationId,
-        modelId,
-      );
+      const result = await getLlmApiKeyAssignmentsDataAction(organizationId, modelId);
 
-      setApiKeys(apiKeys);
-      setAssignedApiKeyIds(new Set(assignedApiKeyIds));
+      if (result.success) {
+        setApiKeys(result.value.apiKeys);
+        setAssignedApiKeyIds(new Set(result.value.assignedApiKeyIds));
+        setLoadError(false);
+      } else {
+        setLoadError(true);
+        toast.error(result.error.message);
+      }
     } catch (error) {
       logError('Error loading API key assignments', error);
+      setLoadError(true);
       toast.error('Fehler beim Laden der API-Schlüssel');
     } finally {
       setIsLoading(false);
@@ -160,7 +166,7 @@ export function LlmApiKeyAssignmentsView({
           Wählen Sie die API-Schlüssel aus, denen dieses Modell zugeordnet werden soll.
         </CardDescription>
         <CardAction>
-          <Button onClick={handleSave} disabled={isSaving || isLoading}>
+          <Button onClick={handleSave} disabled={isSaving || isLoading || loadError}>
             {isSaving ? 'Speichere...' : 'Zuordnungen speichern'}
           </Button>
         </CardAction>
@@ -169,6 +175,15 @@ export function LlmApiKeyAssignmentsView({
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="text-gray-500">Lade API-Schlüssel...</div>
+          </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center gap-3 py-8">
+            <p className="text-muted-foreground text-sm">
+              API-Schlüssel konnten nicht geladen werden.
+            </p>
+            <Button type="button" variant="outline" size="sm" onClick={loadData}>
+              Erneut versuchen
+            </Button>
           </div>
         ) : (
           <>
