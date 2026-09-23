@@ -58,6 +58,7 @@ function createAzureModel(baseUrl: string): AiModel {
     priceMetadata: {
       type: 'image',
       inputTextTokenPrice: 1,
+      inputImageTokenPrice: 4,
       outputTextTokenPrice: 2,
       outputImageTokenPrice: 3,
     },
@@ -80,6 +81,7 @@ describe('constructAzureImageGenerationFn', () => {
       usage: {
         input_tokens_details: {
           text_tokens: 4,
+          image_tokens: 7,
         },
         output_tokens_details: {
           text_tokens: 5,
@@ -115,6 +117,7 @@ describe('constructAzureImageGenerationFn', () => {
       output_format: 'png',
       usage: {
         input_text_tokens: 4,
+        input_image_tokens: 7,
         output_text_tokens: 5,
         output_image_tokens: 6,
       },

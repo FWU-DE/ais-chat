@@ -24,7 +24,8 @@ export const llmModelPriceMetadataSchema = z.union([
     .object({
       type: z.literal('image'),
       inputTextTokenPrice: z.number(),
-      outputTextTokenPrice: z.number().optional(),
+      inputImageTokenPrice: z.number(),
+      outputTextTokenPrice: z.number(),
       outputImageTokenPrice: z.number(),
     })
     .strict(),

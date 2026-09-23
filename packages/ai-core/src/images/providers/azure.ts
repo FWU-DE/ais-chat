@@ -21,6 +21,10 @@ function setUsageAttributes(span: Sentry.Span, usage: OpenAI.Images.ImagesRespon
   span.setAttribute('gen_ai.usage.output_tokens', usage.output_tokens);
   span.setAttribute('gen_ai.usage.total_tokens', usage.total_tokens);
 
+  if (usage.input_tokens_details) {
+    span.setAttribute('gen_ai.usage.input_image_tokens', usage.input_tokens_details.image_tokens);
+  }
+
   if (usage.output_tokens_details) {
     span.setAttribute('gen_ai.usage.output_text_tokens', usage.output_tokens_details.text_tokens);
     span.setAttribute('gen_ai.usage.output_image_tokens', usage.output_tokens_details.image_tokens);
@@ -142,6 +146,7 @@ export function constructAzureImageGenerationFn(model: AiModel): ImageGeneration
             output_format: result.output_format,
             usage: {
               input_text_tokens: result.usage.input_tokens_details.text_tokens,
+              input_image_tokens: result.usage.input_tokens_details.image_tokens,
               output_text_tokens: result.usage.output_tokens_details?.text_tokens,
               output_image_tokens: result.usage.output_tokens_details?.image_tokens ?? 0,
             },

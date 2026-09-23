@@ -62,7 +62,11 @@ describe('constructBifrostImageGenerationFn', () => {
       data: [{ b64_json: 'base64-bifrost-image' }],
       output_format: 'png',
       usage: {
-        input_tokens: 4,
+        input_tokens: 13,
+        input_tokens_details: {
+          text_tokens: 4,
+          image_tokens: 9,
+        },
         output_tokens: 5,
         output_tokens_details: {
           text_tokens: 2,
@@ -98,6 +102,7 @@ describe('constructBifrostImageGenerationFn', () => {
       output_format: 'png',
       usage: {
         input_text_tokens: 4,
+        input_image_tokens: 9,
         output_text_tokens: 2,
         output_image_tokens: 3,
       },
@@ -110,6 +115,7 @@ describe('constructBifrostImageGenerationFn', () => {
       output_format: 'png',
       usage: {
         input_tokens: 4,
+        input_tokens_details: { text_tokens: 4, image_tokens: 0 },
         output_tokens: 5,
         output_tokens_details: { text_tokens: 2, image_tokens: 3 },
       },
@@ -134,6 +140,7 @@ describe('constructBifrostImageGenerationFn', () => {
       output_format: 'png',
       usage: {
         input_tokens: 4,
+        input_tokens_details: { text_tokens: 4, image_tokens: 0 },
         output_tokens: 5,
         output_tokens_details: {
           text_tokens: 2,
@@ -163,6 +170,7 @@ describe('constructBifrostImageGenerationFn', () => {
       output_format: 'png',
       usage: {
         input_tokens: 4,
+        input_tokens_details: { text_tokens: 4, image_tokens: 0 },
         output_tokens: 5,
         output_tokens_details: {
           text_tokens: 2,
@@ -200,7 +208,8 @@ describe('constructBifrostImageGenerationFn', () => {
       data: [{ b64_json: 'base64-edited-image' }],
       output_format: 'png',
       usage: {
-        input_tokens: 7,
+        input_tokens: 9,
+        input_tokens_details: { text_tokens: 7, image_tokens: 2 },
         output_tokens: 8,
         output_tokens_details: { text_tokens: 1, image_tokens: 6 },
       },
@@ -236,6 +245,7 @@ describe('constructBifrostImageGenerationFn', () => {
         output_format: 'png',
         usage: {
           input_text_tokens: 7,
+          input_image_tokens: 2,
           output_text_tokens: 1,
           output_image_tokens: 6,
         },
@@ -276,6 +286,7 @@ describe('constructBifrostImageGenerationFn', () => {
         output_format: 'png',
         usage: {
           input_tokens: 1,
+          input_tokens_details: { text_tokens: 1, image_tokens: 0 },
           output_tokens: 1,
           output_tokens_details: { text_tokens: 0, image_tokens: 1 },
         },
