@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useImageModels } from '../providers/image-model-provider';
 import { useImageStyle } from '../providers/image-style-provider';
 import { ImageGenerationInputBox } from './image-generation-input-box';
@@ -22,7 +22,8 @@ import { useImageVersions } from './use-image-versions';
 import { useImageGeneration } from './use-image-generation';
 import { ImageAttachment } from '../chat/message-image-attachment';
 import aiBadge from '@/assets/ai-badge.png';
-import { AI_BADGE_PADDING_PX, AI_BADGE_SIZE_PX } from '@/utils/images/bake-ai-badge';
+import { bakeAiBadge } from '@/utils/images/bake-ai-badge';
+import { logError } from '@shared/logging';
 
 interface ImageGenerationChatProps {
   conversationId?: string;
@@ -46,8 +47,40 @@ export default function ImageGenerationChat({
   const [files, setFiles] = useState<Map<string, LocalFileState>>(new Map());
   const imageRef = useRef<HTMLImageElement>(null);
   const [isImageReady, setIsImageReady] = useState(false);
-  const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
-  const [showAiBadge, setShowAiBadge] = useState(false);
+  const [showAiBadge, setShowAiBadge] = useState(true);
+  const [bakedEntry, setBakedEntry] = useState<{
+    sourceUrl: string;
+    objectUrl: string;
+  } | null>(null);
+
+  const sourceUrl = selectedVersion?.imageUrl ?? null;
+
+  useEffect(() => {
+    if (!showAiBadge || sourceUrl === null) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const blob = await bakeAiBadge(sourceUrl, aiBadge.src);
+        if (cancelled) return;
+        setBakedEntry({ sourceUrl, objectUrl: URL.createObjectURL(blob) });
+      } catch (error) {
+        if (!cancelled) logError('Failed to bake AI badge into image', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showAiBadge, sourceUrl]);
+
+  useEffect(() => {
+    if (bakedEntry === null) return;
+    return () => URL.revokeObjectURL(bakedEntry.objectUrl);
+  }, [bakedEntry]);
+
+  const displaySrc =
+    showAiBadge && bakedEntry !== null && bakedEntry.sourceUrl === sourceUrl
+      ? bakedEntry.objectUrl
+      : (sourceUrl ?? '');
 
   const { aspectRatio } = useImageAspectRatio();
 
@@ -192,42 +225,19 @@ export default function ImageGenerationChat({
               prompt={selectedVersion.prompt}
               attachedFiles={selectedVersion.attachedFiles}
             >
-              <div className="relative">
-                <Image
-                  ref={imageRef}
-                  src={selectedVersion.imageUrl}
-                  alt={selectedVersion.prompt}
-                  data-testid="generated-image"
-                  className="w-full rounded-xl"
-                  width={800}
-                  height={800}
-                  loading="eager"
-                  unoptimized
-                  crossOrigin="anonymous" // Needed for clipboard copy to work
-                  onLoad={(e) => {
-                    setIsImageReady(true);
-                    setImageSize({
-                      width: e.currentTarget.naturalWidth,
-                      height: e.currentTarget.naturalHeight,
-                    });
-                  }}
-                />
-                {showAiBadge && isImageReady && imageSize !== null && (
-                  <Image
-                    src={aiBadge}
-                    alt=""
-                    aria-hidden
-                    className="absolute aspect-square pointer-events-none"
-                    style={{
-                      width: `${(AI_BADGE_SIZE_PX / imageSize.width) * 100}%`,
-                      right: `${(AI_BADGE_PADDING_PX / imageSize.width) * 100}%`,
-                      bottom: `${(AI_BADGE_PADDING_PX / imageSize.height) * 100}%`,
-                    }}
-                    width={AI_BADGE_SIZE_PX}
-                    height={AI_BADGE_SIZE_PX}
-                  />
-                )}
-              </div>
+              <Image
+                ref={imageRef}
+                src={displaySrc}
+                alt={selectedVersion.prompt}
+                data-testid="generated-image"
+                className="w-full rounded-xl"
+                width={800}
+                height={800}
+                loading="eager"
+                unoptimized
+                crossOrigin="anonymous" // Needed for clipboard copy to work
+                onLoad={() => setIsImageReady(true)}
+              />
               <ImageActionButtons
                 imageRef={imageRef}
                 fileId={selectedVersion.imageFileId}

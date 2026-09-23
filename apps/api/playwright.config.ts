@@ -1,5 +1,5 @@
 import { defineConfig } from '@playwright/test';
-import dotenv from 'dotenv';
+import { config as dotenvConfig } from '@dotenvx/dotenvx';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // This file should define any environment variables needed by the Playwright tests,
 // e.g. a test API key in sk_ format used for client auth.
 // The API server itself loads .env.local via its own load-env.ts.
-dotenv.config({ path: path.resolve(__dirname, '.env.test') });
+dotenvConfig({ path: path.resolve(__dirname, '.env.test') });
 
 export default defineConfig({
   testDir: './e2e/tests/',

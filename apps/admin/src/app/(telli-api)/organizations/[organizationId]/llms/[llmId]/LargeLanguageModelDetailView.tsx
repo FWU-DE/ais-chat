@@ -56,7 +56,7 @@ function createJsonStringSchema<T>(
       ctx.addIssue({ code: 'custom', message: 'Muss ein gültiges JSON-Format sein' });
       return;
     }
-    if (!shape.safeParse(parsed).success) {
+    if (!shape.validate(parsed)) {
       ctx.addIssue({ code: 'custom', message: invalidShapeMessage });
     }
   });

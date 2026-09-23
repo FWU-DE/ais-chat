@@ -1,5 +1,5 @@
-export const AI_BADGE_SIZE_PX = 56;
-export const AI_BADGE_PADDING_PX = 28;
+const AI_BADGE_SIZE_PX = 56;
+const AI_BADGE_PADDING_PX = 28;
 
 export async function bakeAiBadge(sourceUrl: string, badgeSrc: string): Promise<Blob> {
   const [sourceImage, badgeImage] = await Promise.all([loadImage(sourceUrl), loadImage(badgeSrc)]);

@@ -70,6 +70,7 @@ export function constructBifrostImageGenerationFn(model: AiModel): ImageGenerati
         prompt,
         n: 1,
         size,
+        quality: 'medium',
         image: uploadables,
       });
       return mapBifrostResult(editResult);
@@ -80,6 +81,7 @@ export function constructBifrostImageGenerationFn(model: AiModel): ImageGenerati
       prompt,
       n: 1,
       size,
+      quality: 'medium',
     });
     return mapBifrostResult(result);
   };

@@ -8,7 +8,6 @@ import type {
   ToolRegistry,
 } from './types';
 import { EmptyResponseError } from '../errors';
-import { checkTextInputSafety } from './safety';
 
 export const MAX_AGENTIC_ITERATIONS = 3;
 export const MAX_TOOL_CALLS_PER_ITERATION = 2;
@@ -27,7 +26,6 @@ function logError(message: string, error: unknown) {
 type RunAgentLoopParams = {
   modelSelection: ModelSelection;
   apiKeyId: string;
-  safetyModelName?: string;
   messages: AiCoreMessage[];
   toolRegistry?: ToolRegistry;
   agentName: string;
@@ -59,7 +57,6 @@ type RunAgentLoopParams = {
 export function runAgentLoop({
   modelSelection,
   apiKeyId,
-  safetyModelName,
   messages,
   toolRegistry,
   agentName,

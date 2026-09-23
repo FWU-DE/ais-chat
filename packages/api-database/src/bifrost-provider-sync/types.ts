@@ -54,7 +54,7 @@ export type BifrostProviderConfig = {
 export type BifrostProviderConfigFields = Omit<BifrostProviderConfig, 'provider' | 'keys'>;
 
 export type BifrostProviderResponse = Omit<BifrostProviderConfig, 'provider' | 'keys'> & {
-  name?: BifrostProvider;
+  name?: string;
   concurrency_and_buffer_size?: {
     concurrency?: number;
     buffer_size?: number;
@@ -82,9 +82,9 @@ export type BifrostProviderSyncOptions = {
  * Provider access configuration for a Bifrost virtual key.
  *
  * `provider` is a plain string (not `BifrostProvider`) because virtual keys read from Bifrost
- * may include provider configs for providers this codebase doesn't manage (e.g. `anthropic`),
- * which must be preserved untouched. `budgets` and `rate_limit` are treated as opaque - we only
- * ever read and re-send them unchanged for provider configs we didn't add ourselves.
+ * may include provider configs for providers outside `BIFROST_PROVIDERS`, which this codebase
+ * leaves untouched here. `budgets` and `rate_limit` are treated as opaque - we only ever read
+ * and re-send them unchanged for provider configs we didn't add ourselves.
  */
 export type BifrostVirtualKeyProviderConfig = {
   id?: number;

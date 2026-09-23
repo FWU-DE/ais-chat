@@ -5,13 +5,15 @@ services:
   # Containers share this network namespace via network_mode: "service:keycloak"
   # This is required to access keycloak using the same URL from within the container and the browser
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.3-0
+    image: quay.io/keycloak/keycloak:26.7.4-0
     restart: unless-stopped
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       CLIENT_NAME: ais-chat-dev-client
       CLIENT_SECRET: ClientSecret
+      # ais-chat-app shares keycloak's netns (network_mode: service:keycloak), so it's accessible on localhost.
+      BACKCHANNEL_LOGOUT_URL: http://localhost:3000/api/auth/backchannel-logout
     command: start-dev --import-realm --db dev-file
     volumes:
       - keycloak_data:/opt/keycloak/data/h2
@@ -27,7 +29,7 @@ services:
 
   # Fix keycloak volume permissions (runs with uid 1000)
   fix-keycloak-volume-ownership:
-    image: alpine:3.24.1
+    image: alpine:3.24.2
     restart: no
     entrypoint: /bin/sh -c "chown 1000 /keycloak"
     volumes:
@@ -108,7 +110,7 @@ services:
 
   # Xberg text extraction service
   xberg:
-    image: ghcr.io/xberg-io/xberg:1.1.5-core
+    image: ghcr.io/xberg-io/xberg:1.2.3-core
     restart: unless-stopped
     environment:
       XBERG_MAX_UPLOAD_SIZE_MB: '50'
@@ -147,7 +149,7 @@ services:
       start_period: 2s
 
   bifrost:
-    image: ghcr.io/maximhq/bifrost:v2.1.1
+    image: ghcr.io/maximhq/bifrost:v2.2.1
     restart: unless-stopped
     environment:
       BIFROST_ADMIN_USERNAME: admin
@@ -248,6 +250,8 @@ services:
       VIDIS_CLIENT_SECRET: ClientSecret
       VIDIS_BASE_URI: http://localhost:8080/realms/ais-chat-local
       VIDIS_ISSUER_URI: http://localhost:8080/realms/ais-chat-local
+      # Local keycloak is served over plain HTTP
+      VIDIS_ALLOW_INSECURE_DISCOVERY: true
 
       # Databases
       DATABASE_URL: postgresql://admin:test1234@postgres:5432/app_db
@@ -331,9 +335,9 @@ services:
       AUTH_SECRET: ais-chat-default-secret-please-change-in-production-use-openssl-rand-base64-32
 
       # Keycloak
-      KEYCLOAK_CLIENT_ID: ais-chat-dev-client
+      KEYCLOAK_CLIENT_ID: ais-chat-admin-dev-client
       KEYCLOAK_CLIENT_SECRET: ClientSecret
-      KEYCLOAK_ISSUER: http://localhost:8080/realms/ais-chat-local
+      KEYCLOAK_ISSUER: http://localhost:8080/realms/ais-chat-admin-local
 
       # AIS.chat app
       DATABASE_URL: postgresql://admin:test1234@postgres:5432/app_db
@@ -371,7 +375,7 @@ services:
 
   # Initialization container
   ais-chat-init:
-    image: alpine:3.24.1
+    image: alpine:3.24.2
     restart: no
     environment:
       # Database URLs for both databases

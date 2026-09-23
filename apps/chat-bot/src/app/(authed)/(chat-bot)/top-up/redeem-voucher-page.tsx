@@ -15,7 +15,7 @@ export default function RedeemVoucherPage() {
   const voucherSchema = z.string().length(16);
 
   const handleRedeem = async () => {
-    if (voucherSchema.safeParse(voucherCode).success) {
+    if (voucherSchema.validate(voucherCode)) {
       const result = await redeemVoucherAction(voucherCode);
       if (!result.success) {
         toast.error(tToast('redeem-invalid'));
@@ -45,7 +45,7 @@ export default function RedeemVoucherPage() {
           className="bg-primary text-white px-4 rounded-enterprise-md"
           type="button"
           onClick={handleRedeem}
-          disabled={!voucherSchema.safeParse(voucherCode).success}
+          disabled={!voucherSchema.validate(voucherCode)}
         >
           {t('redeem-button')}
         </button>

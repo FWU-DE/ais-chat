@@ -1,5 +1,5 @@
 import { coverageConfigDefaults, defineConfig } from 'vitest/config';
-import { config as dotenvConfig } from 'dotenv';
+import { config as dotenvConfig } from '@dotenvx/dotenvx';
 dotenvConfig({ path: '.env.test' });
 
 // Configuration options: https://vitest.dev/config/

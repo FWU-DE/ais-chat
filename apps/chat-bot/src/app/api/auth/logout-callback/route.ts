@@ -1,15 +1,13 @@
 import { logError } from '@shared/logging';
 import { withTrustedOrigin } from '@shared/utils/with-trusted-origin';
 import { NextRequest, NextResponse } from 'next/server';
-
-const SESSION_COOKIE_NAME = 'authjs.session-token';
-const SECURE_SESSION_COOKIE_NAME = `__Secure-${SESSION_COOKIE_NAME}`; // Used when site is served over HTTPS
+import { APP_COOKIE_PREFIX } from '@/auth/cookies';
 
 /**
  * This route is called by the IDP after logout.
- * We clear the session cookies and redirect to the login page.
+ * We clear all Auth.js cookies namespaced for this app and redirect to the login page.
  * If the session cookie is bigger than 4 kb, the cookie might be split into multiple cookies.
- * Therefore, we clear all cookies that start with the session cookie name.
+ * Therefore, we clear all cookies whose name contains the app's Auth.js cookie prefix.
  */
 export async function GET(request: NextRequest) {
   const trustedRequest = withTrustedOrigin(request);
@@ -19,16 +17,13 @@ export async function GET(request: NextRequest) {
     const cookieNames = request.cookies
       .getAll()
       .map((cookie) => cookie.name)
-      .filter(
-        (name) =>
-          name.startsWith(SESSION_COOKIE_NAME) || name.startsWith(SECURE_SESSION_COOKIE_NAME),
-      );
+      .filter((name) => name.includes(APP_COOKIE_PREFIX));
 
     cookieNames.forEach((cookieName) => {
       response.cookies.set(cookieName, '', {
         path: '/',
         maxAge: 0,
-        secure: cookieName.startsWith('__Secure-'),
+        secure: cookieName.startsWith('__Secure-') || cookieName.startsWith('__Host-'),
       });
     });
 

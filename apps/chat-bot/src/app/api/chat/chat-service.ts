@@ -453,8 +453,8 @@ export async function sendChatMessage({
     modelSupportsImages,
     imageAttachmentType,
   );
-  
 
+  // TODO: Remove this special handling for text input safety once TD-1604 (centralized error handling for chats) is done
   try {
     await checkTextInputSafety({
       modelSelection,

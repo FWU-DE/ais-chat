@@ -1,7 +1,22 @@
+import { getVidisJwks } from '@/auth/providers/vidis-provider';
 import { sessionBlockList } from '@/auth/session';
+import { env } from '@/env';
 import { logError, logInfo, logWarning } from '@shared/logging';
-import * as jose from 'jose';
+import { jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+
+const BACKCHANNEL_LOGOUT_EVENT = 'http://schemas.openid.net/event/backchannel-logout';
+const logoutTokenSchema = z.object({
+  sid: z.string().min(1),
+  iat: z.number(),
+  exp: z.number(),
+  jti: z.string().min(1),
+  events: z.object({
+    [BACKCHANNEL_LOGOUT_EVENT]: z.object({}),
+  }),
+  nonce: z.never().optional(),
+});
 
 /**
  * Extract the logout_token from the request body
@@ -30,11 +45,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No logout_token found in request body' }, { status: 400 });
     }
 
-    const decodedToken = jose.decodeJwt(logoutToken);
-    const sessionId = decodedToken.sid as string;
-    if (!sessionId) {
-      logWarning('No sid found in logout_token');
-      return NextResponse.json({ error: 'No sid found in logout_token' }, { status: 400 });
+    const jwks = await getVidisJwks();
+    let sessionId: string;
+    try {
+      const { payload } = await jwtVerify(logoutToken, jwks, {
+        issuer: env.vidisIssuerUri,
+        audience: env.vidisClientId,
+        maxTokenAge: '5 minutes',
+      });
+      sessionId = logoutTokenSchema.parse(payload).sid;
+    } catch (error) {
+      logWarning('Rejected backchannel logout request with invalid logout_token', { error });
+      return NextResponse.json({ error: 'Invalid logout_token' }, { status: 401 });
     }
 
     await sessionBlockList.add(sessionId);

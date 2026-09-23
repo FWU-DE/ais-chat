@@ -61,6 +61,7 @@ export default function LearningScenarioSharedChat({
       headerT={t}
       entity={sharedSchoolChat}
       inviteCode={inviteCode}
+      sharedEntityType="learningScenario"
       avatarPictureUrl={avatarPictureUrl}
       chat={chat}
       dialogStartMode="explicit"

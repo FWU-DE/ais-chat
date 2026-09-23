@@ -77,6 +77,7 @@ export default function CharacterSharedChat({
       headerT={t}
       entity={character}
       inviteCode={inviteCode}
+      sharedEntityType="character"
       avatarPictureUrl={avatarPictureUrl}
       chat={chat}
       dialogStartMode="derived"

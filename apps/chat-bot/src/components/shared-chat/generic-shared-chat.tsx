@@ -28,6 +28,7 @@ import {
   newSharedChatSessionId,
   saveSharedChat,
 } from '@/utils/shared-chat-storage';
+import { getSharedChatImageUrl } from '@/utils/shared-chat-files';
 import { cnanoid } from '@shared/random/randomService';
 
 type ShareSessionInput = Parameters<typeof calculateShareSessionState>[0];
@@ -51,6 +52,7 @@ export type SharedChatViewProps = {
    */
   entity: EntityMeta;
   inviteCode: string;
+  sharedEntityType: 'character' | 'learningScenario';
   avatarPictureUrl?: string;
   /**
    * Chat hook result owned by the caller. The caller is responsible for wiring
@@ -106,6 +108,7 @@ export default function GenericSharedChat({
   headerT,
   entity,
   inviteCode,
+  sharedEntityType,
   avatarPictureUrl,
   chat,
   dialogStartMode,
@@ -143,6 +146,15 @@ export default function GenericSharedChat({
               createdAt: new Date(),
               metadata: null,
               userId: null,
+              localUrl: isImageFile(file.name)
+                ? getSharedChatImageUrl({
+                    fileId: file.id,
+                    inviteCode,
+                    entityType: sharedEntityType,
+                    entityId: entity.id,
+                    sharedSessionId: restored.sharedSessionId,
+                  })
+                : undefined,
             })),
           );
         }

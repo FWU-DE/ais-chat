@@ -15,7 +15,7 @@ const requiredModelNames: Record<Exclude<StaticModelRole, 'safety'>, string> = {
 
 export async function initializeStaticModelConfigurations() {
   const configuration = await dbGetConfiguration(STATIC_MODELS_CONFIGURATION_KEY);
-  if (!configuration || !staticModelsConfigurationSchema.safeParse(configuration.value).success) {
+  if (!configuration || !staticModelsConfigurationSchema.validate(configuration.value)) {
     const models = await dbGetAllLlmModels();
     const firstTextModel = getFirstTextModel(models);
     const firstImageModel = models.find((model) => model.priceMetadata.type === 'image');

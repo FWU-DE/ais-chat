@@ -1808,3 +1808,120 @@ export const urlPresetTable = pgTable('url_preset', {
   orderNumber: integer('order_number').notNull().default(0),
   urls: text('urls').array().notNull(),
 });
+
+/**** Community Templates *****/
+export const templateRequestStatusSchema = z.enum([
+  'submitted',
+  'approved',
+  'rejected',
+  'cancelled',
+]);
+export const templateRequestStatus = pgEnum(
+  'template_request_status',
+  templateRequestStatusSchema.enum,
+);
+
+export const CommunityTemplateRequestTable = pgTable(
+  'community_template_request',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    assistantId: uuid('assistant_id').references(() => assistantTable.id, { onDelete: 'cascade' }),
+    characterId: uuid('character_id').references(() => characterTable.id, { onDelete: 'cascade' }),
+    learningScenarioId: uuid('learning_scenario_id').references(() => learningScenarioTable.id, {
+      onDelete: 'cascade',
+    }),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    createdBy: uuid('created_by').notNull(),
+    state: templateRequestStatus('status').notNull().default('submitted'),
+    note: text('note').notNull().default(''),
+  },
+  (table) => [
+    check(
+      'community_template_request_exactly_one_target_ck',
+      sql`((${table.assistantId} IS NOT NULL)::int + (${table.characterId} IS NOT NULL)::int + (${table.learningScenarioId} IS NOT NULL)::int) = 1`,
+    ),
+    index().on(table.assistantId),
+    index().on(table.characterId),
+    index().on(table.learningScenarioId),
+    index().on(table.state),
+  ],
+);
+
+export const CommunityTemplateRequestSelectSchema = createSelectSchema(
+  CommunityTemplateRequestTable,
+).extend({
+  createdAt: z.coerce.date(),
+});
+export const CommunityTemplateRequestInsertSchema = createInsertSchema(
+  CommunityTemplateRequestTable,
+).omit({
+  id: true,
+  createdAt: true,
+});
+export const CommunityTemplateRequestUpdateSchema = createUpdateSchema(
+  CommunityTemplateRequestTable,
+).omit({
+  createdAt: true,
+  createdBy: true,
+});
+
+export type CommunityTemplateRequestSelectModel = z.infer<
+  typeof CommunityTemplateRequestSelectSchema
+>;
+export type CommunityTemplateRequestInsertModel = z.infer<
+  typeof CommunityTemplateRequestInsertSchema
+>;
+export type CommunityTemplateRequestUpdateModel = z.infer<
+  typeof CommunityTemplateRequestUpdateSchema
+>;
+
+export const templateRequestEventTypeSchema = z.enum([
+  'submit',
+  'approve',
+  'reject',
+  'cancel',
+  'user_message',
+  'editor_message',
+]);
+export const templateRequestEventType = pgEnum(
+  'template_request_event_type',
+  templateRequestEventTypeSchema.enum,
+);
+export const templateRequestCreatorRoleSchema = z.enum(['user', 'editor']);
+export const templateRequestCreatorRole = pgEnum(
+  'template_request_creator_role',
+  templateRequestCreatorRoleSchema.enum,
+);
+export const CommunityTemplateRequestEventTable = pgTable(
+  'community_template_request_events',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    templateRequestId: uuid('template_request_id')
+      .references(() => CommunityTemplateRequestTable.id, { onDelete: 'cascade' })
+      .notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    createdById: uuid('created_by_id').notNull(),
+    createdByName: text('created_by_name'),
+    createdByRole: templateRequestCreatorRole('created_by_role').notNull(),
+    eventType: templateRequestEventType('event_type').notNull(),
+    message: text('message').notNull().default(''),
+  },
+  (table) => [index().on(table.templateRequestId)],
+);
+
+export const CommunityTemplateRequestEventSelectSchema = createSelectSchema(
+  CommunityTemplateRequestEventTable,
+).extend({ createdAt: z.coerce.date() });
+export const CommunityTemplateRequestEventInsertSchema = createInsertSchema(
+  CommunityTemplateRequestEventTable,
+).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type CommunityTemplateRequestEventSelectModel = z.infer<
+  typeof CommunityTemplateRequestEventSelectSchema
+>;
+export type CommunityTemplateRequestEventInsertModel = z.infer<
+  typeof CommunityTemplateRequestEventInsertSchema
+>;
