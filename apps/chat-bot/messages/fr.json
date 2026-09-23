@@ -50,7 +50,7 @@
   "ai-activity": {
     "title": "Activité IA",
     "toggle": "Afficher/masquer l’activité IA",
-    "open-source": "Ouvrir la source : {source}",
+    "open-source": "Ouvrir la source: {source}",
     "steps": {
       "analysis": "Analyse",
       "done": "Terminé",

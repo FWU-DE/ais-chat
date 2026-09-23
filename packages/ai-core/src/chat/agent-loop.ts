@@ -8,13 +8,11 @@ import type {
   ToolRegistry,
 } from './types';
 import { EmptyResponseError } from '../errors';
-import { checkInputSafety } from '../safety';
-import { isChatImageAttachment } from './types';
-import { getTextModelById } from '../models';
 import { generateAgenticStreamWithBilling } from './agentic-stream';
+import { env } from '../env';
 
-export const MAX_AGENTIC_ITERATIONS = 3;
-export const MAX_TOOL_CALLS_PER_ITERATION = 8;
+export const MAX_AGENTIC_ITERATIONS = env.maxAgenticIterations;
+export const MAX_TOOL_CALLS_PER_ITERATION = env.maxToolCallsPerIteration;
 
 const toolCallDuration = metrics
   .getMeter('ais-chat.tools', '0.0.1')

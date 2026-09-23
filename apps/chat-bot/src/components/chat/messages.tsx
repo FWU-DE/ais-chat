@@ -37,7 +37,7 @@ export function Messages({
   webSourceMapping,
   activitySteps = [],
   showActivityDialog = false,
-}: MessagesProps) {
+}: MessagesProps): React.JSX.Element {
   return (
     <div className={containerClassName}>
       {messages.map((message, index) => (

@@ -212,6 +212,8 @@ export async function sendCharacterMessage({
     },
   });
 
+  const aiActivity = createAiActivityStream(update, tools.toolRegistry);
+
   // Build system prompt
   const systemPrompt = constructCharacterSystemPrompt({
     character,

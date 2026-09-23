@@ -9,10 +9,8 @@ import { parseJsonRecord, readString, readValue, toLinks } from './ai-activity';
 import { TOOL_NAMES } from '@/types/tool-names';
 import { webSearchArgsSchema } from '@/app/api/chat/tools/web-search-tool';
 import { webScraperArgsSchema } from '@/app/api/chat/tools/web-scraper-tool';
-import { retrieveTextChunksArgsSchema } from '@/app/api/chat/tools/retrieve-text-chunks-tool';
 import { retrieveEntireFileArgsSchema } from '@/app/api/chat/tools/retrieve-entire-file-tool';
 import { mundoSearchArgsSchema } from '@/app/api/chat/tools/mundo-search-tool';
-import { expressionSchema } from '@/app/api/chat/tools/math-calculate-tool';
 
 function createActivityStep(
   toolCall: NonNullable<ConversationMessageModel['toolCalls']>[number],
@@ -36,19 +34,9 @@ function createActivityStep(
       detail = parsed.success ? parsed.data.query : undefined;
       break;
     }
-    case TOOL_NAMES.retrieveTextChunks: {
-      const parsed = retrieveTextChunksArgsSchema.safeParse(args);
-      detail = parsed.success ? parsed.data.search : undefined;
-      break;
-    }
     case TOOL_NAMES.retrieveEntireFile: {
       const parsed = retrieveEntireFileArgsSchema.safeParse(args);
       detail = parsed.success ? parsed.data.fileName : undefined;
-      break;
-    }
-    case TOOL_NAMES.mathCalculate: {
-      const parsed = expressionSchema.safeParse(args);
-      detail = parsed.success ? parsed.data.expression : undefined;
       break;
     }
     case TOOL_NAMES.webScraper: {

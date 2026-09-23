@@ -70,14 +70,10 @@ function StepIcon({ step }: { step: AiActivityStep }) {
 }
 
 function StepDetail({ step }: { step: Extract<AiActivityStep, { kind: 'tool' }> }) {
-  const detail =
-    step.tool === 'math_calculate'
-      ? [step.detail, step.result].filter((part) => part !== undefined).join(' = ')
-      : step.detail;
-  const visibleDetail = truncate(detail);
+  const visibleDetail = truncate(step.detail);
 
   return visibleDetail === undefined || visibleDetail.length === 0 ? null : (
-    <span title={detail} className="min-w-0 truncate text-sm text-black/50">
+    <span title={step.detail} className="min-w-0 truncate text-sm text-black/50">
       {visibleDetail}
     </span>
   );
@@ -202,7 +198,7 @@ export function AiActivityPanel({ steps, panelId }: { steps: AiActivityStep[]; p
       {isOpen && (
         <div
           id={panelId}
-          className="w-full overflow-hidden rounded-xl border border-[#e7e7e7] bg-white p-4"
+          className="w-full overflow-hidden rounded-xl border border-border bg-white p-4"
         >
           <ActivityStepList steps={steps} />
         </div>

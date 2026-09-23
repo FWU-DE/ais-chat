@@ -217,6 +217,8 @@ export async function sendLearningScenarioMessage({
     },
   });
 
+  const aiActivity = createAiActivityStream(update, tools.toolRegistry);
+
   // Build system prompt
   const systemPrompt = constructLearningScenarioSystemPrompt({
     learningScenario: learningScenario,

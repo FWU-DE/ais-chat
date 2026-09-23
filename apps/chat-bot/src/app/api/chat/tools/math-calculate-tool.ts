@@ -5,7 +5,6 @@ import {
   type CalculatorResponse,
 } from '../calculator';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { parseJsonRecord } from '@/utils/chat/ai-activity';
 import type { ToolDefinition, ToolRegistration } from './types';
 import { TOOL_NAMES } from '@/types/tool-names';
 
@@ -51,12 +50,10 @@ export function buildMathCalculateTool(): ToolRegistration {
     handler,
     activity: {
       createStep: (toolCall: ToolCall) => {
-        const parsed = expressionSchema.safeParse(parseJsonRecord(toolCall.arguments));
         return {
           kind: 'tool',
           id: toolCall.id,
           tool: TOOL_NAMES.mathCalculate,
-          detail: parsed.success ? parsed.data.expression : undefined,
         };
       },
     },

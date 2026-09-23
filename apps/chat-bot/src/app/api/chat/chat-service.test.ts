@@ -64,6 +64,7 @@ const mocks = vi.hoisted(() => ({
   getChatTitleMock: vi.fn(),
   limitChatHistoryMock: vi.fn(),
   annotateMessageAttachmentNamesMock: vi.fn(),
+  convertMessageModelToMessageMock: vi.fn(),
   extractUrlsMock: vi.fn(),
   createImageAttachmentsForConversationMock: vi.fn(),
   ingestWebContentMock: vi.fn(),
@@ -163,6 +164,10 @@ vi.mock('./utils', () => ({
   getChatTitle: mocks.getChatTitleMock,
   limitChatHistory: mocks.limitChatHistoryMock,
   annotateMessageAttachmentNames: mocks.annotateMessageAttachmentNamesMock,
+}));
+
+vi.mock('@/utils/chat/messages', () => ({
+  convertMessageModelToMessage: mocks.convertMessageModelToMessageMock,
 }));
 
 vi.mock('../utils/extract-urls', () => ({
@@ -330,6 +335,7 @@ beforeEach(() => {
   mocks.annotateMessageAttachmentNamesMock.mockImplementation(
     (incomingMessages: ChatMessage[]) => incomingMessages,
   );
+  mocks.convertMessageModelToMessageMock.mockImplementation((incomingMessages) => incomingMessages);
   mocks.enrichMessagesWithImageDataMock.mockImplementation((messages: ChatMessage[]) => messages);
   mocks.createImageAttachmentsForConversationMock.mockResolvedValue([]);
   mocks.convertToAiCoreMessagesMock.mockImplementation(
