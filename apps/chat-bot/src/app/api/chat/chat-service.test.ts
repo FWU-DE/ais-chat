@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { runAgentLoop } from '@ais-chat/ai-core';
 import type { ChatMessage } from '@/types/chat';
 import type { UserAndContext } from '@/auth/types';
+import { decodeChatStreamEvent } from '@/utils/streaming';
 
 const webSearchResults = [
   {
@@ -63,6 +64,7 @@ const mocks = vi.hoisted(() => ({
   getChatTitleMock: vi.fn(),
   limitChatHistoryMock: vi.fn(),
   annotateMessageAttachmentNamesMock: vi.fn(),
+  convertMessageModelToMessageMock: vi.fn(),
   extractUrlsMock: vi.fn(),
   createImageAttachmentsForConversationMock: vi.fn(),
   ingestWebContentMock: vi.fn(),
@@ -162,6 +164,10 @@ vi.mock('./utils', () => ({
   getChatTitle: mocks.getChatTitleMock,
   limitChatHistory: mocks.limitChatHistoryMock,
   annotateMessageAttachmentNames: mocks.annotateMessageAttachmentNamesMock,
+}));
+
+vi.mock('@/utils/chat/messages', () => ({
+  convertMessageModelToMessage: mocks.convertMessageModelToMessageMock,
 }));
 
 vi.mock('../utils/extract-urls', () => ({
@@ -271,6 +277,25 @@ async function collectStream(stream: ReadableStream<string>) {
   return chunks.join('');
 }
 
+async function collectTextStream(stream: ReadableStream<string>) {
+  const reader = stream.getReader();
+  const chunks: string[] = [];
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (value !== undefined && decodeChatStreamEvent(value) === null) {
+        chunks.push(value);
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return chunks.join('');
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 
@@ -310,6 +335,7 @@ beforeEach(() => {
   mocks.annotateMessageAttachmentNamesMock.mockImplementation(
     (incomingMessages: ChatMessage[]) => incomingMessages,
   );
+  mocks.convertMessageModelToMessageMock.mockImplementation((incomingMessages) => incomingMessages);
   mocks.enrichMessagesWithImageDataMock.mockImplementation((messages: ChatMessage[]) => messages);
   mocks.createImageAttachmentsForConversationMock.mockResolvedValue([]);
   mocks.convertToAiCoreMessagesMock.mockImplementation(
@@ -417,7 +443,7 @@ describe('sendChatMessage', () => {
       user: createUser(),
     });
 
-    const streamedText = await collectStream(result.stream);
+    const streamedText = await collectTextStream(result.stream);
 
     expect(mocks.buildToolsMock).toHaveBeenCalledTimes(1);
     expect(mocks.buildToolsMock).toHaveBeenCalledWith(
@@ -480,7 +506,7 @@ describe('sendChatMessage', () => {
     expect(mocks.sendRabbitmqEventMock).toHaveBeenCalled();
   });
 
-  it('does not persist retrieve_entire_file tool calls or results', async () => {
+  it('persists retrieve_entire_file tool calls and results', async () => {
     mocks.runAgentLoopMock.mockImplementationOnce(
       ({ onComplete }: Parameters<typeof runAgentLoop>[0]) => {
         void onComplete({
@@ -539,16 +565,23 @@ describe('sendChatMessage', () => {
       orderNumber: number;
     }>;
 
-    expect(insertedMessages).toHaveLength(3);
+    expect(insertedMessages).toHaveLength(4);
     expect(insertedMessages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           role: 'assistant',
-          toolCalls: [
+          toolCalls: expect.arrayContaining([
+            expect.objectContaining({
+              name: 'retrieve_entire_file',
+            }),
             expect.objectContaining({
               name: 'web_search',
             }),
-          ],
+          ]),
+        }),
+        expect.objectContaining({
+          role: 'tool',
+          toolCallId: 'call-retrieve-entire-file',
         }),
         expect.objectContaining({
           role: 'tool',
@@ -557,21 +590,6 @@ describe('sendChatMessage', () => {
         expect.objectContaining({
           role: 'assistant',
           id: result.messageId,
-        }),
-      ]),
-    );
-
-    expect(insertedMessages).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          toolCallId: 'call-retrieve-entire-file',
-        }),
-        expect.objectContaining({
-          toolCalls: expect.arrayContaining([
-            expect.objectContaining({
-              name: 'retrieve_entire_file',
-            }),
-          ]),
         }),
       ]),
     );

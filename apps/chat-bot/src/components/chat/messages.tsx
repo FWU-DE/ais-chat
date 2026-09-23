@@ -1,8 +1,10 @@
 import { type UIMessage, type ChatStatus } from '@/types/chat';
 import { ChatBox, type PendingFileModel } from './chat-box';
+import { AiActivityPanel } from './activity/ai-activity';
 import LoadingAnimation from './loading-animation';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
+import type { AiActivityStep } from '@/types/ai-activity';
 
 // Re-export for consumers that import from this file
 export type { ChatStatus, PendingFileModel };
@@ -18,7 +20,8 @@ interface MessagesProps {
   fileMapping?: Map<string, FileModel[]>;
   pendingFileMapping?: Map<string, PendingFileModel[]>;
   webSourceMapping?: Map<string, WebSource[]>;
-  showWebSourcesInDialog?: boolean;
+  activitySteps?: AiActivityStep[];
+  showActivityDialog?: boolean;
 }
 
 export function Messages({
@@ -32,8 +35,9 @@ export function Messages({
   fileMapping,
   pendingFileMapping,
   webSourceMapping,
-  showWebSourcesInDialog,
-}: MessagesProps) {
+  activitySteps = [],
+  showActivityDialog = false,
+}: MessagesProps): React.JSX.Element {
   return (
     <div className={containerClassName}>
       {messages.map((message, index) => (
@@ -49,13 +53,15 @@ export function Messages({
           assistantIcon={assistantIcon}
           webSources={message.role === 'user' ? webSourceMapping?.get(message.id) : undefined}
           status={status}
-          showWebSourcesInDialog={showWebSourcesInDialog}
+          showActivityDialog={showActivityDialog}
         >
           {message}
         </ChatBox>
       ))}
-
-      {isLoading && <LoadingAnimation />}
+      {isLoading && <LoadingAnimation activitySteps={activitySteps} />}
+      {isLoading && !showActivityDialog && activitySteps.length > 0 && (
+        <AiActivityPanel steps={activitySteps} panelId="live-ai-activity" />
+      )}
     </div>
   );
 }

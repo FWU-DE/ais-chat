@@ -1,4 +1,3 @@
-import type { ToolRegistry } from '@ais-chat/ai-core';
 import type { UserAndContext } from '@/auth/types';
 import type { FileModel, WebSearchModel, WebSearchResult } from '@shared/db/schema';
 import { buildWebSearchTool } from './tools/web-search-tool';
@@ -7,6 +6,7 @@ import { buildRetrieveEntireFileTool } from './tools/retrieve-entire-file-tool';
 import { buildRetrieveTextChunksTool } from './tools/retrieve-text-chunks-tool';
 import { buildMundoSearchTool } from './tools/mundo-search-tool';
 import { buildMathCalculateTool } from './tools/math-calculate-tool';
+import type { ToolRegistration } from './tools/types';
 
 type BuildToolsParams = {
   user: UserAndContext;
@@ -25,7 +25,7 @@ type BuildToolsParams = {
 };
 
 type BuildToolsResult = {
-  toolRegistry: ToolRegistry;
+  toolRegistry: Record<string, ToolRegistration>;
 };
 
 export async function buildTools({
@@ -43,7 +43,7 @@ export async function buildTools({
   isCalculatorEnabled = false,
   onWebSearchResults,
 }: BuildToolsParams): Promise<BuildToolsResult> {
-  const toolRegistry: ToolRegistry = {};
+  const toolRegistry: Record<string, ToolRegistration> = {};
 
   if (isCalculatorEnabled) {
     const calculatorTool = buildMathCalculateTool();

@@ -12,12 +12,7 @@ import { isImageFile } from '@/utils/files/generic';
 import { type UIMessage, type ChatStatus } from '@/types/chat';
 import { ReactNode } from 'react';
 import { WebSource } from '@shared/db/types';
-import {
-  WebSearchSourcesButton,
-  WebSearchSourcesDialog,
-  WebSearchSourcesPanel,
-  useWebSearchSourcesDisclosure,
-} from './sources/web-search-sources';
+import { AiActivityDialog, AiActivityPanel } from './activity/ai-activity';
 import DownloadConversationMessageButton from './download-conversation-message-button';
 import { utils } from '@shared/utils';
 import DisplayFileAttachment from './display-file-attachment';
@@ -38,7 +33,7 @@ export function ChatBox({
   conversationId,
   characterName,
   status,
-  showWebSourcesInDialog = false,
+  showActivityDialog,
 }: {
   assistantIcon?: ReactNode;
   children: UIMessage;
@@ -52,16 +47,10 @@ export function ChatBox({
   conversationId?: string;
   characterName?: string;
   status: ChatStatus;
-  showWebSourcesInDialog?: boolean;
+  showActivityDialog?: boolean;
 }) {
   const tCommon = useTranslations('common');
   const { isAtLeast } = useBreakpoints();
-  const {
-    isOpen: isAssistantSourcesOpen,
-    panelRef,
-    openOrScrollIntoView,
-    toggleOpen,
-  } = useWebSearchSourcesDisclosure();
 
   const userClassName =
     children.role === 'user'
@@ -83,8 +72,7 @@ export function ChatBox({
   const parsedUrls =
     children.role === 'user' ? (utils.url.parseHyperlinks(children.content) ?? []) : [];
   const userWebSources = children.role === 'user' ? [...(webSources ?? [])] : [];
-  const assistantWebSearchSources =
-    children.role === 'assistant' ? (children.webSearchResults ?? []) : [];
+  const activitySteps = children.role === 'assistant' ? (children.activitySteps ?? []) : [];
 
   for (const url of parsedUrls) {
     if (userWebSources.find((source) => source.link === url) === undefined) {
@@ -141,21 +129,13 @@ export function ChatBox({
       </div>
     ) : null;
 
-  const maybeAssistantWebSearchSources =
-    assistantWebSearchSources.length > 0 && !showWebSourcesInDialog ? (
-      <WebSearchSourcesPanel
-        sources={assistantWebSearchSources}
-        isOpen={isAssistantSourcesOpen}
-        onToggle={toggleOpen}
-        panelId={`assistant-web-sources-${children.id}`}
-        panelRef={panelRef}
-      />
+  const AiActivity =
+    activitySteps.length > 0 && !showActivityDialog && !(isLoading && isLastNonUser) ? (
+      <AiActivityPanel steps={activitySteps} panelId={`assistant-ai-activity-${children.id}`} />
     ) : null;
 
   const margin =
-    allFiles !== undefined || userWebSources.length > 0 || maybeAssistantWebSearchSources !== null
-      ? 'm-0 mt-4'
-      : 'm-4';
+    allFiles !== undefined || userWebSources.length > 0 || AiActivity !== null ? 'm-0 mt-4' : 'm-4';
 
   const maybeShowMessageIcons =
     isLastNonUser && status !== 'streaming' ? (
@@ -180,15 +160,7 @@ export function ChatBox({
             <ReloadIcon className="w-5 h-5" />
           </div>
         </button>
-        {assistantWebSearchSources.length > 0 &&
-          (showWebSourcesInDialog ? (
-            <WebSearchSourcesDialog sources={assistantWebSearchSources} />
-          ) : (
-            <WebSearchSourcesButton
-              panelId={`assistant-web-sources-${children.id}`}
-              onClick={openOrScrollIntoView}
-            />
-          ))}
+        {showActivityDialog && <AiActivityDialog steps={activitySteps} />}
       </div>
     ) : null;
 
@@ -196,6 +168,7 @@ export function ChatBox({
 
   return (
     <>
+      {AiActivity}
       <div key={index} className={cn('w-full', userClassName, margin)}>
         <div aria-label={`${children.role} message ${Math.floor(index / 2 + 1)}`}>
           <div className={cn('flex min-w-0', isAtLeast.sm ? 'flex-row' : 'flex-col')}>
@@ -206,7 +179,6 @@ export function ChatBox({
                 children.role === 'assistant' && 'w-full min-w-0',
               )}
             >
-              {maybeAssistantWebSearchSources}
               {messageContent}
               {maybeShowMessageIcons}
             </div>

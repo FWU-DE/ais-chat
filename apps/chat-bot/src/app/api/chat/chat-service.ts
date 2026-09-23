@@ -7,6 +7,7 @@ import {
 } from '@ais-chat/ai-core';
 import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
 import { getModelAndApiKeyWithResult, getAuxiliaryModel, getSafetyModel } from '../utils/utils';
+import { createAiActivityStream } from './ai-activity-stream';
 import { getChatModelSelection } from '../utils/model-circuit-breaker';
 import {
   dbGetConversationAndMessages,
@@ -73,44 +74,6 @@ type CustomChatIds = {
   learningScenarioId?: string | undefined;
   assistantId?: string | undefined;
 };
-
-function filterPersistedAgentLoopMessages(agentLoopMessages: AiCoreMessage[]) {
-  const excludedToolCallIds = new Set<string>();
-
-  return agentLoopMessages.flatMap((message) => {
-    if (message.role === 'assistant' && message.toolCalls?.length) {
-      const retainedToolCalls = message.toolCalls.filter((toolCall) => {
-        if (toolCall.name === 'retrieve_entire_file') {
-          excludedToolCallIds.add(toolCall.id);
-          return false;
-        }
-
-        return true;
-      });
-
-      if (retainedToolCalls.length === 0 && message.content.trim().length === 0) {
-        return [];
-      }
-
-      return [
-        {
-          ...message,
-          toolCalls: retainedToolCalls.length > 0 ? retainedToolCalls : undefined,
-        },
-      ];
-    }
-
-    if (
-      message.role === 'tool' &&
-      message.toolCallId &&
-      excludedToolCallIds.has(message.toolCallId)
-    ) {
-      return [];
-    }
-
-    return [message];
-  });
-}
 
 function ensureConversationCustomChatIdsMatch({
   incomingIds,
@@ -494,6 +457,7 @@ export async function sendChatMessage({
       );
     },
   });
+  const aiActivity = createAiActivityStream(update, tools.toolRegistry);
 
   // Build system prompt
   const systemPrompt = constructChatSystemPrompt({
@@ -562,11 +526,9 @@ export async function sendChatMessage({
     agentLoopMessages: AiCoreMessage[];
     modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
   }) {
-    const persistedAgentLoopMessages = filterPersistedAgentLoopMessages(agentLoopMessages);
-
     // Persist intermediate tool call/result messages and the final assistant message in one query
     const messagesToInsert = [
-      ...persistedAgentLoopMessages.map((msg, index) => ({
+      ...agentLoopMessages.map((msg, index) => ({
         content: msg.content,
         role: msg.role,
         userId: user.id,
@@ -581,7 +543,7 @@ export async function sendChatMessage({
         content: fullText,
         role: 'assistant' as const,
         userId: user.id,
-        orderNumber: assistantMessageOrderNumber + persistedAgentLoopMessages.length,
+        orderNumber: assistantMessageOrderNumber + agentLoopMessages.length,
         modelName: definedModel.name,
         conversationId: activeConversation.id,
         webSearchResults,
@@ -628,8 +590,11 @@ export async function sendChatMessage({
     onTextChunk: (delta: string) => {
       update(delta);
     },
+    onToolCalls: aiActivity.onToolCalls,
+    onToolResult: aiActivity.onToolResult,
     onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {
       try {
+        aiActivity.finish();
         await persistAssistantMessage({
           fullText,
           usage,

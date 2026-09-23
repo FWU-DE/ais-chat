@@ -21,7 +21,7 @@ Use this skill when the user asks to:
   ```
   echo "DATABASE_URL=postgres://dummy" > ../../apps/chat-bot/.env.local
   ```
-- run `pnpm run db:generate`
+- run `pnpm run db:generate` OR `pnpm run db:generate --custom` if there are no schema changes
 - for each migration 2 files will be created:
   - a .json file in 'packages/shared/migrations/meta' containing the current database schema metadata
   - a .sql file in 'packages/shared/migrations' with the SQL code for the migration

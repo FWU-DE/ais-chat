@@ -24,16 +24,18 @@ export async function sendMessage(page: Page, message: string) {
     await page.keyboard.press('Enter');
     // Wait for the loading spinner to appear after sending the message
     await waitForLoadingSpinner;
-    // Wait for the loading spinner to disappear, which indicates that the response has started streaming
-    await loadingSpinner.waitFor({ state: 'detached', timeout: 60_000 });
 
-    // Either the response finishes successfully and shows the Reload button,
-    // or an error message appears and the test should fail.
+    // Agentic tool calls can keep the loading spinner visible while they execute, so
+    // wait for the terminal response state instead of treating spinner removal as
+    // the start of streaming.
     await Promise.race([
-      reloadButton.waitFor({ timeout: 20_000 }),
-      errorText.waitFor({ timeout: 20_000 }).then(() => {
-        throw new Error('Error message appeared after sending message');
-      }),
+      reloadButton.waitFor({ timeout: 80_000 }),
+      errorText.waitFor({ timeout: 80_000 }).then(
+        () => {
+          throw new Error('Error message appeared after sending message');
+        },
+        () => new Promise<never>(() => {}),
+      ),
     ]);
   });
 }

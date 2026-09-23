@@ -1,6 +1,14 @@
 import type { WebSearchResult } from '@shared/db/schema';
+import { z } from 'zod';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
 import { resolveWebSearchConfig, searchWeb } from '../websearch';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
+import { TOOL_NAMES } from '@/types/tool-names';
+
+export const webSearchArgsSchema = z.object({
+  query: z.string(),
+});
 
 type WebSearchToolResult = {
   title: string | null;
@@ -55,7 +63,7 @@ export async function buildWebSearchTool({
       : baseDescription;
 
   const definition: ToolDefinition = {
-    name: 'web_search',
+    name: TOOL_NAMES.webSearch,
     description,
     parameters: {
       type: 'object',
@@ -72,7 +80,8 @@ export async function buildWebSearchTool({
   };
 
   const handler = async (args: Record<string, unknown>) => {
-    const query = typeof args.query === 'string' ? args.query : '';
+    const parsed = webSearchArgsSchema.safeParse(args);
+    const query = parsed.success ? parsed.data.query : '';
     const results = await searchWeb({
       query,
       conversationId,
@@ -101,5 +110,28 @@ export async function buildWebSearchTool({
     return JSON.stringify(response);
   };
 
-  return { definition, handler };
+  return {
+    definition,
+    handler,
+    activity: {
+      createStep: (toolCall: ToolCall) => {
+        const parsed = webSearchArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
+        return {
+          kind: 'tool',
+          id: toolCall.id,
+          tool: TOOL_NAMES.webSearch,
+          detail: parsed.success ? parsed.data.query.trim() : undefined,
+        };
+      },
+      applyResult: (step, result) => {
+        const parsed = parseJsonRecord(result);
+        const links = toLinks(
+          parsed !== null && typeof parsed === 'object'
+            ? (parsed as { results?: unknown }).results
+            : undefined,
+        );
+        return links === undefined ? step : { ...step, links };
+      },
+    },
+  };
 }

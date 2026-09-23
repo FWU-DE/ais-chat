@@ -7,6 +7,7 @@ import {
 } from '@ais-chat/ai-core';
 import { NotFoundError } from '@shared/error';
 import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
+import { createAiActivityStream } from '../chat/ai-activity-stream';
 import { getUserAndContextByUserId } from '@/auth/utils';
 import { checkProductAccess } from '@/utils/vidis/access';
 import { getModelAndApiKeyWithResult, getSafetyModel } from '../utils/utils';
@@ -216,6 +217,8 @@ export async function sendLearningScenarioMessage({
     },
   });
 
+  const aiActivity = createAiActivityStream(update, tools.toolRegistry);
+
   // Build system prompt
   const systemPrompt = constructLearningScenarioSystemPrompt({
     learningScenario: learningScenario,
@@ -271,7 +274,10 @@ export async function sendLearningScenarioMessage({
     onTextChunk: (delta) => {
       update(delta);
     },
+    onToolCalls: aiActivity.onToolCalls,
+    onToolResult: aiActivity.onToolResult,
     onComplete: async ({ usage, priceInCents, modelUsages }) => {
+      aiActivity.finish();
       await persistUsage({ usage, priceInCents, modelUsages });
 
       done();
