@@ -10,7 +10,6 @@ const mocks = vi.hoisted(() => ({
   dbGetFederalStateWithDecryptedApiKeyWithResult: vi.fn(),
   dbGetConversationAndMessages: vi.fn(),
   dbGetOrCreateConversation: vi.fn(),
-  dbGetModelByIdAndFederalStateId: vi.fn(),
   dbInsertChatContent: vi.fn(),
   dbInsertConversationUsage: vi.fn(),
   dbInsertFile: vi.fn(),
@@ -65,9 +64,6 @@ vi.mock('@shared/db/functions/federal-state', () => ({
   dbGetFederalStateWithDecryptedApiKeyWithResult:
     mocks.dbGetFederalStateWithDecryptedApiKeyWithResult,
 }));
-vi.mock('@shared/db/functions/llm-model', () => ({
-  dbGetModelByIdAndFederalStateId: mocks.dbGetModelByIdAndFederalStateId,
-}));
 vi.mock('@shared/db/functions/token-usage', () => ({
   dbInsertConversationUsage: mocks.dbInsertConversationUsage,
 }));
@@ -107,7 +103,6 @@ function prepareExistingConversation() {
     messages: [{ id: 'previous-assistant', role: 'assistant', orderNumber: 2 }],
   });
   mocks.fetchInputImages.mockResolvedValue([]);
-  mocks.getAvailableImageModelsForFederalState.mockResolvedValue([imageModel]);
   mocks.getUser.mockResolvedValue({ id: 'user-id', federalState: { id: 'DE-TEST' } });
   mocks.userHasCompletedTraining.mockResolvedValue(true);
   mocks.checkProductAccess.mockReturnValue({ hasAccess: true });
@@ -115,10 +110,7 @@ function prepareExistingConversation() {
     null,
     { apiKeyId: 'api-key-id' },
   ]);
-  mocks.dbGetModelByIdAndFederalStateId.mockResolvedValue({
-    ...imageModel,
-    priceMetadata: { type: 'image' },
-  });
+  mocks.getAvailableImageModelsForFederalState.mockResolvedValue([imageModel]);
   mocks.dbGetOrCreateConversation.mockResolvedValue({ id: 'conversation-id' });
   mocks.userHasReachedTokenPointsLimit.mockResolvedValue(false);
   mocks.generateImageWithBilling.mockResolvedValue({
@@ -143,7 +135,7 @@ describe('handleImageGeneration', () => {
 
     const result = await handleImageGeneration({
       prompt: 'Make it blue',
-      model: imageModel,
+      modelId: imageModel.id,
       userId: 'user-id',
       federalStateId: 'DE-TEST',
       options: { aspectRatio: 'quadratic' },
@@ -185,7 +177,7 @@ describe('handleImageGeneration', () => {
     await expect(
       handleImageGeneration({
         prompt: 'Make it blue',
-        model: imageModel,
+        modelId: imageModel.id,
         userId: 'user-id',
         federalStateId: 'DE-TEST',
         options: { aspectRatio: 'quadratic' },
