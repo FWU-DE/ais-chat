@@ -59,6 +59,7 @@ function transformToFederalStateEditForm(federalState: FederalStateModel): Feder
       isImageGenerationEnabled: federalState.featureToggles.isImageGenerationEnabled ?? false,
       isWebSearchEnabled: federalState.featureToggles.isWebSearchEnabled ?? false,
       isCalculatorEnabled: federalState.featureToggles.isCalculatorEnabled ?? false,
+      isSpeechModelEnabled: federalState.featureToggles.isSpeechModelEnabled ?? false,
       isSharedPageLocaleDetectionEnabled:
         federalState.featureToggles.isSharedPageLocaleDetectionEnabled ?? true,
     },
@@ -275,6 +276,12 @@ export function FederalStateView(props: FederalStateViewProps) {
             name="featureToggles.isCalculatorEnabled"
             label="Taschenrechner aktivieren"
             description="Erlaubt die Nutzung des Taschenrechners."
+            control={control}
+          />
+          <FormFieldCheckbox
+            name="featureToggles.isSpeechModelEnabled"
+            label="Sprachmodell aktivieren"
+            description="Erlaubt die Nutzung des Sprachmodells (Text-to-Speech)."
             control={control}
           />
           <FormFieldCheckbox
