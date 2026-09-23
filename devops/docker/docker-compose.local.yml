@@ -105,7 +105,7 @@ services:
       start_period: 40s
 
   xberg:
-    image: ghcr.io/xberg-io/xberg:1.1.5-core
+    image: ghcr.io/xberg-io/xberg:1.2.3-core
     environment:
       XBERG_MAX_UPLOAD_SIZE_MB: '50'
     ports:
@@ -161,7 +161,7 @@ services:
         condition: service_healthy
 
   bifrost:
-    image: ghcr.io/maximhq/bifrost:v2.1.1
+    image: ghcr.io/maximhq/bifrost:v2.2.1
     restart: unless-stopped
     environment:
       BIFROST_ADMIN_USERNAME: admin

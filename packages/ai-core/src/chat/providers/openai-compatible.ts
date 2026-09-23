@@ -83,7 +83,6 @@ export async function* streamOpenAICompatibleAgenticResponse({
           arguments: '',
         };
 
-        existingToolCall.name = chunk.name;
         existingToolCall.arguments = chunk.arguments;
         toolCalls.set(chunk.output_index, existingToolCall);
       } else if (
