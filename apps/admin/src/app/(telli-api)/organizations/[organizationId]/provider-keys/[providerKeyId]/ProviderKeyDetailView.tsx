@@ -104,85 +104,91 @@ export function ProviderKeyDetailView({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          {isCreate
-            ? 'Neuen Provider-Key erstellen'
-            : `Provider-Key bearbeiten: ${providerKey?.name}`}
-        </CardTitle>
-        <CardDescription>
-          Provider-Zugang konfigurieren und logischen Sprachmodellen zuweisen.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <FormErrorDisplay errors={errors} />
-        <form className="flex flex-col gap-6" onSubmit={handleSubmit(onSubmit)}>
-          <FormField name="name" label="Name" control={control} required />
-          <FormField
-            name="provider"
-            label="Provider"
-            description="ionos, openai, azure oder google; muss dem Provider in den Einstellungen entsprechen"
-            control={control}
-            required
-          />
-          <FormField
-            name="settings"
-            label="Einstellungen"
-            description="Provider-spezifische JSON-Konfiguration einschließlich Zugangsdaten"
-            control={control}
-            type="textArea"
-            required
-            className="min-h-40 font-mono"
-          />
-          <FormField name="weight" label="Gewichtung" control={control} type="number" required />
-          <FormFieldCheckbox name="isEnabled" label="Aktiv" control={control} />
+    <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            {isCreate
+              ? 'Neuen Provider-Key erstellen'
+              : `Provider-Key bearbeiten: ${providerKey?.name}`}
+          </CardTitle>
+          <CardDescription>
+            Provider-Zugang konfigurieren und logischen Sprachmodellen zuweisen.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FormErrorDisplay errors={errors} />
+          <form className="flex flex-col gap-6" onSubmit={handleSubmit(onSubmit)}>
+            <FormField name="name" label="Name" control={control} required />
+            <FormField
+              name="provider"
+              label="Provider"
+              description="ionos, openai, azure oder google; muss dem Provider in den Einstellungen entsprechen"
+              control={control}
+              required
+            />
+            <FormField
+              name="settings"
+              label="Einstellungen"
+              description="Provider-spezifische JSON-Konfiguration einschließlich Zugangsdaten"
+              control={control}
+              type="textArea"
+              required
+              className="min-h-40 font-mono"
+            />
+            <FormField name="weight" label="Gewichtung" control={control} type="number" required />
+            <FormFieldCheckbox name="isEnabled" label="Aktiv" control={control} />
 
-          <div className="flex justify-end gap-3 pt-4">
-            {!isCreate && (
+            <div className="flex justify-end gap-3 pt-4">
+              {!isCreate && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={isSubmitting}
+                  onClick={() => confirmDelete(handleDelete)}
+                >
+                  <TrashSimpleIcon /> Löschen
+                </Button>
+              )}
               <Button
                 type="button"
-                variant="destructive"
+                variant="outline"
                 disabled={isSubmitting}
-                onClick={() => confirmDelete(handleDelete)}
+                onClick={() => router.push(ROUTES.api.providerKeys(organizationId))}
               >
-                <TrashSimpleIcon /> Löschen
+                Abbrechen
               </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isSubmitting}
-              onClick={() => router.push(ROUTES.api.providerKeys(organizationId))}
-            >
-              Abbrechen
-            </Button>
-            <Button type="submit" disabled={isSubmitting || (!isDirty && !isCreate)}>
-              {isCreate ? 'Erstellen' : 'Speichern'}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-      <ConfirmAlertDialog
-        title="Provider-Key löschen"
-        description="Möchten Sie diesen Provider-Key wirklich löschen? Alle zugehörigen Modell-Zuordnungen werden ebenfalls entfernt."
-        confirmLabel="Löschen"
-        cancelLabel="Abbrechen"
-        {...deleteDialogProps}
-      />
+              <Button type="submit" disabled={isSubmitting || (!isDirty && !isCreate)}>
+                {isCreate ? 'Erstellen' : 'Speichern'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+        <ConfirmAlertDialog
+          title="Provider-Key löschen"
+          description="Möchten Sie diesen Provider-Key wirklich löschen? Alle zugehörigen Modell-Zuordnungen werden ebenfalls entfernt."
+          confirmLabel="Löschen"
+          cancelLabel="Abbrechen"
+          {...deleteDialogProps}
+        />
+      </Card>
 
       {!!providerKey?.models.length && (
-        <CardContent>
-          <h3 className="mb-3 text-lg font-medium">Zugeordnete Modelle</h3>
-          {providerKey.models.map(({ model }) => (
-            <Button key={model.id} variant="link" asChild>
-              <Link href={ROUTES.api.llmDetails(organizationId, model.id)}>
-                {model.displayName || model.name}
-              </Link>
-            </Button>
-          ))}
-        </CardContent>
+        <Card>
+          <CardHeader>
+            <CardTitle>Zugeordnete Modelle</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {providerKey.models.map(({ model }) => (
+              <Button key={model.id} variant="link" asChild>
+                <Link href={ROUTES.api.llmDetails(organizationId, model.id)}>
+                  {model.displayName || model.name}
+                </Link>
+              </Button>
+            ))}
+          </CardContent>
+        </Card>
       )}
-    </Card>
+    </div>
   );
 }
