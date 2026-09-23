@@ -58,31 +58,6 @@ This guide helps you run AIS.chat using pre-built Docker images with minimal con
 All services are preconfigured with sensible defaults in `devops/docker/docker-compose.yml`.
 To customize environment variables edit `devops/docker/docker-compose.yml` directly or create a `docker-compose.override.yml`.
 
-### Calculator arithmetic service
-
-The Compose setup includes a libqalculate HTTP service. In the self-hosted Compose file,
-calculator is reachable by the containerized chatbot through the internal calculator network and is also
-published on the local host at `http://127.0.0.1:8081` for local testing. Host clients should use
-the loopback port. The application and Keycloak share a network namespace in this Compose setup so the
-application can reach calculator.
-
-- `GET /healthz` returns `{"status":"success","result":"ok"}`.
-- `POST /v1/calculate` accepts `Content-Type: application/json` and a body such as
-  `{"expression":"2 + 2"}`. Successful responses contain `status: "success"` and the calculated string in `result`.
-- Requests are limited to an 8 KiB body, a 4096-character expression, 16 KiB worker output, and
-  a 2-second worker wall time. The pool runs up to 4 workers concurrently and queues up to 32
-  additional requests in FIFO order. Invalid requests return structured HTTP 400 JSON; a full
-  worker pool returns HTTP 429.
-
-Start it with the self-hosted stack using `docker compose -f devops/docker/docker-compose.yml up -d`.
-For source development, calculator starts with the normal local stack:
-`docker compose -f devops/docker/docker-compose.local.yml up -d --build`.
-The local calculator service explicitly joins the default Compose network so containerized local apps can
-use `http://calculator:8080`; apps run directly on the host must use `http://127.0.0.1:8081`.
-Enable **calculator** for the relevant federal state in AIS.chat Admin before using the chatbot tool.
-Focused service tests run with `pnpm --filter @ais-chat/calculator-service test` (type and lint checks use
-the corresponding `check-types` and `lint` scripts).
-
 ### Stopping and Cleanup
 
 ```sh
@@ -131,6 +106,7 @@ The project uses environment variables in `.env.local` files for local developme
 **Required `.env.local` files:**
 
 - `apps/chat-bot/.env.local` — For the chat-bot app (database URLs, API connection, authentication, storage)
+- `apps/admin/.env.local` — For the admin app (database URLs, API connection, authentication)
 - `apps/api/.env.local` — For the API app (database URL, logging, telemetry)
 
 For detailed variable documentation and values for local development with docker-compose, see the `.env.example` files in each app directory.
@@ -213,11 +189,13 @@ pnpm dev
 ### Keycloak
 
 Keycloak is used for logins both locally and in e2e tests.
-The realm, client and several predefined users are configured in [ais-chat-local-realm.json](devops/docker/keycloak/ais-chat-local-realm.json).
-Users are defined at the bottom of the json.
+Two realms are imported: [ais-chat-local-realm.json](devops/docker/keycloak/ais-chat-local-realm.json) for the chat-bot app,
+and [ais-chat-admin-local-realm.json](devops/docker/keycloak/ais-chat-admin-local-realm.json) for the admin app.
+Each realm's client and predefined users are configured at the bottom of its json.
+The admin realm defines the `admin` / `password` and `editor` / `password` users used to log into ais-chat-admin.
 
-The json is imported once when starting keycloak, but only if the realm does not yet exist.
-When updating the json, remember to drop your local keycloak docker volume to re-import the realm.
+The jsons are imported once when starting keycloak, but only if the corresponding realm does not yet exist.
+When updating a json, remember to drop your local keycloak docker volume to re-import the realms.
 
 ### Valkey
 
