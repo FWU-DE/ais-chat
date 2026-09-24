@@ -2,6 +2,7 @@ import { syncAllBifrostProviders } from './bifrost-provider-sync';
 import { createHash } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import { db } from './db';
+import { isLlmProvider } from './llm-model';
 import {
   LlmModel,
   LlmInsertModel,
@@ -72,7 +73,7 @@ export async function seedProviderKeysForModels(models: SeedModel[]): Promise<vo
 }
 
 function getProviderKeySettings(model: SeedModel): SeedModel['setting'] {
-  if (model.setting.provider !== 'azure') return model.setting;
+  if (!isLlmProvider(model.setting, 'azure')) return model.setting;
   try {
     return { ...model.setting, baseUrl: new URL(model.setting.baseUrl).origin };
   } catch {
@@ -106,7 +107,7 @@ export async function syncSeedModelsToBifrost(): Promise<void> {
 }
 
 function getUpstreamModelName(model: SeedModel): string {
-  if (model.setting.provider !== 'azure') return model.name;
+  if (!isLlmProvider(model.setting, 'azure')) return model.name;
   try {
     const parts = new URL(model.setting.baseUrl).pathname.split('/').filter(Boolean);
     const deploymentIndex = parts.indexOf('deployments');

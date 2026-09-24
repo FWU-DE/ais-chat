@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/core';
 import { z } from 'zod';
+import { isLlmProvider } from '@ais-chat/api-database/llm-model';
 import { AiGenerationError, EmptyResponseError, ProviderConfigurationError } from '../../errors';
 import { createGoogleAuth } from '../../google-client';
 import { buildGuardPrompt } from '../prompt';
@@ -103,7 +104,7 @@ function getEndpoint(model: AiModel): { id: string; host: string } {
 }
 
 export function constructGoogleSafetyCheckFn(model: AiModel): SafetyCheckFn {
-  if (model.setting.provider !== 'google') {
+  if (!isLlmProvider(model.setting, 'google')) {
     throw new ProviderConfigurationError('Invalid model configuration for Google');
   }
 

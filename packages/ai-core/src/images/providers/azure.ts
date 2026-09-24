@@ -1,5 +1,6 @@
 import { instrumentOpenAiClient } from '@sentry/core';
 import * as Sentry from '@sentry/core';
+import { isLlmProvider } from '@ais-chat/api-database/llm-model';
 import OpenAI, { toFile } from 'openai';
 import type { AiModel, ImageGenerationFn } from '../types';
 import { AiGenerationError, ProviderConfigurationError, ResponsibleAIError } from '../../errors';
@@ -55,7 +56,7 @@ function createAzureClient(model: AiModel): {
   client: OpenAI;
   deployment: string;
 } {
-  if (model.setting.provider !== 'azure') {
+  if (!isLlmProvider(model.setting, 'azure')) {
     throw new ProviderConfigurationError('Invalid model configuration for Azure');
   }
 

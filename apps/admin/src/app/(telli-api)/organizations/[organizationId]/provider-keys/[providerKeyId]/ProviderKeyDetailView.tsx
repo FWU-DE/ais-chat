@@ -6,12 +6,14 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { llmModelSettingsSchema } from '@ais-chat/api-database/llm-model';
 import { Button } from '@ui/components/button';
 import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/components/card';
 import { FormField } from '@ui/components/form/form-field';
 import { FormFieldCheckbox } from '@ui/components/form/form-field-checkbox';
 import { FormErrorDisplay } from '@/components/FormErrorDisplay';
+import { createJsonStringSchema } from '@/components/utils/json-schema';
 import { ROUTES } from '@/consts/routes';
 import type { ProviderKey } from '@/types/provider-key';
 import {
@@ -21,19 +23,38 @@ import {
 } from './actions';
 import { TrashSimpleIcon } from '@phosphor-icons/react';
 
-const providerKeyFormSchema = z.object({
-  name: z.string().trim().min(1, 'Name ist erforderlich'),
-  provider: z.string().trim().min(1, 'Provider ist erforderlich'),
-  settings: z.string().refine((value) => {
+const providerKeyFormSchema = z
+  .object({
+    name: z.string().trim().min(1, 'Name ist erforderlich'),
+    provider: z.string().trim().min(1, 'Provider ist erforderlich'),
+    settings: createJsonStringSchema(
+      llmModelSettingsSchema,
+      'Muss eine gültige Provider-Konfiguration sein',
+      { allowEmpty: false },
+    ),
+    weight: z.number().positive('Gewichtung muss größer als 0 sein'),
+    isEnabled: z.boolean(),
+  })
+  .superRefine((data, ctx) => {
+    let settings: unknown;
     try {
-      return typeof JSON.parse(value) === 'object';
+      settings = JSON.parse(data.settings);
     } catch {
-      return false;
+      return;
     }
-  }, 'Einstellungen müssen gültiges JSON sein'),
-  weight: z.number().positive('Gewichtung muss größer als 0 sein'),
-  isEnabled: z.boolean(),
-});
+    if (
+      typeof settings === 'object' &&
+      settings !== null &&
+      'provider' in settings &&
+      settings.provider !== data.provider
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['provider'],
+        message: 'Provider muss dem Provider in den Einstellungen entsprechen',
+      });
+    }
+  });
 
 type ProviderKeyForm = z.infer<typeof providerKeyFormSchema>;
 
@@ -123,7 +144,7 @@ export function ProviderKeyDetailView({
             <FormField
               name="provider"
               label="Provider"
-              description="ionos, openai, azure oder google; muss dem Provider in den Einstellungen entsprechen"
+              description="ionos, openai, azure oder google; alternativ ein beliebiger nativer Bifrost-Provider-Name, sofern kein Wert aus dieser Liste"
               control={control}
               required
             />
