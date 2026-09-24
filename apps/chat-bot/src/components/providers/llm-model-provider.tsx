@@ -63,7 +63,7 @@ export function LlmModelsProvider({
   }
 
   return (
-    <LlmModelsContext.Provider
+    <LlmModelsContext
       value={{
         models,
         defaultModel,
@@ -74,7 +74,7 @@ export function LlmModelsProvider({
       }}
     >
       {children}
-    </LlmModelsContext.Provider>
+    </LlmModelsContext>
   );
 }
 

@@ -31,9 +31,9 @@ export function ImageModelsProvider({
   );
 
   return (
-    <ImageModelsContext.Provider value={{ models, selectedModel, setSelectedModel }}>
+    <ImageModelsContext value={{ models, selectedModel, setSelectedModel }}>
       {children}
-    </ImageModelsContext.Provider>
+    </ImageModelsContext>
   );
 }
 

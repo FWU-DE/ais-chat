@@ -4,6 +4,7 @@ import type { ChatMessage } from '@/types/chat';
 
 const mocks = vi.hoisted(() => ({
   runAgentLoopMock: vi.fn(),
+  checkTextInputSafetyMock: vi.fn(),
   getUserAndContextByUserIdMock: vi.fn(),
   checkProductAccessMock: vi.fn(),
   sharedCharacterChatHasReachedTokenPointsLimitMock: vi.fn(),
@@ -38,6 +39,20 @@ vi.mock('@ais-chat/ai-core', () => ({
   runAgentLoop: mocks.runAgentLoopMock,
   TokenPointsExceededError: class TokenPointsExceededError extends Error {},
   SharedChatExpiredError: class SharedChatExpiredError extends Error {},
+  ResponsibleAIError: class ResponsibleAIError extends Error {
+    static is(error: unknown): error is Error {
+      return Boolean(
+        error &&
+        typeof error === 'object' &&
+        'name' in error &&
+        error.name === 'ResponsibleAIError',
+      );
+    }
+  },
+}));
+
+vi.mock('@ais-chat/ai-core/chat/safety', () => ({
+  checkTextInputSafety: mocks.checkTextInputSafetyMock,
 }));
 
 vi.mock('@/auth/utils', () => ({

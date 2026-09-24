@@ -47,9 +47,19 @@
       }
     }
   },
-  "websearch": {
-    "results": {
-      "title": "مصادر من الإنترنت"
+  "ai-activity": {
+    "title": "نشاط الذكاء الاصطناعي",
+    "toggle": "إظهار/إخفاء نشاط الذكاء الاصطناعي",
+    "open-source": "فتح المصدر: {source}",
+    "steps": {
+      "analysis": "تحليل",
+      "done": "تم",
+      "web_search": "بحث في الإنترنت",
+      "web_scraper": "تمت قراءة صفحة ويب",
+      "retrieve_text_chunks": "تمت قراءة الملف",
+      "retrieve_entire_file": "تمت قراءة الملف بالكامل",
+      "mundo_search": "البحث في Mundo",
+      "math_calculate": "تم إجراء الحساب"
     }
   }
 }

@@ -26,9 +26,7 @@ export function HeaderExtensionProvider({ children }: { children: ReactNode }) {
     [headerMountNode, compactMenuItems],
   );
 
-  return (
-    <HeaderExtensionContext.Provider value={value}>{children}</HeaderExtensionContext.Provider>
-  );
+  return <HeaderExtensionContext value={value}>{children}</HeaderExtensionContext>;
 }
 
 export function useHeaderExtension() {

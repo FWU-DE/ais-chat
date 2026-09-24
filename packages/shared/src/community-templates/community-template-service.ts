@@ -8,7 +8,7 @@ import {
   CommunityTemplateRequestTable,
   templateRequestStatusSchema,
 } from '@shared/db/schema';
-import { checkParameterUUID, NotFoundError } from '@shared/error';
+import { checkParameterUUID, ForbiddenError, NotFoundError } from '@shared/error';
 import { getCharacterInfo } from '@shared/characters/character-service';
 import { createCancelEvent, createSubmitEvent } from './community-template-request-event';
 import {
@@ -55,7 +55,7 @@ async function verifyTemplateRequestOwnership({
   user: Pick<UserModel, 'id'>;
 }) {
   if (templateRequest.createdBy !== user.id) {
-    throw new Error('User does not own this community template request');
+    throw new ForbiddenError('User is not allowed to modify this community template request.');
   }
 }
 
@@ -96,6 +96,7 @@ export async function createCommunityTemplateRequest({
   const existingRequest = await getCharacterTemplateRequest(characterId);
 
   if (existingRequest) {
+    await verifyTemplateRequestOwnership({ templateRequest: existingRequest, user });
     await db.transaction(async (tx) => {
       await dbUpdateTemplateRequest({ id: existingRequest.id, state: 'submitted' }, tx);
       await dbInsertTemplateRequestEvent(createSubmitEvent(existingRequest.id, user.id), tx);

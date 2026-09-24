@@ -1,34 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { runAgentLoop } from './agent-loop';
 import type { Message, TokenUsage, StreamEvent } from './types';
-import { InvalidModelError, ProviderConfigurationError } from '../errors';
-import { getTextModelById } from '../models';
 
 // Mock the generateAgenticStreamWithBilling import
 const mockGenerateAgenticStreamWithBilling = vi.fn();
-const mockCheckTextSafety = vi.fn();
 
 vi.mock('./agentic-stream', () => ({
   generateAgenticStreamWithBilling: (...args: unknown[]) =>
     mockGenerateAgenticStreamWithBilling(...args),
-}));
-
-vi.mock('../models', () => ({
-  getTextModelById: vi.fn().mockResolvedValue({ safetyFilterEnabled: true }),
-}));
-
-vi.mock('../safety', () => ({
-  checkTextSafety: (...args: unknown[]) => mockCheckTextSafety(...args),
-  checkInputSafety: async (...args: unknown[]) => {
-    const result = await mockCheckTextSafety(...args);
-    if (result.safe) {
-      return;
-    }
-
-    throw new (class extends Error {
-      name = 'ResponsibleAIError';
-    })('Input was blocked by the safety model');
-  },
 }));
 
 // Mock Sentry to verify spans are created
@@ -39,7 +18,6 @@ vi.mock('@sentry/core', () => ({
 }));
 
 describe('agent-loop', () => {
-  const mockGetTextModelById = vi.mocked(getTextModelById);
   const usage: TokenUsage = {
     promptTokens: 10,
     completionTokens: 20,
@@ -51,166 +29,6 @@ describe('agent-loop', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockCheckTextSafety.mockResolvedValue({ safe: true });
-    mockGetTextModelById.mockResolvedValue({ safetyFilterEnabled: true } as never);
-  });
-
-  it('checks the supplied safety model once with user and assistant context, excluding system and tool messages', async () => {
-    const image = {
-      type: 'image' as const,
-      contentType: 'image/png',
-      url: 'data:image/png;base64,abc',
-    };
-    const messages: Message[] = [
-      { role: 'system', content: 'System instruction' },
-      { role: 'user', content: 'Look at this', attachments: [image] },
-      { role: 'assistant', content: 'I see it' },
-      { role: 'tool', content: 'Tool result' },
-    ];
-    mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
-      yield { type: 'text', delta: 'Done' } satisfies StreamEvent;
-      yield { type: 'finish', usage } satisfies StreamEvent;
-    });
-
-    runAgentLoop({
-      modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
-      apiKeyId: 'test-key',
-      safetyModelName: 'safety-model',
-      messages,
-      agentName: 'Test Agent',
-      onTextChunk: vi.fn(),
-      onComplete: vi.fn(),
-      onError: vi.fn(),
-    });
-
-    await vi.waitFor(() => expect(mockCheckTextSafety).toHaveBeenCalledTimes(1));
-    expect(mockCheckTextSafety).toHaveBeenCalledWith(
-      'safety-model',
-      [
-        { role: 'user', content: 'Look at this', images: [image] },
-        { role: 'assistant', content: 'I see it', images: undefined },
-      ],
-      'test-key',
-    );
-  });
-
-  it('skips the safety pre-check when every selected model disables it', async () => {
-    mockGetTextModelById.mockResolvedValue({ safetyFilterEnabled: false } as never);
-    mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
-      yield { type: 'text', delta: 'Done' } satisfies StreamEvent;
-    });
-
-    runAgentLoop({
-      modelSelection: {
-        modelIds: ['test-model'],
-        modelName: 'Test Model',
-      },
-      apiKeyId: 'test-key',
-      safetyModelName: 'safety-model',
-      messages: [{ role: 'user', content: 'Test query' }],
-      agentName: 'Test Agent',
-      onTextChunk: vi.fn(),
-      onComplete: vi.fn(),
-      onError: vi.fn(),
-    });
-
-    await vi.waitFor(() => expect(mockGenerateAgenticStreamWithBilling).toHaveBeenCalled());
-    expect(mockCheckTextSafety).not.toHaveBeenCalled();
-  });
-
-  it('checks safety once before multiple tool iterations', async () => {
-    let streamCallCount = 0;
-    mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
-      streamCallCount += 1;
-      if (streamCallCount === 1) {
-        yield {
-          type: 'tool_call',
-          call: { id: 'call-1', name: 'test_tool', arguments: '{}' },
-        } satisfies StreamEvent;
-      } else {
-        yield { type: 'text', delta: 'Done' } satisfies StreamEvent;
-      }
-      yield { type: 'finish', usage } satisfies StreamEvent;
-    });
-
-    runAgentLoop({
-      modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
-      apiKeyId: 'test-key',
-      messages: [{ role: 'user', content: 'Test query' }],
-      safetyModelName: 'safety-model',
-      toolRegistry: {
-        test_tool: {
-          definition: { name: 'test_tool', description: 'Test', parameters: {} },
-          handler: async () => 'tool result',
-        },
-      },
-      agentName: 'Test Agent',
-      onTextChunk: vi.fn(),
-      onComplete: vi.fn(),
-      onError: vi.fn(),
-    });
-
-    await vi.waitFor(() => expect(streamCallCount).toBe(2));
-    expect(mockCheckTextSafety).toHaveBeenCalledTimes(1);
-  });
-
-  it('reports a ResponsibleAIError for unsafe classifications', async () => {
-    mockCheckTextSafety.mockResolvedValue({ safe: false, categories: ['S1'] });
-    const onError = vi.fn();
-
-    runAgentLoop({
-      modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
-      apiKeyId: 'test-key',
-      messages: [{ role: 'user', content: 'Test query' }],
-      safetyModelName: 'safety-model',
-      agentName: 'Test Agent',
-      onTextChunk: vi.fn(),
-      onComplete: vi.fn(),
-      onError,
-    });
-
-    await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
-    expect(onError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'ResponsibleAIError',
-        message: 'Input was blocked by the safety model',
-      }),
-      expect.objectContaining({
-        priceInCents: 0,
-        modelUsages: [],
-      }),
-    );
-    expect(mockCheckTextSafety).toHaveBeenCalledTimes(1);
-    expect(mockGenerateAgenticStreamWithBilling).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    [new InvalidModelError('Safety model is inaccessible')],
-    [new ProviderConfigurationError('Safety provider is misconfigured')],
-  ])('preserves known safety errors without generating a response', async (error) => {
-    mockCheckTextSafety.mockRejectedValue(error);
-    const onError = vi.fn();
-
-    runAgentLoop({
-      modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
-      apiKeyId: 'test-key',
-      messages: [{ role: 'user', content: 'Test query' }],
-      safetyModelName: 'safety-model',
-      agentName: 'Test Agent',
-      onTextChunk: vi.fn(),
-      onComplete: vi.fn(),
-      onError,
-    });
-
-    await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
-    expect(onError).toHaveBeenCalledWith(
-      error,
-      expect.objectContaining({
-        priceInCents: 0,
-        modelUsages: [],
-      }),
-    );
-    expect(mockGenerateAgenticStreamWithBilling).not.toHaveBeenCalled();
   });
 
   it('inserts double newlines between iterations when both produce text', async () => {
@@ -545,29 +363,19 @@ describe('agent-loop', () => {
     const onComplete = vi.fn();
     const onError = vi.fn();
 
-    // Iteration 1: Emit 4 tool calls (exceeds MAX_TOOL_CALLS_PER_ITERATION = 2)
+    // Iteration 1: Emit 10 tool calls (exceeds MAX_TOOL_CALLS_PER_ITERATION = 8)
     // Iteration 2: Return final text with no more tool calls
     let callCount = 0;
     mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
       callCount++;
       if (callCount === 1) {
         yield { type: 'text', delta: 'Response text.' } satisfies StreamEvent;
-        yield {
-          type: 'tool_call',
-          call: { id: 'call_1', name: 'tool1', arguments: '{}' },
-        } satisfies StreamEvent;
-        yield {
-          type: 'tool_call',
-          call: { id: 'call_2', name: 'tool2', arguments: '{}' },
-        } satisfies StreamEvent;
-        yield {
-          type: 'tool_call',
-          call: { id: 'call_3', name: 'tool3', arguments: '{}' },
-        } satisfies StreamEvent;
-        yield {
-          type: 'tool_call',
-          call: { id: 'call_4', name: 'tool4', arguments: '{}' },
-        } satisfies StreamEvent;
+        for (let toolIndex = 1; toolIndex <= 10; toolIndex++) {
+          yield {
+            type: 'tool_call',
+            call: { id: `call_${toolIndex}`, name: `tool${toolIndex}`, arguments: '{}' },
+          } satisfies StreamEvent;
+        }
         yield { type: 'finish', usage } satisfies StreamEvent;
       } else {
         yield { type: 'text', delta: 'Final answer.' } satisfies StreamEvent;
@@ -575,24 +383,18 @@ describe('agent-loop', () => {
       }
     });
 
-    const toolRegistry = {
-      tool1: {
-        definition: { name: 'tool1', description: '', parameters: {} },
-        handler: async () => 'result1',
-      },
-      tool2: {
-        definition: { name: 'tool2', description: '', parameters: {} },
-        handler: async () => 'result2',
-      },
-      tool3: {
-        definition: { name: 'tool3', description: '', parameters: {} },
-        handler: async () => 'result3',
-      },
-      tool4: {
-        definition: { name: 'tool4', description: '', parameters: {} },
-        handler: async () => 'result4',
-      },
-    };
+    const toolRegistry = Object.fromEntries(
+      Array.from({ length: 10 }, (_, index) => {
+        const toolNumber = index + 1;
+        return [
+          `tool${toolNumber}`,
+          {
+            definition: { name: `tool${toolNumber}`, description: '', parameters: {} },
+            handler: async () => `result${toolNumber}`,
+          },
+        ];
+      }),
+    );
 
     runAgentLoop({
       modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
@@ -615,23 +417,24 @@ describe('agent-loop', () => {
     // Find the first assistant message with tool calls (iteration 1)
     const firstAssistant = agentLoopMessages.find((msg: Message) => msg.role === 'assistant');
     expect(firstAssistant).toBeDefined();
-    expect(firstAssistant.toolCalls).toHaveLength(4);
+    expect(firstAssistant.toolCalls).toHaveLength(10);
 
     // Find tool result messages after the first assistant message
     const firstAssistantIndex = agentLoopMessages.indexOf(firstAssistant);
     const toolResultMessages = agentLoopMessages.slice(
       firstAssistantIndex + 1,
-      firstAssistantIndex + 5,
+      firstAssistantIndex + 11,
     );
-    expect(toolResultMessages).toHaveLength(4);
+    expect(toolResultMessages).toHaveLength(10);
 
-    // First two tool calls should execute normally
+    // The first eight tool calls should execute normally.
     expect(toolResultMessages[0].content).toBe('result1');
     expect(toolResultMessages[1].content).toBe('result2');
+    expect(toolResultMessages[7].content).toBe('result8');
 
-    // Last two should get budget error
-    expect(toolResultMessages[2].content).toContain('Tool call budget exceeded');
-    expect(toolResultMessages[3].content).toContain('Tool call budget exceeded');
+    // The last two should get budget errors.
+    expect(toolResultMessages[8].content).toContain('Tool call budget exceeded');
+    expect(toolResultMessages[9].content).toContain('Tool call budget exceeded');
   });
 
   describe('Sentry instrumentation', () => {

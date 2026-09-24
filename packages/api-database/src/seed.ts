@@ -194,6 +194,7 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     priceMetadata: {
       type: 'image',
       inputTextTokenPrice: 414,
+      inputImageTokenPrice: 635,
       outputTextTokenPrice: 828,
       outputImageTokenPrice: 2648,
     },

@@ -14,11 +14,11 @@
     "./utils": "./src/api-utils/index.ts"
   },
   "scripts": {
-    "db:generate": "dotenv -e ../../apps/api/.env.local -- drizzle-kit generate",
+    "db:generate": "dotenvx run -f ../../apps/api/.env.local -f ../../apps/api/.env.development -- drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",
-    "db:migrate:local": "dotenv -e ../../apps/api/.env.local -- drizzle-kit migrate --config=./drizzle.config.ts",
-    "db:seed": "dotenv -e ../../apps/api/.env.development -e ../../apps/api/.env.local -- tsx src/seed.ts",
-    "db:seed:from-stage": "dotenv -e ../../apps/api/.env.development -e ../../apps/api/.env.local -- tsx src/seed-from-stage.ts",
+    "db:migrate:local": "dotenvx run -f ../../apps/api/.env.local -f ../../apps/api/.env.development -- drizzle-kit migrate --config=./drizzle.config.ts",
+    "db:seed": "dotenvx run -f ../../apps/api/.env.local -f ../../apps/api/.env.development -- tsx src/seed.ts",
+    "db:seed:from-stage": "dotenvx run -f ../../apps/api/.env.local -f ../../apps/api/.env.development -f ../../apps/admin/.env.development -- tsx src/seed-from-stage.ts",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -38,10 +38,10 @@
   "devDependencies": {
     "@ais-chat/eslint-config": "workspace:*",
     "@ais-chat/typescript-config": "workspace:*",
+    "@dotenvx/dotenvx": "2.24.1",
     "@types/node": "24.13.4",
     "@types/pg": "8.23.1",
     "@vitest/coverage-v8": "5.0.0",
-    "dotenv-cli": "11.0.0",
     "drizzle-kit": "0.31.10",
     "eslint": "10.8.1",
     "tsx": "4.23.13",

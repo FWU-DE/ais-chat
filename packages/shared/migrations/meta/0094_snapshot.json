@@ -1,5 +1,5 @@
 {
-  "id": "ec0fb5f6-96a5-4adb-baa1-6b6626615430",
+  "id": "36f8ce2c-bca4-437e-8e20-5d936b59407a",
   "prevId": "4b923550-a672-4c49-b05f-14e8cd571177",
   "version": "7",
   "dialect": "postgresql",
@@ -306,8 +306,8 @@
         }
       },
       "indexes": {
-        "community_template_request_assistant_id_unique": {
-          "name": "community_template_request_assistant_id_unique",
+        "community_template_request_assistant_id_index": {
+          "name": "community_template_request_assistant_id_index",
           "columns": [
             {
               "expression": "assistant_id",
@@ -316,13 +316,13 @@
               "nulls": "last"
             }
           ],
-          "isUnique": true,
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
         },
-        "community_template_request_character_id_unique": {
-          "name": "community_template_request_character_id_unique",
+        "community_template_request_character_id_index": {
+          "name": "community_template_request_character_id_index",
           "columns": [
             {
               "expression": "character_id",
@@ -331,13 +331,13 @@
               "nulls": "last"
             }
           ],
-          "isUnique": true,
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
         },
-        "community_template_request_learning_scenario_id_unique": {
-          "name": "community_template_request_learning_scenario_id_unique",
+        "community_template_request_learning_scenario_id_index": {
+          "name": "community_template_request_learning_scenario_id_index",
           "columns": [
             {
               "expression": "learning_scenario_id",
@@ -346,7 +346,7 @@
               "nulls": "last"
             }
           ],
-          "isUnique": true,
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -2808,7 +2808,7 @@
         },
         "price_metadata": {
           "name": "price_metadata",
-          "type": "json",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": true
         },
