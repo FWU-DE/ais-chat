@@ -22,6 +22,7 @@ import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
 import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
 import { constructLearningScenarioSystemPrompt } from './system-prompt';
 import {
+  agentLoopMessagesToChatMessages,
   convertToAiCoreMessages,
   determineImageAttachmentTypeForModel,
   enrichMessagesWithImageData,
@@ -276,8 +277,16 @@ export async function sendLearningScenarioMessage({
     },
     onToolCalls: aiActivity.onToolCalls,
     onToolResult: aiActivity.onToolResult,
-    onComplete: async ({ usage, priceInCents, modelUsages }) => {
+    onComplete: async ({ usage, priceInCents, modelUsages, agentLoopMessages }) => {
       aiActivity.finish();
+      if (agentLoopMessages.length > 0) {
+        update(
+          encodeChatStreamEvent({
+            type: 'agent_loop_messages',
+            messages: agentLoopMessagesToChatMessages(agentLoopMessages),
+          }),
+        );
+      }
       await persistUsage({ usage, priceInCents, modelUsages });
 
       done();

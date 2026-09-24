@@ -280,6 +280,8 @@ export default function GenericSharedChat({
         role: message.role,
         content: message.content,
         activitySteps: message.activitySteps,
+        toolCalls: message.toolCalls,
+        toolCallId: message.toolCallId,
         files: pendingFileMapping.get(message.id) ?? [],
       })),
     });

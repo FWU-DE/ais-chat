@@ -164,7 +164,6 @@ describe('shared-chat sessionStorage round-trip', () => {
           attachments: [
             { type: 'image', contentType: 'image/png', url: 'data:image/png;base64,xx' },
           ],
-          toolCallId: 'tc1',
         },
       ],
     });

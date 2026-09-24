@@ -140,6 +140,7 @@ export function useAisChat({
         let firstChunk = true;
         let assistantWebSearchResults: WebSearchResult[] = result.webSearchResults ?? [];
         let assistantActivitySteps: AiActivityStep[] = [];
+        let agentLoopMessages: ChatMessage[] = [];
 
         const ensureAssistantMessage = () => {
           if (!firstChunk) {
@@ -217,6 +218,11 @@ export function useAisChat({
               continue;
             }
 
+            if (streamEvent?.type === 'agent_loop_messages') {
+              agentLoopMessages = streamEvent.messages;
+              continue;
+            }
+
             ensureAssistantMessage();
             setMessages((prev) => {
               const updated = [...prev];
@@ -230,6 +236,16 @@ export function useAisChat({
               return updated;
             });
           }
+        }
+
+        if (agentLoopMessages.length > 0) {
+          setMessages((prev) => {
+            const lastIdx = prev.length - 1;
+            if (prev[lastIdx]?.role !== 'assistant') {
+              return prev;
+            }
+            return [...prev.slice(0, lastIdx), ...agentLoopMessages, ...prev.slice(lastIdx)];
+          });
         }
 
         // Get final message for onFinish callback

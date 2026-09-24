@@ -15,6 +15,8 @@ const persistedSharedFileSchema = z.object({
  * Schema for a persisted chat message in browser storage.
  * Kept in sync with `ChatMessage` from `@/types/chat`, plus the files that
  * were attached to that message (empty when none were attached).
+ * `toolCalls`/`toolCallId` persist the agent loop's intermediate tool call/result
+ * messages, so they can be replayed as context on the next turn without refetching.
  * The restored value is structurally compatible with `ChatMessage` for rendering
  * and round-trip back through the same persistence path.
  */
@@ -24,6 +26,8 @@ const persistedChatMessageSchema = chatMessageSchema
     role: true,
     content: true,
     activitySteps: true,
+    toolCalls: true,
+    toolCallId: true,
   })
   .extend({
     files: z.array(persistedSharedFileSchema).default([]),
