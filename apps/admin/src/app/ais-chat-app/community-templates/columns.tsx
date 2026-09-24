@@ -7,6 +7,18 @@ import { Button } from '@ui/components/button';
 import { ArrowUpDownIcon } from 'lucide-react';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
 
+export type CommunityTemplateRequestStatus = CommunityTemplateRequestSummary['state'];
+
+export const communityTemplateRequestStatusOptions: Array<{
+  value: CommunityTemplateRequestStatus;
+  label: string;
+}> = [
+  { value: 'submitted', label: 'Eingereicht' },
+  { value: 'approved', label: 'Genehmigt' },
+  { value: 'rejected', label: 'Änderungen erforderlich' },
+  { value: 'cancelled', label: 'Zurückgezogen' },
+];
+
 export const columns: ColumnDef<DataTableFeatures, CommunityTemplateRequestSummary>[] = [
   {
     accessorKey: 'entityType',
@@ -97,6 +109,8 @@ export const columns: ColumnDef<DataTableFeatures, CommunityTemplateRequestSumma
   },
   {
     accessorKey: 'state',
+    filterFn: (row, _columnId, selectedStatuses: CommunityTemplateRequestStatus[]) =>
+      selectedStatuses.length === 0 || selectedStatuses.includes(row.original.state),
     header: ({ column }) => {
       return (
         <Button
@@ -142,16 +156,8 @@ function mapCreatedByRoleToLabel(
 }
 
 function mapStatusToLabel(status: CommunityTemplateRequestSummary['state']) {
-  switch (status) {
-    case 'cancelled':
-      return 'Zurückgezogen';
-    case 'approved':
-      return 'Genehmigt';
-    case 'rejected':
-      return 'Änderungen erforderlich';
-    case 'submitted':
-      return 'Eingereicht';
-    default:
-      return 'unbekannt';
-  }
+  return (
+    communityTemplateRequestStatusOptions.find((option) => option.value === status)?.label ??
+    'unbekannt'
+  );
 }
