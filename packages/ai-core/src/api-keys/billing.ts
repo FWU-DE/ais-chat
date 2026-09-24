@@ -34,20 +34,22 @@ function calculatePriceInCentByImageModelAndUsage({
 }: {
   priceMetadata: {
     inputTextTokenPrice: number;
-    outputTextTokenPrice?: number;
+    inputImageTokenPrice: number;
+    outputTextTokenPrice: number;
     outputImageTokenPrice: number;
   };
   usage: Usage;
 }) {
   // These prices are in cent per 1 million tokens
-  // Newer models include "image tokens" in their price metadata, which we calculate by multiplying the number of output image tokens with the outputImageTokenPrice.
+  // Newer models include "image tokens" in their price metadata, which we calculate by multiplying the number of input/output image tokens with the input/outputImageTokenPrice.
   const inputTextTokenPrice = usage.input_text_tokens * priceMetadata.inputTextTokenPrice;
-  const outputTextTokenPrice =
-    (usage.output_text_tokens ?? 0) * (priceMetadata.outputTextTokenPrice ?? 0);
+  const inputImageTokenPrice = usage.input_image_tokens * priceMetadata.inputImageTokenPrice;
+  const outputTextTokenPrice = (usage.output_text_tokens ?? 0) * priceMetadata.outputTextTokenPrice;
   const outputImageTokenPrice = usage.output_image_tokens * priceMetadata.outputImageTokenPrice;
 
   return (
-    (inputTextTokenPrice + outputTextTokenPrice + outputImageTokenPrice) / TOKEN_AMOUNT_PER_PRICE
+    (inputTextTokenPrice + inputImageTokenPrice + outputTextTokenPrice + outputImageTokenPrice) /
+    TOKEN_AMOUNT_PER_PRICE
   );
 }
 
