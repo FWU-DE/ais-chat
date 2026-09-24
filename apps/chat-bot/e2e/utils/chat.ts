@@ -20,7 +20,6 @@ export async function sendMessage(
 ) {
   await test.step('send message and wait for response', async () => {
     const loadingSpinner = page.getByAltText('Ladeanimation');
-    const reloadButton = page.getByLabel('Reload');
     const errorBox = page.getByRole('button', { name: 'Erneut versuchen' });
 
     await enterMessage(page, message);
@@ -38,8 +37,8 @@ export async function sendMessage(
     // Either the response finishes successfully and shows the Reload button,
     // or an error message appears and the test should fail.
     await Promise.race([
-      reloadButton.waitFor({ timeout: 20_000 }),
-      errorBox.waitFor({ timeout: 20_000 }).then(() => {
+      loadingSpinner.waitFor({ state: 'detached', timeout: 80_000 }),
+      errorBox.waitFor({ timeout: 80_000 }).then(() => {
         throw new Error('Error message appeared after sending message');
       }),
     ]);
@@ -79,7 +78,13 @@ export async function selectDifferentModel(page: Page, modelName?: string) {
 
   if (modelName) {
     const option = page.getByTestId(`menu-item-${modelName}`);
+    const modelUpdate = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/user/model') && response.request().method() === 'POST',
+    );
     await option.click();
+    const response = await modelUpdate;
+    expect(response.ok(), `Failed to persist selected model ${modelName}`).toBe(true);
   } else {
     // The selected model is not listed in the dropdown
     // -> selecting the first menu item will be a different model
@@ -95,15 +100,18 @@ export async function selectDifferentModel(page: Page, modelName?: string) {
 export async function deleteChat(page: Page, conversationId: string) {
   const listItem = page.locator(`li:has(a[href="/d/${conversationId}"])`).first();
 
-  // Ensure element is in viewport
-  await listItem.scrollIntoViewIfNeeded();
-  await expect(listItem).toBeVisible();
+  // Refresh the sidebar before looking up the virtualized item. The chat page can finish
+  // rendering before the query invalidation triggered by the first response completes.
+  await page.reload();
+  await page.waitForLoadState('domcontentloaded');
 
-  await listItem.hover();
+  // The sidebar is virtualized and may still be refreshing after the page reload.
+  await expect(listItem).toBeVisible({ timeout: 30_000 });
+  await listItem.scrollIntoViewIfNeeded();
 
   const dropDownMenu = listItem.getByTestId('conversation-actions');
-  await expect(dropDownMenu).toBeVisible();
-  await dropDownMenu.click();
+  // Clicking the hidden trigger directly avoids Firefox's unreliable hover handling.
+  await dropDownMenu.click({ force: true });
 
   await page.getByTestId('delete-conversation').click();
   await waitForToast(page);

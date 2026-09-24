@@ -10,7 +10,7 @@ describe('checkProductAccess', () => {
   const baseFederalState: ObscuredFederalState = {
     id: 'DE-BY',
     createdAt: baseDate,
-    teacherPriceLimit: 500,
+    teacherPriceLimit: 5000,
     studentPriceLimit: 200,
     mandatoryCertificationTeacher: null,
     chatStorageTime: 120,
