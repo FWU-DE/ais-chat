@@ -69,6 +69,7 @@ export async function getCommunityTemplateRequestWithEvents({
   characterId: string;
   user: Pick<UserModel, 'id'>;
 }): Promise<CommunityTemplateRequestWithEvents | null> {
+  checkParameterUUID(characterId);
   const requestWithEvents = await dbGetTemplateRequestWithEvents(characterId);
   if (requestWithEvents === null) return null;
 
@@ -89,6 +90,7 @@ export async function createCommunityTemplateRequest({
   characterId: string;
   user: Pick<UserModel, 'id'>;
 }): Promise<CommunityTemplateRequestWithEvents | null> {
+  checkParameterUUID(characterId);
   await verifyCharacterTemplateRequestAccess(characterId, user);
 
   const existingRequest = await getCharacterTemplateRequest(characterId);
@@ -127,6 +129,7 @@ export async function cancelCommunityTemplateRequest({
   characterId: string;
   user: Pick<UserModel, 'id'>;
 }): Promise<CommunityTemplateRequestWithEvents | null> {
+  checkParameterUUID(characterId);
   await verifyCharacterTemplateRequestAccess(characterId, user);
 
   const existingRequest = await getCharacterTemplateRequest(characterId);
