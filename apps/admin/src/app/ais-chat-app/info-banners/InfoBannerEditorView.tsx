@@ -47,7 +47,7 @@ import { createInfoBannerAction, deleteInfoBannerAction, updateInfoBannerAction 
 const dateTimeLocalSchema = z
   .string()
   .refine((value) => !Number.isNaN(new Date(value).getTime()), {
-    message: 'Bitte geben Sie ein gültiges Datum und eine Uhrzeit an.',
+    error: 'Bitte geben Sie ein gültiges Datum und eine Uhrzeit an.',
   })
   .transform((value) => new Date(value));
 
@@ -64,7 +64,7 @@ const infoBannerEditFormSchema = manageInfoBannerBaseSchema
 
     if (!hasMappings) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'Bitte wählen Sie mindestens ein Bundesland aus.',
         path: ['mappings'],
       });

@@ -1,6 +1,7 @@
 'use client';
 
 import { CaretDownIcon } from '@phosphor-icons/react';
+import { cva, type VariantProps } from 'class-variance-authority';
 import { CheckIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
@@ -16,7 +17,24 @@ export type MultipleSelectDropdownOptionGroup<T extends string = string> = {
   options: Array<{ value: T; label: string }>;
 };
 
-type MultipleSelectDropdownProps<T extends string = string> = {
+const multipleSelectDropdownTriggerVariants = cva(
+  'border-input hover:border-primary/60 focus-visible:border-ring focus-visible:ring-ring/50 flex w-full items-center justify-between rounded-lg border bg-transparent px-2.5 text-left text-sm outline-none focus-visible:ring-3',
+  {
+    variants: {
+      size: {
+        default: 'h-11',
+        sm: 'h-8',
+      },
+    },
+    defaultVariants: {
+      size: 'default',
+    },
+  },
+);
+
+type MultipleSelectDropdownProps<T extends string = string> = VariantProps<
+  typeof multipleSelectDropdownTriggerVariants
+> & {
   label: string;
   tooltip?: string;
   value: T[];
@@ -42,6 +60,7 @@ export function MultipleSelectDropdown<T extends string = string>({
   contentClassName,
   showSelectAll = true,
   selectAllLabel = 'Alle auswählen',
+  size = 'default',
 }: MultipleSelectDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const options = useMemo(() => optionGroups.flatMap((group) => group.options), [optionGroups]);
@@ -114,7 +133,7 @@ export function MultipleSelectDropdown<T extends string = string>({
           }}
           aria-label={label}
           data-testid={testId}
-          className="border-input hover:border-primary/60 focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full items-center justify-between rounded-lg border bg-transparent px-2.5 text-left text-sm outline-none focus-visible:ring-3"
+          className={multipleSelectDropdownTriggerVariants({ size })}
         >
           <span className="truncate text-muted-foreground">{selectedLabel}</span>
           <CaretDownIcon className="text-muted-foreground size-4 shrink-0" />

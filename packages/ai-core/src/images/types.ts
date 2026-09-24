@@ -2,6 +2,7 @@ import type { LlmModel } from '@ais-chat/api-database';
 
 export type Usage = {
   input_text_tokens: number;
+  input_image_tokens: number;
   output_text_tokens?: number;
   output_image_tokens: number;
 };

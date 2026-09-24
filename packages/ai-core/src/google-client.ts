@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import type { LlmModel } from '@ais-chat/api-database';
 import { GoogleGenAI } from '@google/genai';
 import { GoogleAuth, type GoogleAuthOptions } from 'google-auth-library';
@@ -65,13 +66,23 @@ export function createGoogleAuth(model: LlmModel): GoogleAuth {
   return new GoogleAuth(getGoogleAuthOptions(model.setting, true));
 }
 
+function getCredentialsFingerprint(
+  authCredentials: Extract<LlmModel['setting'], { provider: 'google' }>['authCredentials'],
+): string {
+  if (authCredentials === undefined) return 'adc';
+  const normalized =
+    typeof authCredentials === 'string' ? authCredentials : JSON.stringify(authCredentials);
+  return createHash('sha256').update(normalized).digest('hex');
+}
+
 export function createGoogleClient(model: LlmModel): GoogleClientConfig {
   if (model.setting.provider !== 'google') {
     throw new ProviderConfigurationError('Invalid model configuration for Google');
   }
 
-  const { projectId, location } = model.setting;
-  const cacheKey = `${projectId}-${location}` as const;
+  const { projectId, location, authCredentials } = model.setting;
+  const cacheKey =
+    `${projectId}-${location}-${getCredentialsFingerprint(authCredentials)}` as const;
 
   const cachedClient = googleClientCache.get(cacheKey);
   if (cachedClient) {

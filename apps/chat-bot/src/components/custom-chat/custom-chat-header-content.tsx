@@ -23,11 +23,7 @@ export function CustomChatHeaderContentProvider({ children }: { children: ReactN
     [formStateProps],
   );
 
-  return (
-    <CustomChatHeaderContentContext.Provider value={value}>
-      {children}
-    </CustomChatHeaderContentContext.Provider>
-  );
+  return <CustomChatHeaderContentContext value={value}>{children}</CustomChatHeaderContentContext>;
 }
 
 export function useCustomChatHeaderContent() {

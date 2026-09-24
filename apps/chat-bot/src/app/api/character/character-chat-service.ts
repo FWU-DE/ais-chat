@@ -2,10 +2,12 @@ import {
   TokenPointsExceededError,
   SharedChatExpiredError,
   runAgentLoop,
+  ResponsibleAIError,
   type TokenUsage,
 } from '@ais-chat/ai-core';
 import { NotFoundError } from '@shared/error';
 import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
+import { createAiActivityStream } from '../chat/ai-activity-stream';
 import { getUserAndContextByUserId } from '@/auth/utils';
 import { checkProductAccess } from '@/utils/vidis/access';
 import { getModelAndApiKeyWithResult, getSafetyModel } from '../utils/utils';
@@ -41,6 +43,7 @@ import {
   sharedChatHasExpired,
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
+import { checkTextInputSafety } from '@ais-chat/ai-core/chat/safety';
 
 /**
  * Sends a character chat message and streams the response.
@@ -141,38 +144,9 @@ export async function sendCharacterMessage({
     federalStateId: teacherUserAndContext.federalState.id,
   });
 
-  const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
-  const assistantMessageId = crypto.randomUUID();
-
   const allowWebTools = isWebSearchEnabledForEntity({
     featureToggles: teacherUserAndContext.federalState.featureToggles,
     entity: character,
-  });
-
-  const tools = await buildTools({
-    user: teacherUserAndContext,
-    characterId: character.id,
-    webSearchSettings: character,
-    relatedFileEntities,
-    attachedLinks: character.attachedLinks,
-    sourceUrls: processedUrls,
-    allowWebTools,
-    allowMundoSearch: false,
-    isCalculatorEnabled: teacherUserAndContext.federalState.featureToggles.isCalculatorEnabled,
-    onWebSearchResults: (results) => {
-      update(
-        encodeChatStreamEvent({
-          type: 'web_search_results',
-          webSearchResults: results,
-        }),
-      );
-    },
-  });
-
-  // Build system prompt
-  const systemPrompt = constructCharacterSystemPrompt({
-    character,
-    activeToolDefinitions: Object.values(tools.toolRegistry).map((entry) => entry.definition),
   });
 
   // Prune messages
@@ -199,6 +173,52 @@ export async function sendCharacterMessage({
     modelSupportsImages,
     imageAttachmentType,
   );
+
+  // TODO: Remove this special handling for text input safety once TD-1604 (centralized error handling for chats) is done
+  try {
+    await checkTextInputSafety({
+      modelSelection,
+      safetyModelName: safetyModel?.name,
+      messages: convertToAiCoreMessages('', messagesWithImages),
+      apiKeyId,
+    });
+  } catch (error) {
+    if (ResponsibleAIError.is(error)) {
+      return createErrorResult(error);
+    }
+    throw error;
+  }
+
+  const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
+  const assistantMessageId = crypto.randomUUID();
+
+  const tools = await buildTools({
+    user: teacherUserAndContext,
+    characterId: character.id,
+    webSearchSettings: character,
+    relatedFileEntities,
+    attachedLinks: character.attachedLinks,
+    sourceUrls: processedUrls,
+    allowWebTools,
+    allowMundoSearch: false,
+    isCalculatorEnabled: teacherUserAndContext.federalState.featureToggles.isCalculatorEnabled,
+    onWebSearchResults: (results) => {
+      update(
+        encodeChatStreamEvent({
+          type: 'web_search_results',
+          webSearchResults: results,
+        }),
+      );
+    },
+  });
+
+  const aiActivity = createAiActivityStream(update, tools.toolRegistry);
+
+  // Build system prompt
+  const systemPrompt = constructCharacterSystemPrompt({
+    character,
+    activeToolDefinitions: Object.values(tools.toolRegistry).map((entry) => entry.definition),
+  });
 
   const persistUsage = async ({
     usage,
@@ -242,7 +262,6 @@ export async function sendCharacterMessage({
   runAgentLoop({
     modelSelection,
     apiKeyId,
-    safetyModelName: safetyModel?.name,
     messages: convertToAiCoreMessages(systemPrompt, messagesWithImages),
     toolRegistry: tools.toolRegistry,
     agentName: resolveAgentNameForTracing({ characterId: character.id }),
@@ -250,7 +269,10 @@ export async function sendCharacterMessage({
     onTextChunk: (delta) => {
       update(delta);
     },
+    onToolCalls: aiActivity.onToolCalls,
+    onToolResult: aiActivity.onToolResult,
     onComplete: async ({ usage, priceInCents, modelUsages }) => {
+      aiActivity.finish();
       await persistUsage({ usage, priceInCents, modelUsages });
 
       done();

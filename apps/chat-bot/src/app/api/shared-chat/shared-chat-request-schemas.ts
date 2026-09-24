@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
-const requiredNonEmptyString = (message: string) =>
+const requiredNonEmptyString = (error: string) =>
   z
     .custom<string>((value) => typeof value === 'string' && value.trim() !== '', {
-      message,
+      error,
     })
     .transform((value) => value.trim());
 
@@ -16,7 +16,7 @@ export const sharedChatCommonRequestSchema = z.object({
 
 export const sharedChatUploadFormSchema = sharedChatCommonRequestSchema.extend({
   file: z.custom<File>((value) => value instanceof File, {
-    message: 'Invalid or missing file in form data',
+    error: 'Invalid or missing file in form data',
   }),
 });
 

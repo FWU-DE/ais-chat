@@ -47,7 +47,7 @@ export function CookieConsentProvider({ children }: { children: React.ReactNode 
   }
 
   return (
-    <CookieConsentContext.Provider
+    <CookieConsentContext
       value={{
         cookie: 'all',
         consent,
@@ -57,6 +57,6 @@ export function CookieConsentProvider({ children }: { children: React.ReactNode 
       }}
     >
       {children}
-    </CookieConsentContext.Provider>
+    </CookieConsentContext>
   );
 }
