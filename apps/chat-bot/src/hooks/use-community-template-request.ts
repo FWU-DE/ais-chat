@@ -22,8 +22,9 @@ type UseCommunityTemplateRequestResult = {
 };
 
 /**
+ * Hook for managing community template requests.
  *
- * Optimistic behavior: create/cancel already return the updated request, so the
+ * create/cancel already return the updated request, so the
  * state is applied directly without the extra refetch round trip.
  */
 export function useCommunityTemplateRequest({
