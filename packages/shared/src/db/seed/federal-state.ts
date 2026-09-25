@@ -36,7 +36,13 @@ export async function insertFederalStates({ skip = true }: { skip: boolean }) {
     await db
       .insert(federalStateTable)
       .values({ ...federalState, apiKeyId })
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        target: federalStateTable.id,
+        set: {
+          encryptedApiKey: federalState.encryptedApiKey,
+          apiKeyId,
+        },
+      });
 
     // upsert models per federal state
     const federalStateAndApiKey = await dbGetFederalStateWithDecryptedApiKey({
