@@ -120,7 +120,7 @@ const mockUser = (userRole: 'student' | 'teacher' = 'teacher') => ({
 const mockFederalState = (): FederalStateModel =>
   ({
     id: generateUUID(),
-    teacherPriceLimit: 5000,
+    teacherPriceLimit: 500,
     studentPriceLimit: 100,
     createdAt: new Date(),
     mandatoryCertificationTeacher: null,
