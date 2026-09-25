@@ -128,6 +128,11 @@ jobs:
           LLM_GPT5MINI_BASE_URL: ${{ secrets.LLM_GPT5MINI_BASE_URL }}
           LLM_MOCK_API_KEY: mock-api-key
           LLM_MOCK_BASE_URL: http://mock-llm:6556
+          LLM_GOOGLE_PROJECT_ID: ${{ secrets.LLM_GOOGLE_PROJECT_ID }}
+          LLM_GOOGLE_LOCATION: ${{ secrets.LLM_GOOGLE_LOCATION }}
+          LLM_GOOGLE_AUTH_CREDENTIALS: ${{ secrets.LLM_GOOGLE_AUTH_CREDENTIALS }}
+          LLM_LLAMA_GUARD_ENDPOINT_ID: ${{ secrets.LLM_LLAMA_GUARD_ENDPOINT_ID }}
+          LLM_LLAMA_GUARD_ENDPOINT_HOST: ${{ secrets.LLM_LLAMA_GUARD_ENDPOINT_HOST }}
 
       - name: Run migrations and seed database (if applicable)
         run: pnpm --filter @ais-chat/shared db:migrate && pnpm --filter @ais-chat/shared db:seed
@@ -196,6 +201,7 @@ jobs:
         run: pnpm --filter ais-chat-app e2e
         env:
           CI: true
+          E2E_GUARD_TEXT_MODEL: GPT-5 nano
           E2E_TEXT_MODEL_1: Mock LLM
           E2E_TEXT_MODEL_2: Mock LLM (2)
 
