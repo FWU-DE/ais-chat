@@ -95,6 +95,23 @@
       }
     }
   },
+  "community-sharing": {
+    "title": "Community-Freigabe",
+    "status": {
+      "approved": "Genehmigt",
+      "cancelled": "Zurückgezogen",
+      "rejected": "Änderung erforderlich",
+      "submitted": "Eingereicht"
+    },
+    "event-type": {
+      "approve": "Genehmigt",
+      "cancel": "Zurückgezogen",
+      "submit": "Eingereicht",
+      "reject": "Änderung erforderlich",
+      "user_message": "Nachricht von mir",
+      "editor_message": "Nachricht von AIS.chat-Redaktion"
+    }
+  },
   "usage-disclaimer": {
     "initial-title": "Willkommen bei AIS.chat!",
     "terms-and-conditions-title": "Nutzungsbedingungen"
