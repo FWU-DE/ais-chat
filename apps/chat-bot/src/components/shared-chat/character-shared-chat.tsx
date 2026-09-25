@@ -84,6 +84,7 @@ export default function CharacterSharedChat({
       avatarPictureUrl={avatarPictureUrl}
       chat={chat}
       dialogStartMode="derived"
+      showActivityDialog
       assistantIcon={assistantIcon}
       uploadFileFn={uploadSharedCharacterFile}
     />

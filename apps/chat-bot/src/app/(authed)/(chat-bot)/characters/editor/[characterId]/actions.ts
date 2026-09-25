@@ -1,6 +1,7 @@
 'use server';
 
 import { AccessLevel } from '@shared/db/schema';
+import { getCommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
 import { ShareWithLearnersLimitParams } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners-limit-params';
 import { requireAuth } from '@/auth/requireAuth';
 import {
@@ -18,7 +19,59 @@ import {
   UpdateCharacterActionModel,
   uploadAvatarPictureForCharacter,
 } from '@shared/characters/character-service';
+import {
+  cancelCommunityTemplateRequest,
+  createCommunityTemplateRequest,
+} from '@shared/community-templates/community-template-service';
 import { runServerAction } from '@shared/actions/run-server-action';
+
+export async function getCommunityTemplateRequestWithEventsAction({
+  characterId,
+}: {
+  characterId: string;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'getCommunityTemplateRequestWithEventsAction',
+    getCommunityTemplateRequestWithEvents,
+  )({
+    characterId,
+    user,
+  });
+}
+
+export async function createCommunityTemplateRequestAction({
+  characterId,
+}: {
+  characterId: string;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'createCommunityTemplateRequestAction',
+    createCommunityTemplateRequest,
+  )({
+    characterId,
+    user,
+  });
+}
+
+export async function cancelCommunityTemplateRequestAction({
+  characterId,
+}: {
+  characterId: string;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'cancelCommunityTemplateRequestAction',
+    cancelCommunityTemplateRequest,
+  )({
+    characterId,
+    user,
+  });
+}
 
 export async function updateCharacterAccessLevelAction({
   characterId,

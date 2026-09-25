@@ -111,7 +111,7 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
                   aria-label={t('open-source', { source: link.title })}
                 >
                   <span className="min-w-0 flex-1 truncate text-sm text-black">{link.title}</span>
-                  <span className="shrink-0 rounded-full border border-primary/15 bg-primary/8 px-2 py-0.5 text-[13px] font-medium leading-5.75 text-primary">
+                  <span className="inline-flex h-5 shrink-0 items-center rounded-full border border-primary/15 bg-primary/8 px-2 text-[13px] font-medium leading-none text-primary">
                     {getLinkDomain(link.url)}
                   </span>
                 </a>
