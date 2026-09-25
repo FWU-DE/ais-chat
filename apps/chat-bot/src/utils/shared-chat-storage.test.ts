@@ -109,6 +109,32 @@ describe('shared-chat sessionStorage round-trip', () => {
     expect(loadSharedChat(INVITE_CODE)).toEqual(data);
   });
 
+  it('persists and restores agent loop tool-call and tool-result fields', () => {
+    const data: PersistedSharedChat = {
+      sharedSessionId: 'session-1',
+      messages: [
+        {
+          id: 'm1',
+          role: 'assistant',
+          content: '',
+          toolCalls: [{ id: 'tool-call-1', name: 'web_search', arguments: '{"query":"test"}' }],
+          files: [],
+        },
+        {
+          id: 'm2',
+          role: 'tool',
+          content: '{"results":[]}',
+          toolCallId: 'tool-call-1',
+          files: [],
+        },
+      ],
+    };
+
+    saveSharedChat(INVITE_CODE, data);
+
+    expect(loadSharedChat(INVITE_CODE)).toEqual(data);
+  });
+
   it('defaults files to an empty array when not provided', () => {
     storage.setItem(
       sharedChatStorageKey(INVITE_CODE),

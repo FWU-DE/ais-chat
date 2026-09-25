@@ -29,6 +29,28 @@ describe('encodeChatStreamEvent / decodeChatStreamEvent', () => {
     expect(decodeChatStreamEvent(encodeChatStreamEvent(event))).toEqual(event);
   });
 
+  it('round-trips agent loop tool-call and tool-result messages', () => {
+    const event: ChatStreamEvent = {
+      type: 'agent_loop_messages',
+      messages: [
+        {
+          id: 'assistant-tool-call-1',
+          role: 'assistant',
+          content: '',
+          toolCalls: [{ id: 'tool-call-1', name: 'web_search', arguments: '{"query":"test"}' }],
+        },
+        {
+          id: 'tool-result-1',
+          role: 'tool',
+          content: '{"results":[]}',
+          toolCallId: 'tool-call-1',
+        },
+      ],
+    };
+
+    expect(decodeChatStreamEvent(encodeChatStreamEvent(event))).toEqual(event);
+  });
+
   it('returns null for plain text chunks and malformed events', () => {
     expect(decodeChatStreamEvent('just some streamed text')).toBeNull();
     expect(decodeChatStreamEvent('\u001enot json')).toBeNull();
