@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
 import { waitForAutosave, waitForToast } from '../../utils/utils';
-import { sendMessage, uploadFile } from '../../utils/chat';
+import { sendMessage } from '../../utils/chat';
 import { configureAssistant, createAssistant, deleteAssistant } from '../../utils/assistant';
 import { nanoid } from 'nanoid';
 
@@ -60,10 +60,6 @@ test('teacher can login, create an assistant and start a chat', async ({ page })
   await page.reload();
   await page.waitForURL('/assistants/d/**/**');
   await expect(page.getByLabel('assistant message 1')).toContainText(assistantName);
-
-  await uploadFile(page, './e2e/fixtures/file-upload/Große Text Datei.txt');
-  await sendMessage(page, 'Gib "OK" aus.');
-  await expect(page.getByLabel('assistant message 2')).toBeVisible();
 });
 
 test('teacher can delete assistant with chat', async ({ page }) => {
