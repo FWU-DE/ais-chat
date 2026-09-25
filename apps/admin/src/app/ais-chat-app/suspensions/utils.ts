@@ -1,21 +1,6 @@
 import { assertEntityType, throwEntityInvalidArgumentError } from '@shared/entities/entity-types';
 import { SuspensionRequestEntityOverview } from '@shared/suspension/suspension-service';
 
-export function mapEntityTypeToLabel(entityType: SuspensionRequestEntityOverview['entityType']) {
-  assertEntityType(entityType);
-
-  switch (entityType) {
-    case 'assistant':
-      return 'Assistent';
-    case 'character':
-      return 'Dialogpartner';
-    case 'learningScenario':
-      return 'Lernszenario';
-    default:
-      throwEntityInvalidArgumentError();
-  }
-}
-
 export function mapReasonToLabel(
   reason: SuspensionRequestEntityOverview['reasons'][number]['reason'],
 ) {
