@@ -34,6 +34,7 @@ type RunAgentLoopParams = {
   /** Tears down the upstream provider stream when the client goes away or the generation times out. */
   abortSignal?: AbortSignal;
   onTextChunk: (delta: string) => void;
+  onReasoningSummary?: (delta: string) => void;
   onToolCalls?: (calls: ToolCall[]) => void;
   onToolResult?: (result: { toolCallId: string; name: string; result: string }) => void;
   onComplete: (result: {
@@ -66,6 +67,7 @@ export function runAgentLoop({
   agentName,
   abortSignal,
   onTextChunk,
+  onReasoningSummary,
   onToolCalls,
   onToolResult,
   onComplete,
@@ -156,6 +158,8 @@ export function runAgentLoop({
               for await (const event of stream) {
                 if (event.type === 'text') {
                   iterationText += event.delta;
+                } else if (event.type === 'reasoning_summary') {
+                  onReasoningSummary?.(event.delta);
                 } else if (event.type === 'tool_call') {
                   if (pendingToolCalls.length < MAX_TOOL_CALLS_PER_ITERATION) {
                     // On last iteration, tools are disabled but model might still emit tool calls

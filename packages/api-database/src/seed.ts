@@ -174,7 +174,7 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     additionalParameters: {
       reasoning: {
         effort: 'minimal',
-        summary: null,
+        summary: 'auto',
       },
     },
     supportedImageFormats: ['jpg', 'jpeg', 'png', 'webp'],
@@ -220,7 +220,7 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     additionalParameters: {
       reasoning: {
         effort: 'low',
-        summary: null,
+        summary: 'auto',
       },
     },
     supportedImageFormats: ['jpg', 'jpeg', 'png', 'webp'],

@@ -79,6 +79,16 @@ function StepDetail({ step }: { step: Extract<AiActivityStep, { kind: 'tool' }> 
   );
 }
 
+function AnalysisSummary({ summary }: { summary: string | undefined }) {
+  const visibleSummary = truncate(summary);
+
+  return visibleSummary === undefined || visibleSummary.length === 0 ? null : (
+    <span title={summary} className="min-w-0 truncate text-sm text-black/50">
+      {visibleSummary}
+    </span>
+  );
+}
+
 function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean }) {
   const t = useTranslations('ai-activity');
   const links = step.kind === 'tool' ? (step.links ?? []) : [];
@@ -96,6 +106,7 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
         <div className="flex flex-wrap items-baseline gap-2">
           <span className="text-sm font-medium text-black">{getAiActivityStepTitle(step, t)}</span>
           {step.kind === 'tool' && <StepDetail step={step} />}
+          {step.kind === 'analysis' && <AnalysisSummary summary={step.summary} />}
         </div>
 
         {links.length > 0 && (
