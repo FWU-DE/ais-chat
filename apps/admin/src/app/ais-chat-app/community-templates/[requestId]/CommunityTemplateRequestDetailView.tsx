@@ -16,6 +16,7 @@ import { mapStateToLabel } from '../columns';
 import RejectCommunityTemplateRequestDialog from './RejectCommunityTemplateRequestDialog';
 import SendMessageToAuthorDialog from './SendMessageToAuthorDialog';
 import { CheckIcon } from '@phosphor-icons/react';
+import { cn } from '@ui/lib/utils';
 export const dynamic = 'force-dynamic';
 
 export type CommunityTemplateRequestDetailViewProps = {
@@ -140,20 +141,56 @@ export default function CommunityTemplateRequestDetailView(
           </CardAction>
         </CardHeader>
         <CardContent>
-          {data.events.map((event) => (
-            <div key={event.id}>
-              <div>{event.createdAt.toLocaleString()}</div>
-              <div>{event.createdByName}</div>
-              <div>{event.createdByRole}</div>
-              <div>{event.eventType}</div>
-              <div>{event.message}</div>
-            </div>
-          ))}
+          <ul className="flex flex-col gap-8">
+            {data.events.map((event) => (
+              <li key={event.id} className="flex flex-col gap-2 text-sm font-normal">
+                <div className="flex flex-row gap-4 items-center">
+                  <span className="font-medium">{mapEventTypeToLabel(event.eventType)}</span>
+                  {event.createdByName && (
+                    <span className="text-xs font-normal text-foreground/60">
+                      {event.createdByName}
+                    </span>
+                  )}
+                  <span className="text-xs font-normal text-foreground/60">
+                    {event.createdAt.toLocaleString()}
+                  </span>
+                </div>
+                {event.message && (
+                  <div
+                    className={cn(
+                      'px-4 py-3 rounded-xl rounded-br-none',
+                      event.createdByRole === 'editor' ? 'bg-primary/10' : 'bg-secondary/30',
+                    )}
+                  >
+                    {event.message}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
         </CardContent>
       </Card>
-      <div></div>
-      <div>{requestId}</div>
-      <div>{JSON.stringify(data)}</div>
     </div>
   );
+}
+
+function mapEventTypeToLabel(
+  eventType: CommunityTemplateRequestWithEventsAdmin['events'][number]['eventType'],
+) {
+  switch (eventType) {
+    case 'approve':
+      return 'Freigegeben';
+    case 'cancel':
+      return 'Zurückgezogen';
+    case 'reject':
+      return 'Änderungen erforderlich';
+    case 'submit':
+      return 'Eingereicht';
+    case 'editor_message':
+      return 'Nachricht von AIS.chat-Redaktion';
+    case 'user_message':
+      return 'Nachricht von Autor/Autorin';
+    default:
+      return eventType;
+  }
 }

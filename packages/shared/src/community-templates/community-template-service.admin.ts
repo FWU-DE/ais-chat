@@ -11,7 +11,7 @@ import {
 } from '@shared/db/schema';
 import { EntityType } from '@shared/entities/entity-types';
 import { NotFoundError } from '@shared/error';
-import { desc, eq, sql } from 'drizzle-orm';
+import { asc, desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 export type CommunityTemplateRequestSummary = CommunityTemplateRequestSelectModel & {
@@ -108,7 +108,7 @@ export async function getCommunityTemplateRequestWithEventsForAdmin(
       eq(CommunityTemplateRequestEventTable.templateRequestId, CommunityTemplateRequestTable.id),
     )
     .where(eq(CommunityTemplateRequestTable.id, requestId))
-    .orderBy(desc(CommunityTemplateRequestEventTable.createdAt));
+    .orderBy(asc(CommunityTemplateRequestEventTable.createdAt));
 
   const firstRow = rows[0];
   if (!firstRow) throw new NotFoundError('Community template request not found');
