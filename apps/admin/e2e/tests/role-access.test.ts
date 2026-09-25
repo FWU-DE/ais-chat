@@ -23,7 +23,7 @@ test.describe('admin role access', () => {
 
     await page.goto('/ais-chat-app');
     await expect(page.getByRole('link', { name: 'Bundesländer' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Vorlagen' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Vorlagen', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Sperrungen' })).toBeVisible();
   });
 
@@ -36,7 +36,7 @@ test.describe('admin role access', () => {
     await expect(page.getByText('Rolle: Editor')).toBeVisible();
     await expect(page.getByRole('link', { name: 'AIS.chat-api' })).not.toBeVisible();
     await expect(page.getByRole('link', { name: 'Bundesländer' })).not.toBeVisible();
-    await expect(page.getByRole('link', { name: 'Vorlagen' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Vorlagen', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Sperrungen' })).toBeVisible();
   });
 
