@@ -24,7 +24,7 @@ export const mockUserAndContext = (): UserAndContext => {
     userRole: 'teacher',
     federalState: {
       id: federalStateId,
-      teacherPriceLimit: 5000,
+      teacherPriceLimit: 500,
       createdAt: new Date(),
       studentPriceLimit: 0,
       mandatoryCertificationTeacher: null,

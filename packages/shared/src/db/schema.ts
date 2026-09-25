@@ -226,7 +226,7 @@ export type FederalStatePictureUrls = z.infer<typeof federalStatePictureUrlsSche
 
 export const federalStateTable = pgTable('federal_state', {
   id: text('id').primaryKey(),
-  teacherPriceLimit: integer('teacher_price_limit').notNull().default(5000),
+  teacherPriceLimit: integer('teacher_price_limit').notNull().default(500),
   studentPriceLimit: integer('student_price_limit').notNull().default(200),
   encryptedApiKey: text('encrypted_api_key'), // This will stay until we have migrated all usages to apiKeyId
   apiKeyId: uuid('api_key_id'),
