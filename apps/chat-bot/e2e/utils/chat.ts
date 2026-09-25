@@ -23,10 +23,19 @@ export async function sendMessage(
     const errorBox = page.getByRole('button', { name: 'Erneut versuchen' });
 
     await enterMessage(page, message);
-    const waitForLoadingSpinner = loadingSpinner.waitFor();
+    const waitForLoadingSpinner = loadingSpinner.waitFor().then(() => 'loading' as const);
+    const waitForError = errorBox.waitFor({ timeout: 80_000 }).then(() => 'error' as const);
     await page.keyboard.press('Enter');
-    // Wait for the loading spinner to appear after sending the message
-    await waitForLoadingSpinner;
+
+    const initialState = await Promise.race([waitForLoadingSpinner, waitForError]);
+    if (initialState === 'error') {
+      if (options.expectedError === undefined) {
+        throw new Error('Error message appeared after sending message');
+      }
+
+      await expect(page.getByText(options.expectedError, { exact: true })).toBeVisible();
+      return;
+    }
 
     if (options.expectedError !== undefined) {
       await errorBox.waitFor({ timeout: 20_000 });
