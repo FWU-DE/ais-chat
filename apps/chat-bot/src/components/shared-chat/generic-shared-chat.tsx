@@ -83,6 +83,7 @@ export type SharedChatViewProps = {
    * `w-full` outer/inner, extra hr spacing).
    */
   enableFloatingText?: boolean;
+  showActivityDialog?: boolean;
   /**
    * Icon rendered next to assistant messages. When provided, also rendered by the
    * `Messages` list.
@@ -109,6 +110,7 @@ export default function GenericSharedChat({
   exerciseDescription,
   exerciseTitle,
   enableFloatingText = false,
+  showActivityDialog = false,
   assistantIcon,
   uploadFileFn,
 }: SharedChatViewProps) {
@@ -379,6 +381,7 @@ export default function GenericSharedChat({
                 containerClassName="flex flex-col gap-4"
                 pendingFileMapping={pendingFileMapping}
                 activitySteps={chat.activitySteps}
+                showActivityDialog={showActivityDialog}
               />
             )}
             {/* If there is a TokenPointsExceededError or SharedChatExpiredError we show a dialog instead */}
