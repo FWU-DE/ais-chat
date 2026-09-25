@@ -71,10 +71,19 @@ function StepIcon({ step }: { step: AiActivityStep }) {
 
 function StepDetail({ step }: { step: Extract<AiActivityStep, { kind: 'tool' }> }) {
   const visibleDetail = truncate(step.detail);
+  const visibleResult = step.tool === 'math_calculate' ? truncate(step.result) : undefined;
+  const text =
+    visibleDetail === undefined
+      ? visibleResult === undefined
+        ? undefined
+        : `= ${visibleResult}`
+      : visibleResult === undefined
+        ? visibleDetail
+        : `${visibleDetail} = ${visibleResult}`;
 
-  return visibleDetail === undefined || visibleDetail.length === 0 ? null : (
+  return text === undefined || text.length === 0 ? null : (
     <span title={step.detail} className="min-w-0 truncate text-sm text-black/50">
-      {visibleDetail}
+      {text}
     </span>
   );
 }

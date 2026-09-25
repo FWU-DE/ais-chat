@@ -7,6 +7,7 @@ import {
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import type { ToolDefinition, ToolRegistration } from './types';
 import { TOOL_NAMES } from '@/types/tool-names';
+import { parseJsonRecord, readString } from '@/utils/chat/ai-activity';
 
 export const expressionSchema = z.object({
   expression: z.string().trim().min(1).max(CALCULATOR_MAX_EXPRESSION_LENGTH),
@@ -54,7 +55,13 @@ export function buildMathCalculateTool(): ToolRegistration {
           kind: 'tool',
           id: toolCall.id,
           tool: TOOL_NAMES.mathCalculate,
+          detail: readString(parseJsonRecord(toolCall.arguments), 'expression'),
         };
+      },
+      applyResult: (step, result) => {
+        const parsed = parseJsonRecord(result);
+        const value = readString(parsed, 'result');
+        return value === undefined ? step : { ...step, result: value };
       },
     },
   };
