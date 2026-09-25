@@ -26,6 +26,11 @@ export function createAiActivityStream(
         publish();
       }
     },
+    onReasoningSummary: (delta: string) => {
+      if (collector.addReasoningSummary(delta)) {
+        publish();
+      }
+    },
     onToolResult: ({ toolCallId, result }: { toolCallId: string; result: string }) => {
       if (collector.addToolResult(toolCallId, result)) {
         publish();

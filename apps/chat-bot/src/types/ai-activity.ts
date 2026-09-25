@@ -22,7 +22,7 @@ const aiActivityLinkSchema = z.object({
 });
 
 export const aiActivityStepSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('analysis') }),
+  z.object({ kind: z.literal('analysis'), summary: z.string().optional() }),
   z.object({ kind: z.literal('done') }),
   z.object({
     kind: z.literal('tool'),

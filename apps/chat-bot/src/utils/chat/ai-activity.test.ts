@@ -82,6 +82,18 @@ describe('activity helpers', () => {
 });
 
 describe('createAiActivityCollector', () => {
+  it('accumulates provider reasoning summaries on the analysis step', () => {
+    const collector = createAiActivityCollector({});
+
+    collector.start();
+
+    expect(collector.addReasoningSummary('First part. ')).toBe(true);
+    expect(collector.addReasoningSummary('Second part.')).toBe(true);
+    expect(collector.getSteps()).toEqual([
+      { kind: 'analysis', summary: 'First part. Second part.' },
+    ]);
+  });
+
   it('starts, adds tool calls, applies results, and finishes', () => {
     const applyResult = vi.fn((step, result: string) => ({ ...step, result }));
     const collector = createAiActivityCollector(createToolRegistry({ applyResult }));

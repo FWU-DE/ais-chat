@@ -590,6 +590,7 @@ export async function sendChatMessage({
     onTextChunk: (delta: string) => {
       update(delta);
     },
+    onReasoningSummary: aiActivity.onReasoningSummary,
     onToolCalls: aiActivity.onToolCalls,
     onToolResult: aiActivity.onToolResult,
     onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {

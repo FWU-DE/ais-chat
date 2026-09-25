@@ -85,6 +85,28 @@ export function createAiActivityCollector(toolRegistry: Record<string, ToolRegis
       steps.push({ kind: 'analysis' });
       return true;
     },
+    addReasoningSummary(summary: string): boolean {
+      if (summary.length === 0) {
+        return false;
+      }
+
+      const analysisIndex = steps.findIndex((step) => step.kind === 'analysis');
+      if (analysisIndex === -1) {
+        steps.unshift({ kind: 'analysis', summary });
+        return true;
+      }
+
+      const analysis = steps[analysisIndex];
+      if (analysis?.kind !== 'analysis') {
+        return false;
+      }
+
+      steps[analysisIndex] = {
+        ...analysis,
+        summary: `${analysis.summary ?? ''}${summary}`,
+      };
+      return true;
+    },
     addToolCalls(toolCalls: ToolCall[]): boolean {
       const toolSteps = toolCalls.flatMap((toolCall) => {
         const activity = toolRegistry[toolCall.name]?.activity;

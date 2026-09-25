@@ -274,6 +274,7 @@ export async function sendLearningScenarioMessage({
     onTextChunk: (delta) => {
       update(delta);
     },
+    onReasoningSummary: aiActivity.onReasoningSummary,
     onToolCalls: aiActivity.onToolCalls,
     onToolResult: aiActivity.onToolResult,
     onComplete: async ({ usage, priceInCents, modelUsages }) => {
