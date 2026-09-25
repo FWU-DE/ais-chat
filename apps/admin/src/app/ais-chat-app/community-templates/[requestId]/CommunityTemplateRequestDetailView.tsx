@@ -1,17 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getCommunityTemplateRequestWithEventsForAdminAction } from './actions';
+import {
+  getCommunityTemplateRequestWithEventsForAdminAction,
+  updateInternalNoteAction,
+} from './actions';
 import { CommunityTemplateRequestWithEventsAdmin } from '@shared/community-templates/community-template-service.admin';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@ui/components/card';
 import { Button } from '@ui/components/button';
 import { Textarea } from '@ui/components/textarea';
-import { CheckIcon } from '@phosphor-icons/react';
 import { ExternalLink } from '@/components/navigation/ExternalLink';
 import { buildChatBotEntityUrl } from '@/utils/buildChatBotEntityUrl';
 import { mapEntityTypeToLabel } from '@/utils/mapEntityTypeToLabel';
 import { mapStateToLabel } from '../columns';
 import RejectCommunityTemplateRequestDialog from './RejectCommunityTemplateRequestDialog';
+import SendMessageToAuthorDialog from './SendMessageToAuthorDialog';
+import { CheckIcon } from '@phosphor-icons/react';
 export const dynamic = 'force-dynamic';
 
 export type CommunityTemplateRequestDetailViewProps = {
@@ -49,6 +53,8 @@ export default function CommunityTemplateRequestDetailView(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     )[0]?.createdByName;
 
+  const isApprovePossible = data?.state === 'submitted' || data?.state === 'rejected';
+
   return data === undefined ? (
     <div>Loading...</div>
   ) : (
@@ -84,11 +90,13 @@ export default function CommunityTemplateRequestDetailView(
             <dd>{mapStateToLabel(data.state)}</dd>
             <dt></dt>
             <dd className="flex flex-row gap-4">
-              <Button>
-                <CheckIcon /> Freigeben
+              <Button disabled={!isApprovePossible}>
+                <CheckIcon />
+                Freigeben
               </Button>
               <RejectCommunityTemplateRequestDialog
                 requestId={requestId}
+                requestState={data.state}
                 onRejected={async () => setReloadTrigger((currentTrigger) => currentTrigger + 1)}
               />
             </dd>
@@ -99,16 +107,37 @@ export default function CommunityTemplateRequestDetailView(
         <CardHeader>
           <CardTitle>Interne Notizen</CardTitle>
           <CardAction>
-            <Button>Speichern</Button>
+            <Button
+              onClick={async () => {
+                await updateInternalNoteAction(requestId, data.note);
+                setReloadTrigger((currentTrigger) => currentTrigger + 1);
+              }}
+            >
+              Speichern
+            </Button>
           </CardAction>
         </CardHeader>
         <CardContent>
-          <Textarea className="min-h-30" />
+          <Textarea
+            className="min-h-30"
+            value={data.note}
+            onChange={(event) =>
+              setData((currentData) =>
+                currentData ? { ...currentData, note: event.target.value } : currentData,
+              )
+            }
+          />
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
           <CardTitle>Verlauf</CardTitle>
+          <CardAction>
+            <SendMessageToAuthorDialog
+              requestId={requestId}
+              onSendMessage={async () => setReloadTrigger((currentTrigger) => currentTrigger + 1)}
+            />
+          </CardAction>
         </CardHeader>
         <CardContent>
           {data.events.map((event) => (

@@ -175,7 +175,7 @@ export async function rejectRequest(
   });
 }
 
-export async function addMessageForUser(
+export async function sendMessageToAuthor(
   requestId: string,
   editorId: string,
   editorName: string,

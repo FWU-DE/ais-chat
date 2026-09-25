@@ -7,7 +7,7 @@ import {
   updateInternalNote,
   approveRequest,
   rejectRequest,
-  addMessageForUser,
+  sendMessageToAuthor,
 } from '@shared/community-templates/community-template-service.admin';
 
 export async function getCommunityTemplateRequestWithEventsForAdminAction(requestId: string) {
@@ -39,13 +39,12 @@ export async function rejectRequestAction(requestId: string, message: string) {
   return runServerAction('rejectRequest', rejectRequest)(requestId, editorId, editorName, message);
 }
 
-export async function addMessageForUserAction(
-  requestId: string,
-  editorId: string,
-  editorName: string,
-  message: string,
-) {
-  return runServerAction('addMessageForUser', addMessageForUser)(
+export async function sendMessageToAuthorAction(requestId: string, message: string) {
+  const session = await requireAdminOrEditorAuth();
+  const editorId = session.user.id;
+  const editorName = session.user.name ?? session.user.email;
+
+  return runServerAction('sendMessageToAuthor', sendMessageToAuthor)(
     requestId,
     editorId,
     editorName,

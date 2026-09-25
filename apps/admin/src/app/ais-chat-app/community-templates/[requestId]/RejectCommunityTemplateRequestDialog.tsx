@@ -7,14 +7,17 @@ import { Textarea } from '@ui/components/textarea';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { rejectRequestAction } from './actions';
+import { TemplateRequestStatus } from '@shared/db/schema';
 
 export type RejectCommunityTemplateRequestDialogProps = {
   requestId: string;
+  requestState: TemplateRequestStatus;
   onRejected: () => Promise<void>;
 };
 
 export default function RejectCommunityTemplateRequestDialog({
   requestId,
+  requestState,
   onRejected,
 }: RejectCommunityTemplateRequestDialogProps) {
   const [message, setMessage] = useState('');
@@ -28,10 +31,12 @@ export default function RejectCommunityTemplateRequestDialog({
     });
   }, []);
 
+  const isRejectPossible = requestState === 'submitted' || requestState === 'approved';
+
   return (
     <ConfirmationDialog
       trigger={
-        <Button>
+        <Button disabled={!isRejectPossible}>
           <PencilSimpleIcon /> Überarbeitung anfordern
         </Button>
       }
