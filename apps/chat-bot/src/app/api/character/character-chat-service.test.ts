@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { runAgentLoop } from '@ais-chat/ai-core';
 import type { ChatMessage } from '@/types/chat';
+import { decodeChatStreamEvent } from '@/utils/streaming';
 
 const mocks = vi.hoisted(() => ({
   runAgentLoopMock: vi.fn(),
@@ -26,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   getMostRecentUserMessageMock: vi.fn(),
   limitChatHistoryMock: vi.fn(),
   annotateMessageAttachmentNamesMock: vi.fn(),
+  agentLoopMessagesToChatMessagesMock: vi.fn(),
   logErrorMock: vi.fn(),
   buildToolsMock: vi.fn(),
   createImageAttachmentsForConversationMock: vi.fn(),
@@ -111,6 +113,7 @@ vi.mock('../chat/utils', () => ({
   getMostRecentUserMessage: mocks.getMostRecentUserMessageMock,
   limitChatHistory: mocks.limitChatHistoryMock,
   annotateMessageAttachmentNames: mocks.annotateMessageAttachmentNamesMock,
+  agentLoopMessagesToChatMessages: mocks.agentLoopMessagesToChatMessagesMock,
 }));
 
 vi.mock('@shared/logging', () => ({
@@ -194,7 +197,7 @@ async function collectStream(stream: ReadableStream<string>) {
     reader.releaseLock();
   }
 
-  return chunks.join('');
+  return chunks;
 }
 
 beforeEach(() => {
@@ -224,6 +227,20 @@ beforeEach(() => {
   mocks.annotateMessageAttachmentNamesMock.mockImplementation(
     (incomingMessages: ChatMessage[]) => incomingMessages,
   );
+  mocks.agentLoopMessagesToChatMessagesMock.mockReturnValue([
+    {
+      id: 'loop-assistant-1',
+      role: 'assistant',
+      content: '',
+      toolCalls: [{ id: 'tool-call-1', name: 'web_search', arguments: '{}' }],
+    },
+    {
+      id: 'loop-tool-1',
+      role: 'tool',
+      content: 'tool result',
+      toolCallId: 'tool-call-1',
+    },
+  ]);
   mocks.getMostRecentUserMessageMock.mockImplementation((incomingMessages: ChatMessage[]) =>
     incomingMessages.filter((m) => m.role === 'user').at(-1),
   );
@@ -278,6 +295,56 @@ describe('sendCharacterMessage', () => {
     expect(mocks.buildToolsMock).toHaveBeenCalledWith(
       expect.objectContaining({ isCalculatorEnabled: true }),
     );
+  });
+
+  it('emits agent loop messages before completing the stream', async () => {
+    const agentLoopMessages = [
+      { role: 'assistant' as const, content: '', toolCalls: [] },
+      { role: 'tool' as const, content: 'tool result', toolCallId: 'tool-call-1' },
+    ];
+    mocks.runAgentLoopMock.mockImplementationOnce(
+      ({ onComplete }: Parameters<typeof runAgentLoop>[0]) => {
+        void onComplete({
+          fullText: 'shared response',
+          usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
+          priceInCents: 4,
+          modelId: model.id,
+          modelUsages: [],
+          agentLoopMessages,
+        });
+      },
+    );
+
+    const { sendCharacterMessage } = await import('./character-chat-service');
+    const result = await sendCharacterMessage({
+      characterId: character.id,
+      inviteCode: 'invite-code',
+      messages,
+      modelId: model.id,
+    });
+
+    const chunks = await collectStream(result.stream);
+    const event = chunks
+      .map(decodeChatStreamEvent)
+      .find((streamEvent) => streamEvent?.type === 'agent_loop_messages');
+
+    expect(event).toEqual({
+      type: 'agent_loop_messages',
+      messages: [
+        {
+          id: 'loop-assistant-1',
+          role: 'assistant',
+          content: '',
+          toolCalls: [{ id: 'tool-call-1', name: 'web_search', arguments: '{}' }],
+        },
+        {
+          id: 'loop-tool-1',
+          role: 'tool',
+          content: 'tool result',
+          toolCallId: 'tool-call-1',
+        },
+      ],
+    });
   });
 
   it('forwards fileIds to shared file service', async () => {

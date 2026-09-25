@@ -5,9 +5,15 @@
 
 import type { WebSearchResult } from '@shared/db/schema';
 import type { AiActivityStep } from '@/types/ai-activity';
+import type { ChatMessage } from '@/types/chat';
 import { logError } from '@shared/logging';
 
 const STREAM_EVENT_PREFIX = '\u001e';
+
+export type AgentLoopChatMessage = Pick<
+  ChatMessage,
+  'id' | 'role' | 'content' | 'toolCalls' | 'toolCallId'
+>;
 
 export type ChatStreamEvent =
   | {
@@ -17,6 +23,10 @@ export type ChatStreamEvent =
   | {
       type: 'ai_activity';
       steps: AiActivityStep[];
+    }
+  | {
+      type: 'agent_loop_messages';
+      messages: AgentLoopChatMessage[];
     };
 
 export function encodeChatStreamEvent(event: ChatStreamEvent): string {
@@ -31,7 +41,11 @@ export function decodeChatStreamEvent(chunk: string): ChatStreamEvent | null {
   try {
     const event = JSON.parse(chunk.slice(STREAM_EVENT_PREFIX.length)) as ChatStreamEvent;
 
-    if (event.type !== 'web_search_results' && event.type !== 'ai_activity') {
+    if (
+      event.type !== 'web_search_results' &&
+      event.type !== 'ai_activity' &&
+      event.type !== 'agent_loop_messages'
+    ) {
       return null;
     }
 

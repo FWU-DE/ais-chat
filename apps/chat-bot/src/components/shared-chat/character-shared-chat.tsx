@@ -26,6 +26,8 @@ export default function CharacterSharedChat({
       role: message.role,
       content: message.content,
       activitySteps: message.activitySteps,
+      toolCalls: message.toolCalls,
+      toolCallId: message.toolCallId,
     })) ??
     (character.initialMessage
       ? [{ id: 'initial-message', role: 'assistant', content: character.initialMessage }]
