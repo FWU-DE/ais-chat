@@ -51,7 +51,7 @@ export default function SpeechButton({ text }: { text: string }) {
     try {
       const result = await generateSpeechAction({ text });
       if (!result.success) {
-        toast.error(result.error.message);
+        toast.error(tCommon('read-aloud-error'));
         setStatus('idle');
         return;
       }
