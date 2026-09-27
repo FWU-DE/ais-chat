@@ -1,23 +1,37 @@
-/* Use different library beacuse wavefile is CommonJS
-//import { WaveFile } from 'wavefile';
 import type { AiModel, SpeechGenerationFn } from '../types';
 import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { createGoogleClient, formatGoogleError } from '../../google-client';
 
 function pcmToWav(pcm: Buffer): Buffer {
-  // Gemini TTS generates 24 kHz mono signed 16-bit little-endian PCM.
+  // Gemini TTS generates 24 kHz mono signed 16-bit little-endian PCM:
   // https://ai.google.dev/gemini-api/docs/speech-generation
   const SAMPLE_RATE = 24000; // samples per second
   const CHANNELS = 1;
   const BITS_PER_SAMPLE = 16;
+  const BYTES_PER_SAMPLE = BITS_PER_SAMPLE / 8;
 
-  // Reinterpret the raw PCM bytes as 16-bit samples.
-  // Put into aligned array to handle potential odd byte lengths.
-  const samples = new Int16Array(Math.floor(pcm.byteLength / 2));
-  new Uint8Array(samples.buffer).set(pcm.subarray(0, samples.length * 2));
-  const wav = new WaveFile();
-  wav.fromScratch(CHANNELS, SAMPLE_RATE, String(BITS_PER_SAMPLE), samples);
-  return Buffer.from(wav.toBuffer());
+  // Drop trailing odd byte to keep samples 16-bit aligned.
+  const dataLength = Math.floor(pcm.byteLength / BYTES_PER_SAMPLE) * BYTES_PER_SAMPLE;
+  const byteRate = SAMPLE_RATE * CHANNELS * BYTES_PER_SAMPLE;
+  const blockAlign = CHANNELS * BYTES_PER_SAMPLE;
+
+  // Canonical 44-byte WAV header for PCM: https://docs.fileformat.com/audio/wav/
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0, 'ascii');
+  header.writeUInt32LE(36 + dataLength, 4);
+  header.write('WAVE', 8, 'ascii');
+  header.write('fmt ', 12, 'ascii');
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(CHANNELS, 22);
+  header.writeUInt32LE(SAMPLE_RATE, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(BITS_PER_SAMPLE, 34);
+  header.write('data', 36, 'ascii');
+  header.writeUInt32LE(dataLength, 40);
+
+  return Buffer.concat([header, pcm.subarray(0, dataLength)]);
 }
 
 export function constructGoogleSpeechGenerationFn(model: AiModel): SpeechGenerationFn {
@@ -58,4 +72,3 @@ export function constructGoogleSpeechGenerationFn(model: AiModel): SpeechGenerat
     return { wavBuffer };
   };
 }
-*/

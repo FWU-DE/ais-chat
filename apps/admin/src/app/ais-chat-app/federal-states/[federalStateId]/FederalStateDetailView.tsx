@@ -280,8 +280,8 @@ export function FederalStateView(props: FederalStateViewProps) {
           />
           <FormFieldCheckbox
             name="featureToggles.isSpeechModelEnabled"
-            label="Sprachmodell aktivieren"
-            description="Erlaubt die Nutzung des Sprachmodells (Text-to-Speech)."
+            label="Sprachausgabe aktivieren"
+            description="Erlaubt die Nutzung der Sprachausgabe."
             control={control}
           />
           <FormFieldCheckbox

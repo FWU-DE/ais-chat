@@ -7,8 +7,10 @@ import { SpeakerHighIcon, PauseIcon } from '@phosphor-icons/react';
 import Spinner from '@/components/icons/spinner';
 import { useToast } from '@/components/common/toast';
 import { generateSpeechAction } from '@/app/api/chat/actions';
+import { useFederalState } from '@/components/providers/federal-state-provider';
 
 export default function SpeechButton({ text }: { text: string }) {
+  const federalState = useFederalState();
   const toast = useToast();
   const tCommon = useTranslations('common');
   const [status, setStatus] = React.useState<'idle' | 'loading' | 'playing' | 'paused'>('idle');
@@ -83,6 +85,10 @@ export default function SpeechButton({ text }: { text: string }) {
   }
 
   const label = status === 'playing' ? tCommon('pause-message') : tCommon('read-aloud');
+
+  if (federalState?.featureToggles?.isSpeechModelEnabled !== true) {
+    return null;
+  }
 
   return (
     <Button
