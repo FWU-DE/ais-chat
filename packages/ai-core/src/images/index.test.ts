@@ -66,6 +66,7 @@ describe('generateImageWithBilling', () => {
     output_format: 'png' as const,
     usage: {
       input_text_tokens: 1_000_000,
+      input_image_tokens: 1_000_000,
       output_text_tokens: 1_000_000,
       output_image_tokens: 1_000_000,
     },

@@ -65,6 +65,7 @@ describe('billImageGenerationUsageToApiKey', () => {
       priceMetadata: {
         type: 'image',
         inputTextTokenPrice: 1,
+        inputImageTokenPrice: 4,
         outputTextTokenPrice: 2,
         outputImageTokenPrice: 3,
       },
@@ -72,6 +73,7 @@ describe('billImageGenerationUsageToApiKey', () => {
 
     const usage = {
       input_text_tokens: 1_000_000,
+      input_image_tokens: 1_000_000,
       output_text_tokens: 1_000_000,
       output_image_tokens: 1_000_000,
     };
@@ -80,11 +82,11 @@ describe('billImageGenerationUsageToApiKey', () => {
 
     const result = await billImageGenerationUsageToApiKey(apiKeyId, imageModel, usage);
 
-    expect(result).toBe(6);
+    expect(result).toBe(10);
     expect(mockDbCreateImageGenerationUsage).toHaveBeenCalledWith({
       apiKeyId: 'test-api-key-123',
       modelId: 'model-789',
-      costsInCent: 6,
+      costsInCent: 10,
     });
   });
 

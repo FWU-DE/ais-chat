@@ -719,7 +719,7 @@ export const llmModelTable = pgTable(
     name: text('name').notNull(),
     displayName: text('display_name').notNull(),
     description: text('description').notNull().default(''),
-    priceMetadata: json('price_metadata').$type<LlmModelPriceMetadata>().notNull(),
+    priceMetadata: jsonb('price_metadata').$type<LlmModelPriceMetadata>().notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     supportedImageFormats: json('supported_image_formats').$type<string[]>(),
     imageGenerationConfig: jsonb('image_generation_config').$type<ImageGenerationConfig>(),
@@ -1821,6 +1821,7 @@ export const templateRequestStatus = pgEnum(
   'template_request_status',
   templateRequestStatusSchema.enum,
 );
+export type TemplateRequestStatus = z.infer<typeof templateRequestStatusSchema>;
 
 export const CommunityTemplateRequestTable = pgTable(
   'community_template_request',
@@ -1841,9 +1842,11 @@ export const CommunityTemplateRequestTable = pgTable(
       'community_template_request_exactly_one_target_ck',
       sql`((${table.assistantId} IS NOT NULL)::int + (${table.characterId} IS NOT NULL)::int + (${table.learningScenarioId} IS NOT NULL)::int) = 1`,
     ),
-    index().on(table.assistantId),
-    index().on(table.characterId),
-    index().on(table.learningScenarioId),
+    uniqueIndex('community_template_request_assistant_id_unique').on(table.assistantId),
+    uniqueIndex('community_template_request_character_id_unique').on(table.characterId),
+    uniqueIndex('community_template_request_learning_scenario_id_unique').on(
+      table.learningScenarioId,
+    ),
     index().on(table.state),
   ],
 );
@@ -1852,19 +1855,29 @@ export const CommunityTemplateRequestSelectSchema = createSelectSchema(
   CommunityTemplateRequestTable,
 ).extend({
   createdAt: z.coerce.date(),
+  state: templateRequestStatusSchema,
 });
 export const CommunityTemplateRequestInsertSchema = createInsertSchema(
   CommunityTemplateRequestTable,
-).omit({
-  id: true,
-  createdAt: true,
-});
+)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    state: templateRequestStatusSchema,
+  });
 export const CommunityTemplateRequestUpdateSchema = createUpdateSchema(
   CommunityTemplateRequestTable,
-).omit({
-  createdAt: true,
-  createdBy: true,
-});
+)
+  .omit({
+    createdAt: true,
+    createdBy: true,
+  })
+  .extend({
+    id: z.uuid(),
+    state: templateRequestStatusSchema,
+  });
 
 export type CommunityTemplateRequestSelectModel = z.infer<
   typeof CommunityTemplateRequestSelectSchema
@@ -1912,13 +1925,22 @@ export const CommunityTemplateRequestEventTable = pgTable(
 
 export const CommunityTemplateRequestEventSelectSchema = createSelectSchema(
   CommunityTemplateRequestEventTable,
-).extend({ createdAt: z.coerce.date() });
+).extend({
+  createdAt: z.coerce.date(),
+  createdByRole: templateRequestCreatorRoleSchema,
+  eventType: templateRequestEventTypeSchema,
+});
 export const CommunityTemplateRequestEventInsertSchema = createInsertSchema(
   CommunityTemplateRequestEventTable,
-).omit({
-  id: true,
-  createdAt: true,
-});
+)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    createdByRole: templateRequestCreatorRoleSchema,
+    eventType: templateRequestEventTypeSchema,
+  });
 
 export type CommunityTemplateRequestEventSelectModel = z.infer<
   typeof CommunityTemplateRequestEventSelectSchema

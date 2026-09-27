@@ -136,6 +136,7 @@ export default function FilterSelectSection({
             testId="filter-school-type-select"
             selectedCountLabel={(count) => t('filter.selected-count', { count })}
             showSelectAll={isEditView}
+            size="sm"
           />
           <MultipleSelectDropdown
             label={t('filter.grade-filter')}
@@ -146,6 +147,7 @@ export default function FilterSelectSection({
             testId="filter-grade-range-select"
             selectedCountLabel={(count) => t('filter.selected-count', { count })}
             showSelectAll={isEditView}
+            size="sm"
           />
           <MultipleSelectDropdown
             label={t('filter.subject-filter')}
@@ -156,6 +158,7 @@ export default function FilterSelectSection({
             testId="filter-subject-select"
             selectedCountLabel={(count) => t('filter.selected-count', { count })}
             showSelectAll={isEditView}
+            size="sm"
           />
           <MultipleSelectDropdown
             label={t('filter.category-filter')}
@@ -166,6 +169,7 @@ export default function FilterSelectSection({
             testId="filter-category-select"
             selectedCountLabel={(count) => t('filter.selected-count', { count })}
             showSelectAll={isEditView}
+            size="sm"
           />
           <MultipleSelectDropdown
             label={t('filter.federal-state-filter')}
@@ -176,6 +180,7 @@ export default function FilterSelectSection({
             testId="filter-federal-state-select"
             selectedCountLabel={(count) => t('filter.selected-count', { count })}
             showSelectAll={isEditView}
+            size="sm"
           />
           <MultipleSelectDropdown
             label={t('filter.language-filter')}
@@ -187,6 +192,7 @@ export default function FilterSelectSection({
             testId="filter-language-select"
             selectedCountLabel={(count) => t('filter.selected-count', { count })}
             showSelectAll={isEditView}
+            size="sm"
           />
         </CardRow>
       </Card>

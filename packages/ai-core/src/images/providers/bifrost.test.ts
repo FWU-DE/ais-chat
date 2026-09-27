@@ -62,7 +62,11 @@ describe('constructBifrostImageGenerationFn', () => {
       data: [{ b64_json: 'base64-bifrost-image' }],
       output_format: 'png',
       usage: {
-        input_tokens: 4,
+        input_tokens: 13,
+        input_tokens_details: {
+          text_tokens: 4,
+          image_tokens: 9,
+        },
         output_tokens: 5,
         output_tokens_details: {
           text_tokens: 2,
@@ -98,9 +102,45 @@ describe('constructBifrostImageGenerationFn', () => {
       output_format: 'png',
       usage: {
         input_text_tokens: 4,
+        input_image_tokens: 9,
         output_text_tokens: 2,
         output_image_tokens: 3,
       },
+    });
+  });
+
+  it('should default input_image_tokens to 0 when the response omits image_tokens for a text-only prompt', async () => {
+    generateMock.mockResolvedValue({
+      data: [{ b64_json: 'base64-bifrost-image' }],
+      output_format: 'png',
+      usage: {
+        input_tokens: 26,
+        input_tokens_details: {
+          text_tokens: 26,
+        },
+        output_tokens: 1504,
+        output_tokens_details: {
+          image_tokens: 1056,
+          text_tokens: 448,
+        },
+      },
+    });
+
+    const model = {
+      id: 'model-bifrost-image',
+      name: 'image-model',
+      provider: 'bifrost',
+      setting: { provider: 'azure', apiKey: 'unused', baseUrl: 'unused' },
+    } as AiModel;
+
+    const generateImage = constructBifrostImageGenerationFn(model);
+    const result = await generateImage({ prompt: 'a duck with a hat', model: model.name });
+
+    expect(result.usage).toEqual({
+      input_text_tokens: 26,
+      input_image_tokens: 0,
+      output_text_tokens: 448,
+      output_image_tokens: 1056,
     });
   });
 
@@ -110,6 +150,7 @@ describe('constructBifrostImageGenerationFn', () => {
       output_format: 'png',
       usage: {
         input_tokens: 4,
+        input_tokens_details: { text_tokens: 4, image_tokens: 0 },
         output_tokens: 5,
         output_tokens_details: { text_tokens: 2, image_tokens: 3 },
       },
@@ -134,6 +175,7 @@ describe('constructBifrostImageGenerationFn', () => {
       output_format: 'png',
       usage: {
         input_tokens: 4,
+        input_tokens_details: { text_tokens: 4, image_tokens: 0 },
         output_tokens: 5,
         output_tokens_details: {
           text_tokens: 2,
@@ -163,6 +205,7 @@ describe('constructBifrostImageGenerationFn', () => {
       output_format: 'png',
       usage: {
         input_tokens: 4,
+        input_tokens_details: { text_tokens: 4, image_tokens: 0 },
         output_tokens: 5,
         output_tokens_details: {
           text_tokens: 2,
@@ -200,7 +243,8 @@ describe('constructBifrostImageGenerationFn', () => {
       data: [{ b64_json: 'base64-edited-image' }],
       output_format: 'png',
       usage: {
-        input_tokens: 7,
+        input_tokens: 9,
+        input_tokens_details: { text_tokens: 7, image_tokens: 2 },
         output_tokens: 8,
         output_tokens_details: { text_tokens: 1, image_tokens: 6 },
       },
@@ -236,6 +280,7 @@ describe('constructBifrostImageGenerationFn', () => {
         output_format: 'png',
         usage: {
           input_text_tokens: 7,
+          input_image_tokens: 2,
           output_text_tokens: 1,
           output_image_tokens: 6,
         },
@@ -276,6 +321,7 @@ describe('constructBifrostImageGenerationFn', () => {
         output_format: 'png',
         usage: {
           input_tokens: 1,
+          input_tokens_details: { text_tokens: 1, image_tokens: 0 },
           output_tokens: 1,
           output_tokens_details: { text_tokens: 0, image_tokens: 1 },
         },

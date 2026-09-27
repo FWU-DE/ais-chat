@@ -19,6 +19,9 @@ export async function AdminAppSidebar() {
         </>
       )}
       {canAccessApp && <SidebarItem label="Vorlagen" href={ROUTES.app.templates} />}
+      {canAccessApp && (
+        <SidebarItem label="Community Vorlagen" href={ROUTES.app.communityTemplates} />
+      )}
       {canAccessApp && <SidebarItem label="Sperrungen" href={ROUTES.app.suspensions} />}
     </Sidebar>
   );
