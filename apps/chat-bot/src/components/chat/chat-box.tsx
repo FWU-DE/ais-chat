@@ -16,6 +16,7 @@ import { AiActivityDialog, AiActivityPanel } from './activity/ai-activity';
 import DownloadConversationMessageButton from './download-conversation-message-button';
 import { utils } from '@shared/utils';
 import DisplayFileAttachment from './display-file-attachment';
+import SpeechButton from './speech-button';
 
 // Re-export for consumers
 export type { PendingFileModel };
@@ -160,6 +161,7 @@ export function ChatBox({
             <ReloadIcon className="w-5 h-5" />
           </div>
         </button>
+        {children.role === 'assistant' && <SpeechButton text={children.content} />}
         {showActivityDialog && <AiActivityDialog steps={activitySteps} />}
       </div>
     ) : null;

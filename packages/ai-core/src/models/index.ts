@@ -8,6 +8,7 @@ import { AiModel } from '../images/types';
 import type { AiModel as TextAiModel } from '../chat/types';
 import type { AiModel as EmbeddingAiModel } from '../embeddings/types';
 import type { AiModel as SafetyAiModel } from '../safety/types';
+import type { AiModel as SpeechAiModel } from '../tts/types';
 
 export async function getImageModelById(modelId: string): Promise<AiModel> {
   const model = await dbGetModelById(modelId);
@@ -49,6 +50,17 @@ export async function getSafetyModelById(modelId: string): Promise<SafetyAiModel
   }
   if (model.priceMetadata.type !== 'safety') {
     throw new InvalidModelError(`Model with id ${modelId} is not a safety model`);
+  }
+  return resolveRoutingModel(model);
+}
+
+export async function getSpeechModelById(modelId: string): Promise<SpeechAiModel> {
+  const model = await dbGetModelById(modelId);
+  if (!model) {
+    throw new InvalidModelError(`Model with id ${modelId} not found`);
+  }
+  if (model.priceMetadata.type !== 'speech') {
+    throw new InvalidModelError(`Model with id ${modelId} is not a speech model`);
   }
   return resolveRoutingModel(model);
 }

@@ -30,7 +30,7 @@ export function constructGoogleSpeechGenerationFn(model: AiModel): SpeechGenerat
   const { client } = createGoogleClient(model);
   const modelName = model.name;
 
-  return async function getGoogleSpeech({ text, voice }) {
+  return async function getGoogleSpeech({ text, voice, abortSignal }) {
     let response;
     try {
       response = await client.models.generateContent({
@@ -41,6 +41,7 @@ export function constructGoogleSpeechGenerationFn(model: AiModel): SpeechGenerat
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } },
           },
+          abortSignal,
         },
       });
     } catch (error) {
