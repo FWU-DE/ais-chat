@@ -66,7 +66,7 @@ export function useImageGeneration({
     try {
       const result = await generateImageAction({
         prompt: normalizedPrompt,
-        model: selectedModel,
+        modelId: selectedModel.id,
         style: selectedStyle,
         options: { aspectRatio },
         inputFileIds,
