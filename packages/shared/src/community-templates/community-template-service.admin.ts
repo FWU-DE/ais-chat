@@ -1,4 +1,7 @@
 import { db } from '@shared/db';
+import { dbUpdateAssistantAccessLevel } from '@shared/db/functions/assistants';
+import { dbUpdateCharacterAccessLevel } from '@shared/db/functions/character';
+import { dbUpdateLearningScenarioAccessLevel } from '@shared/db/functions/learning-scenario';
 import {
   assistantTable,
   characterTable,
@@ -10,7 +13,7 @@ import {
   templateRequestCreatorRoleSchema,
 } from '@shared/db/schema';
 import { EntityType } from '@shared/entities/entity-types';
-import { NotFoundError } from '@shared/error';
+import { InvalidArgumentError, NotFoundError } from '@shared/error';
 import { asc, desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -46,6 +49,10 @@ function latestTemplateRequestEvent() {
     .as('latest_event');
 }
 
+/**
+ * Returns all community template requests for the list view in admin app.
+ * Each record includes the entity id, name and type as well as the latest event information.
+ */
 export async function getCommunityTemplateRequests(): Promise<CommunityTemplateRequestSummary[]> {
   const latestEvent = latestTemplateRequestEvent();
   const rows = await db
@@ -82,6 +89,10 @@ export async function getCommunityTemplateRequests(): Promise<CommunityTemplateR
   );
 }
 
+/**
+ * Returns the community template request along with all its events for the admin view.
+ * Also includes the entity id, name and type.
+ */
 export async function getCommunityTemplateRequestWithEventsForAdmin(
   requestId: string,
 ): Promise<CommunityTemplateRequestWithEventsAdmin> {
@@ -121,6 +132,9 @@ export async function getCommunityTemplateRequestWithEventsForAdmin(
   };
 }
 
+/**
+ * Editor users can update the internal note on a request.
+ */
 export async function updateInternalNote(requestId: string, note: string): Promise<void> {
   await db
     .update(CommunityTemplateRequestTable)
@@ -128,12 +142,25 @@ export async function updateInternalNote(requestId: string, note: string): Promi
     .where(eq(CommunityTemplateRequestTable.id, requestId));
 }
 
+/**
+ * Editor users can approve a community template request so that it is visible to the community.
+ * Sets the access level of the referenced entity to 'community' within the same transaction.
+ */
 export async function approveRequest(
   requestId: string,
   editorId: string,
   editorName: string,
 ): Promise<void> {
   await db.transaction(async (tx) => {
+    const [request] = await tx
+      .select()
+      .from(CommunityTemplateRequestTable)
+      .where(eq(CommunityTemplateRequestTable.id, requestId));
+
+    if (!request) throw new NotFoundError('Community template request not found');
+    if (request.state !== 'submitted' && request.state !== 'rejected')
+      throw new InvalidArgumentError('Transition to approved state is not possible.');
+
     await tx
       .update(CommunityTemplateRequestTable)
       .set({ state: 'approved' })
@@ -148,7 +175,14 @@ export async function approveRequest(
       message: 'Request approved',
     });
 
-    // Todo: We also have to update the internal state of the character, assistantant, learning scenario
+    // exactly one of assistantId, characterId, learningScenarioId is set per request
+    if (request.characterId !== null) {
+      await dbUpdateCharacterAccessLevel(request.characterId, 'community', tx);
+    } else if (request.assistantId !== null) {
+      await dbUpdateAssistantAccessLevel(request.assistantId, 'community', tx);
+    } else if (request.learningScenarioId !== null) {
+      await dbUpdateLearningScenarioAccessLevel(request.learningScenarioId, 'community', tx);
+    }
   });
 }
 
