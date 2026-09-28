@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import {
+  approveRequestAction,
   getCommunityTemplateRequestWithEventsForAdminAction,
   updateInternalNoteAction,
 } from './actions';
@@ -91,7 +92,13 @@ export default function CommunityTemplateRequestDetailView(
             <dd>{mapStateToLabel(data.state)}</dd>
             <dt></dt>
             <dd className="flex flex-row gap-4">
-              <Button disabled={!isApprovePossible}>
+              <Button
+                disabled={!isApprovePossible}
+                onClick={async () => {
+                  await approveRequestAction(requestId);
+                  setReloadTrigger((currentTrigger) => currentTrigger + 1);
+                }}
+              >
                 <CheckIcon />
                 Freigeben
               </Button>
