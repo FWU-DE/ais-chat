@@ -3,15 +3,12 @@ import { Button } from '@ui/components/button';
 import { ConfirmationDialog } from '@ui/components/dialog/confirmation-dialog';
 import { Textarea } from '@ui/components/textarea';
 import { useCallback, useState } from 'react';
-import { sendMessageToAuthorAction } from './actions';
 
 export type SendMessageToAuthorDialogProps = {
-  requestId: string;
-  onSendMessage: () => Promise<void>;
+  onSendMessage: (message: string) => Promise<boolean>;
 };
 
 export default function SendMessageToAuthorDialog({
-  requestId,
   onSendMessage,
 }: SendMessageToAuthorDialogProps) {
   const [message, setMessage] = useState('');
@@ -32,10 +29,9 @@ export default function SendMessageToAuthorDialog({
       confirmLabel="Senden"
       cancelLabel="Abbrechen"
       onConfirm={async () => {
-        const result = await sendMessageToAuthorAction(requestId, message);
-        if (result.success) {
+        const success = await onSendMessage(message);
+        if (success) {
           setMessage('');
-          await onSendMessage();
         }
       }}
       trigger={

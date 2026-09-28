@@ -5,20 +5,16 @@ import { Button } from '@ui/components/button';
 import { PencilSimpleIcon } from '@phosphor-icons/react';
 import { Textarea } from '@ui/components/textarea';
 import { useCallback, useState } from 'react';
-import { toast } from 'sonner';
-import { rejectRequestAction } from './actions';
 import { TemplateRequestStatus } from '@shared/db/schema';
 
 export type RejectCommunityTemplateRequestDialogProps = {
-  requestId: string;
   requestState: TemplateRequestStatus;
-  onRejected: () => Promise<void>;
+  onReject: (message: string) => Promise<boolean>;
 };
 
 export default function RejectCommunityTemplateRequestDialog({
-  requestId,
   requestState,
-  onRejected,
+  onReject,
 }: RejectCommunityTemplateRequestDialogProps) {
   const [message, setMessage] = useState('');
   const focusMessageTextarea = useCallback((element: HTMLTextAreaElement | null) => {
@@ -53,12 +49,9 @@ export default function RejectCommunityTemplateRequestDialog({
       cancelLabel="Abbrechen"
       confirmLabel="Senden"
       onConfirm={async () => {
-        const result = await rejectRequestAction(requestId, message);
-        if (result.success) {
+        const success = await onReject(message);
+        if (success) {
           setMessage('');
-          await onRejected();
-        } else {
-          toast.error(result.error.message);
         }
       }}
     />

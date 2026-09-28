@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import {
   approveRequestAction,
   getCommunityTemplateRequestWithEventsForAdminAction,
+  rejectRequestAction,
+  sendMessageToAuthorAction,
   updateInternalNoteAction,
 } from './actions';
 import { CommunityTemplateRequestWithEventsAdmin } from '@shared/community-templates/community-template-service.admin';
@@ -18,6 +20,7 @@ import RejectCommunityTemplateRequestDialog from './RejectCommunityTemplateReque
 import SendMessageToAuthorDialog from './SendMessageToAuthorDialog';
 import { CheckIcon } from '@phosphor-icons/react';
 import { cn } from '@ui/lib/utils';
+import { toast } from 'sonner';
 export const dynamic = 'force-dynamic';
 
 export type CommunityTemplateRequestDetailViewProps = {
@@ -57,6 +60,35 @@ export default function CommunityTemplateRequestDetailView(
 
   const isApprovePossible = data?.state === 'submitted' || data?.state === 'rejected';
 
+  const handleApprove = async () => {
+    const result = await approveRequestAction(requestId);
+    if (result.success) {
+      setReloadTrigger((currentTrigger) => currentTrigger + 1);
+    } else {
+      toast.error(result.error.message);
+    }
+  };
+
+  const handleReject = async (message: string) => {
+    const result = await rejectRequestAction(requestId, message);
+    if (result.success) {
+      setReloadTrigger((currentTrigger) => currentTrigger + 1);
+    } else {
+      toast.error(result.error.message);
+    }
+    return result.success;
+  };
+
+  const handleSendMessage = async (message: string) => {
+    const result = await sendMessageToAuthorAction(requestId, message);
+    if (result.success) {
+      setReloadTrigger((currentTrigger) => currentTrigger + 1);
+    } else {
+      toast.error(result.error.message);
+    }
+    return result.success;
+  };
+
   return data === undefined ? (
     <div>Loading...</div>
   ) : (
@@ -92,20 +124,13 @@ export default function CommunityTemplateRequestDetailView(
             <dd>{mapStateToLabel(data.state)}</dd>
             <dt></dt>
             <dd className="flex flex-row gap-4">
-              <Button
-                disabled={!isApprovePossible}
-                onClick={async () => {
-                  await approveRequestAction(requestId);
-                  setReloadTrigger((currentTrigger) => currentTrigger + 1);
-                }}
-              >
+              <Button disabled={!isApprovePossible} onClick={handleApprove}>
                 <CheckIcon />
                 Freigeben
               </Button>
               <RejectCommunityTemplateRequestDialog
-                requestId={requestId}
                 requestState={data.state}
-                onRejected={async () => setReloadTrigger((currentTrigger) => currentTrigger + 1)}
+                onReject={handleReject}
               />
             </dd>
           </dl>
@@ -141,10 +166,7 @@ export default function CommunityTemplateRequestDetailView(
         <CardHeader>
           <CardTitle>Verlauf</CardTitle>
           <CardAction>
-            <SendMessageToAuthorDialog
-              requestId={requestId}
-              onSendMessage={async () => setReloadTrigger((currentTrigger) => currentTrigger + 1)}
-            />
+            <SendMessageToAuthorDialog onSendMessage={handleSendMessage} />
           </CardAction>
         </CardHeader>
         <CardContent>
