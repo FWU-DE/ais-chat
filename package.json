@@ -30,7 +30,7 @@
   "devDependencies": {
     "@ais-chat/typescript-config": "workspace:*",
     "madge": "8.0.0",
-    "prettier": "3.9.6",
-    "turbo": "2.10.12"
+    "prettier": "3.9.8",
+    "turbo": "2.11.2"
   }
 }

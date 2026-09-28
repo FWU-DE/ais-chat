@@ -1,6 +1,5 @@
 'use server';
 
-import { LlmModelSelectModel } from '@shared/db/schema';
 import { handleImageGeneration } from './image-generation-service';
 import { ImageStyle } from '@shared/utils/chat';
 import { runServerAction } from '@shared/actions/run-server-action';
@@ -14,14 +13,14 @@ import { ImageGenerationOptions } from '@/components/image-generation/image-gene
  */
 export async function generateImageAction({
   prompt,
-  model,
+  modelId,
   style,
   options,
   inputFileIds = [],
   conversationId,
 }: {
   prompt: string;
-  model: LlmModelSelectModel;
+  modelId: string;
   style?: ImageStyle;
   options: ImageGenerationOptions;
   inputFileIds?: string[];
@@ -34,7 +33,7 @@ export async function generateImageAction({
     handleImageGeneration,
   )({
     prompt,
-    model,
+    modelId,
     style,
     options,
     inputFileIds,

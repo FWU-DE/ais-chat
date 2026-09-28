@@ -1,7 +1,6 @@
 import { getUser, userHasCompletedTraining } from '@/auth/utils';
 import { checkProductAccess } from '@/utils/vidis/access';
 import { dbGetFederalStateWithDecryptedApiKeyWithResult } from '@shared/db/functions/federal-state';
-import { dbGetModelByIdAndFederalStateId } from '@shared/db/functions/llm-model';
 import { sendRabbitmqEvent } from '@/rabbitmq/send';
 import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
 import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
@@ -36,7 +35,7 @@ import { validateInputFiles, fetchInputImages } from './image-generation-input-f
 
 export interface ImageGenerationParams {
   prompt: string;
-  modelId: string;
+  model: LlmModelSelectModel;
   conversationId: string;
   options: ImageGenerationRequestOptions;
 }
@@ -75,7 +74,7 @@ async function createImageConversation(prompt: string): Promise<string> {
  */
 export async function handleImageGeneration({
   prompt,
-  model,
+  modelId,
   style,
   userId,
   federalStateId,
@@ -84,7 +83,7 @@ export async function handleImageGeneration({
   conversationId: existingConversationId,
 }: {
   prompt: string;
-  model: LlmModelSelectModel;
+  modelId: string;
   style?: ImageStyle;
   userId: string;
   federalStateId: string;
@@ -92,7 +91,11 @@ export async function handleImageGeneration({
   inputFileIds?: string[];
   conversationId?: string;
 }) {
-  await checkIfImageModelIsAssignedToFederalState(model, federalStateId);
+  const imageModels = await getAvailableImageModelsForFederalState({ federalStateId });
+  const model = imageModels.find((imageModel) => imageModel.id === modelId);
+  if (!model) {
+    throw new NotFoundError('Could not find image generation model for federal state');
+  }
 
   if (!prompt || prompt.trim().length === 0) {
     throw new Error('Prompt is required');
@@ -165,7 +168,7 @@ export async function handleImageGeneration({
     // Generate image using the service
     const result = await generateImage({
       prompt: fullPrompt.trim(),
-      modelId: model.id,
+      model,
       conversationId,
       options: { size, inputImages },
     });
@@ -278,7 +281,7 @@ export async function handleImageGeneration({
  */
 export async function generateImage({
   prompt,
-  modelId,
+  model,
   conversationId,
   options,
 }: ImageGenerationParams): Promise<ImageGenerationResult> {
@@ -306,19 +309,6 @@ export async function generateImage({
     throw new Error('Federal state has no API key assigned');
   }
 
-  const definedModel = await dbGetModelByIdAndFederalStateId({
-    modelId,
-    federalStateId: user.federalState.id,
-  });
-
-  if (!definedModel) {
-    throw new Error(`Model ${modelId} not found`);
-  }
-
-  if (definedModel.priceMetadata.type !== 'image') {
-    throw new Error('Selected model is not an image generation model');
-  }
-
   // Get conversation for RabbitMQ event
   const conversation = await dbGetOrCreateConversation({
     conversationId,
@@ -344,7 +334,7 @@ export async function generateImage({
   try {
     const safetyModel = await getSafetyModel();
     const result = await generateImageWithBilling(
-      definedModel.id,
+      model.id,
       prompt.trim(),
       federalStateObject.apiKeyId,
       options,
@@ -357,7 +347,7 @@ export async function generateImage({
     await dbInsertConversationUsage({
       conversationId,
       userId: user.id,
-      modelId: definedModel.id,
+      modelId: model.id,
       completionTokens: 0, // Images don't have completion tokens
       promptTokens: 0, // Images don't have prompt tokens
       costsInCent: costsInCent,
@@ -371,7 +361,7 @@ export async function generateImage({
           promptTokens: 0, // Images don't use tokens
           completionTokens: 0, // Images don't use tokens
           costsInCent: costsInCent,
-          provider: definedModel.provider,
+          provider: model.provider,
           anonymous: false,
           conversation,
         }),
@@ -386,17 +376,5 @@ export async function generateImage({
     throw error instanceof Error
       ? error
       : new Error('Internal server error during image generation');
-  }
-}
-
-// Checks if the given image model is assigned to the federal state
-async function checkIfImageModelIsAssignedToFederalState(
-  imageModel: LlmModelSelectModel,
-  federalStateId: string,
-) {
-  const models = await getAvailableImageModelsForFederalState({ federalStateId });
-  const foundModel = models.find((model) => model.id === imageModel.id);
-  if (!foundModel) {
-    throw new NotFoundError('Could not find image generation model for federal state');
   }
 }

@@ -21,15 +21,15 @@
     "@ais-chat/shared": "workspace:*",
     "@ais-chat/shared-core": "workspace:*",
     "@ais-chat/ui": "workspace:*",
-    "@aws-sdk/client-s3": "3.1131.0",
-    "@aws-sdk/s3-request-presigner": "3.1131.0",
+    "@aws-sdk/client-s3": "3.1136.0",
+    "@aws-sdk/s3-request-presigner": "3.1136.0",
     "@hookform/resolvers": "5.9.1",
     "@opentelemetry/api": "1.9.1",
     "@phosphor-icons/react": "2.1.10",
-    "@sentry/nextjs": "10.74.0",
+    "@sentry/nextjs": "10.75.0",
     "@t3-oss/env-nextjs": "0.13.11",
     "@tanstack/react-table": "9.2.4",
-    "lucide-react": "1.45.0",
+    "lucide-react": "1.47.0",
     "next": "16.3.5",
     "next-auth": "5.0.0-beta.32",
     "pg": "8.23.0",
@@ -40,14 +40,14 @@
     "require-in-the-middle": "8.0.1",
     "sonner": "2.0.8",
     "tailwind-merge": "3.7.0",
-    "zod": "4.6.4"
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@ais-chat/eslint-config": "workspace:*",
     "@ais-chat/typescript-config": "workspace:*",
     "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "4.3.3",
-    "@types/node": "24.13.4",
+    "@types/node": "24.13.6",
     "@types/react": "19.3.0",
     "@types/react-csv": "1.1.10",
     "@types/react-dom": "19.3.0",
@@ -55,11 +55,11 @@
     "esbuild": "0.28.2",
     "eslint": "10.8.1",
     "postcss": "8.5.28",
-    "prettier": "3.9.6",
+    "prettier": "3.9.8",
     "prettier-eslint": "17.1.2",
     "tailwindcss": "4.3.3",
     "tailwindcss-animate": "1.0.7",
     "typescript": "6.0.3",
-    "vitest": "5.0.0"
+    "vitest": "5.0.1"
   }
 }
