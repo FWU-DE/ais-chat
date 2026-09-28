@@ -108,7 +108,7 @@ export async function dbFindModelsToUpdate({
 }
 
 export async function dbUpdateLlmModelsForAllFederalStates() {
-  const states = await dbGetFederalStates();
+  const states = (await dbGetFederalStates()).filter((state) => state.encryptedApiKey !== null);
 
   const stateUpdates = await Promise.all(
     states.map(async (state) => {

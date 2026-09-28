@@ -82,16 +82,37 @@ describe('activity helpers', () => {
 });
 
 describe('createAiActivityCollector', () => {
-  it('accumulates provider reasoning summaries on the analysis step', () => {
+  it('accumulates provider reasoning summaries without changing the analysis step', () => {
     const collector = createAiActivityCollector({});
 
     collector.start();
 
     expect(collector.addReasoningSummary('First part. ')).toBe(true);
     expect(collector.addReasoningSummary('Second part.')).toBe(true);
+    expect(collector.getSteps()).toEqual([{ kind: 'analysis' }]);
+  });
+
+  it('adds the full reasoning summary before the done step', () => {
+    const collector = createAiActivityCollector({});
+
+    collector.start();
+    collector.addReasoningSummary('Reasoning trace.');
+
+    expect(collector.finish()).toBe(true);
     expect(collector.getSteps()).toEqual([
-      { kind: 'analysis', summary: 'First part. Second part.' },
+      { kind: 'analysis' },
+      { kind: 'analysis-summary', content: 'Reasoning trace.' },
+      { kind: 'done' },
     ]);
+  });
+
+  it('does not add a reasoning summary step when no summary was received', () => {
+    const collector = createAiActivityCollector({});
+
+    collector.start();
+
+    expect(collector.finish()).toBe(false);
+    expect(collector.getSteps()).toEqual([]);
   });
 
   it('starts, adds tool calls, applies results, and finishes', () => {

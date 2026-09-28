@@ -41,6 +41,8 @@ export function getAiActivityStepTitle(step: AiActivityStep, t: Translator): str
   switch (step.kind) {
     case 'analysis':
       return t('steps.analysis');
+    case 'analysis-summary':
+      return t('steps.analysis-summary');
     case 'done':
       return t('steps.done');
     case 'tool':
@@ -59,6 +61,10 @@ function getLinkDomain(url: string): string {
 function StepIcon({ step }: { step: AiActivityStep }) {
   if (step.kind === 'analysis') {
     return <SparkleIcon className="size-4" />;
+  }
+
+  if (step.kind === 'analysis-summary') {
+    return <SparkleIcon className="size-4" weight="fill" />;
   }
 
   if (step.kind === 'done') {
@@ -88,14 +94,12 @@ function StepDetail({ step }: { step: Extract<AiActivityStep, { kind: 'tool' }> 
   );
 }
 
-function AnalysisSummary({ summary }: { summary: string | undefined }) {
-  const visibleSummary = truncate(summary);
+function AnalysisSummaryContent({ content }: { content: string }) {
+  if (content.length === 0) {
+    return null;
+  }
 
-  return visibleSummary === undefined || visibleSummary.length === 0 ? null : (
-    <span title={summary} className="min-w-0 truncate text-sm text-black/50">
-      {visibleSummary}
-    </span>
-  );
+  return <p className="whitespace-pre-wrap text-sm text-black/70">{content}</p>;
 }
 
 function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean }) {
@@ -115,9 +119,9 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
         <div className="flex flex-wrap items-baseline gap-2">
           <span className="text-sm font-medium text-black">{getAiActivityStepTitle(step, t)}</span>
           {step.kind === 'tool' && <StepDetail step={step} />}
-          {step.kind === 'analysis' && <AnalysisSummary summary={step.summary} />}
         </div>
 
+        {step.kind === 'analysis-summary' && <AnalysisSummaryContent content={step.content} />}
         {links.length > 0 && (
           <ul className="max-h-44 overflow-y-auto rounded-xl border border-border bg-background-2 p-1">
             {links.map((link, index) => (

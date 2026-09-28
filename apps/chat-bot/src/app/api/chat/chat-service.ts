@@ -519,12 +519,14 @@ export async function sendChatMessage({
     priceInCents,
     agentLoopMessages,
     modelUsages,
+    reasoningSummary,
   }: {
     fullText: string;
     usage: TokenUsage;
     priceInCents: number;
     agentLoopMessages: AiCoreMessage[];
     modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+    reasoningSummary?: string;
   }) {
     // Persist intermediate tool call/result messages and the final assistant message in one query
     const messagesToInsert = [
@@ -547,6 +549,7 @@ export async function sendChatMessage({
         modelName: definedModel.name,
         conversationId: activeConversation.id,
         webSearchResults,
+        reasoningSummary: reasoningSummary ?? null,
       },
     ];
 
@@ -602,6 +605,7 @@ export async function sendChatMessage({
           priceInCents,
           modelUsages,
           agentLoopMessages,
+          reasoningSummary: aiActivity.getReasoningSummary(),
         });
         done();
       } catch (error) {

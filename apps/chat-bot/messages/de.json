@@ -153,10 +153,11 @@
     "open-source": "Quelle öffnen: {source}",
     "steps": {
       "analysis": "Analyse",
+      "analysis-summary": "Analyse Zusammenfassung",
       "done": "Fertig",
       "web_search": "Websuche",
       "web_scraper": "Webseite gelesen",
-      "retrieve_text_chunks": "Relevante Dateiausschnitte gelesen",
+      "retrieve_text_chunks": "Relevante Dateiausschnitte gelesen: Suchbegriffe",
       "retrieve_entire_file": "Datei vollständig gelesen",
       "mundo_search": "Mundo durchsucht",
       "math_calculate": "Berechnung durchgeführt"

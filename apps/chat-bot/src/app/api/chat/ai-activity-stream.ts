@@ -41,6 +41,7 @@ export function createAiActivityStream(
         publish();
       }
     },
+    getReasoningSummary: collector.getReasoningSummary,
     getSteps: () => collector.getSteps(),
   };
 }

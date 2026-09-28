@@ -75,6 +75,7 @@ export function createAiActivityCollector(toolRegistry: Record<string, ToolRegis
   const steps: AiActivityStep[] = [];
   const stepsById = new Map<string, AiActivityToolStep>();
   let hasToolActivity = false;
+  let reasoningSummary = '';
 
   return {
     start(): boolean {
@@ -86,25 +87,11 @@ export function createAiActivityCollector(toolRegistry: Record<string, ToolRegis
       return true;
     },
     addReasoningSummary(summary: string): boolean {
-      if (summary.length === 0) {
+      if (typeof summary !== 'string' || summary.length === 0) {
         return false;
       }
 
-      const analysisIndex = steps.findIndex((step) => step.kind === 'analysis');
-      if (analysisIndex === -1) {
-        steps.unshift({ kind: 'analysis', summary });
-        return true;
-      }
-
-      const analysis = steps[analysisIndex];
-      if (analysis?.kind !== 'analysis') {
-        return false;
-      }
-
-      steps[analysisIndex] = {
-        ...analysis,
-        summary: `${analysis.summary ?? ''}${summary}`,
-      };
+      reasoningSummary += summary;
       return true;
     },
     addToolCalls(toolCalls: ToolCall[]): boolean {
@@ -148,7 +135,9 @@ export function createAiActivityCollector(toolRegistry: Record<string, ToolRegis
       return true;
     },
     finish(): boolean {
-      if (!hasToolActivity) {
+      const hasReasoningActivity = reasoningSummary.length > 0;
+
+      if (!hasToolActivity && !hasReasoningActivity) {
         steps.length = 0;
         return false;
       }
@@ -157,11 +146,18 @@ export function createAiActivityCollector(toolRegistry: Record<string, ToolRegis
         return false;
       }
 
+      if (hasReasoningActivity) {
+        steps.push({ kind: 'analysis-summary', content: reasoningSummary });
+      }
+
       steps.push({ kind: 'done' });
       return true;
     },
     getSteps(): AiActivityStep[] {
       return [...steps];
+    },
+    getReasoningSummary(): string | undefined {
+      return reasoningSummary.length > 0 ? reasoningSummary : undefined;
     },
   };
 }
