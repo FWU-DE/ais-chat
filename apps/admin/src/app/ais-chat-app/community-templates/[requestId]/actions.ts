@@ -11,6 +11,8 @@ import {
 } from '@shared/community-templates/community-template-service.admin';
 
 export async function getCommunityTemplateRequestWithEventsForAdminAction(requestId: string) {
+  await requireAdminOrEditorAuth();
+
   return runServerAction(
     'getCommunityTemplateRequestWithEventsForAdmin',
     getCommunityTemplateRequestWithEventsForAdmin,
@@ -25,6 +27,7 @@ export async function updateInternalNoteAction(requestId: string, note: string) 
 
 export async function approveRequestAction(requestId: string) {
   const session = await requireAdminOrEditorAuth();
+
   const editorId = session.user.id;
   const editorName = session.user.name ?? session.user.email;
 
@@ -33,6 +36,7 @@ export async function approveRequestAction(requestId: string) {
 
 export async function rejectRequestAction(requestId: string, message: string) {
   const session = await requireAdminOrEditorAuth();
+
   const editorId = session.user.id;
   const editorName = session.user.name ?? session.user.email;
 
@@ -41,6 +45,7 @@ export async function rejectRequestAction(requestId: string, message: string) {
 
 export async function sendMessageToAuthorAction(requestId: string, message: string) {
   const session = await requireAdminOrEditorAuth();
+
   const editorId = session.user.id;
   const editorName = session.user.name ?? session.user.email;
 
