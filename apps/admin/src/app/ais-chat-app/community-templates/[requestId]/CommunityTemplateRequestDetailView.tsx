@@ -26,17 +26,21 @@ export const dynamic = 'force-dynamic';
 export type CommunityTemplateRequestDetailViewProps = {
   requestId: string;
   host: string;
+  initialData: CommunityTemplateRequestWithEventsAdmin;
 };
 
 export default function CommunityTemplateRequestDetailView(
   props: CommunityTemplateRequestDetailViewProps,
 ) {
-  const { requestId, host } = props;
+  const { requestId, host, initialData } = props;
 
-  const [data, setData] = useState<CommunityTemplateRequestWithEventsAdmin | undefined>(undefined);
+  const [data, setData] = useState<CommunityTemplateRequestWithEventsAdmin>(initialData);
   const [reloadTrigger, setReloadTrigger] = useState(0);
 
   useEffect(() => {
+    // reloadTrigger starts at 0 so the initial fetch is skipped; initialData is already fresh
+    if (reloadTrigger === 0) return;
+
     async function fetchData() {
       const result = await getCommunityTemplateRequestWithEventsForAdminAction(requestId);
       if (result.success) {
@@ -101,9 +105,7 @@ export default function CommunityTemplateRequestDetailView(
     return result.success;
   };
 
-  return data === undefined ? (
-    <div>Loading...</div>
-  ) : (
+  return (
     <div className="flex flex-col gap-4">
       <Card>
         <CardHeader>
