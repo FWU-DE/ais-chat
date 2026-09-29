@@ -57,6 +57,8 @@ describe('constructBifrostEmbeddingGenerationFn', () => {
       apiKey: 'bifrost-api-key',
       baseURL: 'http://localhost:8089/openai/v1',
       defaultHeaders: { 'x-bf-vk': 'bifrost-api-key' },
+      timeout: 15_000,
+      maxRetries: 1,
     });
     expect(createMock).toHaveBeenCalledWith({
       model: 'embedding-model',
