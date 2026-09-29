@@ -41,6 +41,13 @@ export const llmModelPriceMetadataSchema = z.union([
       promptTokenPrice: z.number(),
     })
     .strict(),
+  z
+    .object({
+      type: z.literal('speech'),
+      inputTextTokenPrice: z.number(),
+      outputAudioTokenPrice: z.number(),
+    })
+    .strict(),
 ]);
 
 export type LlmModelPriceMetadata = z.infer<typeof llmModelPriceMetadataSchema>;

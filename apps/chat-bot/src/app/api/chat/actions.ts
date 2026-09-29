@@ -4,10 +4,12 @@ import * as Sentry from '@sentry/nextjs';
 import { requireAuth } from '@/auth/requireAuth';
 import { userHasCompletedTraining } from '@/auth/utils';
 import { NotFoundError } from '@shared/error';
+import { runServerAction } from '@shared/actions/run-server-action';
 
 import { sendChatMessage } from './chat-service';
+import { generateSpeech } from './speech-service';
 import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
-import { SEND_CHAT_MESSAGE_ACTION_NAME } from '@/server-action-names';
+import { GENERATE_SPEECH_ACTION_NAME, SEND_CHAT_MESSAGE_ACTION_NAME } from '@/server-action-names';
 import { checkProductAccess } from '@/utils/vidis/access';
 
 export type { ChatMessage, SendMessageResult } from '@/types/chat';
@@ -61,5 +63,16 @@ export async function sendChatMessageAction({
       }
       throw error;
     }
+  });
+}
+
+export async function generateSpeechAction({ text }: { text: string }) {
+  const { federalState } = await requireAuth();
+  return runServerAction(
+    GENERATE_SPEECH_ACTION_NAME,
+    generateSpeech,
+  )({
+    text,
+    federalStateId: federalState.id,
   });
 }
