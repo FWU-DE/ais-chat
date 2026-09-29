@@ -14,7 +14,7 @@ import {
 } from '@shared/db/schema';
 import { EntityType } from '@shared/entities/entity-types';
 import { InvalidArgumentError, NotFoundError } from '@shared/error';
-import { asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 export type CommunityTemplateRequestSummary = CommunityTemplateRequestSelectModel & {
@@ -152,19 +152,30 @@ export async function approveRequest(
   editorName: string,
 ): Promise<void> {
   await db.transaction(async (tx) => {
+    // Conditional update: only the transaction whose WHERE clause still matches wins the race,
+    // preventing two concurrent approvals from both inserting an approve event.
     const [request] = await tx
-      .select()
-      .from(CommunityTemplateRequestTable)
-      .where(eq(CommunityTemplateRequestTable.id, requestId));
-
-    if (!request) throw new NotFoundError('Community template request not found');
-    if (request.state !== 'submitted' && request.state !== 'rejected')
-      throw new InvalidArgumentError('Transition to approved state is not possible.');
-
-    await tx
       .update(CommunityTemplateRequestTable)
       .set({ state: 'approved' })
-      .where(eq(CommunityTemplateRequestTable.id, requestId));
+      .where(
+        and(
+          eq(CommunityTemplateRequestTable.id, requestId),
+          or(
+            eq(CommunityTemplateRequestTable.state, 'submitted'),
+            eq(CommunityTemplateRequestTable.state, 'rejected'),
+          ),
+        ),
+      )
+      .returning();
+
+    if (!request) {
+      const [existing] = await tx
+        .select()
+        .from(CommunityTemplateRequestTable)
+        .where(eq(CommunityTemplateRequestTable.id, requestId));
+      if (!existing) throw new NotFoundError('Community template request not found');
+      throw new InvalidArgumentError('Transition to approved state is not possible.');
+    }
 
     await tx.insert(CommunityTemplateRequestEventTable).values({
       templateRequestId: requestId,
@@ -193,10 +204,27 @@ export async function rejectRequest(
   message: string,
 ): Promise<void> {
   await db.transaction(async (tx) => {
-    await tx
+    // Conditional update: only the transaction whose WHERE clause still matches wins the race,
+    // preventing two concurrent actions from both inserting a reject event.
+    const [request] = await tx
       .update(CommunityTemplateRequestTable)
       .set({ state: 'rejected' })
-      .where(eq(CommunityTemplateRequestTable.id, requestId));
+      .where(
+        and(
+          eq(CommunityTemplateRequestTable.id, requestId),
+          eq(CommunityTemplateRequestTable.state, 'submitted'),
+        ),
+      )
+      .returning();
+
+    if (!request) {
+      const [existing] = await tx
+        .select()
+        .from(CommunityTemplateRequestTable)
+        .where(eq(CommunityTemplateRequestTable.id, requestId));
+      if (!existing) throw new NotFoundError('Community template request not found');
+      throw new InvalidArgumentError('Transition to rejected state is not possible.');
+    }
 
     await tx.insert(CommunityTemplateRequestEventTable).values({
       templateRequestId: requestId,
