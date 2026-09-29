@@ -1,6 +1,7 @@
 import { OpenAI as OpenAIv4 } from 'openaiv4';
 import type { AiModel, EmbeddingGenerationFn } from '../types';
 import { ProviderConfigurationError } from '../../errors';
+import { EMBEDDING_CLIENT_MAX_RETRIES, EMBEDDING_CLIENT_TIMEOUT_MS } from './const';
 
 export function constructIonosEmbeddingGenerationFn(model: AiModel): EmbeddingGenerationFn {
   if (model.setting.provider !== 'ionos') {
@@ -11,6 +12,8 @@ export function constructIonosEmbeddingGenerationFn(model: AiModel): EmbeddingGe
   const client = new OpenAIv4({
     apiKey: model.setting.apiKey,
     baseURL: model.setting.baseUrl,
+    timeout: EMBEDDING_CLIENT_TIMEOUT_MS,
+    maxRetries: EMBEDDING_CLIENT_MAX_RETRIES,
   });
 
   return async function getIonosEmbedding({ texts }) {

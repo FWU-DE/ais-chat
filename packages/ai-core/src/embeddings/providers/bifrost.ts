@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import type { AiModel, EmbeddingGenerationFn } from '../types';
 import { ProviderConfigurationError } from '../../errors';
 import { env } from '../../env';
+import { EMBEDDING_CLIENT_MAX_RETRIES, EMBEDDING_CLIENT_TIMEOUT_MS } from './const';
 
 function createBifrostClient(model: AiModel): {
   client: OpenAI;
@@ -22,6 +23,8 @@ function createBifrostClient(model: AiModel): {
         apiKey: env.bifrostApiKey ?? 'not-needed',
         baseURL: env.bifrostBaseUrl,
         ...(env.bifrostApiKey ? { defaultHeaders: { 'x-bf-vk': env.bifrostApiKey } } : {}),
+        timeout: EMBEDDING_CLIENT_TIMEOUT_MS,
+        maxRetries: EMBEDDING_CLIENT_MAX_RETRIES,
       }),
     ),
     modelName: model.name,
