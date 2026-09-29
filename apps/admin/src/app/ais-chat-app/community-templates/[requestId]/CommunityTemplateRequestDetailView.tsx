@@ -41,6 +41,8 @@ export default function CommunityTemplateRequestDetailView(
       const result = await getCommunityTemplateRequestWithEventsForAdminAction(requestId);
       if (result.success) {
         setData(result.value);
+      } else {
+        toast.error(result.error.message);
       }
     }
     void fetchData();
@@ -81,6 +83,16 @@ export default function CommunityTemplateRequestDetailView(
 
   const handleSendMessage = async (message: string) => {
     const result = await sendMessageToAuthorAction(requestId, message);
+    if (result.success) {
+      setReloadTrigger((currentTrigger) => currentTrigger + 1);
+    } else {
+      toast.error(result.error.message);
+    }
+    return result.success;
+  };
+
+  const handleUpdateNote = async (note: string) => {
+    const result = await updateInternalNoteAction(requestId, note);
     if (result.success) {
       setReloadTrigger((currentTrigger) => currentTrigger + 1);
     } else {
@@ -140,14 +152,7 @@ export default function CommunityTemplateRequestDetailView(
         <CardHeader>
           <CardTitle>Interne Notizen</CardTitle>
           <CardAction>
-            <Button
-              onClick={async () => {
-                await updateInternalNoteAction(requestId, data.note);
-                setReloadTrigger((currentTrigger) => currentTrigger + 1);
-              }}
-            >
-              Speichern
-            </Button>
+            <Button onClick={async () => await handleUpdateNote(data.note)}>Speichern</Button>
           </CardAction>
         </CardHeader>
         <CardContent>
