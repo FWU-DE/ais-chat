@@ -25,6 +25,7 @@
     "DE_TEST_API_KEY",
     "API_KEY",
     "API_URL",
+    "CHAT_BOT_BASE_URL",
     "ENCRYPTION_KEY",
     "RABBITMQ_URI",
     "NEXT_RUNTIME",

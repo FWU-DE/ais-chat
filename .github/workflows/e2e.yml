@@ -27,6 +27,7 @@ jobs:
       API_DATABASE_URL: postgresql://admin:test1234@127.0.0.1:5432/api_db
       API_URL: http://localhost:3002
       API_KEY: ApiKeyForAISChatApiAdminApi
+      CHAT_BOT_BASE_URL: http://localhost:3000
       ENCRYPTION_KEY: EncryptionKeyForEncryptedApiKeysToAISChatApi
       # Auth.js secret
       AUTH_SECRET: 'yN1a0lQ77RgeEQam5DvGaddbdUDQoxswK+21FmEqBPs='

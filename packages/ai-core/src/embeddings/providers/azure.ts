@@ -2,6 +2,7 @@ import { instrumentOpenAiClient } from '@sentry/core';
 import OpenAI from 'openai';
 import type { AiModel, EmbeddingGenerationFn } from '../types';
 import { ProviderConfigurationError } from '../../errors';
+import { EMBEDDING_CLIENT_MAX_RETRIES, EMBEDDING_CLIENT_TIMEOUT_MS } from './const';
 
 function createAzureClient(model: AiModel): {
   client: OpenAI;
@@ -20,6 +21,8 @@ function createAzureClient(model: AiModel): {
       apiKey: model.setting.apiKey,
       baseURL: basePath,
       defaultQuery: Object.fromEntries(searchParams.entries()),
+      timeout: EMBEDDING_CLIENT_TIMEOUT_MS,
+      maxRetries: EMBEDDING_CLIENT_MAX_RETRIES,
     }),
   );
 

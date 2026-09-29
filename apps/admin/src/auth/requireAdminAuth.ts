@@ -4,9 +4,10 @@ import * as Sentry from '@sentry/nextjs';
 import { ForbiddenError, UnauthenticatedError } from '@shared/error';
 import { AdminRole, ADMIN_ROLE, canAccessAdminApp, canAccessEditorArea } from './roles';
 
-// Type for a validated admin session with guaranteed user.name
+// Type for a validated admin session with guaranteed user id and name
 export type ValidatedSession = Session & {
   user: NonNullable<Session['user']> & {
+    id: string;
     name: string;
   };
   adminRole: AdminRole;
@@ -36,7 +37,7 @@ export async function requireAdminOrEditorAuth(): Promise<ValidatedSession> {
 
 async function requireAuthenticatedAdminRole(): Promise<ValidatedSession> {
   const session = await auth();
-  if (!session?.user?.name) {
+  if (!session?.user?.id || !session.user.name) {
     throw new UnauthenticatedError('Authentication required or session incomplete');
   }
   if (!canAccessAdminApp(session.adminRole)) {

@@ -82,6 +82,9 @@ const result = NextAuth({
       if (token?.id_token) {
         session.idToken = token.id_token as string;
       }
+      if (session.user && token?.sub) {
+        session.user.id = token.sub;
+      }
       if (token?.adminRole) {
         session.adminRole = token.adminRole as AdminRole;
       }

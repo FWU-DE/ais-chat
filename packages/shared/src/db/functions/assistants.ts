@@ -13,6 +13,7 @@ import {
 import {
   conversationTable,
   AssistantFileMapping,
+  type AccessLevel,
   type AssistantInsertModel,
   type AssistantSelectModel,
   assistantTable,
@@ -22,6 +23,7 @@ import {
 } from '../schema';
 import { NotFoundError } from '@shared/error';
 import { UserModel } from '@shared/auth/user-model';
+import { PgTransactionObject } from '../types';
 
 type IncludeDeletedOption = {
   includeDeleted?: boolean;
@@ -349,4 +351,24 @@ export async function dbInsertAssistantFileMapping({
     .returning();
 
   return insertedFileMapping;
+}
+
+/**
+ * Updates the access level of an assistant within the given transaction.
+ * The `updatedAt` timestamp is bumped automatically by the column's `$onUpdateFn`.
+ */
+export async function dbUpdateAssistantAccessLevel(
+  assistantId: string,
+  accessLevel: AccessLevel,
+  tx: PgTransactionObject,
+): Promise<void> {
+  const [updatedAssistant] = await tx
+    .update(assistantTable)
+    .set({ accessLevel })
+    .where(eq(assistantTable.id, assistantId))
+    .returning({ id: assistantTable.id });
+
+  if (!updatedAssistant) {
+    throw new NotFoundError('Assistant not found');
+  }
 }

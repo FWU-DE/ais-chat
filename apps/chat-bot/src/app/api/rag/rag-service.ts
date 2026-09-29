@@ -88,7 +88,12 @@ export async function retrieveChunksByQuery({
     });
     queryEmbedding = embedding ?? [];
   } catch (error) {
-    logError('Failed to generate embedding, using empty array as fallback:', error);
+    logError('Failed to generate embedding, returning no chunks:', error);
+  }
+
+  // pgvector rejects zero-dimension vectors, so skip the query instead of failing at the DB level
+  if (queryEmbedding.length === 0) {
+    return [];
   }
 
   const fileIds = relatedFileEntities.map((file) => file.id);

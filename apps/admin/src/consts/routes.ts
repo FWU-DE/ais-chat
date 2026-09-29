@@ -40,6 +40,8 @@ export const ROUTES = {
     template: (templateType: TemplateTypes, templateId: string) =>
       `/ais-chat-app/templates/${templateType}/${templateId}`,
     communityTemplates: '/ais-chat-app/community-templates',
+    communityTemplateRequest: (requestId: string) =>
+      `/ais-chat-app/community-templates/${requestId}`,
     vouchers: (federalStateId: string) => `/ais-chat-app/federal-states/${federalStateId}/vouchers`,
     voucherNew: (federalStateId: string) =>
       `/ais-chat-app/federal-states/${federalStateId}/vouchers/new`,

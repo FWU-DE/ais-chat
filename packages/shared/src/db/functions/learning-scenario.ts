@@ -15,6 +15,7 @@ import { db } from '..';
 import { SHARE_EXTENSION_WINDOW_MS } from '@shared/sharing/const';
 import {
   fileTable,
+  AccessLevel,
   FilterGroup,
   LearningScenarioFileMapping,
   LearningScenarioOptionalShareDataModel,
@@ -29,6 +30,7 @@ import {
   userTable,
 } from '../schema';
 import { UserModel } from '@shared/auth/user-model';
+import { PgTransactionObject } from '../types';
 
 type IncludeDeletedOption = {
   includeDeleted?: boolean;
@@ -738,4 +740,23 @@ export async function dbUpdateLearningScenarioFilterGroup({
     .update(learningScenarioTable)
     .set({ filterGroup: updatedFilterGroup })
     .where(eq(learningScenarioTable.id, learningScenarioId));
+}
+
+/**
+ * Updates the access level of a learning scenario within the given transaction.
+ */
+export async function dbUpdateLearningScenarioAccessLevel(
+  learningScenarioId: string,
+  accessLevel: AccessLevel,
+  tx: PgTransactionObject,
+): Promise<void> {
+  const [updatedLearningScenario] = await tx
+    .update(learningScenarioTable)
+    .set({ accessLevel })
+    .where(eq(learningScenarioTable.id, learningScenarioId))
+    .returning({ id: learningScenarioTable.id });
+
+  if (!updatedLearningScenario) {
+    throw new NotFoundError('Learning scenario not found');
+  }
 }

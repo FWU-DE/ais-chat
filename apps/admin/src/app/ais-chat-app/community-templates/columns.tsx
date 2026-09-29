@@ -6,6 +6,7 @@ import { DataTableFeatures } from '@ui/components/data-table';
 import { Button } from '@ui/components/button';
 import { ArrowUpDownIcon } from 'lucide-react';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
+import { mapEntityTypeToLabel } from '@/utils/mapEntityTypeToLabel';
 
 export type CommunityTemplateRequestStatus = CommunityTemplateRequestSummary['state'];
 
@@ -124,25 +125,12 @@ export const columns: ColumnDef<DataTableFeatures, CommunityTemplateRequestSumma
       );
     },
     cell: ({ row }) => {
-      return mapStatusToLabel(row.original.state);
+      return mapStateToLabel(row.original.state);
     },
   },
 ];
 
-function mapEntityTypeToLabel(entityType: CommunityTemplateRequestSummary['entityType']) {
-  switch (entityType) {
-    case 'assistant':
-      return 'Assistent';
-    case 'character':
-      return 'Dialogpartner';
-    case 'learningScenario':
-      return 'Lernszenario';
-    default:
-      return 'unbekannt';
-  }
-}
-
-function mapCreatedByRoleToLabel(
+export function mapCreatedByRoleToLabel(
   createdByRole: CommunityTemplateRequestSummary['latestEventCreatedByRole'],
 ) {
   switch (createdByRole) {
@@ -155,7 +143,7 @@ function mapCreatedByRoleToLabel(
   }
 }
 
-function mapStatusToLabel(status: CommunityTemplateRequestSummary['state']) {
+export function mapStateToLabel(status: CommunityTemplateRequestSummary['state']) {
   return (
     communityTemplateRequestStatusOptions.find((option) => option.value === status)?.label ??
     'unbekannt'
