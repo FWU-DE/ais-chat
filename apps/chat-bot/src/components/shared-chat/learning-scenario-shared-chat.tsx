@@ -5,12 +5,18 @@ import { useTranslations } from 'next-intl';
 import { LearningScenarioWithShareDataModel } from '@shared/db/schema';
 import GenericSharedChat from './generic-shared-chat';
 import { loadSharedChat } from '@/utils/shared-chat-storage';
+import { generateLearningScenarioSpeechAction } from '@/app/api/learning-scenario/actions';
 import { z } from 'zod';
 
 export default function LearningScenarioSharedChat({
   avatarPictureUrl,
+  isSpeechModelEnabled,
   ...sharedSchoolChat
-}: LearningScenarioWithShareDataModel & { inviteCode: string; avatarPictureUrl?: string }) {
+}: LearningScenarioWithShareDataModel & {
+  inviteCode: string;
+  avatarPictureUrl?: string;
+  isSpeechModelEnabled: boolean;
+}) {
   const t = useTranslations('learning-scenarios.shared');
   const { id, inviteCode, modelId } = sharedSchoolChat;
 
@@ -70,6 +76,13 @@ export default function LearningScenarioSharedChat({
       exerciseDescription={sharedSchoolChat.studentExercise}
       exerciseTitle={t('exercise-title')}
       uploadFileFn={uploadSharedLearningScenarioFile}
+      isSpeechModelEnabled={isSpeechModelEnabled}
+      generateSpeechFn={(text) =>
+        generateLearningScenarioSpeechAction({
+          text,
+          inviteCode,
+        })
+      }
     />
   );
 }

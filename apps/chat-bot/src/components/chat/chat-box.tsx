@@ -6,7 +6,7 @@ import MarkdownDisplay from './markdown-display';
 import { cn } from '@/utils/tailwind';
 import { useTranslations } from 'next-intl';
 import Citation from './sources/citation';
-import { iconClassName } from '@/utils/tailwind/icon';
+import { Button } from '@ui/components/button';
 import useBreakpoints from '../hooks/use-breakpoints';
 import { isImageFile } from '@/utils/files/generic';
 import { type UIMessage, type ChatStatus } from '@/types/chat';
@@ -17,6 +17,7 @@ import DownloadConversationMessageButton from './download-conversation-message-b
 import { utils } from '@shared/utils';
 import DisplayFileAttachment from './display-file-attachment';
 import SpeechButton from './speech-button';
+import { ServerActionResult } from '@shared/actions/server-action-result';
 
 // Re-export for consumers
 export type { PendingFileModel };
@@ -35,6 +36,8 @@ export function ChatBox({
   characterName,
   status,
   showActivityDialog,
+  generateSpeechFn,
+  isSpeechModelEnabled,
 }: {
   assistantIcon?: ReactNode;
   children: UIMessage;
@@ -49,6 +52,8 @@ export function ChatBox({
   characterName?: string;
   status: ChatStatus;
   showActivityDialog?: boolean;
+  generateSpeechFn: (text: string) => Promise<ServerActionResult<{ audioBase64: string }>>;
+  isSpeechModelEnabled: boolean;
 }) {
   const tCommon = useTranslations('common');
   const { isAtLeast } = useBreakpoints();
@@ -141,7 +146,13 @@ export function ChatBox({
   const maybeShowMessageIcons =
     isLastNonUser && status !== 'streaming' ? (
       <div className="flex items-center gap-1 mt-1">
-        <CopyToClipboardButton text={children.content} className="size-5" />
+        <CopyToClipboardButton
+          text={children.content}
+          className="size-5"
+          size="icon-sm"
+          title={tCommon('message-copy')}
+          aria-label={tCommon('message-copy')}
+        />
         {status === 'ready' &&
           conversationId !== undefined &&
           children.id !== 'initial-message' && (
@@ -151,17 +162,24 @@ export function ChatBox({
               characterName={characterName}
             />
           )}
-        <button
-          title={tCommon('regenerate-message')}
+        <Button
+          variant="ghost"
+          size="icon-sm"
           type="button"
+          title={tCommon('regenerate-message')}
           onClick={() => regenerateMessage()}
-          aria-label="Reload"
+          aria-label={tCommon('regenerate-message')}
+          className="text-primary"
         >
-          <div className={cn('p-1.5 rounded-enterprise-sm', iconClassName)}>
-            <ReloadIcon className="w-5 h-5" />
-          </div>
-        </button>
-        {children.role === 'assistant' && <SpeechButton text={children.content} />}
+          <ReloadIcon className="size-5 text-primary" />
+        </Button>
+        {children.role === 'assistant' && (
+          <SpeechButton
+            text={children.content}
+            generateSpeechFn={generateSpeechFn}
+            isSpeechModelEnabled={isSpeechModelEnabled}
+          />
+        )}
         {showActivityDialog && <AiActivityDialog steps={activitySteps} />}
       </div>
     ) : null;

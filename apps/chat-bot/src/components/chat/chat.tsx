@@ -15,6 +15,7 @@ import { LocalFileState } from './send-message-form';
 import { deepCopy } from '@/utils/object';
 import { getFileExtension, isImageFile } from '@/utils/files/generic';
 import { refetchFileMapping } from '@/app/(authed)/(chat-bot)/actions';
+import { generateSpeechAction } from '@/app/api/chat/actions';
 import { InitialChatContentDisplay } from './initial-content-display';
 import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
 import { ChatInputBox } from './chat-input-box';
@@ -27,6 +28,7 @@ import { getConversationPath } from '@/utils/chat/path';
 import { Messages, type PendingFileModel } from './messages';
 import { WebSource } from '@shared/db/types';
 import { FloatingText } from './floating-text';
+import { useFederalState } from '../providers/federal-state-provider';
 import { getErrorMessageByType } from '@/error/get-error-message-by-type';
 
 type ChatProps = {
@@ -60,6 +62,7 @@ export default function Chat({
   const tCommon = useTranslations('common');
   const tLearningScenarioShared = useTranslations('learning-scenarios.shared');
 
+  const federalState = useFederalState();
   const { selectedModel, setDownloadConversationEnabled } = useLlmModels();
   const conversationPath = getConversationPath({
     customGptId: assistant?.id,
@@ -347,6 +350,8 @@ export default function Chat({
               webSourceMapping={webSourceMapping}
               activitySteps={activitySteps}
               showActivityDialog={character !== undefined}
+              generateSpeechFn={(text) => generateSpeechAction({ text })}
+              isSpeechModelEnabled={federalState?.featureToggles?.isSpeechModelEnabled === true}
             />
           )}
           {error && (

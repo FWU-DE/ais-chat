@@ -1,18 +1,11 @@
 import { generateSpeechById } from '@ais-chat/ai-core';
-import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
+import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
 
-export async function generateSpeech({
-  text,
-  federalStateId,
-}: {
-  text: string;
-  federalStateId: string;
-}) {
-  const models = await dbGetLlmModelsByFederalStateId({ federalStateId });
-  const speechModel = models.find((model) => model.priceMetadata.type === 'speech');
+export async function generateSpeech({ text }: { text: string }) {
+  const speechModel = await dbGetSpeechModel();
 
   if (!speechModel) {
-    throw new Error('No speech model assigned to this federal state');
+    throw new Error('No speech model configured');
   }
 
   const { wavBuffer } = await generateSpeechById({

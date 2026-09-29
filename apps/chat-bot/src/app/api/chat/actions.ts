@@ -9,7 +9,10 @@ import { runServerAction } from '@shared/actions/run-server-action';
 import { sendChatMessage } from './chat-service';
 import { generateSpeech } from './speech-service';
 import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
-import { GENERATE_SPEECH_ACTION_NAME, SEND_CHAT_MESSAGE_ACTION_NAME } from '@/server-action-names';
+import {
+  GENERATE_CHAT_SPEECH_ACTION_NAME,
+  SEND_CHAT_MESSAGE_ACTION_NAME,
+} from '@/server-action-names';
 import { checkProductAccess } from '@/utils/vidis/access';
 
 export type { ChatMessage, SendMessageResult } from '@/types/chat';
@@ -67,12 +70,6 @@ export async function sendChatMessageAction({
 }
 
 export async function generateSpeechAction({ text }: { text: string }) {
-  const { federalState } = await requireAuth();
-  return runServerAction(
-    GENERATE_SPEECH_ACTION_NAME,
-    generateSpeech,
-  )({
-    text,
-    federalStateId: federalState.id,
-  });
+  await requireAuth();
+  return runServerAction(GENERATE_CHAT_SPEECH_ACTION_NAME, generateSpeech)({ text });
 }

@@ -6,11 +6,17 @@ import { useTranslations } from 'next-intl';
 import { SpeakerHighIcon, PauseIcon } from '@phosphor-icons/react';
 import Spinner from '@/components/icons/spinner';
 import { useToast } from '@/components/common/toast';
-import { generateSpeechAction } from '@/app/api/chat/actions';
-import { useFederalState } from '@/components/providers/federal-state-provider';
+import { ServerActionResult } from '@shared/actions/server-action-result';
 
-export default function SpeechButton({ text }: { text: string }) {
-  const federalState = useFederalState();
+export default function SpeechButton({
+  text,
+  generateSpeechFn,
+  isSpeechModelEnabled,
+}: {
+  text: string;
+  generateSpeechFn: (text: string) => Promise<ServerActionResult<{ audioBase64: string }>>;
+  isSpeechModelEnabled: boolean;
+}) {
   const toast = useToast();
   const tCommon = useTranslations('common');
   const [status, setStatus] = React.useState<'idle' | 'loading' | 'playing' | 'paused'>('idle');
@@ -49,7 +55,7 @@ export default function SpeechButton({ text }: { text: string }) {
 
     setStatus('loading');
     try {
-      const result = await generateSpeechAction({ text });
+      const result = await generateSpeechFn(text);
       if (!result.success) {
         toast.error(tCommon('read-aloud-error'));
         setStatus('idle');
@@ -86,7 +92,7 @@ export default function SpeechButton({ text }: { text: string }) {
 
   const label = status === 'playing' ? tCommon('pause-message') : tCommon('read-aloud');
 
-  if (federalState?.featureToggles?.isSpeechModelEnabled !== true) {
+  if (!isSpeechModelEnabled) {
     return null;
   }
 

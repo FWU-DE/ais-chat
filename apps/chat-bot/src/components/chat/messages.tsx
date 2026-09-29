@@ -5,6 +5,7 @@ import LoadingAnimation from './loading-animation';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import type { AiActivityStep } from '@/types/ai-activity';
+import { ServerActionResult } from '@shared/actions/server-action-result';
 
 // Re-export for consumers that import from this file
 export type { ChatStatus, PendingFileModel };
@@ -22,6 +23,8 @@ interface MessagesProps {
   webSourceMapping?: Map<string, WebSource[]>;
   activitySteps?: AiActivityStep[];
   showActivityDialog?: boolean;
+  generateSpeechFn: (text: string) => Promise<ServerActionResult<{ audioBase64: string }>>;
+  isSpeechModelEnabled: boolean;
 }
 
 export function Messages({
@@ -37,6 +40,8 @@ export function Messages({
   webSourceMapping,
   activitySteps = [],
   showActivityDialog = false,
+  generateSpeechFn,
+  isSpeechModelEnabled,
 }: MessagesProps): React.JSX.Element {
   return (
     <div className={containerClassName}>
@@ -54,6 +59,8 @@ export function Messages({
           webSources={message.role === 'user' ? webSourceMapping?.get(message.id) : undefined}
           status={status}
           showActivityDialog={showActivityDialog}
+          generateSpeechFn={generateSpeechFn}
+          isSpeechModelEnabled={isSpeechModelEnabled}
         >
           {message}
         </ChatBox>

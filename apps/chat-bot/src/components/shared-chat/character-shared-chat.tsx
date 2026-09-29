@@ -8,6 +8,7 @@ import { AssistantIcon } from '../chat/assistant-icon';
 import GenericSharedChat from './generic-shared-chat';
 import { reductionBreakpoint } from '@/utils/tailwind/layout';
 import { loadSharedChat } from '@/utils/shared-chat-storage';
+import { generateCharacterSpeechAction } from '@/app/api/character/actions';
 import { z } from 'zod';
 
 /**
@@ -15,8 +16,13 @@ import { z } from 'zod';
  */
 export default function CharacterSharedChat({
   avatarPictureUrl,
+  isSpeechModelEnabled,
   ...character
-}: CharacterWithShareDataModel & { inviteCode: string; avatarPictureUrl?: string }) {
+}: CharacterWithShareDataModel & {
+  inviteCode: string;
+  avatarPictureUrl?: string;
+  isSpeechModelEnabled: boolean;
+}) {
   const t = useTranslations('characters.shared');
   const { id, inviteCode, modelId } = character;
 
@@ -85,6 +91,8 @@ export default function CharacterSharedChat({
       showActivityDialog
       assistantIcon={assistantIcon}
       uploadFileFn={uploadSharedCharacterFile}
+      isSpeechModelEnabled={isSpeechModelEnabled}
+      generateSpeechFn={(text) => generateCharacterSpeechAction({ text, inviteCode })}
     />
   );
 }
