@@ -24,8 +24,11 @@ import {
 import { ColumnFiltersState } from '@tanstack/react-table';
 import { CommunityTemplateRequestSummary } from '@shared/community-templates/community-template-service.admin';
 import { Field, FieldLabel } from '@ui/components/field';
+import { useRouter } from 'next/navigation';
+import { ROUTES } from '@/consts/routes';
 
 export default function CommunityTemplateRequestsListView() {
+  const router = useRouter();
   const [requests, setRequests] = useState<CommunityTemplateRequestSummary[]>([]);
   const [isPending, startTransition] = useTransition();
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -49,8 +52,8 @@ export default function CommunityTemplateRequestsListView() {
     void loadData();
   };
 
-  function handleRowClicked(): void {
-    // Todo: TD-1593 implement edit request view
+  function handleRowClicked(row: CommunityTemplateRequestSummary): void {
+    router.push(ROUTES.app.communityTemplateRequest(row.id));
   }
 
   function updateColumnFilter(id: string, value: string | string[]) {
@@ -90,6 +93,7 @@ export default function CommunityTemplateRequestsListView() {
               <Field>
                 <FieldLabel>Nach Vorlagenname filtern</FieldLabel>
                 <Input
+                  className="m-0"
                   placeholder="Vorlagenname"
                   value={
                     (columnFilters.find((filter) => filter.id === 'entityName')?.value as string) ??

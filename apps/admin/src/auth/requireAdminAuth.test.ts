@@ -36,6 +36,14 @@ describe('admin authorization guards', () => {
     await expect(requireAdminAuth()).rejects.toBeInstanceOf(UnauthenticatedError);
   });
 
+  it('rejects an authenticated session without a user id', async () => {
+    const sessionWithoutUserId = createSession(ADMIN_ROLE);
+    sessionWithoutUserId.user!.id = undefined;
+    authMock.mockResolvedValue(sessionWithoutUserId);
+
+    await expect(requireAdminAuth()).rejects.toBeInstanceOf(UnauthenticatedError);
+  });
+
   it('rejects an authenticated user without an admin role', async () => {
     authMock.mockResolvedValue(createSession(undefined));
 

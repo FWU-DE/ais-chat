@@ -24,7 +24,9 @@ export function CommunityTemplateRequestEvent({ event }: CommunityTemplateReques
           {formatDateToGermanTimestamp(createdAt)}
         </span>
       </div>
-      <CommunityTemplateRequestEventMessage message={message} createdByRole={createdByRole} />
+      {message.length > 0 && (
+        <CommunityTemplateRequestEventMessage message={message} createdByRole={createdByRole} />
+      )}
     </div>
   );
 }

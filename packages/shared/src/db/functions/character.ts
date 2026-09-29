@@ -31,6 +31,8 @@ import {
 } from '../schema';
 import { findStaticModelByRole } from '@shared/llm-models/llm-model-service';
 import { UserModel } from '@shared/auth/user-model';
+import { AccessLevel } from '../schema';
+import { PgTransactionObject } from '../types';
 
 type IncludeDeletedOption = {
   includeDeleted?: boolean;
@@ -799,4 +801,24 @@ export async function dbUpdateCharacterFilterGroup({
     .update(characterTable)
     .set({ filterGroup: updatedFilterGroup })
     .where(eq(characterTable.id, characterId));
+}
+
+/**
+ * Updates the access level of a character within the given transaction.
+ * The `updatedAt` timestamp is bumped automatically by the column's `$onUpdateFn`.
+ */
+export async function dbUpdateCharacterAccessLevel(
+  characterId: string,
+  accessLevel: AccessLevel,
+  tx: PgTransactionObject,
+): Promise<void> {
+  const [updatedCharacter] = await tx
+    .update(characterTable)
+    .set({ accessLevel })
+    .where(eq(characterTable.id, characterId))
+    .returning({ id: characterTable.id });
+
+  if (!updatedCharacter) {
+    throw new NotFoundError('Character not found');
+  }
 }
