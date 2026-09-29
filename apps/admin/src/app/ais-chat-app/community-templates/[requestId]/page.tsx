@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import TwoColumnLayout from '@/components/layout/TwoColumnLayout';
 import CommunityTemplateRequestDetailView from './CommunityTemplateRequestDetailView';
 import { AdminAppSidebar } from '../../AdminAppSidebar';
-import { headers } from 'next/headers';
+import { buildChatBotEntityUrl } from '@/utils/buildChatBotEntityUrl';
 import { getCommunityTemplateRequestWithEventsForAdminAction } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +11,6 @@ export default async function Page(
   props: PageProps<'/ais-chat-app/community-templates/[requestId]'>,
 ) {
   const { requestId } = await props.params;
-  const host = (await headers()).get('host') ?? '';
 
   const result = await getCommunityTemplateRequestWithEventsForAdminAction(requestId);
   if (!result.success) {
@@ -19,13 +18,19 @@ export default async function Page(
     throw new Error(result.error.message);
   }
 
+  const { entityType, assistantId, characterId, learningScenarioId } = result.value;
+  const chatBotEntityUrl = buildChatBotEntityUrl(
+    entityType,
+    assistantId ?? characterId ?? learningScenarioId ?? '',
+  );
+
   return (
     <TwoColumnLayout
       sidebar={<AdminAppSidebar />}
       page={
         <CommunityTemplateRequestDetailView
           requestId={requestId}
-          host={host}
+          chatBotEntityUrl={chatBotEntityUrl}
           initialData={result.value}
         />
       }

@@ -13,7 +13,6 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@ui/compon
 import { Button } from '@ui/components/button';
 import { Textarea } from '@ui/components/textarea';
 import { ExternalLink } from '@/components/navigation/ExternalLink';
-import { buildChatBotEntityUrl } from '@/utils/buildChatBotEntityUrl';
 import { mapEntityTypeToLabel } from '@/utils/mapEntityTypeToLabel';
 import { mapStateToLabel } from '../columns';
 import RejectCommunityTemplateRequestDialog from './RejectCommunityTemplateRequestDialog';
@@ -25,14 +24,14 @@ export const dynamic = 'force-dynamic';
 
 export type CommunityTemplateRequestDetailViewProps = {
   requestId: string;
-  host: string;
+  chatBotEntityUrl: string;
   initialData: CommunityTemplateRequestWithEventsAdmin;
 };
 
 export default function CommunityTemplateRequestDetailView(
   props: CommunityTemplateRequestDetailViewProps,
 ) {
-  const { requestId, host, initialData } = props;
+  const { requestId, chatBotEntityUrl, initialData } = props;
 
   const [data, setData] = useState<CommunityTemplateRequestWithEventsAdmin>(initialData);
   const [reloadTrigger, setReloadTrigger] = useState(0);
@@ -118,15 +117,7 @@ export default function CommunityTemplateRequestDetailView(
           <dl className="grid grid-cols-[150px_1fr] gap-4 [&>dt]:text-muted-foreground">
             <dt>ID:</dt>
             <dd>
-              <ExternalLink
-                href={buildChatBotEntityUrl(
-                  data.entityType,
-                  data.assistantId ?? data.characterId ?? data.learningScenarioId ?? '',
-                  host,
-                )}
-              >
-                {data.id}
-              </ExternalLink>
+              <ExternalLink href={chatBotEntityUrl}>{data.id}</ExternalLink>
             </dd>
             <dt>Erstellt am:</dt>
             <dd>{data.createdAt.toLocaleString()}</dd>
