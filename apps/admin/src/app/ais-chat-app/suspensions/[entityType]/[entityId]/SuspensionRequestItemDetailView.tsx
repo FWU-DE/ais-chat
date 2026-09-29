@@ -8,7 +8,6 @@ import {
   CardContent,
   CardAction,
 } from '@ui/components/card';
-import { mapEntityTypeToLabel } from '../../utils';
 import { SuspensionRequestEntityOverview } from '@shared/suspension/suspension-service';
 import { EntityRef, EntityType } from '@shared/entities/entity-types';
 import { Button } from '@ui/components/button';
@@ -24,6 +23,7 @@ import {
 import { toast } from 'sonner';
 import { Skeleton } from '@ui/components/skeleton';
 import { SuspensionRequestItem } from './SuspensionRequestItem';
+import { mapEntityTypeToLabel } from '@/utils/mapEntityTypeToLabel';
 
 type SuspendedEntityDetailViewProps = {
   entityType: EntityType;
