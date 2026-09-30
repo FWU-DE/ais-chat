@@ -28,7 +28,7 @@ export default function ClientProvider({
           <NextThemeProvider
             attribute="class"
             defaultTheme="light"
-            enableSystem
+            enableSystem={false}
             disableTransitionOnChange
           >
             <ThemeProvider designConfiguration={designConfiguration}>

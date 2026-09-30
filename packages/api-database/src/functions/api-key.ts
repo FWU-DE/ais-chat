@@ -119,6 +119,19 @@ export async function dbGetAllApiKeysByProjectId(organizationId: string, project
     );
 }
 
+export async function dbGetAllApiKeysByOrganizationId(organizationId: string) {
+  return await db
+    .select({
+      id: apiKeyTable.id,
+      name: apiKeyTable.name,
+      projectName: projectTable.name,
+    })
+    .from(apiKeyTable)
+    .innerJoin(projectTable, eq(apiKeyTable.projectId, projectTable.id))
+    .where(eq(projectTable.organizationId, organizationId))
+    .orderBy(projectTable.name, apiKeyTable.name);
+}
+
 export async function dbGetApiKeysAndUsageByProjectId({ projectId }: { projectId: string }) {
   return await db.select().from(apiKeyTable).where(eq(apiKeyTable.projectId, projectId));
 }
@@ -309,6 +322,59 @@ export async function dbUpdateModelMappingsForApiKey(
       .from(llmModelApiKeyMappingTable)
       .innerJoin(llmModelTable, eq(llmModelApiKeyMappingTable.llmModelId, llmModelTable.id))
       .where(eq(llmModelApiKeyMappingTable.apiKeyId, apiKeyId));
+  });
+}
+
+export async function dbGetApiKeyIdsForModel(organizationId: string, modelId: string) {
+  const rows = await db
+    .select({ apiKeyId: llmModelApiKeyMappingTable.apiKeyId })
+    .from(llmModelApiKeyMappingTable)
+    .innerJoin(llmModelTable, eq(llmModelApiKeyMappingTable.llmModelId, llmModelTable.id))
+    .where(and(eq(llmModelTable.id, modelId), eq(llmModelTable.organizationId, organizationId)));
+
+  return rows.map((row) => row.apiKeyId);
+}
+
+export async function dbSetApiKeysForModel(
+  organizationId: string,
+  modelId: string,
+  apiKeyIds: string[],
+) {
+  return await db.transaction(async (tx) => {
+    const [model] = await tx
+      .select({ id: llmModelTable.id })
+      .from(llmModelTable)
+      .where(and(eq(llmModelTable.id, modelId), eq(llmModelTable.organizationId, organizationId)))
+      .limit(1);
+
+    if (!model) {
+      throw new Error('Model not found');
+    }
+
+    const availableApiKeys = await tx
+      .select({ id: apiKeyTable.id })
+      .from(apiKeyTable)
+      .innerJoin(projectTable, eq(apiKeyTable.projectId, projectTable.id))
+      .where(
+        and(eq(projectTable.organizationId, organizationId), inArray(apiKeyTable.id, apiKeyIds)),
+      );
+
+    if (availableApiKeys.length !== apiKeyIds.length) {
+      throw new Error('Some API key IDs are invalid or do not belong to the organization');
+    }
+
+    await tx
+      .delete(llmModelApiKeyMappingTable)
+      .where(eq(llmModelApiKeyMappingTable.llmModelId, modelId));
+
+    if (apiKeyIds.length > 0) {
+      await tx.insert(llmModelApiKeyMappingTable).values(
+        apiKeyIds.map((apiKeyId) => ({
+          llmModelId: modelId,
+          apiKeyId,
+        })),
+      );
+    }
   });
 }
 
