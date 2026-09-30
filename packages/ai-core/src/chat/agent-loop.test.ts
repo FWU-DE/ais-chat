@@ -169,6 +169,41 @@ describe('agent-loop', () => {
     );
   });
 
+  it('forwards each text delta before the provider stream completes', async () => {
+    const messages: Message[] = [{ role: 'user', content: 'Test query' }];
+    let streamCompleted = false;
+    const onTextChunk = vi.fn(() => {
+      expect(streamCompleted).toBe(false);
+    });
+    const onComplete = vi.fn();
+    const onError = vi.fn();
+
+    mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+      yield { type: 'text', delta: 'First chunk.' } satisfies StreamEvent;
+      yield { type: 'text', delta: 'Second chunk.' } satisfies StreamEvent;
+      streamCompleted = true;
+      yield { type: 'finish', usage } satisfies StreamEvent;
+    });
+
+    runAgentLoop({
+      modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+      apiKeyId: 'test-key',
+      messages,
+      agentName: 'Test Agent',
+      onTextChunk,
+      onComplete,
+      onError,
+    });
+
+    await vi.waitFor(() => {
+      expect(onComplete).toHaveBeenCalled();
+    });
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(onTextChunk).toHaveBeenNthCalledWith(1, 'First chunk.');
+    expect(onTextChunk).toHaveBeenNthCalledWith(2, 'Second chunk.');
+  });
+
   it('does not insert separator when first iteration produces no text (tool-only)', async () => {
     const messages: Message[] = [{ role: 'user', content: 'Test query' }];
     const onTextChunk = vi.fn();
