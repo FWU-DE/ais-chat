@@ -23,44 +23,7 @@ import { llmModelPriceMetadataSchema } from '@ais-chat/shared/db/schema';
 import { imageGenerationConfigSchema } from '@ais-chat/api-database/types';
 import { PriceMetadataExamplesDialog } from './PriceMetadataExamplesDialog';
 import { ImageGenerationConfigExampleDialog } from './ImageGenerationConfigExampleDialog';
-
-// Helper function to validate JSON
-const jsonStringSchema = z.string().refine((str) => {
-  if (!str.trim()) return true; // Empty string is valid
-  try {
-    JSON.parse(str);
-    return true;
-  } catch {
-    return false;
-  }
-}, 'Muss ein gültiges JSON-Format sein');
-
-// Builds a Zod schema for a JSON-encoded textarea that must parse into a
-// value matching `shape`, instead of just checking for *some* valid JSON.
-function createJsonStringSchema<T>(
-  shape: z.ZodType<T>,
-  invalidShapeMessage: string,
-  { allowEmpty = true }: { allowEmpty?: boolean } = {},
-) {
-  return z.string().superRefine((str, ctx) => {
-    if (!str.trim()) {
-      if (!allowEmpty) {
-        ctx.addIssue({ code: 'custom', message: 'Dieses Feld ist erforderlich' });
-      }
-      return;
-    }
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(str);
-    } catch {
-      ctx.addIssue({ code: 'custom', message: 'Muss ein gültiges JSON-Format sein' });
-      return;
-    }
-    if (!shape.validate(parsed)) {
-      ctx.addIssue({ code: 'custom', message: invalidShapeMessage });
-    }
-  });
-}
+import { createJsonStringSchema, jsonStringSchema } from '@/components/utils/json-schema';
 
 const priceMetadataSchema = createJsonStringSchema(
   llmModelPriceMetadataSchema,
@@ -248,6 +211,7 @@ export function LargeLanguageModelDetailView({
             name="name"
             label="Name *"
             description="Technischer Name des Modells"
+            tooltip="Beginnt der Name mit dem Namen eines Bifrost-nativen Providers (z. B. bei einem via Provider-Key direkt als nativer Bifrost-Provider registrierten Anbieter), deutet Bifrost dies als Adressierung nach dem Schema „Provider/Modellname“ und schneidet den Provider-Teil ab – das Modell wird dann nicht gefunden. In diesem Fall abweichenden Namen wählen und den echten Wert unter „Provider-Modellnamen“ hinterlegen."
             control={control}
           />
 
