@@ -7,6 +7,13 @@ import {
 } from './types';
 import { assertBifrostResponse, bifrostFetch } from './http';
 
+// Encodes path segments so arbitrary provider/key ids can't escape `/api/providers/...`.
+function providerPath(provider: string, ...segments: string[]): string {
+  return ['/api/providers', encodeURIComponent(provider), ...segments.map(encodeURIComponent)].join(
+    '/',
+  );
+}
+
 /**
  * Applies one provider config and all of its keys to Bifrost.
  *
@@ -118,7 +125,7 @@ export async function deleteBifrostProvider({
     bifrostAdminUrl,
     bifrostAdminUsername,
     bifrostAdminPassword,
-    path: `/api/providers/${provider}`,
+    path: providerPath(provider),
     init: { method: 'DELETE' },
   });
   if (response.status === 404) return;
@@ -145,7 +152,7 @@ async function deleteBifrostProviderKey({
       bifrostAdminUrl,
       bifrostAdminUsername,
       bifrostAdminPassword,
-      path: `/api/providers/${provider}/keys/${keyId}`,
+      path: providerPath(provider, 'keys', keyId),
       init: { method: 'DELETE' },
     }),
     logger,
@@ -169,7 +176,7 @@ async function ensureBifrostProvider({
     bifrostAdminUrl,
     bifrostAdminUsername,
     bifrostAdminPassword,
-    path: `/api/providers/${providerConfig.provider}`,
+    path: providerPath(providerConfig.provider),
     init: {
       method: 'GET',
     },
@@ -203,7 +210,7 @@ async function ensureBifrostProvider({
       bifrostAdminUrl,
       bifrostAdminUsername,
       bifrostAdminPassword,
-      path: `/api/providers/${providerConfig.provider}`,
+      path: providerPath(providerConfig.provider),
       init: {
         method: 'PUT',
         body: JSON.stringify(getUpdateProviderPayload(providerConfig, existingProvider)),
@@ -240,7 +247,7 @@ async function syncBifrostProviderKey({
         bifrostAdminUrl,
         bifrostAdminUsername,
         bifrostAdminPassword,
-        path: `/api/providers/${provider}/keys/${existingKey.id}`,
+        path: providerPath(provider, 'keys', existingKey.id),
         init: {
           method: 'PUT',
           body: JSON.stringify({ ...existingKey, ...key, id: existingKey.id }),
@@ -256,7 +263,7 @@ async function syncBifrostProviderKey({
       bifrostAdminUrl,
       bifrostAdminUsername,
       bifrostAdminPassword,
-      path: `/api/providers/${provider}/keys`,
+      path: providerPath(provider, 'keys'),
       init: {
         method: 'POST',
         body: JSON.stringify(key),
@@ -284,7 +291,7 @@ async function listBifrostProviderKeys({
       bifrostAdminUrl,
       bifrostAdminUsername,
       bifrostAdminPassword,
-      path: `/api/providers/${provider}/keys`,
+      path: providerPath(provider, 'keys'),
       init: { method: 'GET' },
     }),
     logger,
