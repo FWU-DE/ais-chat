@@ -118,7 +118,6 @@ export function runAgentLoop({
             const pendingToolCalls: ToolCall[] = [];
             const overBudgetToolCalls: ToolCall[] = [];
             let iterationText = '';
-            let iterationTextPublished = false;
 
             // Add separator before starting a new iteration if the previous iteration produced text
             if (iteration > 0 && fullText && !fullText.endsWith('\n\n')) {
@@ -156,6 +155,7 @@ export function runAgentLoop({
               for await (const event of stream) {
                 if (event.type === 'text') {
                   iterationText += event.delta;
+                  onTextChunk(event.delta);
                 } else if (event.type === 'tool_call') {
                   if (pendingToolCalls.length < MAX_TOOL_CALLS_PER_ITERATION) {
                     // On last iteration, tools are disabled but model might still emit tool calls
@@ -172,29 +172,23 @@ export function runAgentLoop({
               if (!streamCompleted && iterationText.length > 0) {
                 // Preserve partial output when the provider stream is interrupted.
                 fullText += iterationText;
-                onTextChunk(iterationText);
-                iterationTextPublished = true;
               }
             }
 
             if (pendingToolCalls.length === 0 && overBudgetToolCalls.length === 0) {
               fullText += iterationText;
-              onTextChunk(iterationText);
               break;
             }
 
             if (abortSignal?.aborted) {
-              if (!iterationTextPublished && iterationText.length > 0) {
+              if (iterationText.length > 0 && streamCompleted) {
                 fullText += iterationText;
-                onTextChunk(iterationText);
               }
               break;
             }
 
             if (iterationText.length > 0) {
               fullText += iterationText;
-              onTextChunk(iterationText);
-              iterationTextPublished = true;
             }
 
             loopMessages.push({
@@ -263,11 +257,6 @@ export function runAgentLoop({
 
             for (const { toolCallId, result } of toolResults) {
               loopMessages.push({ role: 'tool', content: result, toolCallId });
-            }
-
-            if (abortSignal?.aborted && !iterationTextPublished && iterationText.length > 0) {
-              fullText += iterationText;
-              onTextChunk(iterationText);
             }
           }
 
