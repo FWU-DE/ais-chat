@@ -48,7 +48,7 @@ export function CommunityTemplateRequest({
         </div>
         <div className="flex flex-row gap-4">
           {canResubmit && (
-            <Button onClick={handleResubmit} disabled={isResubmitting}>
+            <Button type="button" onClick={handleResubmit} disabled={isResubmitting}>
               <PaperPlaneRightIcon />
               {t('actions.resubmit')}
             </Button>
@@ -56,7 +56,7 @@ export function CommunityTemplateRequest({
           <CommunityTemplateMessageDialog
             onSendMessage={onSendMessage}
             trigger={
-              <Button>
+              <Button type="button">
                 <ChatTextIcon />
                 {t('actions.message-editor')}
               </Button>
