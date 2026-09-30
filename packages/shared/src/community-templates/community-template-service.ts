@@ -9,9 +9,18 @@ import {
   CommunityTemplateRequestSelectModel,
   templateRequestStatusSchema,
 } from '@shared/db/schema';
-import { checkParameterUUID, ForbiddenError, NotFoundError } from '@shared/error';
+import {
+  checkParameterUUID,
+  ForbiddenError,
+  InvalidArgumentError,
+  NotFoundError,
+} from '@shared/error';
 import { assertEntityType, EntityRef } from '@shared/entities/entity-types';
-import { createCancelEvent, createSubmitEvent } from './community-template-request-event';
+import {
+  createCancelEvent,
+  createSubmitEvent,
+  createUserMessageEvent,
+} from './community-template-request-event';
 import {
   dbGetTemplateRequestForEntity,
   dbGetTemplateRequestWithEvents,
@@ -196,4 +205,37 @@ export async function cancelCommunityTemplateRequest({
 
   const request = await dbGetTemplateRequestWithEvents(entityRef);
   return { request, entity: { ...entity, isCommunityShared: false } };
+}
+
+/**
+ * User sends a message to the editors regarding their community template request.
+ */
+export async function sendMessageToEditor({
+  entityRef,
+  user,
+  message,
+}: {
+  entityRef: EntityRef;
+  user: Pick<UserModel, 'id'>;
+  message: string;
+}): Promise<{ request: CommunityTemplateRequestWithEvents | null; entity: EntitySharingSnapshot }> {
+  const trimmedMessage = message.trim();
+  if (trimmedMessage.length === 0) {
+    throw new InvalidArgumentError('Message must not be empty');
+  }
+
+  const entity = await getEntityAndVerifySharingAccess(entityRef, user);
+
+  const existingRequest = await dbGetTemplateRequestForEntity(entityRef);
+  if (!existingRequest) {
+    throw new NotFoundError('No community template request found for this entity');
+  }
+  await verifyTemplateRequestOwnership({ templateRequest: existingRequest, user });
+
+  await dbInsertTemplateRequestEvent(
+    createUserMessageEvent(existingRequest.id, user.id, trimmedMessage),
+  );
+
+  const request = await dbGetTemplateRequestWithEvents(entityRef);
+  return { request, entity };
 }

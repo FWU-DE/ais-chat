@@ -17,6 +17,7 @@ type UseCommunityTemplateRequestOptions = {
   getRequest: () => Promise<ServerActionResult<CommunityTemplateRequestWithEvents | null>>;
   createRequest: () => Promise<CommunityTemplateRequestMutationResult>;
   cancelRequest: () => Promise<CommunityTemplateRequestMutationResult>;
+  sendMessage: (message: string) => Promise<CommunityTemplateRequestMutationResult>;
 };
 
 type UseCommunityTemplateRequestResult = {
@@ -25,6 +26,7 @@ type UseCommunityTemplateRequestResult = {
   refresh: () => Promise<void>;
   createRequest: () => Promise<CommunityTemplateRequestMutationResult>;
   cancelRequest: () => Promise<CommunityTemplateRequestMutationResult>;
+  sendMessage: (message: string) => Promise<CommunityTemplateRequestMutationResult>;
 };
 
 /**
@@ -39,6 +41,7 @@ export function useCommunityTemplateRequest({
   getRequest,
   createRequest,
   cancelRequest,
+  sendMessage,
 }: UseCommunityTemplateRequestOptions): UseCommunityTemplateRequestResult {
   const [communityTemplateRequest, setCommunityTemplateRequest] =
     useState<CommunityTemplateRequestWithEvents | null>(null);
@@ -72,6 +75,13 @@ export function useCommunityTemplateRequest({
     },
     cancelRequest: async () => {
       const result = await cancelRequest();
+      if (result.success) {
+        setCommunityTemplateRequest(result.value.request);
+      }
+      return result;
+    },
+    sendMessage: async (message: string) => {
+      const result = await sendMessage(message);
       if (result.success) {
         setCommunityTemplateRequest(result.value.request);
       }

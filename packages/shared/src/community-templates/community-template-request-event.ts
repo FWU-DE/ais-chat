@@ -14,6 +14,21 @@ export function createSubmitEvent(
   };
 }
 
+export function createUserMessageEvent(
+  templateRequestId: string,
+  userId: string,
+  message: string,
+): CommunityTemplateRequestEventInsertModel {
+  return {
+    templateRequestId,
+    createdById: userId,
+    createdByName: '',
+    createdByRole: 'user',
+    eventType: 'user_message',
+    message,
+  };
+}
+
 export function createCancelEvent(
   templateRequestId: string,
   userId: string,

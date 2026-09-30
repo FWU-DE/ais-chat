@@ -19,6 +19,7 @@ import {
   createCommunityTemplateRequest,
   getCommunityTemplateRequestWithEvents,
   getEntitySharingState,
+  sendMessageToEditor,
 } from '@shared/community-templates/community-template-service';
 import { requireAuth } from '@/auth/requireAuth';
 
@@ -51,6 +52,25 @@ export async function createCommunityTemplateRequestAction({
   )({
     entityRef: { entityType: 'learningScenario', entityId: learningScenarioId },
     user,
+  });
+}
+
+export async function sendMessageToEditorAction({
+  learningScenarioId,
+  message,
+}: {
+  learningScenarioId: string;
+  message: string;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'sendMessageToEditorAction',
+    sendMessageToEditor,
+  )({
+    entityRef: { entityType: 'learningScenario', entityId: learningScenarioId },
+    user,
+    message,
   });
 }
 

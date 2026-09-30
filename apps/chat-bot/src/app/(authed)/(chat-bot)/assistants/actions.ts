@@ -16,6 +16,7 @@ import {
   createCommunityTemplateRequest,
   getCommunityTemplateRequestWithEvents,
   getEntitySharingState,
+  sendMessageToEditor,
 } from '@shared/community-templates/community-template-service';
 import { runServerAction } from '@shared/actions/run-server-action';
 import { AssistantInsertModel } from '@shared/db/schema';
@@ -106,6 +107,25 @@ export async function createCommunityTemplateRequestAction({
   )({
     entityRef: { entityType: 'assistant', entityId: assistantId },
     user,
+  });
+}
+
+export async function sendMessageToEditorAction({
+  assistantId,
+  message,
+}: {
+  assistantId: string;
+  message: string;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'sendMessageToEditorAction',
+    sendMessageToEditor,
+  )({
+    entityRef: { entityType: 'assistant', entityId: assistantId },
+    user,
+    message,
   });
 }
 

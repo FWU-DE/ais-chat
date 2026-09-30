@@ -118,8 +118,15 @@
       "resubmit": "Erneut einreichen",
       "message-editor": "Nachricht an AIS.chat-Redaktion"
     },
+    "message-dialog": {
+      "title": "Nachricht an AIS.chat-Redaktion",
+      "message-label": "Nachricht",
+      "message-placeholder": "Nachricht",
+      "send": "Senden"
+    },
     "toasts": {
-      "resubmit-toast-error": "Die Anfrage konnte nicht erneut eingereicht werden."
+      "resubmit-toast-error": "Die Anfrage konnte nicht erneut eingereicht werden.",
+      "send-message-toast-error": "Die Nachricht konnte nicht gesendet werden."
     }
   },
   "usage-disclaimer": {

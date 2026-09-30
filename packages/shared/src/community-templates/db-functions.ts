@@ -135,7 +135,7 @@ export async function dbGetTemplateRequestWithEvents(entityRef: EntityRef) {
  */
 export async function dbInsertTemplateRequestEvent(
   event: CommunityTemplateRequestEventInsertModel,
-  tx: PgTransactionObject,
+  tx: PgTransactionObject | typeof db = db,
 ) {
   const [insertedEvent] = await tx
     .insert(CommunityTemplateRequestEventTable)

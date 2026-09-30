@@ -22,6 +22,7 @@ import {
   cancelCommunityTemplateRequest,
   createCommunityTemplateRequest,
   getEntitySharingState,
+  sendMessageToEditor,
 } from '@shared/community-templates/community-template-service';
 import { runServerAction } from '@shared/actions/run-server-action';
 
@@ -54,6 +55,25 @@ export async function createCommunityTemplateRequestAction({
   )({
     entityRef: { entityType: 'character', entityId: characterId },
     user,
+  });
+}
+
+export async function sendMessageToEditorAction({
+  characterId,
+  message,
+}: {
+  characterId: string;
+  message: string;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'sendMessageToEditorAction',
+    sendMessageToEditor,
+  )({
+    entityRef: { entityType: 'character', entityId: characterId },
+    user,
+    message,
   });
 }
 

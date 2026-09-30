@@ -40,6 +40,7 @@ import {
   linkFileToAssistantAction,
   createCommunityTemplateRequestAction,
   cancelCommunityTemplateRequestAction,
+  sendMessageToEditorAction,
   getCommunityTemplateRequestWithEventsAction,
   getAssistantSharingStateAction,
   updateAssistantSchoolSharingAction,
@@ -160,11 +161,13 @@ export function AssistantEdit({
     setCommunityTemplateRequest,
     createRequest: createCommunityTemplateRequest,
     cancelRequest: cancelCommunityTemplateRequest,
+    sendMessage: sendMessageToEditor,
   } = useCommunityTemplateRequest({
     entityId: assistant.id,
     getRequest: () => getCommunityTemplateRequestWithEventsAction({ assistantId: assistant.id }),
     createRequest: () => createCommunityTemplateRequestAction({ assistantId: assistant.id }),
     cancelRequest: () => cancelCommunityTemplateRequestAction({ assistantId: assistant.id }),
+    sendMessage: (message) => sendMessageToEditorAction({ assistantId: assistant.id, message }),
   });
   const initialValues: AssistantFormValues = {
     name: assistant.name,
@@ -508,6 +511,7 @@ export function AssistantEdit({
             <CommunityTemplateRequest
               requestWithEvents={communityTemplateRequest}
               onResubmit={createCommunityTemplateRequest}
+              onSendMessage={sendMessageToEditor}
             />
           )}
           <FilterSelectSection

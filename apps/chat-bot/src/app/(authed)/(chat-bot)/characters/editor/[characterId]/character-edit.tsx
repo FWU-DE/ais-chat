@@ -26,6 +26,7 @@ import {
   linkFileToCharacterAction,
   createCommunityTemplateRequestAction,
   cancelCommunityTemplateRequestAction,
+  sendMessageToEditorAction,
   getCommunityTemplateRequestWithEventsAction,
   getCharacterSharingStateAction,
   shareCharacterAction,
@@ -162,11 +163,13 @@ export function CharacterEdit({
     setCommunityTemplateRequest,
     createRequest: createCommunityTemplateRequest,
     cancelRequest: cancelCommunityTemplateRequest,
+    sendMessage: sendMessageToEditor,
   } = useCommunityTemplateRequest({
     entityId: character.id,
     getRequest: () => getCommunityTemplateRequestWithEventsAction({ characterId: character.id }),
     createRequest: () => createCommunityTemplateRequestAction({ characterId: character.id }),
     cancelRequest: () => cancelCommunityTemplateRequestAction({ characterId: character.id }),
+    sendMessage: (message) => sendMessageToEditorAction({ characterId: character.id, message }),
   });
 
   const { models, defaultModel } = useLlmModels();
@@ -591,6 +594,7 @@ export function CharacterEdit({
             <CommunityTemplateRequest
               requestWithEvents={communityTemplateRequest}
               onResubmit={createCommunityTemplateRequest}
+              onSendMessage={sendMessageToEditor}
             />
           )}
           <FilterSelectSection

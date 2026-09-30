@@ -10,19 +10,24 @@ import { Button } from '@ui/components/button';
 import { ChatTextIcon, PaperPlaneRightIcon } from '@phosphor-icons/react';
 import { useToast } from '@/components/common/toast';
 import { useState } from 'react';
+import { CommunityTemplateMessageDialog } from './community-template-message-dialog';
 
 type CommunityTemplateRequestProps = {
   requestWithEvents: CommunityTemplateRequestWithEvents;
   onResubmit: () => Promise<CommunityTemplateRequestMutationResult>;
+  onSendMessage: (message: string) => Promise<CommunityTemplateRequestMutationResult>;
 };
 
 export function CommunityTemplateRequest({
   requestWithEvents,
   onResubmit,
+  onSendMessage,
 }: CommunityTemplateRequestProps) {
   const t = useTranslations('community-sharing');
   const toast = useToast();
   const [isResubmitting, setIsResubmitting] = useState(false);
+  const canResubmit =
+    requestWithEvents.state === 'rejected' || requestWithEvents.state === 'cancelled';
 
   async function handleResubmit() {
     setIsResubmitting(true);
@@ -41,15 +46,22 @@ export function CommunityTemplateRequest({
           <span className="text-base font-medium">{t('title')}</span>
           <Chip>{t(`status.${requestWithEvents.state}`)}</Chip>
         </div>
-        <div>
-          <Button onClick={handleResubmit} disabled={isResubmitting}>
-            <PaperPlaneRightIcon />
-            {t('actions.resubmit')}
-          </Button>
-          <Button>
-            <ChatTextIcon />
-            {t('actions.message-editor')}
-          </Button>
+        <div className="flex flex-row gap-4">
+          {canResubmit && (
+            <Button onClick={handleResubmit} disabled={isResubmitting}>
+              <PaperPlaneRightIcon />
+              {t('actions.resubmit')}
+            </Button>
+          )}
+          <CommunityTemplateMessageDialog
+            onSendMessage={onSendMessage}
+            trigger={
+              <Button>
+                <ChatTextIcon />
+                {t('actions.message-editor')}
+              </Button>
+            }
+          />
         </div>
         <ul className="flex flex-col gap-6">
           {requestWithEvents.events.map((event) => (

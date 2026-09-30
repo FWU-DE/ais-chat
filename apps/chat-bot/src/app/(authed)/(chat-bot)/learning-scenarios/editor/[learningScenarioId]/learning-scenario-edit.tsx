@@ -38,6 +38,7 @@ import {
   updateLearningScenarioShareTokenPointsLimitAction,
   createCommunityTemplateRequestAction,
   cancelCommunityTemplateRequestAction,
+  sendMessageToEditorAction,
   getCommunityTemplateRequestWithEventsAction,
   getLearningScenarioSharingStateAction,
   updateLearningScenarioSchoolSharingAction,
@@ -177,6 +178,7 @@ export function LearningScenarioEdit({
     setCommunityTemplateRequest,
     createRequest: createCommunityTemplateRequest,
     cancelRequest: cancelCommunityTemplateRequest,
+    sendMessage: sendMessageToEditor,
   } = useCommunityTemplateRequest({
     entityId: learningScenario.id,
     getRequest: () =>
@@ -185,6 +187,8 @@ export function LearningScenarioEdit({
       createCommunityTemplateRequestAction({ learningScenarioId: learningScenario.id }),
     cancelRequest: () =>
       cancelCommunityTemplateRequestAction({ learningScenarioId: learningScenario.id }),
+    sendMessage: (message) =>
+      sendMessageToEditorAction({ learningScenarioId: learningScenario.id, message }),
   });
 
   const initialValues: LearningScenarioFormValues = {
@@ -617,6 +621,7 @@ export function LearningScenarioEdit({
               <CommunityTemplateRequest
                 requestWithEvents={communityTemplateRequest}
                 onResubmit={createCommunityTemplateRequest}
+                onSendMessage={sendMessageToEditor}
               />
             )}
             <FilterSelectSection
