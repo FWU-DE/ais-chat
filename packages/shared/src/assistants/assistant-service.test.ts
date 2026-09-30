@@ -1188,6 +1188,35 @@ describe('assistant-service', () => {
       expect(dbGetCommunityGpts).toHaveBeenCalledWith();
     });
 
+    it.each(['all' as const, 'school' as const])(
+      'does not duplicate school- and community-shared assistants for filter=%s',
+      async (filter) => {
+        const schoolAndCommunityAssistant = {
+          id: generateUUID(),
+          userId: generateUUID(),
+          isSchoolShared: true,
+          isCommunityShared: true,
+          isGlobal: false,
+          hasLinkAccess: false,
+          suspended: false,
+          ownerSchoolIds: user.schoolIds,
+        } as AssistantSelectModel;
+
+        (dbGetGptsByUser as MockedFunction<typeof dbGetGptsByUser>).mockResolvedValue([] as never);
+        (
+          dbGetGptsByAssociatedSchools as MockedFunction<typeof dbGetGptsByAssociatedSchools>
+        ).mockResolvedValue([schoolAndCommunityAssistant] as never);
+        (dbGetCommunityGpts as MockedFunction<typeof dbGetCommunityGpts>).mockResolvedValue([
+          schoolAndCommunityAssistant,
+        ] as never);
+        (dbGetGlobalGpts as MockedFunction<typeof dbGetGlobalGpts>).mockResolvedValue([] as never);
+
+        const result = await getAssistantsByOverviewFilter({ filter, user });
+
+        expect(result).toEqual([schoolAndCommunityAssistant]);
+      },
+    );
+
     it.each([
       { filter: 'mine' as const, expectedMock: dbGetAssistantsByUserId },
       { filter: 'official' as const, expectedMock: dbGetGlobalGpts },

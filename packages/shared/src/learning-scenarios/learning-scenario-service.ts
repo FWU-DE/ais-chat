@@ -39,6 +39,7 @@ import {
   getAvatarPictureUrl,
 } from '@shared/files/fileService';
 import { buildLearningScenarioPictureKey } from '@shared/utils/picture-key';
+import { uniqueById } from '@shared/utils/arrays';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
 import { and, eq } from 'drizzle-orm';
@@ -127,10 +128,10 @@ export async function getLearningScenariosByOverviewFilter({
         dbGetLearningScenariosByAssociatedSchools({ user }),
         dbGetCommunityLearningScenarios({ user }),
       ]);
-      learningScenarios = [
+      learningScenarios = uniqueById([
         ...schoolLearningScenarios,
         ...filterCommunitySharedByAssociatedSchool({ items: communityLearningScenarios, user }),
-      ];
+      ]);
       break;
     }
     default:

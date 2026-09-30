@@ -1450,6 +1450,30 @@ describe('learning-scenario-service', () => {
       expect(dbGetCommunityLearningScenarios).toHaveBeenCalledWith({ user });
     });
 
+    it('does not duplicate school- and community-shared scenarios for filter=school', async () => {
+      const schoolAndCommunityScenario = {
+        id: generateUUID(),
+        name: 'School and community scenario',
+        userId: generateUUID(),
+        isSchoolShared: true,
+        isCommunityShared: true,
+        hasLinkAccess: false,
+        suspended: false,
+        ownerSchoolIds: user.schoolIds,
+      } as unknown as LearningScenarioSelectModel;
+
+      vi.mocked(dbGetLearningScenariosByAssociatedSchools).mockResolvedValue([
+        schoolAndCommunityScenario,
+      ] as never);
+      vi.mocked(dbGetCommunityLearningScenarios).mockResolvedValue([
+        schoolAndCommunityScenario,
+      ] as never);
+
+      const result = await getLearningScenariosByOverviewFilter({ filter: 'school', user });
+
+      expect(result).toEqual([schoolAndCommunityScenario]);
+    });
+
     it('returns an empty list for unsupported overview filters', async () => {
       const result = await getLearningScenariosByOverviewFilter({
         filter: 'invalid' as never,

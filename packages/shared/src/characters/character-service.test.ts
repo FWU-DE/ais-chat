@@ -1381,6 +1381,27 @@ describe('character-service', () => {
       expect(dbGetCommunityCharacters).toHaveBeenCalledWith({ user });
     });
 
+    it('does not duplicate school- and community-shared characters for filter=school', async () => {
+      const schoolAndCommunityCharacter = {
+        id: generateUUID(),
+        userId: generateUUID(),
+        isSchoolShared: true,
+        isCommunityShared: true,
+        hasLinkAccess: false,
+        suspended: false,
+        ownerSchoolIds: user.schoolIds,
+      } as unknown as CharacterSelectModel;
+
+      vi.mocked(dbGetCharactersByAssociatedSchools).mockResolvedValue([
+        schoolAndCommunityCharacter,
+      ] as never);
+      vi.mocked(dbGetCommunityCharacters).mockResolvedValue([schoolAndCommunityCharacter] as never);
+
+      const result = await getCharactersByOverviewFilter({ filter: 'school', user });
+
+      expect(result).toEqual([schoolAndCommunityCharacter]);
+    });
+
     it('returns an empty list for unsupported overview filters', async () => {
       const result = await getCharactersByOverviewFilter({
         filter: 'invalid' as never,

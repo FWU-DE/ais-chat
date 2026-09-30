@@ -43,6 +43,7 @@ import {
   getAvatarPictureUrl,
 } from '@shared/files/fileService';
 import { buildCharacterPictureKey } from '@shared/utils/picture-key';
+import { uniqueById } from '@shared/utils/arrays';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
 import { generateInviteCode } from '@shared/sharing/generate-invite-code';
@@ -839,10 +840,10 @@ export async function getCharactersByOverviewFilter({
         dbGetCharactersByAssociatedSchools({ user }),
         dbGetCommunityCharacters({ user }),
       ]);
-      characters = [
+      characters = uniqueById([
         ...schoolCharacters,
         ...filterCommunitySharedByAssociatedSchool({ items: communityCharacters, user }),
-      ];
+      ]);
       break;
     }
     default:

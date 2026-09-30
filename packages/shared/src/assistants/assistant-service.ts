@@ -31,6 +31,7 @@ import {
   getAvatarPictureUrl,
 } from '@shared/files/fileService';
 import { buildAssistantPictureKey } from '@shared/utils/picture-key';
+import { uniqueById } from '@shared/utils/arrays';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
 import { copyAssistant, copyRelatedTemplateFiles } from '@shared/templates/template-service';
@@ -190,12 +191,13 @@ export async function getAssistantsByOverviewFilter({
           dbGetCommunityGpts(),
           dbGetGlobalGpts({ user }),
         ]);
-      assistants = [
+      // An assistant can match several sharing queries, e.g. school-shared and community-shared
+      assistants = uniqueById([
         ...privateAssistants,
         ...schoolAssistants,
         ...communityAssistants,
         ...globalAssistants,
-      ];
+      ]);
       break;
     }
     case 'mine':
@@ -212,10 +214,10 @@ export async function getAssistantsByOverviewFilter({
         dbGetGptsByAssociatedSchools({ user }),
         dbGetCommunityGpts(),
       ]);
-      assistants = [
+      assistants = uniqueById([
         ...schoolAssistants,
         ...filterCommunitySharedByAssociatedSchool({ items: communityAssistants, user }),
-      ];
+      ]);
       break;
     }
     default:
