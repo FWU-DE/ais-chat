@@ -382,6 +382,7 @@ export default function GenericSharedChat({
                 pendingFileMapping={pendingFileMapping}
                 activitySteps={chat.activitySteps}
                 showActivityDialog={showActivityDialog}
+                hideFileName
               />
             )}
             {/* If there is a TokenPointsExceededError or SharedChatExpiredError we show a dialog instead */}

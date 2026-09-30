@@ -35,6 +35,7 @@ export function ChatBox({
   characterName,
   status,
   showActivityDialog,
+  hideFileName,
 }: {
   assistantIcon?: ReactNode;
   children: UIMessage;
@@ -49,6 +50,7 @@ export function ChatBox({
   characterName?: string;
   status: ChatStatus;
   showActivityDialog?: boolean;
+  hideFileName?: boolean;
 }) {
   const tCommon = useTranslations('common');
   const { isAtLeast } = useBreakpoints();
@@ -132,7 +134,11 @@ export function ChatBox({
 
   const AiActivity =
     activitySteps.length > 0 && !showActivityDialog && !(isLoading && isLastNonUser) ? (
-      <AiActivityPanel steps={activitySteps} panelId={`assistant-ai-activity-${children.id}`} />
+      <AiActivityPanel
+        steps={activitySteps}
+        panelId={`assistant-ai-activity-${children.id}`}
+        hideFileName={hideFileName}
+      />
     ) : null;
 
   const margin =
@@ -162,7 +168,9 @@ export function ChatBox({
           </div>
         </button>
         {children.role === 'assistant' && <SpeechButton text={children.content} />}
-        {showActivityDialog && <AiActivityDialog steps={activitySteps} />}
+        {showActivityDialog && (
+          <AiActivityDialog steps={activitySteps} hideFileName={hideFileName} />
+        )}
       </div>
     ) : null;
 
