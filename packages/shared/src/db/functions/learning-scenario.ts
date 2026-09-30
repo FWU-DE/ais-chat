@@ -15,7 +15,6 @@ import { db } from '..';
 import { SHARE_EXTENSION_WINDOW_MS } from '@shared/sharing/const';
 import {
   fileTable,
-  AccessLevel,
   FilterGroup,
   LearningScenarioFileMapping,
   LearningScenarioOptionalShareDataModel,
@@ -162,7 +161,7 @@ export function dbGetGlobalLearningScenarios({
     )
     .where(
       and(
-        eq(learningScenarioTable.accessLevel, 'global'),
+        eq(learningScenarioTable.isGlobal, true),
         user.federalStateId
           ? eq(learningScenarioTemplateMappingTable.federalStateId, user.federalStateId)
           : undefined,
@@ -197,7 +196,7 @@ export async function dbGetLearningScenariosByAssociatedSchools({
     .leftJoin(activeShare, eq(activeShare.learningScenarioId, learningScenarioTable.id))
     .where(
       and(
-        eq(learningScenarioTable.accessLevel, 'school'),
+        eq(learningScenarioTable.isSchoolShared, true),
         arrayOverlaps(userTable.schoolIds, user.schoolIds),
         excludeDeletedLearningScenarios({ includeDeleted }),
       ),
@@ -216,7 +215,7 @@ export async function dbGetCommunityLearningScenarios({
     .leftJoin(activeShare, eq(activeShare.learningScenarioId, learningScenarioTable.id))
     .where(
       and(
-        eq(learningScenarioTable.accessLevel, 'community'),
+        eq(learningScenarioTable.isCommunityShared, true),
         excludeDeletedLearningScenarios({ includeDeleted }),
       ),
     )
@@ -235,7 +234,9 @@ export async function dbGetLearningScenariosByUser({
     .where(
       and(
         eq(learningScenarioTable.userId, user.id),
-        eq(learningScenarioTable.accessLevel, 'private'),
+        eq(learningScenarioTable.isSchoolShared, false),
+        eq(learningScenarioTable.isCommunityShared, false),
+        eq(learningScenarioTable.isGlobal, false),
         excludeDeletedLearningScenarios({ includeDeleted }),
       ),
     )
@@ -284,17 +285,19 @@ export async function dbGetAllAccessibleLearningScenarios({
         or(
           and(
             eq(learningScenarioTable.userId, user.id),
-            eq(learningScenarioTable.accessLevel, 'private'),
+            eq(learningScenarioTable.isSchoolShared, false),
+            eq(learningScenarioTable.isCommunityShared, false),
+            eq(learningScenarioTable.isGlobal, false),
           ),
           user.schoolIds.length > 0
             ? and(
-                eq(learningScenarioTable.accessLevel, 'school'),
+                eq(learningScenarioTable.isSchoolShared, true),
                 arrayOverlaps(userTable.schoolIds, user.schoolIds),
               )
             : undefined,
-          eq(learningScenarioTable.accessLevel, 'community'),
+          eq(learningScenarioTable.isCommunityShared, true),
           and(
-            eq(learningScenarioTable.accessLevel, 'global'),
+            eq(learningScenarioTable.isGlobal, true),
             eq(learningScenarioTemplateMappingTable.federalStateId, user.federalStateId),
           ),
         ),
@@ -682,7 +685,9 @@ export async function dbSetLearningScenarioSuspended({
     .update(learningScenarioTable)
     .set({
       suspended: true,
-      accessLevel: 'private',
+      isSchoolShared: false,
+      isCommunityShared: false,
+      isGlobal: false,
       hasLinkAccess: false,
     })
     .where(eq(learningScenarioTable.id, learningScenarioId))
@@ -743,16 +748,38 @@ export async function dbUpdateLearningScenarioFilterGroup({
 }
 
 /**
- * Updates the access level of a learning scenario within the given transaction.
+ * Updates whether a learning scenario is community-shared, within the given transaction.
+ * Only called from the community-template-request workflow (approve/cancel), never directly
+ * from the owner-facing update path.
  */
-export async function dbUpdateLearningScenarioAccessLevel(
+export async function dbUpdateLearningScenarioCommunityShared(
   learningScenarioId: string,
-  accessLevel: AccessLevel,
+  isCommunityShared: boolean,
   tx: PgTransactionObject,
 ): Promise<void> {
   const [updatedLearningScenario] = await tx
     .update(learningScenarioTable)
-    .set({ accessLevel })
+    .set({ isCommunityShared })
+    .where(eq(learningScenarioTable.id, learningScenarioId))
+    .returning({ id: learningScenarioTable.id });
+
+  if (!updatedLearningScenario) {
+    throw new NotFoundError('Learning scenario not found');
+  }
+}
+
+/**
+ * Forces hasLinkAccess on for a learning scenario within the given transaction (admin needs
+ * link access to review a submitted community template request).
+ */
+export async function dbUpdateLearningScenarioHasLinkAccess(
+  learningScenarioId: string,
+  hasLinkAccess: boolean,
+  tx: PgTransactionObject,
+): Promise<void> {
+  const [updatedLearningScenario] = await tx
+    .update(learningScenarioTable)
+    .set({ hasLinkAccess })
     .where(eq(learningScenarioTable.id, learningScenarioId))
     .returning({ id: learningScenarioTable.id });
 

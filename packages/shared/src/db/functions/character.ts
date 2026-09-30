@@ -31,7 +31,6 @@ import {
 } from '../schema';
 import { findStaticModelByRole } from '@shared/llm-models/llm-model-service';
 import { UserModel } from '@shared/auth/user-model';
-import { AccessLevel } from '../schema';
 import { PgTransactionObject } from '../types';
 
 type IncludeDeletedOption = {
@@ -153,7 +152,7 @@ export async function dbGetCharacters({
   const schoolCondition =
     user.schoolIds.length > 0
       ? and(
-          eq(characterTable.accessLevel, 'school'),
+          eq(characterTable.isSchoolShared, true),
           arrayOverlaps(userTable.schoolIds, user.schoolIds),
         )
       : undefined;
@@ -163,8 +162,8 @@ export async function dbGetCharacters({
       or(
         eq(characterTable.userId, user.id),
         schoolCondition,
-        eq(characterTable.accessLevel, 'community'),
-        eq(characterTable.accessLevel, 'global'),
+        eq(characterTable.isCommunityShared, true),
+        eq(characterTable.isGlobal, true),
       ),
       excludeDeletedCharacters({ includeDeleted }),
     ),
@@ -280,7 +279,9 @@ export async function dbGetCopyTemplateCharacter({
   return {
     ...character,
     id: characterId,
-    accessLevel: 'private',
+    isSchoolShared: false,
+    isCommunityShared: false,
+    isGlobal: false,
     userId: user.id,
   };
 }
@@ -321,7 +322,7 @@ export async function dbGetGlobalCharacters({
     )
     .where(
       and(
-        eq(characterTable.accessLevel, 'global'),
+        eq(characterTable.isGlobal, true),
         federalStateId
           ? eq(characterTemplateMappingTable.federalStateId, federalStateId)
           : undefined,
@@ -343,10 +344,7 @@ export async function dbGetCommunityCharacters({
   const characters = await baseCharacterWithShareQuery(activeShare)
     .leftJoin(activeShare, eq(activeShare.characterId, characterTable.id))
     .where(
-      and(
-        eq(characterTable.accessLevel, 'community'),
-        excludeDeletedCharacters({ includeDeleted }),
-      ),
+      and(eq(characterTable.isCommunityShared, true), excludeDeletedCharacters({ includeDeleted })),
     )
     .orderBy(desc(characterTable.createdAt));
 
@@ -379,7 +377,7 @@ export async function dbGetCharactersByAssociatedSchools({
     .where(
       and(
         arrayOverlaps(userTable.schoolIds, user.schoolIds),
-        eq(characterTable.accessLevel, 'school'),
+        eq(characterTable.isSchoolShared, true),
         excludeDeletedCharacters({ includeDeleted }),
       ),
     )
@@ -400,7 +398,9 @@ export async function dbGetCharactersByUser({
     .where(
       and(
         eq(characterTable.userId, user.id),
-        eq(characterTable.accessLevel, 'private'),
+        eq(characterTable.isSchoolShared, false),
+        eq(characterTable.isCommunityShared, false),
+        eq(characterTable.isGlobal, false),
         excludeDeletedCharacters({ includeDeleted }),
       ),
     )
@@ -441,16 +441,21 @@ export async function dbGetAllAccessibleCharacters({
     .where(
       and(
         or(
-          and(eq(characterTable.userId, user.id), eq(characterTable.accessLevel, 'private')),
+          and(
+            eq(characterTable.userId, user.id),
+            eq(characterTable.isSchoolShared, false),
+            eq(characterTable.isCommunityShared, false),
+            eq(characterTable.isGlobal, false),
+          ),
           user.schoolIds && user.schoolIds.length > 0
             ? and(
-                eq(characterTable.accessLevel, 'school'),
+                eq(characterTable.isSchoolShared, true),
                 arrayOverlaps(userTable.schoolIds, user.schoolIds),
               )
             : undefined,
-          eq(characterTable.accessLevel, 'community'),
+          eq(characterTable.isCommunityShared, true),
           and(
-            eq(characterTable.accessLevel, 'global'),
+            eq(characterTable.isGlobal, true),
             eq(characterTemplateMappingTable.federalStateId, federalStateId),
           ),
         ),
@@ -597,7 +602,7 @@ export async function dbGetGlobalCharacterByName({
   const [character] = await baseCharacterQuery().where(
     and(
       eq(characterTable.name, name),
-      eq(characterTable.accessLevel, 'global'),
+      eq(characterTable.isGlobal, true),
       excludeDeletedCharacters({ includeDeleted }),
     ),
   );
@@ -609,7 +614,9 @@ export async function dbSetCharacterSuspended({ characterId }: { characterId: st
     .update(characterTable)
     .set({
       suspended: true,
-      accessLevel: 'private',
+      isSchoolShared: false,
+      isCommunityShared: false,
+      isGlobal: false,
       hasLinkAccess: false,
     })
     .where(eq(characterTable.id, characterId))
@@ -804,17 +811,38 @@ export async function dbUpdateCharacterFilterGroup({
 }
 
 /**
- * Updates the access level of a character within the given transaction.
- * The `updatedAt` timestamp is bumped automatically by the column's `$onUpdateFn`.
+ * Updates whether a character is community-shared, within the given transaction.
+ * Only called from the community-template-request workflow (approve/cancel), never directly
+ * from the owner-facing update path. The `updatedAt` timestamp is bumped automatically.
  */
-export async function dbUpdateCharacterAccessLevel(
+export async function dbUpdateCharacterCommunityShared(
   characterId: string,
-  accessLevel: AccessLevel,
+  isCommunityShared: boolean,
   tx: PgTransactionObject,
 ): Promise<void> {
   const [updatedCharacter] = await tx
     .update(characterTable)
-    .set({ accessLevel })
+    .set({ isCommunityShared })
+    .where(eq(characterTable.id, characterId))
+    .returning({ id: characterTable.id });
+
+  if (!updatedCharacter) {
+    throw new NotFoundError('Character not found');
+  }
+}
+
+/**
+ * Forces hasLinkAccess on for a character within the given transaction (admin needs link
+ * access to review a submitted community template request).
+ */
+export async function dbUpdateCharacterHasLinkAccess(
+  characterId: string,
+  hasLinkAccess: boolean,
+  tx: PgTransactionObject,
+): Promise<void> {
+  const [updatedCharacter] = await tx
+    .update(characterTable)
+    .set({ hasLinkAccess })
     .where(eq(characterTable.id, characterId))
     .returning({ id: characterTable.id });
 

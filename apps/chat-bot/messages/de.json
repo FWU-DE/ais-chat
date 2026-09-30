@@ -113,6 +113,13 @@
       "reject": "Änderung erforderlich",
       "user_message": "Nachricht von mir",
       "editor_message": "Nachricht von AIS.chat-Redaktion"
+    },
+    "actions": {
+      "resubmit": "Erneut einreichen",
+      "message-editor": "Nachricht an AIS.chat-Redaktion"
+    },
+    "toasts": {
+      "resubmit-toast-error": "Die Anfrage konnte nicht erneut eingereicht werden."
     }
   },
   "usage-disclaimer": {

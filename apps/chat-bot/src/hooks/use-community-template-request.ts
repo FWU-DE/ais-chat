@@ -2,30 +2,37 @@
 
 import { useEffect, useState } from 'react';
 import { ServerActionResult } from '@shared/actions/server-action-result';
-import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
+import {
+  CommunityTemplateRequestWithEvents,
+  EntitySharingSnapshot,
+} from '@shared/community-templates/community-template-service';
 
-type CommunityTemplateRequestActionResult =
-  ServerActionResult<CommunityTemplateRequestWithEvents | null>;
+export type CommunityTemplateRequestMutationResult = ServerActionResult<{
+  request: CommunityTemplateRequestWithEvents | null;
+  entity: EntitySharingSnapshot;
+}>;
 
 type UseCommunityTemplateRequestOptions = {
   entityId: string;
-  getRequest: () => Promise<CommunityTemplateRequestActionResult>;
-  createRequest: () => Promise<CommunityTemplateRequestActionResult>;
-  cancelRequest: () => Promise<CommunityTemplateRequestActionResult>;
+  getRequest: () => Promise<ServerActionResult<CommunityTemplateRequestWithEvents | null>>;
+  createRequest: () => Promise<CommunityTemplateRequestMutationResult>;
+  cancelRequest: () => Promise<CommunityTemplateRequestMutationResult>;
 };
 
 type UseCommunityTemplateRequestResult = {
   communityTemplateRequest: CommunityTemplateRequestWithEvents | null;
+  setCommunityTemplateRequest: (request: CommunityTemplateRequestWithEvents | null) => void;
   refresh: () => Promise<void>;
-  createRequest: () => Promise<boolean>;
-  cancelRequest: () => Promise<boolean>;
+  createRequest: () => Promise<CommunityTemplateRequestMutationResult>;
+  cancelRequest: () => Promise<CommunityTemplateRequestMutationResult>;
 };
 
 /**
  * Hook for managing community template requests.
  *
- * create/cancel already return the updated request, so the
- * state is applied directly without the extra refetch round trip.
+ * create/cancel already return the updated request and entity sharing snapshot, so the
+ * state is applied directly without the extra refetch round trip. Callers read the full
+ * result to sync any other sharing-related state (e.g. form fields) on success or failure.
  */
 export function useCommunityTemplateRequest({
   entityId,
@@ -54,20 +61,21 @@ export function useCommunityTemplateRequest({
 
   return {
     communityTemplateRequest,
+    setCommunityTemplateRequest,
     refresh,
     createRequest: async () => {
       const result = await createRequest();
       if (result.success) {
-        setCommunityTemplateRequest(result.value);
+        setCommunityTemplateRequest(result.value.request);
       }
-      return result.success;
+      return result;
     },
     cancelRequest: async () => {
       const result = await cancelRequest();
       if (result.success) {
-        setCommunityTemplateRequest(result.value);
+        setCommunityTemplateRequest(result.value.request);
       }
-      return result.success;
+      return result;
     },
   };
 }

@@ -4,9 +4,9 @@ import {
   dbGetCommunityTemplateRequestWithEventsRows,
   dbGetRequestById,
   dbInsertTemplateRequestEvent,
-  dbUpdateEntityAccessLevel,
   dbUpdateInternalNote,
 } from '@shared/community-templates/community-template-db.admin';
+import { dbSetEntityCommunityShared } from '@shared/community-templates/db-functions';
 import { db } from '@shared/db';
 import {
   CommunityTemplateRequestEventSelectModel,
@@ -187,7 +187,7 @@ export async function approveRequest(
       tx,
     );
 
-    await dbUpdateEntityAccessLevel(resolveEntityReference(request), 'community', tx);
+    await dbSetEntityCommunityShared(resolveEntityReference(request), true, tx);
   });
 }
 

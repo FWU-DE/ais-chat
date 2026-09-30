@@ -384,10 +384,6 @@ export type InfoBannerUserStateInsertModel = z.infer<typeof infoBannerUserStateI
 /**
  * Schema for table character
  */
-export const accessLevelSchema = z.enum(['private', 'school', 'community', 'global']);
-export const accessLevelEnum = pgEnum('access_level', accessLevelSchema.enum);
-export type AccessLevel = z.infer<typeof accessLevelSchema>;
-
 export const webSearchScopeSchema = z.enum(['all-web', 'included-domains']);
 export const webSearchScopeEnum = pgEnum('web_search_scope', webSearchScopeSchema.enum);
 export type WebSearchScope = z.infer<typeof webSearchScopeSchema>;
@@ -571,7 +567,9 @@ export const characterTable = pgTable(
     restrictions: text('restrictions'),
     pictureId: text('picture_id'),
     initialMessage: text('initial_message'),
-    accessLevel: accessLevelEnum('access_level').notNull().default('private'),
+    isSchoolShared: boolean('is_school_shared').notNull().default(false),
+    isCommunityShared: boolean('is_community_shared').notNull().default(false),
+    isGlobal: boolean('is_global').notNull().default(false),
     hasLinkAccess: boolean('has_link_access').notNull().default(false),
     isWebSearchEnabled: boolean('is_web_search_enabled').notNull().default(false),
     webSearchScope: webSearchScopeEnum('web_search_scope').notNull().default('all-web'),
@@ -595,17 +593,14 @@ export const characterTable = pgTable(
   (table) => [index().on(table.userId)],
 );
 
-export const characterSelectSchema = createSelectSchema(characterTable)
-  // for any reason accessLevel has a different type so we have to override it here
-  .extend({
-    createdAt: z.coerce.date(),
-    updatedAt: z.coerce.date(),
-    accessLevel: accessLevelSchema,
-    filterGroup: filterGroupSchema,
-    ownerSchoolIds: z.array(z.string()),
-    webSearchScope: webSearchScopeSchema,
-    webSearchIncludedDomains: webSearchIncludedDomainsSchema,
-  });
+export const characterSelectSchema = createSelectSchema(characterTable).extend({
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  filterGroup: filterGroupSchema,
+  ownerSchoolIds: z.array(z.string()),
+  webSearchScope: webSearchScopeSchema,
+  webSearchIncludedDomains: webSearchIncludedDomainsSchema,
+});
 export const characterInsertSchema = createInsertSchema(characterTable)
   .omit({
     id: true,
@@ -613,9 +608,7 @@ export const characterInsertSchema = createInsertSchema(characterTable)
     updatedAt: true,
     suspended: true,
   })
-  // for any reason accessLevel has a different type so we have to override it here
   .extend({
-    accessLevel: accessLevelSchema,
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
@@ -627,10 +620,8 @@ export const characterUpdateSchema = createUpdateSchema(characterTable)
     updatedAt: true,
     suspended: true,
   })
-  // for any reason accessLevel has a different type so we have to override it here
   .extend({
     id: z.string(),
-    accessLevel: accessLevelSchema,
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
@@ -843,7 +834,9 @@ export const learningScenarioTable = pgTable(
       .notNull(),
     suspended: boolean('suspended').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
-    accessLevel: accessLevelEnum('access_level').notNull().default('private'),
+    isSchoolShared: boolean('is_school_shared').notNull().default(false),
+    isCommunityShared: boolean('is_community_shared').notNull().default(false),
+    isGlobal: boolean('is_global').notNull().default(false),
     originalLearningScenarioId: uuid('original_learning_scenario_id'),
     hasLinkAccess: boolean('has_link_access').notNull().default(false),
     isWebSearchEnabled: boolean('is_web_search_enabled').notNull().default(false),
@@ -856,36 +849,29 @@ export const learningScenarioTable = pgTable(
   (table) => [index().on(table.userId)],
 );
 
-export const learningScenarioSelectSchema = createSelectSchema(learningScenarioTable)
-  // for any reason accessLevel has a different type so we have to override it here
-  .extend({
-    createdAt: z.coerce.date(),
-    updatedAt: z.coerce.date(),
-    accessLevel: accessLevelSchema,
-    filterGroup: filterGroupSchema,
-    ownerSchoolIds: z.array(z.string()),
-    webSearchScope: webSearchScopeSchema,
-    webSearchIncludedDomains: webSearchIncludedDomainsSchema,
-  });
+export const learningScenarioSelectSchema = createSelectSchema(learningScenarioTable).extend({
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  filterGroup: filterGroupSchema,
+  ownerSchoolIds: z.array(z.string()),
+  webSearchScope: webSearchScopeSchema,
+  webSearchIncludedDomains: webSearchIncludedDomainsSchema,
+});
 export const learningScenarioInsertSchema = createInsertSchema(learningScenarioTable)
   .omit({
     createdAt: true,
     updatedAt: true,
     suspended: true,
   })
-  // for any reason accessLevel has a different type so we have to override it here
   .extend({
-    accessLevel: accessLevelSchema,
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
   });
 export const learningScenarioUpdateSchema = createUpdateSchema(learningScenarioTable)
   .omit({ userId: true, createdAt: true, updatedAt: true, suspended: true })
-  // for any reason accessLevel has a different type so we have to override it here
   .extend({
     id: z.string(),
-    accessLevel: accessLevelSchema,
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
@@ -1322,7 +1308,9 @@ export const assistantTable = pgTable(
       .defaultNow()
       .$onUpdateFn(() => new Date())
       .notNull(),
-    accessLevel: accessLevelEnum('access_level').notNull().default('private'),
+    isSchoolShared: boolean('is_school_shared').notNull().default(false),
+    isCommunityShared: boolean('is_community_shared').notNull().default(false),
+    isGlobal: boolean('is_global').notNull().default(false),
     hasLinkAccess: boolean('has_link_access').notNull().default(false),
     isWebSearchEnabled: boolean('is_web_search_enabled').notNull().default(false),
     webSearchScope: webSearchScopeEnum('web_search_scope').notNull().default('all-web'),
@@ -1355,7 +1343,6 @@ export const assistantTable = pgTable(
 export const assistantSelectSchema = createSelectSchema(assistantTable).extend({
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
-  accessLevel: accessLevelSchema,
   filterGroup: filterGroupSchema,
   ownerSchoolIds: z.array(z.string()),
   webSearchScope: webSearchScopeSchema,
@@ -1364,7 +1351,6 @@ export const assistantSelectSchema = createSelectSchema(assistantTable).extend({
 export const assistantInsertSchema = createInsertSchema(assistantTable)
   .omit({ id: true, createdAt: true, updatedAt: true, suspended: true })
   .extend({
-    accessLevel: accessLevelSchema,
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
@@ -1378,8 +1364,6 @@ export const assistantUpdateSchema = createUpdateSchema(assistantTable)
   })
   .extend({
     id: z.string(),
-    // for any reason accessLevel has a different type so we have to override it here
-    accessLevel: accessLevelSchema.optional(),
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),

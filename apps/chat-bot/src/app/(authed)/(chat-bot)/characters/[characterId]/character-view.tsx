@@ -158,7 +158,7 @@ export function CharacterView({
           </CardContent>
         </Card>
 
-        {character.accessLevel === 'global' && (
+        {character.isGlobal && (
           <CustomChatAuthorInfo
             authorLabel={t('author-label')}
             authorText={character.author !== '' ? character.author : t('author-text')}
@@ -194,7 +194,7 @@ export function CharacterView({
       </div>
       {isWebSearchAvailable && <CustomChatWebSearchView {...character} />}
 
-      {(character.hasLinkAccess || character.accessLevel === 'community') && (
+      {(character.hasLinkAccess || character.isCommunityShared) && (
         <CustomChatCreateSuspensionRequestButton
           entityRef={{ entityType: 'character', entityId: character.id }}
         />

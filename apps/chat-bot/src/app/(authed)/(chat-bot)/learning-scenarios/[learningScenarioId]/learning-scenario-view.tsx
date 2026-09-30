@@ -179,7 +179,7 @@ export function LearningScenarioView({
           </CardContent>
         </Card>
 
-        {learningScenario.accessLevel === 'global' && (
+        {learningScenario.isGlobal && (
           <CustomChatAuthorInfo
             authorLabel={t('author-label')}
             authorText={learningScenario.author !== '' ? learningScenario.author : t('author-text')}
@@ -217,7 +217,7 @@ export function LearningScenarioView({
       />
       {isWebSearchAvailable && <CustomChatWebSearchView {...learningScenario} />}
 
-      {(learningScenario.hasLinkAccess || learningScenario.accessLevel === 'community') && (
+      {(learningScenario.hasLinkAccess || learningScenario.isCommunityShared) && (
         <CustomChatCreateSuspensionRequestButton
           entityRef={{ entityType: 'learningScenario', entityId: learningScenario.id }}
         />

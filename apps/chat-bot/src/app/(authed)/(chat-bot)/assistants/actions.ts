@@ -8,11 +8,17 @@ import {
   linkFileToAssistant,
   deleteAssistant,
   updateAssistant,
-  updateAssistantAccessLevel,
+  updateAssistantSchoolSharing,
   uploadAvatarPictureForAssistant,
 } from '@shared/assistants/assistant-service';
+import {
+  cancelCommunityTemplateRequest,
+  createCommunityTemplateRequest,
+  getCommunityTemplateRequestWithEvents,
+  getEntitySharingState,
+} from '@shared/community-templates/community-template-service';
 import { runServerAction } from '@shared/actions/run-server-action';
-import { AccessLevel, AssistantInsertModel } from '@shared/db/schema';
+import { AssistantInsertModel } from '@shared/db/schema';
 
 export async function createNewAssistantAction({
   templateId,
@@ -71,21 +77,81 @@ export async function linkFileToAssistantAction({
   });
 }
 
-export async function updateAssistantAccessLevelAction({
+export async function getCommunityTemplateRequestWithEventsAction({
   assistantId,
-  accessLevel,
 }: {
   assistantId: string;
-  accessLevel: AccessLevel;
 }) {
   const { user } = await requireAuth();
 
   return runServerAction(
-    'updateAssistantAccessLevelAction',
-    updateAssistantAccessLevel,
+    'getCommunityTemplateRequestWithEventsAction',
+    getCommunityTemplateRequestWithEvents,
+  )({
+    entityRef: { entityType: 'assistant', entityId: assistantId },
+    user,
+  });
+}
+
+export async function createCommunityTemplateRequestAction({
+  assistantId,
+}: {
+  assistantId: string;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'createCommunityTemplateRequestAction',
+    createCommunityTemplateRequest,
+  )({
+    entityRef: { entityType: 'assistant', entityId: assistantId },
+    user,
+  });
+}
+
+export async function cancelCommunityTemplateRequestAction({
+  assistantId,
+}: {
+  assistantId: string;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'cancelCommunityTemplateRequestAction',
+    cancelCommunityTemplateRequest,
+  )({
+    entityRef: { entityType: 'assistant', entityId: assistantId },
+    user,
+  });
+}
+
+export async function getAssistantSharingStateAction({ assistantId }: { assistantId: string }) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'getAssistantSharingStateAction',
+    getEntitySharingState,
+  )({
+    entityRef: { entityType: 'assistant', entityId: assistantId },
+    user,
+  });
+}
+
+export async function updateAssistantSchoolSharingAction({
+  assistantId,
+  isSchoolShared,
+}: {
+  assistantId: string;
+  isSchoolShared: boolean;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'updateAssistantSchoolSharingAction',
+    updateAssistantSchoolSharing,
   )({
     assistantId,
-    accessLevel,
+    isSchoolShared,
     user,
   });
 }

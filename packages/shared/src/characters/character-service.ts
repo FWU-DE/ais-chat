@@ -13,7 +13,6 @@ import {
   dbGetCommunityCharacters,
   dbGetCharacters,
   dbGetCharactersByAssociatedSchools,
-  dbGetCharactersByUser,
   dbGetGlobalCharacters,
   dbGetLatestManageableCharacterShare,
   dbStopCharacterShare,
@@ -27,8 +26,6 @@ import {
   getMaxBudgetInCentByUser,
 } from '@shared/users/user-budget-service';
 import {
-  AccessLevel,
-  accessLevelSchema,
   CharacterFileMapping,
   CharacterOptionalShareDataModel,
   CharacterSelectModel,
@@ -38,7 +35,7 @@ import {
   FileModel,
   fileTable,
 } from '@shared/db/schema';
-import { checkParameterUUID, ForbiddenError, InvalidArgumentError } from '@shared/error';
+import { checkParameterUUID, InvalidArgumentError } from '@shared/error';
 import { NotFoundError } from '@shared/error/not-found-error';
 import {
   deleteAvatarPicture,
@@ -109,12 +106,7 @@ export const createNewCharacter = async ({
     });
     verifySuspensionState({ item: sourceCharacter });
 
-    const insertedCharacter = await copyCharacter(
-      templateId,
-      'private',
-      user,
-      duplicateCharacterName,
-    );
+    const insertedCharacter = await copyCharacter(templateId, false, user, duplicateCharacterName);
 
     await copyRelatedTemplateFiles('character', templateId, insertedCharacter.id);
     return insertedCharacter;
@@ -237,49 +229,43 @@ export const linkFileToCharacter = async ({
 };
 
 /**
- * User can share a character he owns with the school or community
- * or unshare it (access level = private).
- * User is not allowed to set the access level to global.
+ * User can share a character he owns with the school, or unshare it (private).
+ * Community sharing is handled separately via the community-template-request workflow;
+ * this function is not authorized to change it.
  */
-export const updateCharacterAccessLevel = async ({
+export const updateCharacterSchoolSharing = async ({
   characterId,
-  accessLevel,
+  isSchoolShared,
   user,
 }: {
   characterId: string;
-  accessLevel: AccessLevel;
+  isSchoolShared: boolean;
   user: Pick<UserModel, 'id'>;
 }) => {
   checkParameterUUID(characterId);
-  accessLevelSchema.parse(accessLevel);
-
-  if (accessLevel === 'global') {
-    throw new ForbiddenError('Not authorized to set the access level to global');
-  }
 
   const { character } = await getCharacterInfo(characterId, user.id);
   verifyWriteAccess({ item: character, user });
   verifySuspensionState({ item: character });
 
-  if (character.accessLevel === accessLevel) {
+  if (character.isSchoolShared === isSchoolShared) {
     return character;
   }
 
   const preservedUpdatedAt = getPreservedUpdatedAtForExemptedKeys({
     entity: character,
-    values: { accessLevel },
-    exemptedKeys: ['accessLevel'],
+    values: { isSchoolShared },
+    exemptedKeys: ['isSchoolShared'],
   });
 
-  // Update the access level in database
   const [updatedCharacter] = await db
     .update(characterTable)
-    .set({ accessLevel, ...(preservedUpdatedAt ? { updatedAt: preservedUpdatedAt } : {}) })
+    .set({ isSchoolShared, ...(preservedUpdatedAt ? { updatedAt: preservedUpdatedAt } : {}) })
     .where(and(eq(characterTable.id, characterId), eq(characterTable.userId, user.id)))
     .returning();
 
   if (updatedCharacter === undefined) {
-    throw new Error('Could not update the access level of the character');
+    throw new Error('Could not update the school sharing state of the character');
   }
 
   return updatedCharacter;
@@ -289,7 +275,9 @@ export const updateCharacterAccessLevel = async ({
  * Schema for updating character details that are allowed to be changed by the user.
  */
 const updateCharacterSchema = characterUpdateSchema.omit({
-  accessLevel: true,
+  isSchoolShared: true,
+  isCommunityShared: true,
+  isGlobal: true,
   isDeleted: true,
   originalCharacterId: true,
   pictureId: true,
@@ -824,35 +812,6 @@ export async function getCharacters({
  * Returns the list of available characters that the user can access
  * based on userId, schools associated with the user, federalStateId and access level.
  */
-export async function getCharacterByAccessLevel({
-  accessLevel,
-  user,
-}: {
-  accessLevel: AccessLevel;
-  user: Pick<UserModel, 'id' | 'schoolIds' | 'federalStateId'>;
-}): Promise<CharacterOptionalShareDataModel[]> {
-  let characters: CharacterOptionalShareDataModel[];
-
-  switch (accessLevel) {
-    case 'community':
-      characters = await dbGetCommunityCharacters({ user });
-      break;
-    case 'global':
-      characters = await dbGetGlobalCharacters({ user });
-      break;
-    case 'school':
-      characters = await dbGetCharactersByAssociatedSchools({ user });
-      break;
-    case 'private':
-      characters = await dbGetCharactersByUser({ user });
-      break;
-    default:
-      return [];
-  }
-
-  return filterReadableCustomChats({ items: characters, user });
-}
-
 export async function getCharactersByOverviewFilter({
   filter,
   user,
@@ -910,7 +869,7 @@ export const getCharacterInfo = async (
 
   return {
     isOwner: character?.userId === userId,
-    isPrivate: character?.accessLevel === 'private',
+    isPrivate: !character?.isSchoolShared && !character?.isCommunityShared && !character?.isGlobal,
     character,
   };
 };

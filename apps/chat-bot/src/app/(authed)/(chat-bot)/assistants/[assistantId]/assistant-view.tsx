@@ -83,7 +83,7 @@ export function AssistantView({
         </CardContent>
       </Card>
 
-      {assistant.accessLevel === 'global' && (
+      {assistant.isGlobal && (
         <CustomChatAuthorInfo
           authorLabel={t('author-label')}
           authorText={assistant.author !== '' ? assistant.author : t('author-text')}
@@ -114,7 +114,7 @@ export function AssistantView({
       />
       {isWebSearchAvailable && <CustomChatWebSearchView {...assistant} />}
 
-      {(assistant.hasLinkAccess || assistant.accessLevel === 'community') && (
+      {(assistant.hasLinkAccess || assistant.isCommunityShared) && (
         <CustomChatCreateSuspensionRequestButton
           entityRef={{ entityType: 'assistant', entityId: assistant.id }}
         />

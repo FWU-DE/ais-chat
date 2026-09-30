@@ -149,7 +149,7 @@ describe('template-service', () => {
 
       const result = await copyAssistant(
         originalId,
-        'private',
+        false,
         { id: 'user-1' },
         'Duplicated assistant',
       );
@@ -159,7 +159,9 @@ describe('template-service', () => {
         assistant: expect.objectContaining({
           name: 'Duplicated assistant',
           originalAssistantId: originalId,
-          accessLevel: 'private',
+          isSchoolShared: false,
+          isCommunityShared: false,
+          isGlobal: false,
           userId: 'user-1',
           isDeleted: false,
           hasLinkAccess: false,
@@ -181,7 +183,7 @@ describe('template-service', () => {
         id: 'assistant-copy',
       } as never);
 
-      await copyAssistant('assistant-origin', 'global', { id: 'user-1' });
+      await copyAssistant('assistant-origin', true, { id: 'user-1' });
 
       const call = (dbUpsertAssistant as MockedFunction<typeof dbUpsertAssistant>).mock
         .calls[0]?.[0];
@@ -206,12 +208,14 @@ describe('template-service', () => {
         upsertedAssistant as never,
       );
 
-      await copyAssistant('assistant-origin', 'global', { id: 'user-1' });
+      await copyAssistant('assistant-origin', true, { id: 'user-1' });
 
       expect(dbUpsertAssistant).toHaveBeenCalledWith({
         assistant: expect.objectContaining({
           name: 'Source assistant name',
-          accessLevel: 'global',
+          isSchoolShared: false,
+          isCommunityShared: false,
+          isGlobal: true,
         }),
       });
     });
@@ -221,7 +225,7 @@ describe('template-service', () => {
         undefined as never,
       );
 
-      await expect(copyAssistant('missing-id', 'private', { id: 'user-1' })).rejects.toThrow(
+      await expect(copyAssistant('missing-id', false, { id: 'user-1' })).rejects.toThrow(
         'Assistent nicht gefunden',
       );
     });
@@ -235,7 +239,7 @@ describe('template-service', () => {
         {} as never,
       );
 
-      await expect(copyAssistant('assistant-origin', 'private', { id: 'user-1' })).rejects.toThrow(
+      await expect(copyAssistant('assistant-origin', false, { id: 'user-1' })).rejects.toThrow(
         'Fehler beim Erstellen des Assistenten',
       );
     });
@@ -261,7 +265,7 @@ describe('template-service', () => {
 
       const result = await copyCharacter(
         originalId,
-        'private',
+        false,
         { id: 'user-1' },
         'Duplicated character',
       );
@@ -271,7 +275,9 @@ describe('template-service', () => {
         expect.objectContaining({
           name: 'Duplicated character',
           originalCharacterId: originalId,
-          accessLevel: 'private',
+          isSchoolShared: false,
+          isCommunityShared: false,
+          isGlobal: false,
           userId: 'user-1',
           isDeleted: false,
           hasLinkAccess: false,
@@ -293,7 +299,7 @@ describe('template-service', () => {
         { id: 'character-copy' },
       ] as never);
 
-      await copyCharacter('character-origin', 'global', { id: 'user-1' });
+      await copyCharacter('character-origin', true, { id: 'user-1' });
 
       const call = (dbCreateCharacter as MockedFunction<typeof dbCreateCharacter>).mock
         .calls[0]?.[0];
@@ -318,12 +324,14 @@ describe('template-service', () => {
         createdCharacter,
       ] as never);
 
-      await copyCharacter('character-origin', 'global', { id: 'user-1' });
+      await copyCharacter('character-origin', true, { id: 'user-1' });
 
       expect(dbCreateCharacter).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'Source character name',
-          accessLevel: 'global',
+          isSchoolShared: false,
+          isCommunityShared: false,
+          isGlobal: true,
         }),
       );
     });
@@ -343,7 +351,7 @@ describe('template-service', () => {
         createdCharacter,
       ] as never);
 
-      await copyCharacter('character-origin', 'private', { id: 'user-1' }, longName);
+      await copyCharacter('character-origin', false, { id: 'user-1' }, longName);
 
       expect(dbCreateCharacter).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -357,7 +365,7 @@ describe('template-service', () => {
         undefined as never,
       );
 
-      await expect(copyCharacter('missing-id', 'private', { id: 'user-1' })).rejects.toThrow(
+      await expect(copyCharacter('missing-id', false, { id: 'user-1' })).rejects.toThrow(
         'Dialogpartner nicht gefunden',
       );
     });
@@ -371,7 +379,7 @@ describe('template-service', () => {
         [] as never,
       );
 
-      await expect(copyCharacter('character-origin', 'private', { id: 'user-1' })).rejects.toThrow(
+      await expect(copyCharacter('character-origin', false, { id: 'user-1' })).rejects.toThrow(
         'Fehler beim Erstellen des Dialogpartners',
       );
     });
@@ -463,7 +471,9 @@ describe('template-service', () => {
         name: 'Original name',
         modelId: generateUUID(),
         userId: generateUUID(),
-        accessLevel: 'private',
+        isSchoolShared: false,
+        isCommunityShared: false,
+        isGlobal: false,
         pictureId: `shared-chats/${originalId}/avatar_abc123`,
       } as never);
       mockDbReturning.mockResolvedValue([{ id: generateUUID() }]);
