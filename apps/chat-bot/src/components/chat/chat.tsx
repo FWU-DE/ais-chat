@@ -262,7 +262,7 @@ export default function Chat({
   }
 
   async function generateSpeech(text: string): Promise<Blob> {
-    const response = await fetch('/api/v1/tts', {
+    const response = await fetch('/api/v1/speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),

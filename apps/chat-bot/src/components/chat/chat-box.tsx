@@ -172,13 +172,11 @@ export function ChatBox({
         >
           <ReloadIcon className="size-5 text-primary" />
         </Button>
-        {children.role === 'assistant' && (
-          <SpeechButton
-            text={children.content}
-            generateSpeechFn={generateSpeechFn}
-            isSpeechModelEnabled={isSpeechModelEnabled}
-          />
-        )}
+        <SpeechButton
+          text={children.content}
+          generateSpeechFn={generateSpeechFn}
+          isSpeechModelEnabled={isSpeechModelEnabled}
+        />
         {showActivityDialog && <AiActivityDialog steps={activitySteps} />}
       </div>
     ) : null;
