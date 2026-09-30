@@ -81,16 +81,8 @@ function getActivitySteps(
   const stepsByToolCallId = new Map<string, AiActivityToolStep>();
 
   for (const message of messages) {
-    if (
-      message.role === 'assistant' &&
-      (message.toolCalls?.length ||
-        (message.reasoningSummary !== null && message.reasoningSummary !== undefined))
-    ) {
-      if (steps.length === 0) {
-        steps.push({ kind: 'analysis' });
-      }
-
-      for (const toolCall of message.toolCalls ?? []) {
+    if (message.role === 'assistant' && message.toolCalls?.length) {
+      for (const toolCall of message.toolCalls) {
         const step = createActivityStep(toolCall);
         if (step === undefined) {
           continue;
@@ -115,7 +107,11 @@ function getActivitySteps(
       continue;
     }
 
-    if (message.role === 'assistant' && steps.length > 0) {
+    if (
+      message.role === 'assistant' &&
+      (steps.length > 0 ||
+        (message.reasoningSummary !== null && message.reasoningSummary !== undefined))
+    ) {
       if (message.reasoningSummary !== null && message.reasoningSummary !== undefined) {
         steps.push({ kind: 'analysis-summary', content: message.reasoningSummary });
       }

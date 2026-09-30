@@ -178,10 +178,6 @@ export function constructGoogleAnthropicAgenticStreamFn(model: AiModel): Agentic
           hasStreamedTextDeltas = true;
           streamedText += event.delta.text;
           yield { type: 'text', delta: event.delta.text };
-        } else if (event.type === 'content_block_delta' && event.delta.type === 'thinking_delta') {
-          if (typeof event.delta.thinking === 'string' && event.delta.thinking.length > 0) {
-            yield { type: 'reasoning_summary', delta: event.delta.thinking };
-          }
         } else if (event.type === 'message_start') {
           streamedUsage = buildTokenUsage(event.message.usage);
         } else if (event.type === 'message_delta') {

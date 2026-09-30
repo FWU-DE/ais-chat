@@ -149,13 +149,21 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
 }
 
 export function ActivityStepList({ steps }: { steps: AiActivityStep[] }) {
+  // Since the raw reasoning is never shown in the step 'analysis' and also not saved in the DB
+  // it should not be displayed in the ai activity panel does not make sense, only the summary step should be shown, if summary exists
+  const displaySteps = steps.filter((step) => step.kind !== 'analysis');
+
+  if (displaySteps.length === 0) {
+    return null;
+  }
+
   return (
     <ul className="flex flex-col">
-      {steps.map((step, index) => (
+      {displaySteps.map((step, index) => (
         <ActivityStep
           key={step.kind === 'tool' ? step.id : `${step.kind}-${index}`}
           step={step}
-          isLast={index === steps.length - 1}
+          isLast={index === displaySteps.length - 1}
         />
       ))}
     </ul>
@@ -165,7 +173,7 @@ export function ActivityStepList({ steps }: { steps: AiActivityStep[] }) {
 export function AiActivityDialog({ steps }: { steps: AiActivityStep[] }) {
   const t = useTranslations('ai-activity');
 
-  if (steps.length === 0) {
+  if (steps.every((step) => step.kind === 'analysis')) {
     return null;
   }
 
@@ -198,7 +206,7 @@ export function AiActivityPanel({ steps, panelId }: { steps: AiActivityStep[]; p
   const t = useTranslations('ai-activity');
   const [isOpen, setIsOpen] = useState(false);
 
-  if (steps.length === 0) {
+  if (steps.every((step) => step.kind === 'analysis')) {
     return null;
   }
 
