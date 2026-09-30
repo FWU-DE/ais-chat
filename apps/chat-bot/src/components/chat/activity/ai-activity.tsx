@@ -69,8 +69,16 @@ function StepIcon({ step }: { step: AiActivityStep }) {
   return <ToolIcon className="size-4" />;
 }
 
-function StepDetail({ step }: { step: Extract<AiActivityStep, { kind: 'tool' }> }) {
-  const visibleDetail = truncate(step.detail);
+function StepDetail({
+  step,
+  hideFileName,
+}: {
+  step: Extract<AiActivityStep, { kind: 'tool' }>;
+  hideFileName?: boolean;
+}) {
+  const visibleDetail = truncate(
+    hideFileName && step.tool === 'retrieve_entire_file' ? undefined : step.detail,
+  );
 
   return visibleDetail === undefined || visibleDetail.length === 0 ? null : (
     <span title={step.detail} className="min-w-0 truncate text-sm text-black/50">
@@ -79,7 +87,15 @@ function StepDetail({ step }: { step: Extract<AiActivityStep, { kind: 'tool' }> 
   );
 }
 
-function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean }) {
+function ActivityStep({
+  step,
+  isLast,
+  hideFileName,
+}: {
+  step: AiActivityStep;
+  isLast: boolean;
+  hideFileName?: boolean;
+}) {
   const t = useTranslations('ai-activity');
   const links = step.kind === 'tool' ? (step.links ?? []) : [];
 
@@ -95,7 +111,7 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
       <div className={cn('flex min-w-0 flex-1 flex-col gap-2 pt-1', isLast ? 'pb-0' : 'pb-4')}>
         <div className="flex flex-wrap items-baseline gap-2">
           <span className="text-sm font-medium text-black">{getAiActivityStepTitle(step, t)}</span>
-          {step.kind === 'tool' && <StepDetail step={step} />}
+          {step.kind === 'tool' && <StepDetail step={step} hideFileName={hideFileName} />}
         </div>
 
         {links.length > 0 && (
@@ -124,7 +140,13 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
   );
 }
 
-export function ActivityStepList({ steps }: { steps: AiActivityStep[] }) {
+export function ActivityStepList({
+  steps,
+  hideFileName = false,
+}: {
+  steps: AiActivityStep[];
+  hideFileName?: boolean;
+}) {
   return (
     <ul className="flex flex-col">
       {steps.map((step, index) => (
@@ -132,13 +154,20 @@ export function ActivityStepList({ steps }: { steps: AiActivityStep[] }) {
           key={step.kind === 'tool' ? step.id : `${step.kind}-${index}`}
           step={step}
           isLast={index === steps.length - 1}
+          hideFileName={hideFileName}
         />
       ))}
     </ul>
   );
 }
 
-export function AiActivityDialog({ steps }: { steps: AiActivityStep[] }) {
+export function AiActivityDialog({
+  steps,
+  hideFileName = false,
+}: {
+  steps: AiActivityStep[];
+  hideFileName?: boolean;
+}) {
   const t = useTranslations('ai-activity');
 
   if (steps.length === 0) {
@@ -163,14 +192,22 @@ export function AiActivityDialog({ steps }: { steps: AiActivityStep[] }) {
           <DialogTitle>{t('title')}</DialogTitle>
         </DialogHeader>
         <div className="min-h-0 overflow-y-auto">
-          <ActivityStepList steps={steps} />
+          <ActivityStepList steps={steps} hideFileName={hideFileName} />
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-export function AiActivityPanel({ steps, panelId }: { steps: AiActivityStep[]; panelId: string }) {
+export function AiActivityPanel({
+  steps,
+  panelId,
+  hideFileName = false,
+}: {
+  steps: AiActivityStep[];
+  panelId: string;
+  hideFileName?: boolean;
+}) {
   const t = useTranslations('ai-activity');
   const [isOpen, setIsOpen] = useState(false);
 
@@ -200,7 +237,7 @@ export function AiActivityPanel({ steps, panelId }: { steps: AiActivityStep[]; p
           id={panelId}
           className="w-full overflow-hidden rounded-xl border border-border bg-white p-4"
         >
-          <ActivityStepList steps={steps} />
+          <ActivityStepList steps={steps} hideFileName={hideFileName} />
         </div>
       )}
     </div>
