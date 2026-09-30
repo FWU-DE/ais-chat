@@ -1,5 +1,8 @@
 'use client';
 
+import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
+import { truncate } from '@/utils/chat/ai-activity';
+import { cn } from '@/utils/tailwind';
 import {
   BooksIcon,
   CalculatorIcon,
@@ -12,8 +15,6 @@ import {
   SparkleIcon,
   type Icon,
 } from '@phosphor-icons/react';
-import { useTranslations } from 'next-intl';
-import { useState } from 'react';
 import { Button } from '@ui/components/button';
 import {
   Dialog,
@@ -22,9 +23,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@ui/components/dialog';
-import { truncate } from '@/utils/chat/ai-activity';
-import { cn } from '@/utils/tailwind';
-import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 
 const TOOL_ICONS: Record<AiActivityToolName, Icon> = {
   web_search: MagnifyingGlassIcon,
@@ -75,8 +75,16 @@ function StepIcon({ step }: { step: AiActivityStep }) {
   return <ToolIcon className="size-4" />;
 }
 
-function StepDetail({ step }: { step: Extract<AiActivityStep, { kind: 'tool' }> }) {
-  const visibleDetail = truncate(step.detail);
+function StepDetail({
+  step,
+  hideFileName,
+}: {
+  step: Extract<AiActivityStep, { kind: 'tool' }>;
+  hideFileName?: boolean;
+}) {
+  const visibleDetail = truncate(
+    hideFileName && step.tool === 'retrieve_entire_file' ? undefined : step.detail,
+  );
   const visibleResult = truncate(step.result);
   const text =
     visibleDetail === undefined
@@ -102,7 +110,15 @@ function AnalysisSummaryContent({ content }: { content: string }) {
   return <p className="whitespace-pre-wrap text-sm text-black/70">{content}</p>;
 }
 
-function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean }) {
+function ActivityStep({
+  step,
+  isLast,
+  hideFileName,
+}: {
+  step: AiActivityStep;
+  isLast: boolean;
+  hideFileName?: boolean;
+}) {
   const t = useTranslations('ai-activity');
   const links = step.kind === 'tool' ? (step.links ?? []) : [];
 
@@ -118,7 +134,7 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
       <div className={cn('flex min-w-0 flex-1 flex-col gap-2 pt-1', isLast ? 'pb-0' : 'pb-4')}>
         <div className="flex flex-wrap items-baseline gap-2">
           <span className="text-sm font-medium text-black">{getAiActivityStepTitle(step, t)}</span>
-          {step.kind === 'tool' && <StepDetail step={step} />}
+          {step.kind === 'tool' && <StepDetail step={step} hideFileName={hideFileName} />}
         </div>
 
         {step.kind === 'analysis-summary' && <AnalysisSummaryContent content={step.content} />}
@@ -148,7 +164,13 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
   );
 }
 
-export function ActivityStepList({ steps }: { steps: AiActivityStep[] }) {
+export function ActivityStepList({
+  steps,
+  hideFileName = false,
+}: {
+  steps: AiActivityStep[];
+  hideFileName?: boolean;
+}) {
   // Since the raw reasoning is never shown in the step 'analysis' and also not saved in the DB
   // it should not be displayed in the ai activity panel does not make sense, only the summary step should be shown, if summary exists
   const displaySteps = steps.filter((step) => step.kind !== 'analysis');
@@ -164,13 +186,20 @@ export function ActivityStepList({ steps }: { steps: AiActivityStep[] }) {
           key={step.kind === 'tool' ? step.id : `${step.kind}-${index}`}
           step={step}
           isLast={index === displaySteps.length - 1}
+          hideFileName={hideFileName}
         />
       ))}
     </ul>
   );
 }
 
-export function AiActivityDialog({ steps }: { steps: AiActivityStep[] }) {
+export function AiActivityDialog({
+  steps,
+  hideFileName = false,
+}: {
+  steps: AiActivityStep[];
+  hideFileName?: boolean;
+}) {
   const t = useTranslations('ai-activity');
 
   if (steps.every((step) => step.kind === 'analysis')) {
@@ -195,14 +224,22 @@ export function AiActivityDialog({ steps }: { steps: AiActivityStep[] }) {
           <DialogTitle>{t('title')}</DialogTitle>
         </DialogHeader>
         <div className="min-h-0 overflow-y-auto">
-          <ActivityStepList steps={steps} />
+          <ActivityStepList steps={steps} hideFileName={hideFileName} />
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-export function AiActivityPanel({ steps, panelId }: { steps: AiActivityStep[]; panelId: string }) {
+export function AiActivityPanel({
+  steps,
+  panelId,
+  hideFileName = false,
+}: {
+  steps: AiActivityStep[];
+  panelId: string;
+  hideFileName?: boolean;
+}) {
   const t = useTranslations('ai-activity');
   const [isOpen, setIsOpen] = useState(false);
 
@@ -232,7 +269,7 @@ export function AiActivityPanel({ steps, panelId }: { steps: AiActivityStep[]; p
           id={panelId}
           className="w-full overflow-hidden rounded-xl border border-border bg-white p-4"
         >
-          <ActivityStepList steps={steps} />
+          <ActivityStepList steps={steps} hideFileName={hideFileName} />
         </div>
       )}
     </div>

@@ -24,6 +24,7 @@ interface MessagesProps {
   showActivityDialog?: boolean;
   generateSpeechFn: (text: string) => Promise<Blob>;
   isSpeechModelEnabled: boolean;
+  hideFileName?: boolean;
 }
 
 export function Messages({
@@ -41,6 +42,7 @@ export function Messages({
   showActivityDialog = false,
   generateSpeechFn,
   isSpeechModelEnabled,
+  hideFileName = false,
 }: MessagesProps): React.JSX.Element {
   return (
     <div className={containerClassName}>
@@ -61,11 +63,16 @@ export function Messages({
           showActivityDialog={showActivityDialog}
           generateSpeechFn={generateSpeechFn}
           isSpeechModelEnabled={isSpeechModelEnabled}
+          hideFileName={hideFileName}
         />
       ))}
       {isLoading && <LoadingAnimation activitySteps={activitySteps} />}
       {isLoading && !showActivityDialog && activitySteps.length > 0 && (
-        <AiActivityPanel steps={activitySteps} panelId="live-ai-activity" />
+        <AiActivityPanel
+          steps={activitySteps}
+          panelId="live-ai-activity"
+          hideFileName={hideFileName}
+        />
       )}
     </div>
   );
