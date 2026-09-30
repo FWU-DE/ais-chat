@@ -168,7 +168,7 @@ export function ChatBox({
           type="button"
           title={tCommon('regenerate-message')}
           onClick={() => regenerateMessage()}
-          aria-label={tCommon('regenerate-message')}
+          aria-label="Reload"
           className="text-primary"
         >
           <ReloadIcon className="size-5 text-primary" />
