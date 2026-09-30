@@ -1,10 +1,12 @@
 import {
+  dbGetAllApiKeysByOrganizationId,
   dbGetAllModelMappingsForApiKey,
+  dbGetApiKeyIdsForModel,
+  dbSetApiKeysForModel,
   dbUpdateModelMappingsForApiKey,
 } from '@ais-chat/api-database';
 import { logInfo } from '@shared/logging';
 import { dbUpdateLlmModelsForAllFederalStates } from '@shared/db/functions/llm-model';
-import { syncBifrostProvidersForOrganization } from './bifrost-provider-sync-service';
 
 export async function getModelApiKeyMappings(
   organizationId: string,
@@ -27,10 +29,34 @@ export async function saveModelApiKeyMappings(
     modelIds,
   );
 
-  await syncBifrostProvidersForOrganization(organizationId);
   await dbUpdateLlmModelsForAllFederalStates();
 
   logInfo('API Key mapping was updated successfully', { projectId, apiKeyId, modelIds });
 
   return result;
+}
+
+export async function getLlmApiKeyAssignmentsData(organizationId: string, modelId: string) {
+  const [apiKeys, assignedApiKeyIds] = await Promise.all([
+    dbGetAllApiKeysByOrganizationId(organizationId),
+    dbGetApiKeyIdsForModel(organizationId, modelId),
+  ]);
+
+  return { apiKeys, assignedApiKeyIds };
+}
+
+export async function saveApiKeysForModel(
+  organizationId: string,
+  modelId: string,
+  apiKeyIds: string[],
+) {
+  await dbSetApiKeysForModel(organizationId, modelId, apiKeyIds);
+
+  await dbUpdateLlmModelsForAllFederalStates();
+
+  logInfo('Model API key assignments were updated successfully', {
+    organizationId,
+    modelId,
+    apiKeyIds,
+  });
 }
