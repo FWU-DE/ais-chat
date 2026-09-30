@@ -8,7 +8,6 @@ import { AssistantIcon } from '../chat/assistant-icon';
 import GenericSharedChat from './generic-shared-chat';
 import { reductionBreakpoint } from '@/utils/tailwind/layout';
 import { loadSharedChat } from '@/utils/shared-chat-storage';
-import { generateCharacterSpeechAction } from '@/app/api/character/actions';
 import { z } from 'zod';
 
 /**
@@ -79,6 +78,20 @@ export default function CharacterSharedChat({
     };
   }
 
+  async function generateSharedCharacterSpeech(text: string): Promise<Blob> {
+    const response = await fetch('/api/v1/shared-chat/speech', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, inviteCode }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Could not generate speech');
+    }
+
+    return response.blob();
+  }
+
   return (
     <GenericSharedChat
       headerT={t}
@@ -92,7 +105,7 @@ export default function CharacterSharedChat({
       assistantIcon={assistantIcon}
       uploadFileFn={uploadSharedCharacterFile}
       isSpeechModelEnabled={isSpeechModelEnabled}
-      generateSpeechFn={(text) => generateCharacterSpeechAction({ text, inviteCode })}
+      generateSpeechFn={generateSharedCharacterSpeech}
     />
   );
 }

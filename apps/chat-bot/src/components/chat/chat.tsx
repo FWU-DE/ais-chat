@@ -15,7 +15,6 @@ import { LocalFileState } from './send-message-form';
 import { deepCopy } from '@/utils/object';
 import { getFileExtension, isImageFile } from '@/utils/files/generic';
 import { refetchFileMapping } from '@/app/(authed)/(chat-bot)/actions';
-import { generateSpeechAction } from '@/app/api/chat/actions';
 import { InitialChatContentDisplay } from './initial-content-display';
 import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
 import { ChatInputBox } from './chat-input-box';
@@ -262,6 +261,20 @@ export default function Chat({
     });
   }
 
+  async function generateSpeech(text: string): Promise<Blob> {
+    const response = await fetch('/api/v1/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Could not generate speech');
+    }
+
+    return response.blob();
+  }
+
   let placeholderElement: ReactNode;
 
   if (character !== undefined) {
@@ -350,7 +363,7 @@ export default function Chat({
               webSourceMapping={webSourceMapping}
               activitySteps={activitySteps}
               showActivityDialog={character !== undefined}
-              generateSpeechFn={(text) => generateSpeechAction({ text })}
+              generateSpeechFn={generateSpeech}
               isSpeechModelEnabled={federalState?.featureToggles?.isSpeechModelEnabled === true}
             />
           )}

@@ -5,7 +5,6 @@ import LoadingAnimation from './loading-animation';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import type { AiActivityStep } from '@/types/ai-activity';
-import { ServerActionResult } from '@shared/actions/server-action-result';
 
 // Re-export for consumers that import from this file
 export type { ChatStatus, PendingFileModel };
@@ -23,7 +22,7 @@ interface MessagesProps {
   webSourceMapping?: Map<string, WebSource[]>;
   activitySteps?: AiActivityStep[];
   showActivityDialog?: boolean;
-  generateSpeechFn: (text: string) => Promise<ServerActionResult<{ audioBase64: string }>>;
+  generateSpeechFn: (text: string) => Promise<Blob>;
   isSpeechModelEnabled: boolean;
 }
 

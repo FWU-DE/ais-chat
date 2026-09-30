@@ -17,7 +17,6 @@ import DownloadConversationMessageButton from './download-conversation-message-b
 import { utils } from '@shared/utils';
 import DisplayFileAttachment from './display-file-attachment';
 import SpeechButton from './speech-button';
-import { ServerActionResult } from '@shared/actions/server-action-result';
 
 // Re-export for consumers
 export type { PendingFileModel };
@@ -52,7 +51,7 @@ export function ChatBox({
   characterName?: string;
   status: ChatStatus;
   showActivityDialog?: boolean;
-  generateSpeechFn: (text: string) => Promise<ServerActionResult<{ audioBase64: string }>>;
+  generateSpeechFn: (text: string) => Promise<Blob>;
   isSpeechModelEnabled: boolean;
 }) {
   const tCommon = useTranslations('common');

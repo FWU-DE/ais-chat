@@ -11,8 +11,8 @@ export async function generateSpeech({ text }: { text: string }) {
   const { wavBuffer } = await generateSpeechById({
     modelId: speechModel.id,
     text,
-    voice: 'Kore',
+    voice: 'Leda',
   });
 
-  return { audioBase64: wavBuffer.toString('base64') };
+  return { buffer: wavBuffer, contentType: 'audio/wav' };
 }

@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { LearningScenarioWithShareDataModel } from '@shared/db/schema';
 import GenericSharedChat from './generic-shared-chat';
 import { loadSharedChat } from '@/utils/shared-chat-storage';
-import { generateLearningScenarioSpeechAction } from '@/app/api/learning-scenario/actions';
 import { z } from 'zod';
 
 export default function LearningScenarioSharedChat({
@@ -63,6 +62,20 @@ export default function LearningScenarioSharedChat({
     };
   }
 
+  async function generateSharedLearningScenarioSpeech(text: string): Promise<Blob> {
+    const response = await fetch('/api/v1/shared-chat/speech', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, inviteCode }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Could not generate speech');
+    }
+
+    return response.blob();
+  }
+
   return (
     <GenericSharedChat
       headerT={t}
@@ -77,12 +90,7 @@ export default function LearningScenarioSharedChat({
       exerciseTitle={t('exercise-title')}
       uploadFileFn={uploadSharedLearningScenarioFile}
       isSpeechModelEnabled={isSpeechModelEnabled}
-      generateSpeechFn={(text) =>
-        generateLearningScenarioSpeechAction({
-          text,
-          inviteCode,
-        })
-      }
+      generateSpeechFn={generateSharedLearningScenarioSpeech}
     />
   );
 }

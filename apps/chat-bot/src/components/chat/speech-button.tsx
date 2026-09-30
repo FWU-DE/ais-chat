@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import { SpeakerHighIcon, PauseIcon } from '@phosphor-icons/react';
 import Spinner from '@/components/icons/spinner';
 import { useToast } from '@/components/common/toast';
-import { ServerActionResult } from '@shared/actions/server-action-result';
 
 export default function SpeechButton({
   text,
@@ -14,19 +13,24 @@ export default function SpeechButton({
   isSpeechModelEnabled,
 }: {
   text: string;
-  generateSpeechFn: (text: string) => Promise<ServerActionResult<{ audioBase64: string }>>;
+  generateSpeechFn: (text: string) => Promise<Blob>;
   isSpeechModelEnabled: boolean;
 }) {
   const toast = useToast();
   const tCommon = useTranslations('common');
   const [status, setStatus] = React.useState<'idle' | 'loading' | 'playing' | 'paused'>('idle');
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = React.useRef<string | null>(null);
   const cachedTextRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     return () => {
       audioRef.current?.pause();
       audioRef.current = null;
+      if (audioUrlRef.current !== null) {
+        URL.revokeObjectURL(audioUrlRef.current);
+        audioUrlRef.current = null;
+      }
     };
   }, []);
 
@@ -55,14 +59,15 @@ export default function SpeechButton({
 
     setStatus('loading');
     try {
-      const result = await generateSpeechFn(text);
-      if (!result.success) {
-        toast.error(tCommon('read-aloud-error'));
-        setStatus('idle');
-        return;
-      }
+      const blob = await generateSpeechFn(text);
 
-      const audio = new Audio(`data:audio/wav;base64,${result.value.audioBase64}`);
+      if (audioUrlRef.current !== null) {
+        URL.revokeObjectURL(audioUrlRef.current);
+      }
+      const url = URL.createObjectURL(blob);
+      audioUrlRef.current = url;
+
+      const audio = new Audio(url);
       audio.onended = () => setStatus('idle');
       audio.onerror = () => {
         toast.error(tCommon('read-aloud-error'));

@@ -30,7 +30,6 @@ import {
 } from '@/utils/shared-chat-storage';
 import { getSharedChatImageUrl } from '@/utils/shared-chat-files';
 import { cnanoid } from '@shared/random/randomService';
-import { ServerActionResult } from '@shared/actions/server-action-result';
 
 type ShareSessionInput = Parameters<typeof calculateShareSessionState>[0];
 type Translator = ReturnType<typeof useTranslations>;
@@ -92,7 +91,7 @@ export type SharedChatViewProps = {
   assistantIcon?: ReactNode;
   uploadFileFn?: (file: File, sharedSessionId: string) => Promise<{ fileId: string }>;
   isSpeechModelEnabled: boolean;
-  generateSpeechFn: (text: string) => Promise<ServerActionResult<{ audioBase64: string }>>;
+  generateSpeechFn: (text: string) => Promise<Blob>;
 };
 
 /**
