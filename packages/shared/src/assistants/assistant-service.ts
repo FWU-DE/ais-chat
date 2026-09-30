@@ -51,6 +51,7 @@ import {
   filterCommunitySharedByAssociatedSchool,
   filterReadableCustomChats,
 } from '@shared/auth/authorization-service';
+import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 
 function buildAvatarFilename(hash: string) {
   return `avatar_${hash}`;
@@ -382,6 +383,13 @@ export async function updateAssistantSchoolSharing({
     return assistant;
   }
 
+  if (!isSchoolShared) {
+    await verifyCommunitySharingInactive({
+      entityRef: { entityType: 'assistant', entityId: assistantId },
+      isCommunityShared: assistant.isCommunityShared,
+    });
+  }
+
   const preservedUpdatedAt = getPreservedUpdatedAtForExemptedKeys({
     entity: assistant,
     values: { isSchoolShared },
@@ -436,6 +444,13 @@ export async function updateAssistant({
 
   if (changedKeys.length === 0) {
     return assistant;
+  }
+
+  if (changedKeys.includes('hasLinkAccess') && !parsedValues.hasLinkAccess) {
+    await verifyCommunitySharingInactive({
+      entityRef: { entityType: 'assistant', entityId: assistantId },
+      isCommunityShared: assistant.isCommunityShared,
+    });
   }
 
   const preservedUpdatedAt = getPreservedUpdatedAtForExemptedKeys({

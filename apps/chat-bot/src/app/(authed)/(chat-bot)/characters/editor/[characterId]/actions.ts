@@ -1,6 +1,5 @@
 'use server';
 
-import { getCommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
 import { ShareWithLearnersLimitParams } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners-limit-params';
 import { requireAuth } from '@/auth/requireAuth';
 import {
@@ -25,22 +24,6 @@ import {
   sendMessageToEditor,
 } from '@shared/community-templates/community-template-service';
 import { runServerAction } from '@shared/actions/run-server-action';
-
-export async function getCommunityTemplateRequestWithEventsAction({
-  characterId,
-}: {
-  characterId: string;
-}) {
-  const { user } = await requireAuth();
-
-  return runServerAction(
-    'getCommunityTemplateRequestWithEventsAction',
-    getCommunityTemplateRequestWithEvents,
-  )({
-    entityRef: { entityType: 'character', entityId: characterId },
-    user,
-  });
-}
 
 export async function createCommunityTemplateRequestAction({
   characterId,

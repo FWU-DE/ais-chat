@@ -70,6 +70,7 @@ import {
   filterCommunitySharedByAssociatedSchool,
   filterReadableCustomChats,
 } from '@shared/auth/authorization-service';
+import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import { dbGetSharedCharacterChatUsageInCentByCharacterId } from '@shared/db/functions/token-points';
 import { sharedCharacterChatHasReachedTokenPointsLimit } from '@shared/users/usage';
 import { isShareWithinGraceWindow } from '@shared/sharing/is-share-within-grace-window';
@@ -253,6 +254,13 @@ export const updateCharacterSchoolSharing = async ({
     return character;
   }
 
+  if (!isSchoolShared) {
+    await verifyCommunitySharingInactive({
+      entityRef: { entityType: 'character', entityId: characterId },
+      isCommunityShared: character.isCommunityShared,
+    });
+  }
+
   const preservedUpdatedAt = getPreservedUpdatedAtForExemptedKeys({
     entity: character,
     values: { isSchoolShared },
@@ -310,6 +318,13 @@ export const updateCharacter = async ({
 
   if (changedKeys.length === 0) {
     return existingCharacter;
+  }
+
+  if (changedKeys.includes('hasLinkAccess') && !parsedCharacterValues.hasLinkAccess) {
+    await verifyCommunitySharingInactive({
+      entityRef: { entityType: 'character', entityId: character.id },
+      isCommunityShared: existingCharacter.isCommunityShared,
+    });
   }
 
   const preservedUpdatedAt = getPreservedUpdatedAtForExemptedKeys({

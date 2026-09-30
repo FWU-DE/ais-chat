@@ -850,3 +850,23 @@ export async function dbUpdateCharacterHasLinkAccess(
     throw new NotFoundError('Character not found');
   }
 }
+
+/**
+ * Forces isSchoolShared on for a character within the given transaction (community sharing
+ * includes school sharing).
+ */
+export async function dbUpdateCharacterSchoolShared(
+  characterId: string,
+  isSchoolShared: boolean,
+  tx: PgTransactionObject,
+): Promise<void> {
+  const [updatedCharacter] = await tx
+    .update(characterTable)
+    .set({ isSchoolShared })
+    .where(eq(characterTable.id, characterId))
+    .returning({ id: characterTable.id });
+
+  if (!updatedCharacter) {
+    throw new NotFoundError('Character not found');
+  }
+}

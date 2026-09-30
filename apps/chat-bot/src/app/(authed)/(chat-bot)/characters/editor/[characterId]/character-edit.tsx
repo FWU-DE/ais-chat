@@ -27,7 +27,6 @@ import {
   createCommunityTemplateRequestAction,
   cancelCommunityTemplateRequestAction,
   sendMessageToEditorAction,
-  getCommunityTemplateRequestWithEventsAction,
   getCharacterSharingStateAction,
   shareCharacterAction,
   unshareCharacterAction,
@@ -38,7 +37,12 @@ import {
   uploadAvatarPictureForCharacterAction,
 } from './actions';
 import { useFormAutosave } from '@/hooks/use-form-autosave';
-import { useCommunityTemplateRequest } from '@/hooks/use-community-template-request';
+import {
+  CommunitySharingState,
+  useCommunityTemplateRequest,
+} from '@/hooks/use-community-template-request';
+import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
+import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
 import { usePendingChangesGuard } from '@/hooks/use-pending-changes-guard';
 import { BackButton } from '@/components/common/back-button';
 import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
@@ -139,6 +143,7 @@ export function CharacterEdit({
   relatedFiles,
   initialLinks,
   avatarPictureUrl,
+  initialCommunityTemplateRequest,
   usedBudget,
   maxBudget,
   budgetUsedBySharedChat,
@@ -148,6 +153,7 @@ export function CharacterEdit({
   relatedFiles: FileModel[];
   initialLinks: WebSource[];
   avatarPictureUrl?: string;
+  initialCommunityTemplateRequest: CommunityTemplateRequestWithEvents | null;
   usedBudget: number;
   maxBudget: number;
   budgetUsedBySharedChat: number;
@@ -158,19 +164,6 @@ export function CharacterEdit({
   const toast = useToast();
   const t = useTranslations('characters');
   const characterFormValuesSchema = useMemo(() => createCharacterFormValuesSchema(t), [t]);
-  const {
-    communityTemplateRequest,
-    setCommunityTemplateRequest,
-    createRequest: createCommunityTemplateRequest,
-    cancelRequest: cancelCommunityTemplateRequest,
-    sendMessage: sendMessageToEditor,
-  } = useCommunityTemplateRequest({
-    entityId: character.id,
-    getRequest: () => getCommunityTemplateRequestWithEventsAction({ characterId: character.id }),
-    createRequest: () => createCommunityTemplateRequestAction({ characterId: character.id }),
-    cancelRequest: () => cancelCommunityTemplateRequestAction({ characterId: character.id }),
-    sendMessage: (message) => sendMessageToEditorAction({ characterId: character.id, message }),
-  });
 
   const { models, defaultModel } = useLlmModels();
   const maybeDefaultModelId = defaultModel?.id;
@@ -191,7 +184,10 @@ export function CharacterEdit({
     federalStates: filterValues.federalStates,
     languages: filterValues.languages,
     isSchoolShared: character.isSchoolShared,
-    isCommunityShared: character.isCommunityShared,
+    isCommunityShared: isCommunitySharingActive({
+      isCommunityShared: character.isCommunityShared,
+      requestState: initialCommunityTemplateRequest?.state,
+    }),
     hasLinkAccess: character.hasLinkAccess,
     isWebSearchEnabled: character.isWebSearchEnabled,
     webSearchScope: character.webSearchScope,
@@ -209,6 +205,36 @@ export function CharacterEdit({
     resolver: zodResolver(characterFormValuesSchema),
     defaultValues: initialValues,
     mode: 'onBlur',
+  });
+
+  const applySharingState = useCallback(
+    ({ entity, request }: CommunitySharingState) => {
+      setValue('isSchoolShared', entity.isSchoolShared, { shouldDirty: false });
+      setValue(
+        'isCommunityShared',
+        isCommunitySharingActive({
+          isCommunityShared: entity.isCommunityShared,
+          requestState: request?.state,
+        }),
+        { shouldDirty: false },
+      );
+      setValue('hasLinkAccess', entity.hasLinkAccess, { shouldDirty: false });
+    },
+    [setValue],
+  );
+
+  const {
+    communityTemplateRequest,
+    setCommunityTemplateRequest,
+    createRequest: createCommunityTemplateRequest,
+    cancelRequest: cancelCommunityTemplateRequest,
+    sendMessage: sendMessageToEditor,
+  } = useCommunityTemplateRequest({
+    initialRequest: initialCommunityTemplateRequest,
+    createRequest: () => createCommunityTemplateRequestAction({ characterId: character.id }),
+    cancelRequest: () => cancelCommunityTemplateRequestAction({ characterId: character.id }),
+    sendMessage: (message) => sendMessageToEditorAction({ characterId: character.id, message }),
+    onSharingStateChange: applySharingState,
   });
 
   const { isSaving, hasSaveError, flushAutoSave, handleAutoSave } =
@@ -346,12 +372,10 @@ export function CharacterEdit({
   const refreshSharingState = useCallback(async () => {
     const result = await getCharacterSharingStateAction({ characterId: character.id });
     if (result.success) {
-      setValue('isSchoolShared', result.value.entity.isSchoolShared, { shouldDirty: false });
-      setValue('isCommunityShared', result.value.entity.isCommunityShared, { shouldDirty: false });
-      setValue('hasLinkAccess', result.value.entity.hasLinkAccess, { shouldDirty: false });
+      applySharingState(result.value);
       setCommunityTemplateRequest(result.value.request);
     }
-  }, [character.id, setValue, setCommunityTemplateRequest]);
+  }, [character.id, applySharingState, setCommunityTemplateRequest]);
 
   const handleSharingChange = async ({ name, checked }: { name: string; checked: boolean }) => {
     if (name === 'isCommunityShared') {
@@ -364,13 +388,6 @@ export function CharacterEdit({
         toast.error(t('toasts.edit-toast-error'));
         return;
       }
-
-      // Cancelling a request that was already approved also revokes community sharing
-      // server-side; reflect that here (isSchoolShared is never touched by this flow).
-      setValue('isCommunityShared', result.value.entity.isCommunityShared, {
-        shouldDirty: false,
-      });
-      setValue('hasLinkAccess', result.value.entity.hasLinkAccess, { shouldDirty: false });
     } else if (name === 'isSchoolShared') {
       const result = await updateCharacterSchoolSharingAction({
         characterId: character.id,

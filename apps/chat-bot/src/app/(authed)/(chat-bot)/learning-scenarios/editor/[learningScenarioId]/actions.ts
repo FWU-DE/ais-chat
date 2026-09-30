@@ -17,27 +17,10 @@ import {
 import {
   cancelCommunityTemplateRequest,
   createCommunityTemplateRequest,
-  getCommunityTemplateRequestWithEvents,
   getEntitySharingState,
   sendMessageToEditor,
 } from '@shared/community-templates/community-template-service';
 import { requireAuth } from '@/auth/requireAuth';
-
-export async function getCommunityTemplateRequestWithEventsAction({
-  learningScenarioId,
-}: {
-  learningScenarioId: string;
-}) {
-  const { user } = await requireAuth();
-
-  return runServerAction(
-    'getCommunityTemplateRequestWithEventsAction',
-    getCommunityTemplateRequestWithEvents,
-  )({
-    entityRef: { entityType: 'learningScenario', entityId: learningScenarioId },
-    user,
-  });
-}
 
 export async function createCommunityTemplateRequestAction({
   learningScenarioId,

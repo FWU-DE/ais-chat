@@ -14,7 +14,6 @@ import {
 import {
   cancelCommunityTemplateRequest,
   createCommunityTemplateRequest,
-  getCommunityTemplateRequestWithEvents,
   getEntitySharingState,
   sendMessageToEditor,
 } from '@shared/community-templates/community-template-service';
@@ -74,22 +73,6 @@ export async function linkFileToAssistantAction({
   )({
     fileId,
     assistantId,
-    user,
-  });
-}
-
-export async function getCommunityTemplateRequestWithEventsAction({
-  assistantId,
-}: {
-  assistantId: string;
-}) {
-  const { user } = await requireAuth();
-
-  return runServerAction(
-    'getCommunityTemplateRequestWithEventsAction',
-    getCommunityTemplateRequestWithEvents,
-  )({
-    entityRef: { entityType: 'assistant', entityId: assistantId },
     user,
   });
 }

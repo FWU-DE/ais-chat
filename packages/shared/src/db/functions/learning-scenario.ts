@@ -787,3 +787,23 @@ export async function dbUpdateLearningScenarioHasLinkAccess(
     throw new NotFoundError('Learning scenario not found');
   }
 }
+
+/**
+ * Forces isSchoolShared on for a learning scenario within the given transaction (community
+ * sharing includes school sharing).
+ */
+export async function dbUpdateLearningScenarioSchoolShared(
+  learningScenarioId: string,
+  isSchoolShared: boolean,
+  tx: PgTransactionObject,
+): Promise<void> {
+  const [updatedLearningScenario] = await tx
+    .update(learningScenarioTable)
+    .set({ isSchoolShared })
+    .where(eq(learningScenarioTable.id, learningScenarioId))
+    .returning({ id: learningScenarioTable.id });
+
+  if (!updatedLearningScenario) {
+    throw new NotFoundError('Learning scenario not found');
+  }
+}

@@ -41,7 +41,6 @@ import {
   createCommunityTemplateRequestAction,
   cancelCommunityTemplateRequestAction,
   sendMessageToEditorAction,
-  getCommunityTemplateRequestWithEventsAction,
   getAssistantSharingStateAction,
   updateAssistantSchoolSharingAction,
   updateAssistantAction,
@@ -54,7 +53,12 @@ import { CustomChatImageUpload } from '@/components/custom-chat/custom-chat-imag
 import { usePendingChangesGuard } from '@/hooks/use-pending-changes-guard';
 import { useForceReloadOnBrowserBackButton } from '@/hooks/use-force-reload-on-browser-back-button';
 import { useFormAutosave } from '@/hooks/use-form-autosave';
-import { useCommunityTemplateRequest } from '@/hooks/use-community-template-request';
+import {
+  CommunitySharingState,
+  useCommunityTemplateRequest,
+} from '@/hooks/use-community-template-request';
+import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
+import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
 import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
 import { WebSource } from '@shared/db/types';
 import CustomShareSection from '@/components/custom-chat/custom-chat-share-section';
@@ -138,12 +142,14 @@ export function AssistantEdit({
   relatedFiles,
   initialLinks,
   avatarPictureUrl,
+  initialCommunityTemplateRequest,
   isWebSearchAvailable,
 }: {
   assistant: AssistantSelectModel;
   relatedFiles: FileModel[];
   initialLinks: WebSource[];
   avatarPictureUrl?: string;
+  initialCommunityTemplateRequest: CommunityTemplateRequestWithEvents | null;
   isWebSearchAvailable: boolean;
 }) {
   useForceReloadOnBrowserBackButton();
@@ -156,19 +162,6 @@ export function AssistantEdit({
     [t],
   );
   const filterValues = extractFilterValues(assistant);
-  const {
-    communityTemplateRequest,
-    setCommunityTemplateRequest,
-    createRequest: createCommunityTemplateRequest,
-    cancelRequest: cancelCommunityTemplateRequest,
-    sendMessage: sendMessageToEditor,
-  } = useCommunityTemplateRequest({
-    entityId: assistant.id,
-    getRequest: () => getCommunityTemplateRequestWithEventsAction({ assistantId: assistant.id }),
-    createRequest: () => createCommunityTemplateRequestAction({ assistantId: assistant.id }),
-    cancelRequest: () => cancelCommunityTemplateRequestAction({ assistantId: assistant.id }),
-    sendMessage: (message) => sendMessageToEditorAction({ assistantId: assistant.id, message }),
-  });
   const initialValues: AssistantFormValues = {
     name: assistant.name,
     description: assistant.description ?? '',
@@ -180,7 +173,10 @@ export function AssistantEdit({
     federalStates: filterValues.federalStates,
     languages: filterValues.languages,
     isSchoolShared: assistant.isSchoolShared,
-    isCommunityShared: assistant.isCommunityShared,
+    isCommunityShared: isCommunitySharingActive({
+      isCommunityShared: assistant.isCommunityShared,
+      requestState: initialCommunityTemplateRequest?.state,
+    }),
     hasLinkAccess: assistant.hasLinkAccess,
     isWebSearchEnabled: assistant.isWebSearchEnabled,
     webSearchScope: assistant.webSearchScope,
@@ -202,6 +198,36 @@ export function AssistantEdit({
     resolver: zodResolver(assistantFormValuesSchema),
     defaultValues: initialValues,
     mode: 'onBlur',
+  });
+
+  const applySharingState = useCallback(
+    ({ entity, request }: CommunitySharingState) => {
+      setValue('isSchoolShared', entity.isSchoolShared, { shouldDirty: false });
+      setValue(
+        'isCommunityShared',
+        isCommunitySharingActive({
+          isCommunityShared: entity.isCommunityShared,
+          requestState: request?.state,
+        }),
+        { shouldDirty: false },
+      );
+      setValue('hasLinkAccess', entity.hasLinkAccess, { shouldDirty: false });
+    },
+    [setValue],
+  );
+
+  const {
+    communityTemplateRequest,
+    setCommunityTemplateRequest,
+    createRequest: createCommunityTemplateRequest,
+    cancelRequest: cancelCommunityTemplateRequest,
+    sendMessage: sendMessageToEditor,
+  } = useCommunityTemplateRequest({
+    initialRequest: initialCommunityTemplateRequest,
+    createRequest: () => createCommunityTemplateRequestAction({ assistantId: assistant.id }),
+    cancelRequest: () => cancelCommunityTemplateRequestAction({ assistantId: assistant.id }),
+    sendMessage: (message) => sendMessageToEditorAction({ assistantId: assistant.id, message }),
+    onSharingStateChange: applySharingState,
   });
 
   const { isSaving, hasSaveError, flushAutoSave, handleAutoSave } =
@@ -337,12 +363,10 @@ export function AssistantEdit({
   const refreshSharingState = useCallback(async () => {
     const result = await getAssistantSharingStateAction({ assistantId: assistant.id });
     if (result.success) {
-      setValue('isSchoolShared', result.value.entity.isSchoolShared, { shouldDirty: false });
-      setValue('isCommunityShared', result.value.entity.isCommunityShared, { shouldDirty: false });
-      setValue('hasLinkAccess', result.value.entity.hasLinkAccess, { shouldDirty: false });
+      applySharingState(result.value);
       setCommunityTemplateRequest(result.value.request);
     }
-  }, [assistant.id, setValue, setCommunityTemplateRequest]);
+  }, [assistant.id, applySharingState, setCommunityTemplateRequest]);
 
   const handleSharingChange = async ({ name, checked }: { name: string; checked: boolean }) => {
     if (name === 'isCommunityShared') {
@@ -355,11 +379,6 @@ export function AssistantEdit({
         toast.error(t('toasts.edit-toast-error'));
         return;
       }
-
-      setValue('isCommunityShared', result.value.entity.isCommunityShared, {
-        shouldDirty: false,
-      });
-      setValue('hasLinkAccess', result.value.entity.hasLinkAccess, { shouldDirty: false });
     } else if (name === 'isSchoolShared') {
       const result = await updateAssistantSchoolSharingAction({
         assistantId: assistant.id,

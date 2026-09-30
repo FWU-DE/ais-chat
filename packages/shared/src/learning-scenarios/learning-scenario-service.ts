@@ -54,6 +54,7 @@ import {
   filterCommunitySharedByAssociatedSchool,
   filterReadableCustomChats,
 } from '@shared/auth/authorization-service';
+import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import { computeBlobHash } from '@ais-chat/shared-core/crypto/blob-hash';
 import { generateInviteCode } from '@shared/sharing/generate-invite-code';
 import {
@@ -246,6 +247,13 @@ export async function updateLearningScenario({
     return learningScenario;
   }
 
+  if (changedKeys.includes('hasLinkAccess') && !parsedData.hasLinkAccess) {
+    await verifyCommunitySharingInactive({
+      entityRef: { entityType: 'learningScenario', entityId: learningScenarioId },
+      isCommunityShared: learningScenario.isCommunityShared,
+    });
+  }
+
   const preservedUpdatedAt = getPreservedUpdatedAtForExemptedKeys({
     entity: learningScenario,
     values: parsedData,
@@ -288,6 +296,13 @@ export async function updateLearningScenarioSchoolSharing({
 
   if (learningScenario.isSchoolShared === isSchoolShared) {
     return learningScenario;
+  }
+
+  if (!isSchoolShared) {
+    await verifyCommunitySharingInactive({
+      entityRef: { entityType: 'learningScenario', entityId: learningScenarioId },
+      isCommunityShared: learningScenario.isCommunityShared,
+    });
   }
 
   const preservedUpdatedAt = getPreservedUpdatedAtForExemptedKeys({

@@ -1,6 +1,7 @@
 import { UserModel } from '@shared/auth/user-model';
 import { verifySuspensionState, verifyWriteAccess } from '@shared/auth/authorization-service';
 import { db } from '@shared/db';
+import { PgTransactionObject } from '@shared/db/types';
 import { dbGetAssistantById } from '@shared/db/functions/assistants';
 import { dbGetCharacterById } from '@shared/db/functions/character';
 import { dbGetLearningScenarioById } from '@shared/db/functions/learning-scenario';
@@ -28,9 +29,11 @@ import {
   dbInsertTemplateRequestEvent,
   dbSetEntityCommunityShared,
   dbSetEntityHasLinkAccess,
+  dbSetEntitySchoolShared,
   dbUpdateTemplateRequest,
   entityRefToInsertColumns,
 } from './db-functions';
+import { isCommunitySharingActive } from './community-sharing-state';
 
 export type CommunityTemplateRequestWithEvents = CommunityTemplateRequestSelectModel & {
   events: CommunityTemplateRequestEventSelectModel[];
@@ -93,6 +96,24 @@ async function verifyTemplateRequestOwnership({
 }
 
 /**
+ * Throws if community sharing is active, since it includes school and link sharing.
+ */
+export async function verifyCommunitySharingInactive({
+  entityRef,
+  isCommunityShared,
+}: {
+  entityRef: EntityRef;
+  isCommunityShared: boolean;
+}) {
+  const request = await dbGetTemplateRequestForEntity(entityRef);
+  if (isCommunitySharingActive({ isCommunityShared, requestState: request?.state })) {
+    throw new InvalidArgumentError(
+      'School and link sharing cannot be disabled while community sharing is active',
+    );
+  }
+}
+
+/**
  * Retrieves a community template request along with its associated events.
  */
 export async function getCommunityTemplateRequestWithEvents({
@@ -128,7 +149,7 @@ export async function getEntitySharingState({
 
 /**
  * Creates a new community template request or resubmits a previously cancelled/rejected one.
- * Forces hasLinkAccess on so admins reviewing the request can access the entity via link.
+ * Community sharing includes school and link sharing, so both are forced on.
  * Does not change isCommunityShared - that only happens once an admin approves the request.
  */
 export async function createCommunityTemplateRequest({
@@ -142,14 +163,21 @@ export async function createCommunityTemplateRequest({
 
   const existingRequest = await dbGetTemplateRequestForEntity(entityRef);
 
+  async function enableSchoolAndLinkSharing(tx: PgTransactionObject) {
+    if (!entity.hasLinkAccess) {
+      await dbSetEntityHasLinkAccess(entityRef, true, tx);
+    }
+    if (!entity.isSchoolShared) {
+      await dbSetEntitySchoolShared(entityRef, true, tx);
+    }
+  }
+
   if (existingRequest) {
     await verifyTemplateRequestOwnership({ templateRequest: existingRequest, user });
     await db.transaction(async (tx) => {
       await dbUpdateTemplateRequest({ id: existingRequest.id, state: 'submitted' }, tx);
       await dbInsertTemplateRequestEvent(createSubmitEvent(existingRequest.id, user.id), tx);
-      if (!entity.hasLinkAccess) {
-        await dbSetEntityHasLinkAccess(entityRef, true, tx);
-      }
+      await enableSchoolAndLinkSharing(tx);
     });
   } else {
     await db.transaction(async (tx) => {
@@ -158,14 +186,12 @@ export async function createCommunityTemplateRequest({
         tx,
       );
       await dbInsertTemplateRequestEvent(createSubmitEvent(createdRequest.id, user.id), tx);
-      if (!entity.hasLinkAccess) {
-        await dbSetEntityHasLinkAccess(entityRef, true, tx);
-      }
+      await enableSchoolAndLinkSharing(tx);
     });
   }
 
   const request = await dbGetTemplateRequestWithEvents(entityRef);
-  return { request, entity: { ...entity, hasLinkAccess: true } };
+  return { request, entity: { ...entity, isSchoolShared: true, hasLinkAccess: true } };
 }
 
 /**

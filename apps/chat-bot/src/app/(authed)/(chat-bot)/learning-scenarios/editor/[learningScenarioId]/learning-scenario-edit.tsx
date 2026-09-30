@@ -39,7 +39,6 @@ import {
   createCommunityTemplateRequestAction,
   cancelCommunityTemplateRequestAction,
   sendMessageToEditorAction,
-  getCommunityTemplateRequestWithEventsAction,
   getLearningScenarioSharingStateAction,
   updateLearningScenarioSchoolSharingAction,
   updateLearningScenarioAction,
@@ -58,7 +57,12 @@ import { CustomChatImageUpload } from '@/components/custom-chat/custom-chat-imag
 import { usePendingChangesGuard } from '@/hooks/use-pending-changes-guard';
 import { useForceReloadOnBrowserBackButton } from '@/hooks/use-force-reload-on-browser-back-button';
 import { useFormAutosave } from '@/hooks/use-form-autosave';
-import { useCommunityTemplateRequest } from '@/hooks/use-community-template-request';
+import {
+  CommunitySharingState,
+  useCommunityTemplateRequest,
+} from '@/hooks/use-community-template-request';
+import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
+import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
 import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
 import { CustomChatModelSelect } from '@/components/custom-chat/custom-chat-model-select';
 import { WebSource } from '@shared/db/types';
@@ -143,6 +147,7 @@ export function LearningScenarioEdit({
   relatedFiles,
   initialLinks,
   avatarPictureUrl,
+  initialCommunityTemplateRequest,
   usedBudget,
   maxBudget,
   budgetUsedBySharedChat,
@@ -152,6 +157,7 @@ export function LearningScenarioEdit({
   relatedFiles: FileModel[];
   initialLinks: WebSource[];
   avatarPictureUrl?: string;
+  initialCommunityTemplateRequest: CommunityTemplateRequestWithEvents | null;
   usedBudget: number;
   maxBudget: number;
   budgetUsedBySharedChat: number;
@@ -173,23 +179,6 @@ export function LearningScenarioEdit({
     learningScenario.modelId && models.some((m) => m.id === learningScenario.modelId);
   const selectedModelId = isModelAvailable ? learningScenario.modelId : maybeDefaultModelId;
   const filterValues = extractFilterValues(learningScenario);
-  const {
-    communityTemplateRequest,
-    setCommunityTemplateRequest,
-    createRequest: createCommunityTemplateRequest,
-    cancelRequest: cancelCommunityTemplateRequest,
-    sendMessage: sendMessageToEditor,
-  } = useCommunityTemplateRequest({
-    entityId: learningScenario.id,
-    getRequest: () =>
-      getCommunityTemplateRequestWithEventsAction({ learningScenarioId: learningScenario.id }),
-    createRequest: () =>
-      createCommunityTemplateRequestAction({ learningScenarioId: learningScenario.id }),
-    cancelRequest: () =>
-      cancelCommunityTemplateRequestAction({ learningScenarioId: learningScenario.id }),
-    sendMessage: (message) =>
-      sendMessageToEditorAction({ learningScenarioId: learningScenario.id, message }),
-  });
 
   const initialValues: LearningScenarioFormValues = {
     name: learningScenario.name,
@@ -204,7 +193,10 @@ export function LearningScenarioEdit({
     federalStates: filterValues.federalStates,
     languages: filterValues.languages,
     isSchoolShared: learningScenario.isSchoolShared,
-    isCommunityShared: learningScenario.isCommunityShared,
+    isCommunityShared: isCommunitySharingActive({
+      isCommunityShared: learningScenario.isCommunityShared,
+      requestState: initialCommunityTemplateRequest?.state,
+    }),
     hasLinkAccess: learningScenario.hasLinkAccess,
     isWebSearchEnabled: learningScenario.isWebSearchEnabled,
     webSearchScope: learningScenario.webSearchScope,
@@ -222,6 +214,39 @@ export function LearningScenarioEdit({
     resolver: zodResolver(learningScenarioFormValuesSchema),
     defaultValues: initialValues,
     mode: 'onBlur',
+  });
+
+  const applySharingState = useCallback(
+    ({ entity, request }: CommunitySharingState) => {
+      setValue('isSchoolShared', entity.isSchoolShared, { shouldDirty: false });
+      setValue(
+        'isCommunityShared',
+        isCommunitySharingActive({
+          isCommunityShared: entity.isCommunityShared,
+          requestState: request?.state,
+        }),
+        { shouldDirty: false },
+      );
+      setValue('hasLinkAccess', entity.hasLinkAccess, { shouldDirty: false });
+    },
+    [setValue],
+  );
+
+  const {
+    communityTemplateRequest,
+    setCommunityTemplateRequest,
+    createRequest: createCommunityTemplateRequest,
+    cancelRequest: cancelCommunityTemplateRequest,
+    sendMessage: sendMessageToEditor,
+  } = useCommunityTemplateRequest({
+    initialRequest: initialCommunityTemplateRequest,
+    createRequest: () =>
+      createCommunityTemplateRequestAction({ learningScenarioId: learningScenario.id }),
+    cancelRequest: () =>
+      cancelCommunityTemplateRequestAction({ learningScenarioId: learningScenario.id }),
+    sendMessage: (message) =>
+      sendMessageToEditorAction({ learningScenarioId: learningScenario.id, message }),
+    onSharingStateChange: applySharingState,
   });
 
   const { isSaving, hasSaveError, flushAutoSave, handleAutoSave } =
@@ -371,12 +396,10 @@ export function LearningScenarioEdit({
       learningScenarioId: learningScenario.id,
     });
     if (result.success) {
-      setValue('isSchoolShared', result.value.entity.isSchoolShared, { shouldDirty: false });
-      setValue('isCommunityShared', result.value.entity.isCommunityShared, { shouldDirty: false });
-      setValue('hasLinkAccess', result.value.entity.hasLinkAccess, { shouldDirty: false });
+      applySharingState(result.value);
       setCommunityTemplateRequest(result.value.request);
     }
-  }, [learningScenario.id, setValue, setCommunityTemplateRequest]);
+  }, [learningScenario.id, applySharingState, setCommunityTemplateRequest]);
 
   const handleSharingChange = async ({ name, checked }: { name: string; checked: boolean }) => {
     if (name === 'isCommunityShared') {
@@ -389,11 +412,6 @@ export function LearningScenarioEdit({
         toast.error(tToast('edit-toast-error'));
         return;
       }
-
-      setValue('isCommunityShared', result.value.entity.isCommunityShared, {
-        shouldDirty: false,
-      });
-      setValue('hasLinkAccess', result.value.entity.hasLinkAccess, { shouldDirty: false });
     } else if (name === 'isSchoolShared') {
       const result = await updateLearningScenarioSchoolSharingAction({
         learningScenarioId: learningScenario.id,

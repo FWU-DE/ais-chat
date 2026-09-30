@@ -396,3 +396,23 @@ export async function dbUpdateAssistantHasLinkAccess(
     throw new NotFoundError('Assistant not found');
   }
 }
+
+/**
+ * Forces isSchoolShared on for an assistant within the given transaction (community sharing
+ * includes school sharing).
+ */
+export async function dbUpdateAssistantSchoolShared(
+  assistantId: string,
+  isSchoolShared: boolean,
+  tx: PgTransactionObject,
+): Promise<void> {
+  const [updatedAssistant] = await tx
+    .update(assistantTable)
+    .set({ isSchoolShared })
+    .where(eq(assistantTable.id, assistantId))
+    .returning({ id: assistantTable.id });
+
+  if (!updatedAssistant) {
+    throw new NotFoundError('Assistant not found');
+  }
+}

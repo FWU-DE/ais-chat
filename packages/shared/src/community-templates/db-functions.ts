@@ -11,14 +11,17 @@ import { EntityRef } from '@shared/entities/entity-types';
 import {
   dbUpdateAssistantCommunityShared,
   dbUpdateAssistantHasLinkAccess,
+  dbUpdateAssistantSchoolShared,
 } from '@shared/db/functions/assistants';
 import {
   dbUpdateCharacterCommunityShared,
   dbUpdateCharacterHasLinkAccess,
+  dbUpdateCharacterSchoolShared,
 } from '@shared/db/functions/character';
 import {
   dbUpdateLearningScenarioCommunityShared,
   dbUpdateLearningScenarioHasLinkAccess,
+  dbUpdateLearningScenarioSchoolShared,
 } from '@shared/db/functions/learning-scenario';
 import { desc, eq } from 'drizzle-orm';
 
@@ -183,5 +186,25 @@ export async function dbSetEntityHasLinkAccess(
       return dbUpdateAssistantHasLinkAccess(entityRef.entityId, hasLinkAccess, tx);
     case 'learningScenario':
       return dbUpdateLearningScenarioHasLinkAccess(entityRef.entityId, hasLinkAccess, tx);
+  }
+}
+
+/**
+ * Dispatches the isSchoolShared flag update to the db function matching the entity's type.
+ * Forced to true whenever a community template request is submitted or resubmitted, since
+ * community sharing includes school sharing.
+ */
+export async function dbSetEntitySchoolShared(
+  entityRef: EntityRef,
+  isSchoolShared: boolean,
+  tx: PgTransactionObject,
+): Promise<void> {
+  switch (entityRef.entityType) {
+    case 'character':
+      return dbUpdateCharacterSchoolShared(entityRef.entityId, isSchoolShared, tx);
+    case 'assistant':
+      return dbUpdateAssistantSchoolShared(entityRef.entityId, isSchoolShared, tx);
+    case 'learningScenario':
+      return dbUpdateLearningScenarioSchoolShared(entityRef.entityId, isSchoolShared, tx);
   }
 }
