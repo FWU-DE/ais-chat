@@ -77,7 +77,7 @@ export default function CustomShareSection<T extends FieldValues>({
               label={t('school')}
               tooltip={t('school-tooltip')}
               testId="school-sharing-checkbox"
-              disabled={suspended || isCommunityShared}
+              disabled={suspended}
               onCheckedChange={(checked) => {
                 onShareChange?.({ name: schoolSharingName, checked });
               }}
@@ -121,7 +121,7 @@ export default function CustomShareSection<T extends FieldValues>({
             control={control}
             label={t('link')}
             tooltip={t('link-tooltip')}
-            disabled={suspended || isCommunityShared}
+            disabled={suspended}
             onCheckedChange={(checked) => {
               onShareChange?.({ name: linkSharingName, checked });
             }}
