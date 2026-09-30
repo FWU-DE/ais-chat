@@ -20,7 +20,6 @@ import SendMessageToAuthorDialog from './SendMessageToAuthorDialog';
 import { CheckIcon } from '@phosphor-icons/react';
 import { cn } from '@ui/lib/utils';
 import { toast } from 'sonner';
-export const dynamic = 'force-dynamic';
 
 export type CommunityTemplateRequestDetailViewProps = {
   requestId: string;
