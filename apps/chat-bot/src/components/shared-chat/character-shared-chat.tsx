@@ -15,8 +15,13 @@ import { z } from 'zod';
  */
 export default function CharacterSharedChat({
   avatarPictureUrl,
+  isSpeechModelEnabled,
   ...character
-}: CharacterWithShareDataModel & { inviteCode: string; avatarPictureUrl?: string }) {
+}: CharacterWithShareDataModel & {
+  inviteCode: string;
+  avatarPictureUrl?: string;
+  isSpeechModelEnabled: boolean;
+}) {
   const t = useTranslations('characters.shared');
   const { id, inviteCode, modelId } = character;
 
@@ -73,6 +78,20 @@ export default function CharacterSharedChat({
     };
   }
 
+  async function generateSharedCharacterSpeech(text: string): Promise<Blob> {
+    const response = await fetch('/api/v1/shared-chat/speech', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, inviteCode }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Could not generate speech');
+    }
+
+    return response.blob();
+  }
+
   return (
     <GenericSharedChat
       headerT={t}
@@ -85,6 +104,8 @@ export default function CharacterSharedChat({
       showActivityDialog
       assistantIcon={assistantIcon}
       uploadFileFn={uploadSharedCharacterFile}
+      isSpeechModelEnabled={isSpeechModelEnabled}
+      generateSpeechFn={generateSharedCharacterSpeech}
     />
   );
 }

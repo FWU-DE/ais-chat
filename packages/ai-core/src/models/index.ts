@@ -8,7 +8,7 @@ import { AiModel } from '../images/types';
 import type { AiModel as TextAiModel } from '../chat/types';
 import type { AiModel as EmbeddingAiModel } from '../embeddings/types';
 import type { AiModel as SafetyAiModel } from '../safety/types';
-import type { AiModel as SpeechAiModel } from '../tts/types';
+import type { AiModel as SpeechAiModel } from '../speech/types';
 
 export async function getImageModelById(modelId: string): Promise<AiModel> {
   const model = await dbGetModelById(modelId);

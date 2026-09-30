@@ -9,8 +9,13 @@ import { z } from 'zod';
 
 export default function LearningScenarioSharedChat({
   avatarPictureUrl,
+  isSpeechModelEnabled,
   ...sharedSchoolChat
-}: LearningScenarioWithShareDataModel & { inviteCode: string; avatarPictureUrl?: string }) {
+}: LearningScenarioWithShareDataModel & {
+  inviteCode: string;
+  avatarPictureUrl?: string;
+  isSpeechModelEnabled: boolean;
+}) {
   const t = useTranslations('learning-scenarios.shared');
   const { id, inviteCode, modelId } = sharedSchoolChat;
 
@@ -57,6 +62,20 @@ export default function LearningScenarioSharedChat({
     };
   }
 
+  async function generateSharedLearningScenarioSpeech(text: string): Promise<Blob> {
+    const response = await fetch('/api/v1/shared-chat/speech', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, inviteCode }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Could not generate speech');
+    }
+
+    return response.blob();
+  }
+
   return (
     <GenericSharedChat
       headerT={t}
@@ -70,6 +89,8 @@ export default function LearningScenarioSharedChat({
       exerciseDescription={sharedSchoolChat.studentExercise}
       exerciseTitle={t('exercise-title')}
       uploadFileFn={uploadSharedLearningScenarioFile}
+      isSpeechModelEnabled={isSpeechModelEnabled}
+      generateSpeechFn={generateSharedLearningScenarioSpeech}
     />
   );
 }

@@ -25,3 +25,12 @@ export const sharedChatImageRequestSchema = sharedChatCommonRequestSchema.extend
   width: z.coerce.number().int().positive().max(1000),
   height: z.coerce.number().int().positive().max(1000),
 });
+
+export const sharedChatSpeechRequestSchema = z.object({
+  inviteCode: requiredNonEmptyString('inviteCode is required'),
+  text: requiredNonEmptyString('text is required'),
+});
+
+export const speechRequestSchema = z.object({
+  text: requiredNonEmptyString('text is required'),
+});
