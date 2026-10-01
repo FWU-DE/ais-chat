@@ -103,14 +103,14 @@
     "status": {
       "approved": "Genehmigt",
       "cancelled": "Zurückgezogen",
-      "rejected": "Änderung erforderlich",
+      "rejected": "Überarbeitung angefordert",
       "submitted": "Eingereicht"
     },
     "event-type": {
       "approve": "Genehmigt",
       "cancel": "Zurückgezogen",
       "submit": "Eingereicht",
-      "reject": "Änderung erforderlich",
+      "reject": "Überarbeitung angefordert",
       "user_message": "Nachricht von mir",
       "editor_message": "Nachricht von AIS.chat-Redaktion"
     },
