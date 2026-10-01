@@ -7,10 +7,16 @@ import { useTranslations } from 'next-intl';
 import { Card, CardRow } from '@ui/components/card';
 import { CommunityTemplateRequestEvent } from './community-template-request-event';
 import { Button } from '@ui/components/button';
-import { ChatTextIcon, PaperPlaneRightIcon } from '@phosphor-icons/react';
+import {
+  CaretDownIcon,
+  CaretUpIcon,
+  ChatTextIcon,
+  PaperPlaneRightIcon,
+} from '@phosphor-icons/react';
 import { useToast } from '@/components/common/toast';
 import { useState } from 'react';
 import { CommunityTemplateMessageDialog } from './community-template-message-dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui/components/collapsible';
 
 type CommunityTemplateRequestProps = {
   requestWithEvents: CommunityTemplateRequestWithEvents;
@@ -26,6 +32,9 @@ export function CommunityTemplateRequest({
   const t = useTranslations('community-sharing');
   const toast = useToast();
   const [isResubmitting, setIsResubmitting] = useState(false);
+  const showRequestDetails =
+    requestWithEvents.state === 'submitted' || requestWithEvents.state === 'rejected';
+  const [isOpen, setIsOpen] = useState(showRequestDetails);
   const canResubmit = requestWithEvents.state === 'rejected';
 
   async function handleResubmit() {
@@ -39,37 +48,46 @@ export function CommunityTemplateRequest({
   }
 
   return (
-    <Card className="mt-3">
-      <CardRow className="flex flex-col">
-        <div className="flex flex-row gap-2">
-          <span className="text-base font-medium">{t('title')}</span>
-          <Chip>{t(`status.${requestWithEvents.state}`)}</Chip>
-        </div>
-        <div className="flex flex-row gap-4">
-          {canResubmit && (
-            <Button type="button" onClick={handleResubmit} disabled={isResubmitting}>
-              <PaperPlaneRightIcon />
-              {t('actions.resubmit')}
-            </Button>
-          )}
-          <CommunityTemplateMessageDialog
-            onSendMessage={onSendMessage}
-            trigger={
-              <Button type="button">
-                <ChatTextIcon />
-                {t('actions.message-editor')}
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="mt-3">
+        <CardRow className="flex flex-col gap-4">
+          <div className="flex flex-row gap-2 items-center">
+            <span className="text-base font-medium">{t('title')}</span>
+            <Chip>{t(`status.${requestWithEvents.state}`)}</Chip>
+            <CollapsibleTrigger asChild>
+              <Button className="ml-auto" variant="ghost">
+                {isOpen ? <CaretUpIcon /> : <CaretDownIcon />}
               </Button>
-            }
-          />
-        </div>
-        <ul className="flex flex-col gap-6">
-          {requestWithEvents.events.map((event) => (
-            <li key={event.id}>
-              <CommunityTemplateRequestEvent event={event} />
-            </li>
-          ))}
-        </ul>
-      </CardRow>
-    </Card>
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent className="flex flex-col gap-4">
+            <div className="flex flex-row gap-4">
+              {canResubmit && (
+                <Button type="button" onClick={handleResubmit} disabled={isResubmitting}>
+                  <PaperPlaneRightIcon />
+                  {t('actions.resubmit')}
+                </Button>
+              )}
+              <CommunityTemplateMessageDialog
+                onSendMessage={onSendMessage}
+                trigger={
+                  <Button type="button">
+                    <ChatTextIcon />
+                    {t('actions.message-editor')}
+                  </Button>
+                }
+              />
+            </div>
+            <ul className="flex flex-col gap-6">
+              {requestWithEvents.events.map((event) => (
+                <li key={event.id}>
+                  <CommunityTemplateRequestEvent event={event} />
+                </li>
+              ))}
+            </ul>
+          </CollapsibleContent>
+        </CardRow>
+      </Card>
+    </Collapsible>
   );
 }
