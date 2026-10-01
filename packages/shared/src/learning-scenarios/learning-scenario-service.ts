@@ -23,8 +23,6 @@ import {
   dbUpdateLearningScenarioShareTokenPointsLimit,
 } from '@shared/db/functions/learning-scenario';
 import {
-  AccessLevel,
-  accessLevelSchema,
   FileModel,
   fileTable,
   LearningScenarioFileMapping,
@@ -34,18 +32,14 @@ import {
   learningScenarioUpdateSchema,
   LearningScenarioWithShareDataModel,
 } from '@shared/db/schema';
-import {
-  checkParameterUUID,
-  ForbiddenError,
-  InvalidArgumentError,
-  NotFoundError,
-} from '@shared/error';
+import { checkParameterUUID, InvalidArgumentError, NotFoundError } from '@shared/error';
 import {
   deleteAvatarPicture,
   deleteMessageAttachments,
   getAvatarPictureUrl,
 } from '@shared/files/fileService';
 import { buildLearningScenarioPictureKey } from '@shared/utils/picture-key';
+import { uniqueById } from '@shared/utils/arrays';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
 import { and, eq } from 'drizzle-orm';
@@ -60,6 +54,7 @@ import {
   filterCommunitySharedByAssociatedSchool,
   filterReadableCustomChats,
 } from '@shared/auth/authorization-service';
+import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import { computeBlobHash } from '@ais-chat/shared-core/crypto/blob-hash';
 import { generateInviteCode } from '@shared/sharing/generate-invite-code';
 import {
@@ -105,39 +100,6 @@ export async function getLearningScenariosForUser({
   return enrichedScenarios;
 }
 
-/**
- * Returns the list of available learning scenarios that the user can access
- * based on userId, schools associated with the user, federalStateId, and access level.
- */
-export async function getLearningScenariosByAccessLevel({
-  accessLevel,
-  user,
-}: {
-  accessLevel: AccessLevel;
-  user: Pick<UserModel, 'id' | 'schoolIds' | 'federalStateId'>;
-}): Promise<LearningScenarioOptionalShareDataModel[]> {
-  let learningScenarios: LearningScenarioOptionalShareDataModel[];
-
-  switch (accessLevel) {
-    case 'community':
-      learningScenarios = await dbGetCommunityLearningScenarios({ user });
-      break;
-    case 'global':
-      learningScenarios = await dbGetGlobalLearningScenarios({ user });
-      break;
-    case 'school':
-      learningScenarios = await dbGetLearningScenariosByAssociatedSchools({ user });
-      break;
-    case 'private':
-      learningScenarios = await dbGetLearningScenariosByUser({ user });
-      break;
-    default:
-      return [];
-  }
-
-  return filterReadableCustomChats({ items: learningScenarios, user });
-}
-
 export async function getLearningScenariosByOverviewFilter({
   filter,
   user,
@@ -167,10 +129,10 @@ export async function getLearningScenariosByOverviewFilter({
         dbGetLearningScenariosByAssociatedSchools({ user }),
         dbGetCommunityLearningScenarios({ user }),
       ]);
-      learningScenarios = [
+      learningScenarios = uniqueById([
         ...schoolLearningScenarios,
         ...filterCommunitySharedByAssociatedSchool({ items: communityLearningScenarios, user }),
-      ];
+      ]);
       break;
     }
     default:
@@ -201,7 +163,10 @@ async function getLearningScenarioInfo(
 
   return {
     isOwner: learningScenario.userId === user.id,
-    isPrivate: learningScenario.accessLevel === 'private',
+    isPrivate:
+      !learningScenario.isSchoolShared &&
+      !learningScenario.isCommunityShared &&
+      !learningScenario.isGlobal,
     learningScenario,
   };
 }
@@ -244,7 +209,9 @@ export async function getSharedLearningScenario({
  * Schema for updating character details that are allowed to be changed by the user.
  */
 const updateLearningScenarioSchema = learningScenarioUpdateSchema.omit({
-  accessLevel: true,
+  isSchoolShared: true,
+  isCommunityShared: true,
+  isGlobal: true,
   isDeleted: true,
   originalLearningScenarioId: true,
   pictureId: true,
@@ -280,6 +247,13 @@ export async function updateLearningScenario({
     return learningScenario;
   }
 
+  if (changedKeys.includes('hasLinkAccess') && !parsedData.hasLinkAccess) {
+    await verifyCommunitySharingInactive({
+      entityRef: { entityType: 'learningScenario', entityId: learningScenarioId },
+      isCommunityShared: learningScenario.isCommunityShared,
+    });
+  }
+
   const preservedUpdatedAt = getPreservedUpdatedAtForExemptedKeys({
     entity: learningScenario,
     values: parsedData,
@@ -300,50 +274,51 @@ export async function updateLearningScenario({
 }
 
 /**
- * User can share a learning scenario he owns with the school or community
- * or unshare it (access level = private).
- * User is not allowed to set the access level to global.
+ * User can share a learning scenario they own with the school, or unshare it (private).
+ * Community sharing is handled separately via the community-template-request workflow;
+ * this function is not authorized to change it.
  */
-export async function updateLearningScenarioAccessLevel({
+export async function updateLearningScenarioSchoolSharing({
   learningScenarioId,
-  accessLevel,
+  isSchoolShared,
   user,
 }: {
   learningScenarioId: string;
-  accessLevel: AccessLevel;
+  isSchoolShared: boolean;
   user: Pick<UserModel, 'id' | 'userRole'>;
 }) {
   checkParameterUUID(learningScenarioId);
-  accessLevelSchema.parse(accessLevel);
-
-  if (accessLevel === 'global') {
-    throw new ForbiddenError('Not authorized to set the access level to global');
-  }
 
   requireTeacherRole(user.userRole);
   const { learningScenario } = await getLearningScenarioInfo(learningScenarioId, user);
   verifyWriteAccess({ item: learningScenario, user });
   verifySuspensionState({ item: learningScenario });
 
-  if (learningScenario.accessLevel === accessLevel) {
+  if (learningScenario.isSchoolShared === isSchoolShared) {
     return learningScenario;
+  }
+
+  if (!isSchoolShared) {
+    await verifyCommunitySharingInactive({
+      entityRef: { entityType: 'learningScenario', entityId: learningScenarioId },
+      isCommunityShared: learningScenario.isCommunityShared,
+    });
   }
 
   const preservedUpdatedAt = getPreservedUpdatedAtForExemptedKeys({
     entity: learningScenario,
-    values: { accessLevel },
-    exemptedKeys: ['accessLevel'],
+    values: { isSchoolShared },
+    exemptedKeys: ['isSchoolShared'],
   });
 
-  // Update the access level in database
   const [updatedLearningScenario] = await db
     .update(learningScenarioTable)
-    .set({ accessLevel, ...(preservedUpdatedAt ? { updatedAt: preservedUpdatedAt } : {}) })
+    .set({ isSchoolShared, ...(preservedUpdatedAt ? { updatedAt: preservedUpdatedAt } : {}) })
     .where(eq(learningScenarioTable.id, learningScenarioId))
     .returning();
 
   if (updatedLearningScenario === undefined) {
-    throw new Error('Could not update the access level of the learning scenario');
+    throw new Error('Could not update the school sharing state of the learning scenario');
   }
 
   return updatedLearningScenario;
@@ -1009,7 +984,6 @@ export async function createNewLearningScenarioFromTemplate({
   });
 
   return duplicateLearningScenario({
-    accessLevel: 'private',
     originalLearningScenarioId,
     user,
     duplicateLearningScenarioName,

@@ -36,7 +36,11 @@ import {
   shareLearningScenarioAction,
   unshareLearningScenarioAction,
   updateLearningScenarioShareTokenPointsLimitAction,
-  updateLearningScenarioAccessLevelAction,
+  createCommunityTemplateRequestAction,
+  cancelCommunityTemplateRequestAction,
+  sendMessageToEditorAction,
+  getLearningScenarioSharingStateAction,
+  updateLearningScenarioSchoolSharingAction,
   updateLearningScenarioAction,
   uploadAvatarPictureForLearningScenarioAction,
 } from './actions';
@@ -53,6 +57,12 @@ import { CustomChatImageUpload } from '@/components/custom-chat/custom-chat-imag
 import { usePendingChangesGuard } from '@/hooks/use-pending-changes-guard';
 import { useForceReloadOnBrowserBackButton } from '@/hooks/use-force-reload-on-browser-back-button';
 import { useFormAutosave } from '@/hooks/use-form-autosave';
+import {
+  CommunitySharingState,
+  useCommunityTemplateRequest,
+} from '@/hooks/use-community-template-request';
+import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
+import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
 import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
 import { CustomChatModelSelect } from '@/components/custom-chat/custom-chat-model-select';
 import { WebSource } from '@shared/db/types';
@@ -65,10 +75,6 @@ import { CustomChatHeaderContent } from '@/components/custom-chat/custom-chat-he
 import { FormField } from '@ui/components/form/form-field';
 import { RichText, stripRichTextTags } from '@/components/common/rich-text';
 import { CustomChatSuspensionError } from '@/components/custom-chat/custom-chat-suspension-error';
-import {
-  getAccessLevelFromShareForm,
-  getShareFormValues,
-} from '@/components/custom-chat/access-level-sharing';
 import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
 import FilterSelectSection from '@/components/custom-chat/filter/custom-chat-filter-select-section';
 import {
@@ -76,6 +82,7 @@ import {
   toFilterGroup,
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
+import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
 
 type LearningScenarioTranslator = ReturnType<typeof useTranslations<'learning-scenarios'>>;
 
@@ -140,6 +147,7 @@ export function LearningScenarioEdit({
   relatedFiles,
   initialLinks,
   avatarPictureUrl,
+  initialCommunityTemplateRequest,
   usedBudget,
   maxBudget,
   budgetUsedBySharedChat,
@@ -149,6 +157,7 @@ export function LearningScenarioEdit({
   relatedFiles: FileModel[];
   initialLinks: WebSource[];
   avatarPictureUrl?: string;
+  initialCommunityTemplateRequest: CommunityTemplateRequestWithEvents | null;
   usedBudget: number;
   maxBudget: number;
   budgetUsedBySharedChat: number;
@@ -183,7 +192,11 @@ export function LearningScenarioEdit({
     categories: filterValues.categories,
     federalStates: filterValues.federalStates,
     languages: filterValues.languages,
-    ...getShareFormValues(learningScenario.accessLevel),
+    isSchoolShared: learningScenario.isSchoolShared,
+    isCommunityShared: isCommunitySharingActive({
+      isCommunityShared: learningScenario.isCommunityShared,
+      requestState: initialCommunityTemplateRequest?.state,
+    }),
     hasLinkAccess: learningScenario.hasLinkAccess,
     isWebSearchEnabled: learningScenario.isWebSearchEnabled,
     webSearchScope: learningScenario.webSearchScope,
@@ -201,6 +214,39 @@ export function LearningScenarioEdit({
     resolver: zodResolver(learningScenarioFormValuesSchema),
     defaultValues: initialValues,
     mode: 'onBlur',
+  });
+
+  const applySharingState = useCallback(
+    ({ entity, request }: CommunitySharingState) => {
+      setValue('isSchoolShared', entity.isSchoolShared, { shouldDirty: false });
+      setValue(
+        'isCommunityShared',
+        isCommunitySharingActive({
+          isCommunityShared: entity.isCommunityShared,
+          requestState: request?.state,
+        }),
+        { shouldDirty: false },
+      );
+      setValue('hasLinkAccess', entity.hasLinkAccess, { shouldDirty: false });
+    },
+    [setValue],
+  );
+
+  const {
+    communityTemplateRequest,
+    setCommunityTemplateRequest,
+    createRequest: createCommunityTemplateRequest,
+    cancelRequest: cancelCommunityTemplateRequest,
+    sendMessage: sendMessageToEditor,
+  } = useCommunityTemplateRequest({
+    initialRequest: initialCommunityTemplateRequest,
+    createRequest: () =>
+      createCommunityTemplateRequestAction({ learningScenarioId: learningScenario.id }),
+    cancelRequest: () =>
+      cancelCommunityTemplateRequestAction({ learningScenarioId: learningScenario.id }),
+    sendMessage: (message) =>
+      sendMessageToEditorAction({ learningScenarioId: learningScenario.id, message }),
+    onSharingStateChange: applySharingState,
   });
 
   const { isSaving, hasSaveError, flushAutoSave, handleAutoSave } =
@@ -237,7 +283,6 @@ export function LearningScenarioEdit({
   const categories = useWatch({ control, name: 'categories' });
   const federalStates = useWatch({ control, name: 'federalStates' });
   const languages = useWatch({ control, name: 'languages' });
-  const savedAccessLevelRef = useRef(learningScenario.accessLevel);
   const attachedLinksRef = useRef(learningScenario.attachedLinks);
   const isSchoolShared = useWatch({ control, name: 'isSchoolShared' });
   const isCommunityShared = useWatch({ control, name: 'isCommunityShared' });
@@ -344,30 +389,39 @@ export function LearningScenarioEdit({
     return result;
   }
 
+  // Resyncs the sharing checkboxes and hasLinkAccess from the server after a failed mutation,
+  // without touching any other (possibly unsaved) form fields.
+  const refreshSharingState = useCallback(async () => {
+    const result = await getLearningScenarioSharingStateAction({
+      learningScenarioId: learningScenario.id,
+    });
+    if (result.success) {
+      applySharingState(result.value);
+      setCommunityTemplateRequest(result.value.request);
+    }
+  }, [learningScenario.id, applySharingState, setCommunityTemplateRequest]);
+
   const handleSharingChange = async ({ name, checked }: { name: string; checked: boolean }) => {
-    if (name === 'isSchoolShared' || name === 'isCommunityShared') {
-      const nextShareValues = {
-        isSchoolShared: name === 'isSchoolShared' ? checked : getValues('isSchoolShared'),
-        isCommunityShared: name === 'isCommunityShared' ? checked : getValues('isCommunityShared'),
-      };
+    if (name === 'isCommunityShared') {
+      const result = checked
+        ? await createCommunityTemplateRequest()
+        : await cancelCommunityTemplateRequest();
 
-      const newAccessLevel = getAccessLevelFromShareForm(nextShareValues);
+      if (!result.success) {
+        await refreshSharingState();
+        toast.error(tToast('edit-toast-error'));
+        return;
+      }
+    } else if (name === 'isSchoolShared') {
+      const result = await updateLearningScenarioSchoolSharingAction({
+        learningScenarioId: learningScenario.id,
+        isSchoolShared: checked,
+      });
 
-      if (newAccessLevel !== savedAccessLevelRef.current) {
-        const result = await updateLearningScenarioAccessLevelAction({
-          learningScenarioId: learningScenario.id,
-          accessLevel: newAccessLevel,
-        });
-
-        if (!result.success) {
-          const savedShareValues = getShareFormValues(savedAccessLevelRef.current);
-          setValue('isSchoolShared', savedShareValues.isSchoolShared);
-          setValue('isCommunityShared', savedShareValues.isCommunityShared);
-          toast.error(tToast('edit-toast-error'));
-          return;
-        }
-
-        savedAccessLevelRef.current = newAccessLevel;
+      if (!result.success) {
+        await refreshSharingState();
+        toast.error(tToast('edit-toast-error'));
+        return;
       }
     }
 
@@ -581,6 +635,13 @@ export function LearningScenarioEdit({
               onShareChange={handleSharingChange}
               suspended={learningScenario.suspended}
             />
+            {communityTemplateRequest && (
+              <CommunityTemplateRequest
+                requestWithEvents={communityTemplateRequest}
+                onResubmit={createCommunityTemplateRequest}
+                onSendMessage={sendMessageToEditor}
+              />
+            )}
             <FilterSelectSection
               values={{
                 schoolTypes,

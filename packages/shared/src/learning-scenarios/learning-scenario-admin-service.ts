@@ -3,7 +3,6 @@
  */
 import { db } from '@shared/db';
 import {
-  AccessLevel,
   LearningScenarioInsertModel,
   learningScenarioInsertSchema,
   learningScenarioTable,
@@ -25,12 +24,10 @@ import { UserModel } from '@shared/auth/user-model';
  * including copying the avatar picture and all related files.
  */
 export async function duplicateLearningScenario({
-  accessLevel,
   user,
   originalLearningScenarioId,
   duplicateLearningScenarioName,
 }: {
-  accessLevel: AccessLevel | undefined;
   originalLearningScenarioId: string;
   user: Pick<UserModel, 'id'>;
   duplicateLearningScenarioName?: string;
@@ -55,7 +52,9 @@ export async function duplicateLearningScenario({
 
   const copy: LearningScenarioInsertModel = {
     ...expectedValues,
-    accessLevel: accessLevel ?? 'private',
+    isSchoolShared: false,
+    isCommunityShared: false,
+    isGlobal: false,
     hasLinkAccess: false,
     id: learningScenarioId,
     isDeleted: false,

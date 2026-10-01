@@ -1,50 +1,86 @@
-import { eq } from 'drizzle-orm';
 import { UserModel } from '@shared/auth/user-model';
 import { verifySuspensionState, verifyWriteAccess } from '@shared/auth/authorization-service';
 import { db } from '@shared/db';
+import { PgTransactionObject } from '@shared/db/types';
+import { dbGetAssistantById } from '@shared/db/functions/assistants';
+import { dbGetCharacterById } from '@shared/db/functions/character';
+import { dbGetLearningScenarioById } from '@shared/db/functions/learning-scenario';
 import {
   CommunityTemplateRequestEventSelectModel,
   CommunityTemplateRequestSelectModel,
-  CommunityTemplateRequestTable,
   templateRequestStatusSchema,
 } from '@shared/db/schema';
-import { checkParameterUUID, ForbiddenError, NotFoundError } from '@shared/error';
-import { getCharacterInfo } from '@shared/characters/character-service';
-import { createCancelEvent, createSubmitEvent } from './community-template-request-event';
 import {
+  checkParameterUUID,
+  ForbiddenError,
+  InvalidArgumentError,
+  NotFoundError,
+} from '@shared/error';
+import { assertEntityType, EntityRef } from '@shared/entities/entity-types';
+import {
+  createCancelEvent,
+  createSubmitEvent,
+  createUserMessageEvent,
+} from './community-template-request-event';
+import {
+  dbGetTemplateRequestForEntity,
   dbGetTemplateRequestWithEvents,
   dbInsertTemplateRequest,
   dbInsertTemplateRequestEvent,
+  dbSetEntityCommunityShared,
+  dbSetEntityHasLinkAccess,
+  dbSetEntitySchoolShared,
   dbUpdateTemplateRequest,
+  entityRefToInsertColumns,
 } from './db-functions';
+import { isCommunitySharingActive } from './community-sharing-state';
 
 export type CommunityTemplateRequestWithEvents = CommunityTemplateRequestSelectModel & {
   events: CommunityTemplateRequestEventSelectModel[];
 };
 
+export type EntitySharingSnapshot = {
+  isSchoolShared: boolean;
+  isCommunityShared: boolean;
+  hasLinkAccess: boolean;
+};
+
 /**
- * Retrieves the community template request for a given character.
- * Returns undefined if no request exists.
+ * Fetches the referenced entity and verifies the user may manage its sharing settings.
+ * Throws NotFoundError if the entity doesn't exist.
  */
-async function getCharacterTemplateRequest(characterId: string) {
-  const [request] = await db
-    .select()
-    .from(CommunityTemplateRequestTable)
-    .where(eq(CommunityTemplateRequestTable.characterId, characterId))
-    .limit(1);
-
-  return request;
-}
-
-async function verifyCharacterTemplateRequestAccess(
-  characterId: string,
+async function getEntityAndVerifySharingAccess(
+  entityRef: EntityRef,
   user: Pick<UserModel, 'id'>,
-) {
-  checkParameterUUID(characterId);
+): Promise<EntitySharingSnapshot> {
+  assertEntityType(entityRef.entityType);
+  checkParameterUUID(entityRef.entityId);
 
-  const { character } = await getCharacterInfo(characterId, user.id);
-  verifyWriteAccess({ item: character, user });
-  verifySuspensionState({ item: character });
+  let entity;
+  switch (entityRef.entityType) {
+    case 'character':
+      entity = await dbGetCharacterById({ characterId: entityRef.entityId });
+      break;
+    case 'assistant':
+      entity = await dbGetAssistantById({ assistantId: entityRef.entityId });
+      break;
+    case 'learningScenario':
+      entity = await dbGetLearningScenarioById({ learningScenarioId: entityRef.entityId });
+      break;
+  }
+
+  if (!entity) {
+    throw new NotFoundError(`${entityRef.entityType} not found`);
+  }
+
+  verifyWriteAccess({ item: entity, user });
+  verifySuspensionState({ item: entity });
+
+  return {
+    isSchoolShared: entity.isSchoolShared,
+    isCommunityShared: entity.isCommunityShared,
+    hasLinkAccess: entity.hasLinkAccess,
+  };
 }
 
 async function verifyTemplateRequestOwnership({
@@ -60,94 +96,124 @@ async function verifyTemplateRequestOwnership({
 }
 
 /**
+ * Throws if community sharing is active, since it includes school and link sharing.
+ */
+export async function verifyCommunitySharingInactive({
+  entityRef,
+  isCommunityShared,
+}: {
+  entityRef: EntityRef;
+  isCommunityShared: boolean;
+}) {
+  const request = await dbGetTemplateRequestForEntity(entityRef);
+  if (isCommunitySharingActive({ isCommunityShared, requestState: request?.state })) {
+    throw new InvalidArgumentError(
+      'School and link sharing cannot be disabled while community sharing is active',
+    );
+  }
+}
+
+/**
  * Retrieves a community template request along with its associated events.
  */
 export async function getCommunityTemplateRequestWithEvents({
-  characterId,
+  entityRef,
   user,
 }: {
-  characterId: string;
+  entityRef: EntityRef;
   user: Pick<UserModel, 'id'>;
 }): Promise<CommunityTemplateRequestWithEvents | null> {
-  checkParameterUUID(characterId);
-  const requestWithEvents = await dbGetTemplateRequestWithEvents(characterId);
+  checkParameterUUID(entityRef.entityId);
+  const requestWithEvents = await dbGetTemplateRequestWithEvents(entityRef);
   if (requestWithEvents === null) return null;
 
-  verifyTemplateRequestOwnership({ templateRequest: requestWithEvents, user });
+  await verifyTemplateRequestOwnership({ templateRequest: requestWithEvents, user });
   return requestWithEvents;
 }
 
 /**
- * Creates a new community template request or updates the existing one.
- *
- * @param param0
- * @returns
+ * Returns the current sharing state (school/community/link) and community template request for
+ * an entity. Used by the frontend to resync its form after a failed mutation.
  */
-export async function createCommunityTemplateRequest({
-  characterId,
+export async function getEntitySharingState({
+  entityRef,
   user,
 }: {
-  characterId: string;
+  entityRef: EntityRef;
   user: Pick<UserModel, 'id'>;
-}): Promise<CommunityTemplateRequestWithEvents | null> {
-  checkParameterUUID(characterId);
-  await verifyCharacterTemplateRequestAccess(characterId, user);
+}): Promise<{ request: CommunityTemplateRequestWithEvents | null; entity: EntitySharingSnapshot }> {
+  const entity = await getEntityAndVerifySharingAccess(entityRef, user);
+  const request = await dbGetTemplateRequestWithEvents(entityRef);
+  return { request, entity };
+}
 
-  const existingRequest = await getCharacterTemplateRequest(characterId);
+/**
+ * Creates a new community template request or resubmits a previously cancelled/rejected one.
+ * Community sharing includes school and link sharing, so both are forced on.
+ * Does not change isCommunityShared - that only happens once an admin approves the request.
+ */
+export async function createCommunityTemplateRequest({
+  entityRef,
+  user,
+}: {
+  entityRef: EntityRef;
+  user: Pick<UserModel, 'id'>;
+}): Promise<{ request: CommunityTemplateRequestWithEvents | null; entity: EntitySharingSnapshot }> {
+  const entity = await getEntityAndVerifySharingAccess(entityRef, user);
+
+  const existingRequest = await dbGetTemplateRequestForEntity(entityRef);
+
+  async function enableSchoolAndLinkSharing(tx: PgTransactionObject) {
+    if (!entity.hasLinkAccess) {
+      await dbSetEntityHasLinkAccess(entityRef, true, tx);
+    }
+    if (!entity.isSchoolShared) {
+      await dbSetEntitySchoolShared(entityRef, true, tx);
+    }
+  }
 
   if (existingRequest) {
     await verifyTemplateRequestOwnership({ templateRequest: existingRequest, user });
     await db.transaction(async (tx) => {
       await dbUpdateTemplateRequest({ id: existingRequest.id, state: 'submitted' }, tx);
       await dbInsertTemplateRequestEvent(createSubmitEvent(existingRequest.id, user.id), tx);
+      await enableSchoolAndLinkSharing(tx);
     });
   } else {
     await db.transaction(async (tx) => {
       const createdRequest = await dbInsertTemplateRequest(
-        { characterId, createdBy: user.id, state: 'submitted' },
+        { ...entityRefToInsertColumns(entityRef), createdBy: user.id, state: 'submitted' },
         tx,
       );
       await dbInsertTemplateRequestEvent(createSubmitEvent(createdRequest.id, user.id), tx);
+      await enableSchoolAndLinkSharing(tx);
     });
   }
 
-  // return request with all events
-  return dbGetTemplateRequestWithEvents(characterId);
+  const request = await dbGetTemplateRequestWithEvents(entityRef);
+  return { request, entity: { ...entity, isSchoolShared: true, hasLinkAccess: true } };
 }
 
 /**
- * User cancels its own community request.
- * That might influence the entity's access level
- * if it has already been shared with the community or school.
- *
- * @param param0
- * @returns
+ * User cancels their own community template request.
+ * If the entity had already been approved (isCommunityShared), this also revokes that
+ * approval as part of the same transaction - isSchoolShared and hasLinkAccess are untouched.
  */
 export async function cancelCommunityTemplateRequest({
-  characterId,
+  entityRef,
   user,
 }: {
-  characterId: string;
+  entityRef: EntityRef;
   user: Pick<UserModel, 'id'>;
-}): Promise<CommunityTemplateRequestWithEvents | null> {
-  checkParameterUUID(characterId);
-  await verifyCharacterTemplateRequestAccess(characterId, user);
+}): Promise<{ request: CommunityTemplateRequestWithEvents | null; entity: EntitySharingSnapshot }> {
+  const entity = await getEntityAndVerifySharingAccess(entityRef, user);
 
-  const existingRequest = await getCharacterTemplateRequest(characterId);
+  const existingRequest = await dbGetTemplateRequestForEntity(entityRef);
   if (!existingRequest) {
-    throw new NotFoundError('No community template request found for this character');
+    throw new NotFoundError('No community template request found for this entity');
   }
   await verifyTemplateRequestOwnership({ templateRequest: existingRequest, user });
 
-  // two cases
-  // case 1: the request is already submitted and the entity is already shared with the community.
-  // --> we have to update the entities access_level to private or school or whatever
-  // case 2: the request is not yet submitted and the entity is not shared with the community.
-  // --> we can simply cancel the request without changing the entity's access_level.
-
-  // Todo TD-1605: case 1 missing
-
-  // case 2
   const cancelledEvent = createCancelEvent(existingRequest.id, user.id);
   await db.transaction(async (tx) => {
     await dbInsertTemplateRequestEvent(cancelledEvent, tx);
@@ -158,8 +224,44 @@ export async function cancelCommunityTemplateRequest({
       },
       tx,
     );
+    if (entity.isCommunityShared) {
+      await dbSetEntityCommunityShared(entityRef, false, tx);
+    }
   });
 
-  // return request with all events
-  return dbGetTemplateRequestWithEvents(characterId);
+  const request = await dbGetTemplateRequestWithEvents(entityRef);
+  return { request, entity: { ...entity, isCommunityShared: false } };
+}
+
+/**
+ * User sends a message to the editors regarding their community template request.
+ */
+export async function sendMessageToEditor({
+  entityRef,
+  user,
+  message,
+}: {
+  entityRef: EntityRef;
+  user: Pick<UserModel, 'id'>;
+  message: string;
+}): Promise<{ request: CommunityTemplateRequestWithEvents | null; entity: EntitySharingSnapshot }> {
+  const trimmedMessage = message.trim();
+  if (trimmedMessage.length === 0) {
+    throw new InvalidArgumentError('Message must not be empty');
+  }
+
+  const entity = await getEntityAndVerifySharingAccess(entityRef, user);
+
+  const existingRequest = await dbGetTemplateRequestForEntity(entityRef);
+  if (!existingRequest) {
+    throw new NotFoundError('No community template request found for this entity');
+  }
+  await verifyTemplateRequestOwnership({ templateRequest: existingRequest, user });
+
+  await dbInsertTemplateRequestEvent(
+    createUserMessageEvent(existingRequest.id, user.id, trimmedMessage),
+  );
+
+  const request = await dbGetTemplateRequestWithEvents(entityRef);
+  return { request, entity };
 }

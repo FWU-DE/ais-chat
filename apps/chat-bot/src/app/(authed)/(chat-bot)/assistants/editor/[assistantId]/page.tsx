@@ -2,6 +2,7 @@ import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
 import { requireAuth } from '@/auth/requireAuth';
 import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 import { getAssistantByUser } from '@shared/assistants/assistant-service';
+import { getCommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
 import { AssistantEdit } from './assistant-edit';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { type Metadata } from 'next';
@@ -25,6 +26,11 @@ export default async function Page(props: PageProps<'/assistants/editor/[assista
     user,
   }).catch(handleErrorInServerComponent);
 
+  const communityTemplateRequest = await getCommunityTemplateRequestWithEvents({
+    entityRef: { entityType: 'assistant', entityId: assistantId },
+    user,
+  }).catch(handleErrorInServerComponent);
+
   const initialLinks = assistant.attachedLinks
     .filter((l) => l !== '')
     .map((url) => ({ link: url }));
@@ -36,6 +42,7 @@ export default async function Page(props: PageProps<'/assistants/editor/[assista
         relatedFiles={fileMappings}
         initialLinks={initialLinks}
         avatarPictureUrl={pictureUrl}
+        initialCommunityTemplateRequest={communityTemplateRequest}
         isWebSearchAvailable={isWebSearchAvailableForFederalState(federalState.featureToggles)}
       />
     </DefaultPageLayout>

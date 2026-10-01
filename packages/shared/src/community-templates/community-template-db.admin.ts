@@ -1,9 +1,5 @@
 import { db } from '@shared/db';
-import { dbUpdateAssistantAccessLevel } from '@shared/db/functions/assistants';
-import { dbUpdateCharacterAccessLevel } from '@shared/db/functions/character';
-import { dbUpdateLearningScenarioAccessLevel } from '@shared/db/functions/learning-scenario';
 import {
-  AccessLevel,
   assistantTable,
   characterTable,
   CommunityTemplateRequestEventInsertModel,
@@ -14,8 +10,7 @@ import {
   TemplateRequestStatus,
 } from '@shared/db/schema';
 import { PgTransactionObject } from '@shared/db/types';
-import { EntityRef } from '@shared/entities/entity-types';
-import { and, asc, desc, eq, or } from 'drizzle-orm';
+import { and, desc, eq, or } from 'drizzle-orm';
 
 /**
  * Selects only the single latest event per template request via
@@ -59,7 +54,7 @@ export async function dbGetCommunityTemplateRequestRows() {
       eq(CommunityTemplateRequestTable.learningScenarioId, learningScenarioTable.id),
     )
     .innerJoin(latestEvent, eq(latestEvent.templateRequestId, CommunityTemplateRequestTable.id))
-    .orderBy(CommunityTemplateRequestTable.createdAt);
+    .orderBy(desc(latestEvent.createdAt));
 }
 
 /**
@@ -87,7 +82,7 @@ export async function dbGetCommunityTemplateRequestWithEventsRows(requestId: str
       eq(CommunityTemplateRequestEventTable.templateRequestId, CommunityTemplateRequestTable.id),
     )
     .where(eq(CommunityTemplateRequestTable.id, requestId))
-    .orderBy(asc(CommunityTemplateRequestEventTable.createdAt));
+    .orderBy(desc(CommunityTemplateRequestEventTable.createdAt));
 }
 
 export async function dbUpdateInternalNote(requestId: string, note: string): Promise<void> {
@@ -137,22 +132,4 @@ export async function dbInsertTemplateRequestEvent(
   tx: PgTransactionObject,
 ): Promise<void> {
   await tx.insert(CommunityTemplateRequestEventTable).values(event);
-}
-
-/**
- * Dispatches the access-level update to the db function matching the entity's type.
- */
-export async function dbUpdateEntityAccessLevel(
-  entityRef: EntityRef,
-  accessLevel: AccessLevel,
-  tx: PgTransactionObject,
-): Promise<void> {
-  switch (entityRef.entityType) {
-    case 'character':
-      return dbUpdateCharacterAccessLevel(entityRef.entityId, accessLevel, tx);
-    case 'assistant':
-      return dbUpdateAssistantAccessLevel(entityRef.entityId, accessLevel, tx);
-    case 'learningScenario':
-      return dbUpdateLearningScenarioAccessLevel(entityRef.entityId, accessLevel, tx);
-  }
 }

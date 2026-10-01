@@ -13,7 +13,6 @@ import {
 import {
   conversationTable,
   AssistantFileMapping,
-  type AccessLevel,
   type AssistantInsertModel,
   type AssistantSelectModel,
   assistantTable,
@@ -123,7 +122,7 @@ export async function dbGetGlobalGpts({
       )
       .where(
         and(
-          eq(assistantTable.accessLevel, 'global'),
+          eq(assistantTable.isGlobal, true),
           eq(assistantTemplateMappingTable.federalStateId, federalStateId),
           excludeDeletedAssistants({ includeDeleted }),
         ),
@@ -131,9 +130,7 @@ export async function dbGetGlobalGpts({
       .orderBy(desc(assistantTable.createdAt));
   } else {
     return baseAssistantQuery()
-      .where(
-        and(eq(assistantTable.accessLevel, 'global'), excludeDeletedAssistants({ includeDeleted })),
-      )
+      .where(and(eq(assistantTable.isGlobal, true), excludeDeletedAssistants({ includeDeleted })))
       .orderBy(desc(assistantTable.createdAt));
   }
 }
@@ -142,7 +139,7 @@ export async function dbGetCommunityGpts(
   options?: IncludeDeletedOption,
 ): Promise<AssistantSelectModel[]> {
   return baseAssistantQuery()
-    .where(and(eq(assistantTable.accessLevel, 'community'), excludeDeletedAssistants(options)))
+    .where(and(eq(assistantTable.isCommunityShared, true), excludeDeletedAssistants(options)))
     .orderBy(desc(assistantTable.createdAt));
 }
 
@@ -155,7 +152,7 @@ export async function dbGetGlobalAssistantByName({
   const [assistant] = await baseAssistantQuery().where(
     and(
       eq(assistantTable.name, name),
-      eq(assistantTable.accessLevel, 'global'),
+      eq(assistantTable.isGlobal, true),
       excludeDeletedAssistants({ includeDeleted }),
     ),
   );
@@ -175,7 +172,7 @@ export async function dbGetGptsByAssociatedSchools({
   return baseAssistantQuery()
     .where(
       and(
-        eq(assistantTable.accessLevel, 'school'),
+        eq(assistantTable.isSchoolShared, true),
         arrayOverlaps(userTable.schoolIds, user.schoolIds),
         excludeDeletedAssistants({ includeDeleted }),
       ),
@@ -193,7 +190,9 @@ export async function dbGetGptsByUser({
     .where(
       and(
         eq(assistantTable.userId, user.id),
-        eq(assistantTable.accessLevel, 'private'),
+        eq(assistantTable.isSchoolShared, false),
+        eq(assistantTable.isCommunityShared, false),
+        eq(assistantTable.isGlobal, false),
         excludeDeletedAssistants({ includeDeleted }),
       ),
     )
@@ -214,17 +213,19 @@ export async function dbGetAssistantByIdOrAssociatedSchool({
         and(
           eq(assistantTable.id, assistantId),
           eq(assistantTable.userId, user.id),
-          eq(assistantTable.accessLevel, 'private'),
+          eq(assistantTable.isSchoolShared, false),
+          eq(assistantTable.isCommunityShared, false),
+          eq(assistantTable.isGlobal, false),
         ),
         user.schoolIds.length > 0
           ? and(
               eq(assistantTable.id, assistantId),
-              eq(assistantTable.accessLevel, 'school'),
+              eq(assistantTable.isSchoolShared, true),
               arrayOverlaps(userTable.schoolIds, user.schoolIds),
             )
           : undefined,
-        and(eq(assistantTable.id, assistantId), eq(assistantTable.accessLevel, 'community')),
-        and(eq(assistantTable.id, assistantId), eq(assistantTable.accessLevel, 'global')),
+        and(eq(assistantTable.id, assistantId), eq(assistantTable.isCommunityShared, true)),
+        and(eq(assistantTable.id, assistantId), eq(assistantTable.isGlobal, true)),
       ),
       excludeDeletedAssistants({ includeDeleted }),
     ),
@@ -256,7 +257,9 @@ export async function dbSetAssistantSuspended({ assistantId }: { assistantId: st
     .update(assistantTable)
     .set({
       suspended: true,
-      accessLevel: 'private',
+      isSchoolShared: false,
+      isCommunityShared: false,
+      isGlobal: false,
       hasLinkAccess: false,
     })
     .where(eq(assistantTable.id, assistantId))
@@ -354,17 +357,58 @@ export async function dbInsertAssistantFileMapping({
 }
 
 /**
- * Updates the access level of an assistant within the given transaction.
- * The `updatedAt` timestamp is bumped automatically by the column's `$onUpdateFn`.
+ * Updates whether an assistant is community-shared, within the given transaction.
+ * Only called from the community-template-request workflow (approve/cancel), never directly
+ * from the owner-facing update path. The `updatedAt` timestamp is bumped automatically.
  */
-export async function dbUpdateAssistantAccessLevel(
+export async function dbUpdateAssistantCommunityShared(
   assistantId: string,
-  accessLevel: AccessLevel,
+  isCommunityShared: boolean,
   tx: PgTransactionObject,
 ): Promise<void> {
   const [updatedAssistant] = await tx
     .update(assistantTable)
-    .set({ accessLevel })
+    .set({ isCommunityShared })
+    .where(eq(assistantTable.id, assistantId))
+    .returning({ id: assistantTable.id });
+
+  if (!updatedAssistant) {
+    throw new NotFoundError('Assistant not found');
+  }
+}
+
+/**
+ * Forces hasLinkAccess on for an assistant within the given transaction (admin needs link
+ * access to review a submitted community template request).
+ */
+export async function dbUpdateAssistantHasLinkAccess(
+  assistantId: string,
+  hasLinkAccess: boolean,
+  tx: PgTransactionObject,
+): Promise<void> {
+  const [updatedAssistant] = await tx
+    .update(assistantTable)
+    .set({ hasLinkAccess })
+    .where(eq(assistantTable.id, assistantId))
+    .returning({ id: assistantTable.id });
+
+  if (!updatedAssistant) {
+    throw new NotFoundError('Assistant not found');
+  }
+}
+
+/**
+ * Forces isSchoolShared on for an assistant within the given transaction (community sharing
+ * includes school sharing).
+ */
+export async function dbUpdateAssistantSchoolShared(
+  assistantId: string,
+  isSchoolShared: boolean,
+  tx: PgTransactionObject,
+): Promise<void> {
+  const [updatedAssistant] = await tx
+    .update(assistantTable)
+    .set({ isSchoolShared })
     .where(eq(assistantTable.id, assistantId))
     .returning({ id: assistantTable.id });
 

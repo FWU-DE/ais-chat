@@ -17,10 +17,9 @@ import { mapEntityTypeToLabel } from '@/utils/mapEntityTypeToLabel';
 import { mapStateToLabel } from '../columns';
 import RejectCommunityTemplateRequestDialog from './RejectCommunityTemplateRequestDialog';
 import SendMessageToAuthorDialog from './SendMessageToAuthorDialog';
-import { CheckIcon } from '@phosphor-icons/react';
+import { CheckIcon, FloppyDiskIcon } from '@phosphor-icons/react';
 import { cn } from '@ui/lib/utils';
 import { toast } from 'sonner';
-export const dynamic = 'force-dynamic';
 
 export type CommunityTemplateRequestDetailViewProps = {
   requestId: string;
@@ -145,7 +144,10 @@ export default function CommunityTemplateRequestDetailView(
         <CardHeader>
           <CardTitle>Interne Notizen</CardTitle>
           <CardAction>
-            <Button onClick={async () => await handleUpdateNote(data.note)}>Speichern</Button>
+            <Button onClick={async () => await handleUpdateNote(data.note)}>
+              <FloppyDiskIcon />
+              Speichern
+            </Button>
           </CardAction>
         </CardHeader>
         <CardContent>

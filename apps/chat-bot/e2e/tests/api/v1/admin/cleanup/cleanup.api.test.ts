@@ -190,7 +190,6 @@ test('should return 403 if authorization header is missing', async ({ request })
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const learningScenarioInsertSchema = createInsertSchema(learningScenarioTable).omit({
-  accessLevel: true,
   webSearchScope: true,
 });
 async function createLearningScenario(
@@ -219,7 +218,6 @@ async function createLearningScenario(
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const characterInsertSchema = createInsertSchema(characterTable).omit({
-  accessLevel: true,
   webSearchScope: true,
 });
 async function createCharacter(data?: Partial<z.infer<typeof characterInsertSchema>>) {
@@ -248,7 +246,6 @@ async function createCharacter(data?: Partial<z.infer<typeof characterInsertSche
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const assistantInsertSchema = createInsertSchema(assistantTable).omit({
-  accessLevel: true,
   webSearchScope: true,
   webSearchIncludedDomains: true,
 });
