@@ -107,12 +107,8 @@ function getActivitySteps(
       continue;
     }
 
-    if (
-      message.role === 'assistant' &&
-      (steps.length > 0 ||
-        (message.reasoningSummary !== null && message.reasoningSummary !== undefined))
-    ) {
-      if (message.reasoningSummary !== null && message.reasoningSummary !== undefined) {
+    if (message.role === 'assistant' && (steps.length > 0 || message.reasoningSummary)) {
+      if (message.reasoningSummary) {
         steps.push({ kind: 'analysis-summary', content: message.reasoningSummary });
       }
       steps.push({ kind: 'done' });

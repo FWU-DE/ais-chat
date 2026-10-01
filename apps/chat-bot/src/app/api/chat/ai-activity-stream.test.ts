@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { decodeChatStreamEvent } from '@/utils/streaming';
+import type { AiActivityToolStep } from '@/types/ai-activity';
 import type { ToolRegistration } from './tools/types';
 import { createAiActivityStream } from './ai-activity-stream';
 
@@ -21,10 +22,7 @@ function createToolRegistry() {
           id: call.id,
           tool: 'math_calculate' as const,
         }),
-        applyResult: (
-          step: { kind: 'tool'; id: string; tool: 'math_calculate' },
-          result: string,
-        ) => ({ ...step, result }),
+        applyResult: (step: AiActivityToolStep, result: string) => ({ ...step, result }),
       },
     },
   } satisfies Record<string, ToolRegistration>;
@@ -42,18 +40,14 @@ describe('createAiActivityStream', () => {
     activity.onReasoningSummary('First part. ');
     activity.onReasoningSummary('Second part.');
 
-    expect(decodeUpdates(updates)).toEqual([
-      { type: 'ai_activity', steps: [{ kind: 'analysis' }] },
-    ]);
+    expect(decodeUpdates(updates)).toEqual([]);
 
     activity.finish();
 
     expect(decodeUpdates(updates)).toEqual([
-      { type: 'ai_activity', steps: [{ kind: 'analysis' }] },
       {
         type: 'ai_activity',
         steps: [
-          { kind: 'analysis' },
           { kind: 'analysis-summary', content: 'First part. Second part.' },
           { kind: 'done' },
         ],
@@ -71,22 +65,13 @@ describe('createAiActivityStream', () => {
     activity.finish();
 
     expect(decodeUpdates(updates)).toEqual([
-      { type: 'ai_activity', steps: [{ kind: 'analysis' }] },
       {
         type: 'ai_activity',
-        steps: [{ kind: 'analysis' }, { kind: 'tool', id: 'call-1', tool: 'math_calculate' }],
+        steps: [{ kind: 'tool', id: 'call-1', tool: 'math_calculate', result: '42' }],
       },
       {
         type: 'ai_activity',
         steps: [
-          { kind: 'analysis' },
-          { kind: 'tool', id: 'call-1', tool: 'math_calculate', result: '42' },
-        ],
-      },
-      {
-        type: 'ai_activity',
-        steps: [
-          { kind: 'analysis' },
           { kind: 'tool', id: 'call-1', tool: 'math_calculate', result: '42' },
           { kind: 'analysis-summary', content: 'Done.' },
           { kind: 'done' },
@@ -104,8 +89,6 @@ describe('createAiActivityStream', () => {
     activity.onToolResult({ toolCallId: toolCall.id, result: 'ignored' });
     activity.finish();
 
-    expect(decodeUpdates(updates)).toEqual([
-      { type: 'ai_activity', steps: [{ kind: 'analysis' }] },
-    ]);
+    expect(decodeUpdates(updates)).toEqual([]);
   });
 });

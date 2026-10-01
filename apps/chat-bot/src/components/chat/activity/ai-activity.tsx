@@ -77,7 +77,7 @@ function StepIcon({ step }: { step: AiActivityStep }) {
 
 function StepDetail({ step }: { step: Extract<AiActivityStep, { kind: 'tool' }> }) {
   const visibleDetail = truncate(step.detail);
-  const visibleResult = step.tool === 'math_calculate' ? truncate(step.result) : undefined;
+  const visibleResult = truncate(step.result);
   const text =
     visibleDetail === undefined
       ? visibleResult === undefined

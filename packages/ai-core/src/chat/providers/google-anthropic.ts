@@ -6,7 +6,6 @@ import type {
   MessageCreateParamsStreaming,
   MessageParam,
   StopReason,
-  ThinkingConfigParam,
   ToolChoice,
   ToolResultBlockParam,
   ToolUnion,
@@ -155,6 +154,7 @@ export function constructGoogleAnthropicAgenticStreamFn(model: AiModel): Agentic
       );
       const vertexModelName = resolveModelName(modelName);
       const messageParams: MessageCreateParamsStreaming = {
+        ...model.additionalParameters,
         max_tokens: maxTokens ?? 4096,
         messages: conversationMessages,
         model: vertexModelName,
@@ -162,9 +162,6 @@ export function constructGoogleAnthropicAgenticStreamFn(model: AiModel): Agentic
         system: buildSystemPrompt(systemMessages),
         tool_choice: mapToolChoiceToAnthropicToolChoice(toolChoice),
         tools: mapToolsToAnthropicTools(tools),
-        ...(getAnthropicThinkingConfig(model) !== undefined
-          ? { thinking: getAnthropicThinkingConfig(model) }
-          : {}),
       };
 
       const stream = client.messages.stream(messageParams, { signal: abortSignal });
@@ -241,12 +238,6 @@ export function constructGoogleAnthropicAgenticStreamFn(model: AiModel): Agentic
 
 function createAnthropicClient(options: ClientOptions): AnthropicVertex {
   return instrumentAnthropicAiClient(new AnthropicVertex(options));
-}
-
-function getAnthropicThinkingConfig(model: AiModel): ThinkingConfigParam | undefined {
-  const additionalParameters = model.additionalParameters as
-    { thinking?: ThinkingConfigParam } | undefined;
-  return additionalParameters?.thinking;
 }
 
 /**

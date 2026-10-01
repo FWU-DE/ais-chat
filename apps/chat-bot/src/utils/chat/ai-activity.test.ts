@@ -82,25 +82,21 @@ describe('activity helpers', () => {
 });
 
 describe('createAiActivityCollector', () => {
-  it('accumulates provider reasoning summaries without changing the analysis step', () => {
+  it('accumulates provider reasoning summaries without exposing raw analysis', () => {
     const collector = createAiActivityCollector({});
-
-    collector.start();
 
     expect(collector.addReasoningSummary('First part. ')).toBe(true);
     expect(collector.addReasoningSummary('Second part.')).toBe(true);
-    expect(collector.getSteps()).toEqual([{ kind: 'analysis' }]);
+    expect(collector.getSteps()).toEqual([]);
   });
 
   it('adds the full reasoning summary before the done step', () => {
     const collector = createAiActivityCollector({});
 
-    collector.start();
     collector.addReasoningSummary('Reasoning trace.');
 
     expect(collector.finish()).toBe(true);
     expect(collector.getSteps()).toEqual([
-      { kind: 'analysis' },
       { kind: 'analysis-summary', content: 'Reasoning trace.' },
       { kind: 'done' },
     ]);
@@ -108,8 +104,6 @@ describe('createAiActivityCollector', () => {
 
   it('does not add a reasoning summary step when no summary was received', () => {
     const collector = createAiActivityCollector({});
-
-    collector.start();
 
     expect(collector.finish()).toBe(false);
     expect(collector.getSteps()).toEqual([]);
@@ -119,13 +113,8 @@ describe('createAiActivityCollector', () => {
     const applyResult = vi.fn((step, result: string) => ({ ...step, result }));
     const collector = createAiActivityCollector(createToolRegistry({ applyResult }));
 
-    expect(collector.start()).toBe(true);
-    expect(collector.start()).toBe(false);
     expect(collector.addToolCalls([toolCall])).toBe(true);
-    expect(collector.getSteps()).toEqual([
-      { kind: 'analysis' },
-      { kind: 'tool', id: 'call-1', tool: 'math_calculate' },
-    ]);
+    expect(collector.getSteps()).toEqual([{ kind: 'tool', id: 'call-1', tool: 'math_calculate' }]);
     expect(collector.addToolResult('unknown', 'ignored')).toBe(false);
     expect(collector.addToolResult('call-1', '42')).toBe(true);
     expect(applyResult).toHaveBeenCalledWith(
@@ -135,7 +124,6 @@ describe('createAiActivityCollector', () => {
     expect(collector.finish()).toBe(true);
     expect(collector.finish()).toBe(true);
     expect(collector.getSteps()).toEqual([
-      { kind: 'analysis' },
       { kind: 'tool', id: 'call-1', tool: 'math_calculate', result: '42' },
       { kind: 'done' },
       { kind: 'done' },
@@ -144,7 +132,6 @@ describe('createAiActivityCollector', () => {
 
   it('ignores calls without registered activity and handles activity without result enrichment', () => {
     const collector = createAiActivityCollector({});
-    expect(collector.start()).toBe(true);
     expect(collector.addToolCalls([toolCall])).toBe(false);
     expect(collector.addToolResult('call-1', 'ignored')).toBe(false);
     expect(collector.finish()).toBe(false);
@@ -154,16 +141,16 @@ describe('createAiActivityCollector', () => {
       createToolRegistry({ applyResult: undefined }),
     );
     expect(noResultCollector.addToolCalls([toolCall])).toBe(true);
-    expect(noResultCollector.addToolResult('call-1', 'ignored')).toBe(false);
+    expect(noResultCollector.addToolResult('call-1', 'ignored')).toBe(true);
     expect(noResultCollector.finish()).toBe(true);
   });
 
-  it('does not publish when an activity result is unchanged', () => {
+  it('publishes tool completion when an activity result is unchanged', () => {
     const collector = createAiActivityCollector(
       createToolRegistry({ applyResult: (step) => step }),
     );
     collector.addToolCalls([toolCall]);
-    expect(collector.addToolResult('call-1', 'same')).toBe(false);
-    expect(collector.getSteps()).toHaveLength(2);
+    expect(collector.addToolResult('call-1', 'same')).toBe(true);
+    expect(collector.getSteps()).toHaveLength(1);
   });
 });
