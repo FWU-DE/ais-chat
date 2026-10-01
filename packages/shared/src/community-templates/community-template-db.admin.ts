@@ -10,7 +10,7 @@ import {
   TemplateRequestStatus,
 } from '@shared/db/schema';
 import { PgTransactionObject } from '@shared/db/types';
-import { and, asc, desc, eq, or } from 'drizzle-orm';
+import { and, desc, eq, or } from 'drizzle-orm';
 
 /**
  * Selects only the single latest event per template request via
@@ -54,7 +54,7 @@ export async function dbGetCommunityTemplateRequestRows() {
       eq(CommunityTemplateRequestTable.learningScenarioId, learningScenarioTable.id),
     )
     .innerJoin(latestEvent, eq(latestEvent.templateRequestId, CommunityTemplateRequestTable.id))
-    .orderBy(CommunityTemplateRequestTable.createdAt);
+    .orderBy(desc(latestEvent.createdAt));
 }
 
 /**
@@ -82,7 +82,7 @@ export async function dbGetCommunityTemplateRequestWithEventsRows(requestId: str
       eq(CommunityTemplateRequestEventTable.templateRequestId, CommunityTemplateRequestTable.id),
     )
     .where(eq(CommunityTemplateRequestTable.id, requestId))
-    .orderBy(asc(CommunityTemplateRequestEventTable.createdAt));
+    .orderBy(desc(CommunityTemplateRequestEventTable.createdAt));
 }
 
 export async function dbUpdateInternalNote(requestId: string, note: string): Promise<void> {
