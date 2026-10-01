@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { Card, CardRow } from '@ui/components/card';
 import { CommunityTemplateRequestEvent } from './community-template-request-event';
 import { Button } from '@ui/components/button';
+import { ScrollArea } from '@ui/components/scroll-area';
 import {
   CaretDownIcon,
   CaretUpIcon,
@@ -78,13 +79,15 @@ export function CommunityTemplateRequest({
                 }
               />
             </div>
-            <ul className="flex flex-col gap-6">
-              {requestWithEvents.events.map((event) => (
-                <li key={event.id}>
-                  <CommunityTemplateRequestEvent event={event} />
-                </li>
-              ))}
-            </ul>
+            <ScrollArea className="h-64">
+              <ul className="flex flex-col gap-6 pr-4">
+                {requestWithEvents.events.map((event) => (
+                  <li key={event.id}>
+                    <CommunityTemplateRequestEvent event={event} />
+                  </li>
+                ))}
+              </ul>
+            </ScrollArea>
           </CollapsibleContent>
         </CardRow>
       </Card>
