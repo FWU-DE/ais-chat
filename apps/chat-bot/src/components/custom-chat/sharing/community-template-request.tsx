@@ -26,8 +26,7 @@ export function CommunityTemplateRequest({
   const t = useTranslations('community-sharing');
   const toast = useToast();
   const [isResubmitting, setIsResubmitting] = useState(false);
-  const canResubmit =
-    requestWithEvents.state === 'rejected' || requestWithEvents.state === 'cancelled';
+  const canResubmit = requestWithEvents.state === 'rejected';
 
   async function handleResubmit() {
     setIsResubmitting(true);
