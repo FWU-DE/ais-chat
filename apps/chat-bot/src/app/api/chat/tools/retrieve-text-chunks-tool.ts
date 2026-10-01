@@ -6,6 +6,7 @@ import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './type
 import { dbGetAllChunks } from '@shared/db/functions/files';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { TOOL_NAMES } from '@/types/tool-names';
+import { parseJsonRecord, readString } from '@/utils/chat/ai-activity';
 
 export const retrieveTextChunksArgsSchema = z.object({
   search: z.string(),
@@ -141,6 +142,7 @@ export function buildRetrieveTextChunksTool({
           kind: 'tool',
           id: toolCall.id,
           tool: TOOL_NAMES.retrieveTextChunks,
+          detail: readString(parseJsonRecord(toolCall.arguments), 'search'),
         };
       },
     },

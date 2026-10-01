@@ -75,14 +75,15 @@ export function createAiActivityCollector(toolRegistry: Record<string, ToolRegis
   const steps: AiActivityStep[] = [];
   const stepsById = new Map<string, AiActivityToolStep>();
   let hasToolActivity = false;
+  let reasoningSummary = '';
 
   return {
-    start(): boolean {
-      if (steps.length > 0) {
+    addReasoningSummary(summary: string): boolean {
+      if (typeof summary !== 'string' || summary.length === 0) {
         return false;
       }
 
-      steps.push({ kind: 'analysis' });
+      reasoningSummary += summary;
       return true;
     },
     addToolCalls(toolCalls: ToolCall[]): boolean {
@@ -96,9 +97,6 @@ export function createAiActivityCollector(toolRegistry: Record<string, ToolRegis
       }
 
       hasToolActivity = true;
-      if (steps.at(-1)?.kind !== 'analysis') {
-        steps.push({ kind: 'analysis' });
-      }
       steps.push(...toolSteps);
 
       for (const step of toolSteps) {
@@ -117,22 +115,23 @@ export function createAiActivityCollector(toolRegistry: Record<string, ToolRegis
       const activity = toolRegistry[step.tool]?.activity;
       const enrichedStep = activity?.applyResult?.(step, result) ?? step;
 
-      if (enrichedStep === step) {
-        return false;
+      if (enrichedStep !== step) {
+        steps[steps.indexOf(step)] = enrichedStep;
+        stepsById.set(toolCallId, enrichedStep);
       }
 
-      steps[steps.indexOf(step)] = enrichedStep;
-      stepsById.set(toolCallId, enrichedStep);
       return true;
     },
     finish(): boolean {
-      if (!hasToolActivity) {
+      const hasReasoningActivity = reasoningSummary.length > 0;
+
+      if (!hasToolActivity && !hasReasoningActivity) {
         steps.length = 0;
         return false;
       }
 
-      if (steps.length === 0) {
-        return false;
+      if (hasReasoningActivity) {
+        steps.push({ kind: 'analysis-summary', content: reasoningSummary });
       }
 
       steps.push({ kind: 'done' });
@@ -140,6 +139,9 @@ export function createAiActivityCollector(toolRegistry: Record<string, ToolRegis
     },
     getSteps(): AiActivityStep[] {
       return [...steps];
+    },
+    getReasoningSummary(): string | undefined {
+      return reasoningSummary.length > 0 ? reasoningSummary : undefined;
     },
   };
 }

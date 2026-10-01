@@ -41,6 +41,8 @@ export function getAiActivityStepTitle(step: AiActivityStep, t: Translator): str
   switch (step.kind) {
     case 'analysis':
       return t('steps.analysis');
+    case 'analysis-summary':
+      return t('steps.analysis-summary');
     case 'done':
       return t('steps.done');
     case 'tool':
@@ -61,6 +63,10 @@ function StepIcon({ step }: { step: AiActivityStep }) {
     return <SparkleIcon className="size-4" />;
   }
 
+  if (step.kind === 'analysis-summary') {
+    return <SparkleIcon className="size-4" weight="fill" />;
+  }
+
   if (step.kind === 'done') {
     return <CheckCircleIcon className="size-4" weight="fill" />;
   }
@@ -71,12 +77,29 @@ function StepIcon({ step }: { step: AiActivityStep }) {
 
 function StepDetail({ step }: { step: Extract<AiActivityStep, { kind: 'tool' }> }) {
   const visibleDetail = truncate(step.detail);
+  const visibleResult = truncate(step.result);
+  const text =
+    visibleDetail === undefined
+      ? visibleResult === undefined
+        ? undefined
+        : `= ${visibleResult}`
+      : visibleResult === undefined
+        ? visibleDetail
+        : `${visibleDetail} = ${visibleResult}`;
 
-  return visibleDetail === undefined || visibleDetail.length === 0 ? null : (
+  return text === undefined || text.length === 0 ? null : (
     <span title={step.detail} className="min-w-0 truncate text-sm text-black/50">
-      {visibleDetail}
+      {text}
     </span>
   );
+}
+
+function AnalysisSummaryContent({ content }: { content: string }) {
+  if (content.length === 0) {
+    return null;
+  }
+
+  return <p className="whitespace-pre-wrap text-sm text-black/70">{content}</p>;
 }
 
 function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean }) {
@@ -98,6 +121,7 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
           {step.kind === 'tool' && <StepDetail step={step} />}
         </div>
 
+        {step.kind === 'analysis-summary' && <AnalysisSummaryContent content={step.content} />}
         {links.length > 0 && (
           <ul className="max-h-44 overflow-y-auto rounded-xl border border-border bg-background-2 p-1">
             {links.map((link, index) => (
@@ -125,13 +149,21 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
 }
 
 export function ActivityStepList({ steps }: { steps: AiActivityStep[] }) {
+  // Since the raw reasoning is never shown in the step 'analysis' and also not saved in the DB
+  // it should not be displayed in the ai activity panel does not make sense, only the summary step should be shown, if summary exists
+  const displaySteps = steps.filter((step) => step.kind !== 'analysis');
+
+  if (displaySteps.length === 0) {
+    return null;
+  }
+
   return (
     <ul className="flex flex-col">
-      {steps.map((step, index) => (
+      {displaySteps.map((step, index) => (
         <ActivityStep
           key={step.kind === 'tool' ? step.id : `${step.kind}-${index}`}
           step={step}
-          isLast={index === steps.length - 1}
+          isLast={index === displaySteps.length - 1}
         />
       ))}
     </ul>
@@ -141,7 +173,7 @@ export function ActivityStepList({ steps }: { steps: AiActivityStep[] }) {
 export function AiActivityDialog({ steps }: { steps: AiActivityStep[] }) {
   const t = useTranslations('ai-activity');
 
-  if (steps.length === 0) {
+  if (steps.every((step) => step.kind === 'analysis')) {
     return null;
   }
 
@@ -174,7 +206,7 @@ export function AiActivityPanel({ steps, panelId }: { steps: AiActivityStep[]; p
   const t = useTranslations('ai-activity');
   const [isOpen, setIsOpen] = useState(false);
 
-  if (steps.length === 0) {
+  if (steps.every((step) => step.kind === 'analysis')) {
     return null;
   }
 

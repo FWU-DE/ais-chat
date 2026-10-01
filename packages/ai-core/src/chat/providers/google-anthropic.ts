@@ -154,6 +154,7 @@ export function constructGoogleAnthropicAgenticStreamFn(model: AiModel): Agentic
       );
       const vertexModelName = resolveModelName(modelName);
       const messageParams: MessageCreateParamsStreaming = {
+        ...model.additionalParameters,
         max_tokens: maxTokens ?? 4096,
         messages: conversationMessages,
         model: vertexModelName,

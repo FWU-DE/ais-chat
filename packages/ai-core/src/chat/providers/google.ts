@@ -13,6 +13,7 @@ import type {
   GenerateContentResponsePromptFeedback,
   GenerateContentResponseUsageMetadata,
   Part,
+  ThinkingConfig,
   Tool,
   ToolConfig,
 } from '@google/genai';
@@ -82,7 +83,10 @@ function buildGoogleGenerateContentParameters({
   tools,
   toolChoice,
   abortSignal,
-}: Parameters<TextGenerationFn>[0]): GenerateContentParameters {
+  thinkingConfig,
+}: Parameters<TextGenerationFn>[0] & {
+  thinkingConfig?: ThinkingConfig;
+}): GenerateContentParameters {
   const contents = messages
     .filter((message) => message.role !== 'system')
     .map((message) => ({
@@ -97,6 +101,7 @@ function buildGoogleGenerateContentParameters({
     ...(maxTokens !== undefined ? { maxOutputTokens: maxTokens } : {}),
     ...(temperature !== undefined ? { temperature } : {}),
     ...(abortSignal !== undefined ? { abortSignal } : {}),
+    ...(thinkingConfig !== undefined ? { thinkingConfig } : {}),
     ...buildGoogleToolConfig(tools, toolChoice),
   };
 
@@ -105,6 +110,21 @@ function buildGoogleGenerateContentParameters({
     contents: contents.length > 0 ? contents : [{ role: 'user', parts: [createPartFromText('')] }],
     ...(Object.keys(config).length > 0 ? { config } : {}),
   };
+}
+
+// Gemini returns thought summary text as parts flagged `thought: true`, mixed in with normal content parts.
+function extractGoogleThoughtText(chunk: GenerateContentResponse): string {
+  const parts = chunk.candidates?.[0]?.content?.parts ?? [];
+  return parts
+    .filter((part) => part.thought === true && part.text !== undefined)
+    .map((part) => part.text)
+    .join('');
+}
+
+function getGoogleThinkingConfig(model: AiModel): ThinkingConfig | undefined {
+  const additionalParameters = model.additionalParameters as
+    { thinkingConfig?: ThinkingConfig } | undefined;
+  return additionalParameters?.thinkingConfig;
 }
 
 function toGoogleFunctionDeclarations(
@@ -354,6 +374,7 @@ export function constructGoogleAgenticStreamFn(model: AiModel): AgenticStreamFn 
           tools,
           toolChoice,
           abortSignal,
+          thinkingConfig: getGoogleThinkingConfig(model),
         }),
       );
 
@@ -361,6 +382,11 @@ export function constructGoogleAgenticStreamFn(model: AiModel): AgenticStreamFn 
 
       for await (const chunk of stream) {
         assertGoogleResponseAllowed(chunk);
+
+        const thoughtText = extractGoogleThoughtText(chunk);
+        if (thoughtText !== '') {
+          yield { type: 'reasoning_summary', delta: thoughtText };
+        }
 
         const chunkText = chunk.text ?? '';
         if (chunkText !== '') {

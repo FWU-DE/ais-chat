@@ -12,8 +12,9 @@ const MIN_STEP_DISPLAY_MS = 3000;
  */
 export function useCurrentActivityLabel(steps: AiActivityStep[]): string | undefined {
   const t = useTranslations('ai-activity');
-  const latestStep = steps.at(-1);
-  const latestTitle = latestStep === undefined ? undefined : getAiActivityStepTitle(latestStep, t);
+  const latestStep = steps.findLast((step) => step.kind !== 'analysis');
+  const latestTitle =
+    latestStep === undefined ? t('steps.analysis') : getAiActivityStepTitle(latestStep, t);
   const [displayedTitle, setDisplayedTitle] = useState<string | undefined>(latestTitle);
   const lastUpdateRef = useRef(0);
 

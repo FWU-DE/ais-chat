@@ -53,6 +53,7 @@
     "open-source": "Open source: {source}",
     "steps": {
       "analysis": "Analysis",
+      "analysis-summary": "Analysis summary",
       "done": "Done",
       "web_search": "Web search",
       "web_scraper": "Web page read",
