@@ -22,24 +22,6 @@ export const communityTemplateRequestStatusOptions: Array<{
 
 export const columns: ColumnDef<DataTableFeatures, CommunityTemplateRequestSummary>[] = [
   {
-    accessorKey: 'entityType',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="link"
-          className="p-0"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Vorlagentyp
-          <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => {
-      return mapEntityTypeToLabel(row.original.entityType);
-    },
-  },
-  {
     accessorKey: 'entityName',
     header: ({ column }) => {
       return (
@@ -48,10 +30,29 @@ export const columns: ColumnDef<DataTableFeatures, CommunityTemplateRequestSumma
           className="p-0"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          Vorlagenname
+          Name
           <ArrowUpDownIcon className="ml-2 h-4 w-4" />
         </Button>
       );
+    },
+  },
+
+  {
+    accessorKey: 'entityType',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="link"
+          className="p-0"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Typ
+          <ArrowUpDownIcon className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      return mapEntityTypeToLabel(row.original.entityType);
     },
   },
   {
@@ -81,7 +82,7 @@ export const columns: ColumnDef<DataTableFeatures, CommunityTemplateRequestSumma
           className="p-0"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          zuletzt aktualisiert
+          Zuletzt aktualisiert
           <ArrowUpDownIcon className="ml-2 h-4 w-4" />
         </Button>
       );
@@ -99,7 +100,7 @@ export const columns: ColumnDef<DataTableFeatures, CommunityTemplateRequestSumma
           className="p-0"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          zuletzt aktualisiert von
+          Zuletzt aktualisiert von
           <ArrowUpDownIcon className="ml-2 h-4 w-4" />
         </Button>
       );
