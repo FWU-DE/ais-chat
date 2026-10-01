@@ -15,6 +15,7 @@ type CopyToClipboardButtonProps = {
   variant?: ComponentProps<typeof Button>['variant'];
   size?: ComponentProps<typeof Button>['size'];
   'aria-label'?: string;
+  title?: string;
   defaultIcons?: boolean;
 };
 
@@ -25,6 +26,7 @@ export default function CopyToClipboardButton({
   variant = 'ghost',
   size = 'icon-round',
   'aria-label': ariaLabel,
+  title,
   defaultIcons = true,
 }: CopyToClipboardButtonProps) {
   const toast = useToast();
@@ -62,6 +64,7 @@ export default function CopyToClipboardButton({
       variant={variant}
       size={size}
       aria-label={ariaLabel ?? t('copy-clipboard')}
+      title={title}
       data-testid="copy-to-clipboard"
       onClick={handleCopy}
       className="text-primary"

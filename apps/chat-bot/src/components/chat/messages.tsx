@@ -22,6 +22,8 @@ interface MessagesProps {
   webSourceMapping?: Map<string, WebSource[]>;
   activitySteps?: AiActivityStep[];
   showActivityDialog?: boolean;
+  generateSpeechFn: (text: string) => Promise<Blob>;
+  isSpeechModelEnabled: boolean;
 }
 
 export function Messages({
@@ -37,6 +39,8 @@ export function Messages({
   webSourceMapping,
   activitySteps = [],
   showActivityDialog = false,
+  generateSpeechFn,
+  isSpeechModelEnabled,
 }: MessagesProps): React.JSX.Element {
   return (
     <div className={containerClassName}>
@@ -54,6 +58,8 @@ export function Messages({
           webSources={message.role === 'user' ? webSourceMapping?.get(message.id) : undefined}
           status={status}
           showActivityDialog={showActivityDialog}
+          generateSpeechFn={generateSpeechFn}
+          isSpeechModelEnabled={isSpeechModelEnabled}
         >
           {message}
         </ChatBox>

@@ -31,6 +31,11 @@ export async function dbGetAllLlmModels() {
   return db.select().from(llmModelTable).orderBy(llmModelTable.createdAt).$withCache();
 }
 
+export async function dbGetSpeechModel() {
+  const models = await dbGetAllLlmModels();
+  return models.find((model) => model.priceMetadata.type === 'speech');
+}
+
 export async function dbGetLlmModelsByFederalStateId({
   federalStateId,
 }: {
