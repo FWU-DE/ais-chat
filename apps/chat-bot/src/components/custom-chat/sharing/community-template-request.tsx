@@ -54,7 +54,15 @@ export function CommunityTemplateRequest({
         <CardRow className="flex flex-col gap-4">
           <div className="flex flex-row gap-2 items-center">
             <span className="text-base font-medium">{t('title')}</span>
-            <Chip>{t(`status.${requestWithEvents.state}`)}</Chip>
+            <Chip
+              className={
+                requestWithEvents.state === 'rejected'
+                  ? 'bg-warning/30 text-warning-foreground'
+                  : ''
+              }
+            >
+              {t(`status.${requestWithEvents.state}`)}
+            </Chip>
             <CollapsibleTrigger asChild>
               <Button className="ml-auto" variant="ghost">
                 {isOpen ? <CaretUpIcon /> : <CaretDownIcon />}
