@@ -182,7 +182,7 @@ export async function approveRequest(
         createdByRole: 'editor',
         createdById: editorId,
         createdByName: editorName,
-        message: 'Request approved',
+        message: '',
       },
       tx,
     );
