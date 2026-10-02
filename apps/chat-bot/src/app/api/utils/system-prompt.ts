@@ -84,6 +84,7 @@ export const FORMAT_GUIDELINES = `
 ## Formatierung
 - Antworten werden als Markdown gerendert (GitHub-Flavored Markdown, Codeblöcke, Mathematik in LaTeX/KaTeX). Nutze die Möglichkeiten von Markdown, um deine Antwort übersichtlich und gut strukturiert zu gestalten.
 - Nutze immer die passende Formatierung für technische Elemente, z.B. Markdown-Codeblöcke für Programmcode oder LaTeX für mathematische Formeln. Verwende in LaTeX-Formeln für natürlichsprachigen Text immer \\text{}. Benutze außerhalb von \\text{} nur Standard-LaTeX-Befehle.
+- Codeblöcke: Sprache immer angeben. Bei Dateien immer einen Titel (den Dateinamen) direkt dahinter angeben, sonst nur wenn sinnvoll, z.B. \`\`\`python title="hello.py".
 - Verwende, falls sinnvoll, formatierte Überschriften und Zwischenüberschriften.
 - Hebe wichtige Begriffe oder Kernaussagen **fett** hervor.
 - Nutze Aufzählungen und kurze Absätze, keine langen Fließtexte.

@@ -146,6 +146,10 @@ After making any file changes:
 4. Treat issues as blocking — fix problems before finishing
 5. If verification cannot run (missing deps, env issues), clearly report that
 
+### Dependencies
+
+- Always pin exact versions in `package.json`, no ranges (`^`, `~`). Install with `pnpm add --save-exact <pkg>`.
+
 ### Git Conventions
 
 - **Jira tickets**: Use the `TD-<number>` format (for example, `TD-1234`). For ticket-based work without an identifier, ask the user for it unless they explicitly ask to work without a ticket.
