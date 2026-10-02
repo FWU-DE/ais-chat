@@ -17,6 +17,8 @@ import DownloadConversationMessageButton from './download-conversation-message-b
 import { utils } from '@shared/utils';
 import DisplayFileAttachment from './display-file-attachment';
 import SpeechButton from './speech-button';
+import { replacePlotBlocks } from '@/utils/code-blocks';
+import { PlotStreamingContext } from './plot/plot-block';
 
 // Re-export for consumers
 export type { PendingFileModel };
@@ -142,11 +144,16 @@ export function ChatBox({
   const margin =
     allFiles !== undefined || userWebSources.length > 0 || AiActivity !== null ? 'm-0 mt-4' : 'm-4';
 
+  // Copy and read-aloud get a short description instead of the plot JSON.
+  const plainText = replacePlotBlocks(children.content, (title) =>
+    title ? tCommon('plot-description', { title }) : tCommon('plot-description-untitled'),
+  );
+
   const maybeShowMessageIcons =
     isLastNonUser && status !== 'streaming' ? (
       <div className="flex items-center gap-1 mt-1">
         <CopyToClipboardButton
-          text={children.content}
+          text={plainText}
           className="size-5"
           size="icon-sm"
           title={tCommon('message-copy')}
@@ -173,7 +180,7 @@ export function ChatBox({
           <ReloadIcon className="size-5 text-primary" />
         </Button>
         <SpeechButton
-          text={children.content}
+          text={plainText}
           generateSpeechFn={generateSpeechFn}
           isSpeechModelEnabled={isSpeechModelEnabled}
         />
@@ -181,7 +188,11 @@ export function ChatBox({
       </div>
     ) : null;
 
-  const messageContent = <MarkdownDisplay>{children.content}</MarkdownDisplay>;
+  const messageContent = (
+    <PlotStreamingContext.Provider value={status === 'streaming' && isLastNonUser}>
+      <MarkdownDisplay>{children.content}</MarkdownDisplay>
+    </PlotStreamingContext.Provider>
+  );
 
   return (
     <>
