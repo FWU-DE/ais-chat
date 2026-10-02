@@ -88,7 +88,7 @@ services:
 
   # Crawl4AI for web scraping capabilities
   crawl4ai:
-    image: unclecode/crawl4ai:0.9.3
+    image: unclecode/crawl4ai:0.9.4
     environment:
       CRAWL4AI_API_TOKEN: ais-chat-crawl4ai-token
     restart: unless-stopped
