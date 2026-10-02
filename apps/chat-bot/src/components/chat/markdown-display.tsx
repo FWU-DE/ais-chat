@@ -9,6 +9,7 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { cn } from '@/utils/tailwind';
 import CopyToClipboardButton from '../common/clipboard-button';
+import { getCodeTitle } from '@/utils/code-blocks';
 
 type MarkdownDisplayProps = {
   children: string;
@@ -213,8 +214,9 @@ export default function MarkdownDisplay({ children: _children }: MarkdownDisplay
               </p>
             );
           },
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           code({ className, children, node, ...props }) {
+            // react-markdown passes the fence info after the language (`title="…"`) as `data.meta`.
+            const title = getCodeTitle((node?.data as { meta?: string } | undefined)?.meta);
             const sanitizedText = String(children).replace(/\n$/, '');
             const match = /language-(\w+)/.exec(className || '');
 
@@ -233,7 +235,7 @@ export default function MarkdownDisplay({ children: _children }: MarkdownDisplay
             return (
               <div className="flex flex-col py-2 text-sm max-w-full">
                 <div className="flex items-center justify-center bg-gray-300 py-2 px-2">
-                  <span>{language}</span>
+                  <span>{title ? `${language} – ${title}` : language}</span>
                   <div className="grow" />
                   <CopyToClipboardButton text={sanitizedText} />
                 </div>
