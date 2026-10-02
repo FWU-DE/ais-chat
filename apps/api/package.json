@@ -40,7 +40,7 @@
     "@opentelemetry/semantic-conventions": "1.43.0",
     "@sentry/node": "10.75.0",
     "@sentry/opentelemetry": "10.75.0",
-    "@sentry/profiling-node": "10.75.0",
+    "@sentry/profiling-node": "11.0.0",
     "@t3-oss/env-core": "0.13.11",
     "fastify": "5.12.5",
     "fastify-graceful-shutdown": "5.0.0",
