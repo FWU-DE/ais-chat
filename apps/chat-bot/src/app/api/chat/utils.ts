@@ -15,6 +15,21 @@ import he from 'he';
 export type FileWithConversationMessageId = FileModel & { conversationMessageId?: string };
 
 /**
+ * Converts agent loop tool call/result messages into persistable chat messages, assigning
+ * each a stable id. Used by chats that have no DB history (e.g. shared chats) so these
+ * messages can be sent to the client and replayed as context on the next turn.
+ */
+export function agentLoopMessagesToChatMessages(agentLoopMessages: AiCoreMessage[]): ChatMessage[] {
+  return agentLoopMessages.map((message) => ({
+    id: crypto.randomUUID(),
+    role: message.role,
+    content: message.content,
+    toolCalls: message.toolCalls,
+    toolCallId: message.toolCallId,
+  }));
+}
+
+/**
  * Adds attached filenames to copies of user messages before they are sent to the model.
  * The original messages remain unchanged, and files without a matching message are ignored.
  */
