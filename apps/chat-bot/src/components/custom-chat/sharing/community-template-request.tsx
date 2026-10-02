@@ -33,8 +33,7 @@ export function CommunityTemplateRequest({
   const t = useTranslations('community-sharing');
   const toast = useToast();
   const [isResubmitting, setIsResubmitting] = useState(false);
-  const showRequestDetails =
-    requestWithEvents.state === 'submitted' || requestWithEvents.state === 'rejected';
+  const showRequestDetails = requestWithEvents.state === 'rejected';
   const [isOpen, setIsOpen] = useState(showRequestDetails);
   const canResubmit = requestWithEvents.state === 'rejected';
 
@@ -48,7 +47,7 @@ export function CommunityTemplateRequest({
     }
   }
 
-  return (
+  return requestWithEvents.state === 'approved' ? null : (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card className="mt-3">
         <CardRow className="flex flex-col gap-4">
@@ -87,7 +86,7 @@ export function CommunityTemplateRequest({
                 }
               />
             </div>
-            <ScrollArea className="h-64">
+            <ScrollArea className="max-h-40">
               <ul className="flex flex-col gap-6 pr-4">
                 {requestWithEvents.events.map((event) => (
                   <li key={event.id}>
