@@ -96,6 +96,12 @@
         "content-no-false-outdated": "Die Vorlage enthält keine falschen oder veralteten Inhalte (z.B. telli statt AIS.chat).",
         "terms-accepted": "Ich habe die [Nutzungsbedingungen](https://ais-chat.schule/terms-of-use/) gelesen und akzeptiere sie."
       }
+    },
+    "community-removal-confirmation": {
+      "title": "Community-Freigabe entfernen?",
+      "description": "Soll die Community-Freigabe entfernt werden? Der Freigabeprozess muss dann erneut durchlaufen werden.",
+      "cancel": "Abbrechen",
+      "accept": "Freigabe entfernen"
     }
   },
   "community-sharing": {
@@ -103,7 +109,7 @@
     "status": {
       "approved": "Genehmigt",
       "cancelled": "Zurückgezogen",
-      "rejected": "Überarbeitung angefordert",
+      "rejected": "Änderung erforderlich",
       "submitted": "Eingereicht"
     },
     "event-type": {

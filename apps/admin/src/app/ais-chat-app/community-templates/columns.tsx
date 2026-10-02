@@ -16,7 +16,7 @@ export const communityTemplateRequestStatusOptions: Array<{
 }> = [
   { value: 'submitted', label: 'Eingereicht' },
   { value: 'approved', label: 'Genehmigt' },
-  { value: 'rejected', label: 'Änderungen erforderlich' },
+  { value: 'rejected', label: 'Überarbeitung angefordert' },
   { value: 'cancelled', label: 'Zurückgezogen' },
 ];
 

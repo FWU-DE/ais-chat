@@ -212,7 +212,7 @@ function mapEventTypeToLabel(
     case 'cancel':
       return 'Zurückgezogen';
     case 'reject':
-      return 'Änderungen erforderlich';
+      return 'Überarbeitung angefordert';
     case 'submit':
       return 'Eingereicht';
     case 'editor_message':
