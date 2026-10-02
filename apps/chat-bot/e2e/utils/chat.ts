@@ -19,16 +19,15 @@ export async function sendMessage(
   options: { expectedError?: string } = {},
 ) {
   await test.step('send message and wait for response', async () => {
-    const loadingSpinner = page.getByAltText('Ladeanimation');
     const errorBox = page.getByRole('button', { name: 'Erneut versuchen' });
+    const assistantMessages = page.getByLabel(/^assistant message /);
+    const assistantMessage = assistantMessages.nth(await assistantMessages.count());
 
     await enterMessage(page, message);
-    const waitForLoadingSpinner = loadingSpinner.waitFor().then(() => 'loading' as const);
-    const waitForError = errorBox.waitFor({ timeout: 80_000 }).then(() => 'error' as const);
     await page.keyboard.press('Enter');
 
-    const initialState = await Promise.race([waitForLoadingSpinner, waitForError]);
-    if (initialState === 'error') {
+    await assistantMessage.or(errorBox).first().waitFor({ timeout: 80_000 });
+    if (await errorBox.isVisible()) {
       if (options.expectedError === undefined) {
         throw new Error('Error message appeared after sending message');
       }
@@ -45,12 +44,10 @@ export async function sendMessage(
 
     // Either the response finishes successfully and shows the Reload button,
     // or an error message appears and the test should fail.
-    await Promise.race([
-      loadingSpinner.waitFor({ state: 'detached', timeout: 80_000 }),
-      errorBox.waitFor({ timeout: 80_000 }).then(() => {
-        throw new Error('Error message appeared after sending message');
-      }),
-    ]);
+    await assistantMessage.getByLabel('Reload').or(errorBox).first().waitFor({ timeout: 80_000 });
+    if (await errorBox.isVisible()) {
+      throw new Error('Error message appeared after sending message');
+    }
   });
 }
 
