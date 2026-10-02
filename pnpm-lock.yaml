@@ -174,8 +174,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/shared-core
       '@dotenvx/dotenvx':
-        specifier: 2.30.0
-        version: 2.30.0
+        specifier: 2.32.3
+        version: 2.32.3
       '@fastify/cors':
         specifier: 11.3.0
         version: 11.3.0
@@ -476,8 +476,8 @@ importers:
         specifier: 4.13.0
         version: 4.13.0(playwright-core@1.63.0)
       '@dotenvx/dotenvx':
-        specifier: 2.30.0
-        version: 2.30.0
+        specifier: 2.32.3
+        version: 2.32.3
       '@playwright/test':
         specifier: 1.63.0
         version: 1.63.0
@@ -664,8 +664,8 @@ importers:
         specifier: workspace:*
         version: link:../typescript-config
       '@dotenvx/dotenvx':
-        specifier: 2.30.0
-        version: 2.30.0
+        specifier: 2.32.3
+        version: 2.32.3
       '@types/node':
         specifier: 24.19.0
         version: 24.19.0
@@ -822,8 +822,8 @@ importers:
         specifier: workspace:*
         version: link:../typescript-config
       '@dotenvx/dotenvx':
-        specifier: 2.30.0
-        version: 2.30.0
+        specifier: 2.32.3
+        version: 2.32.3
       '@types/node':
         specifier: 24.19.0
         version: 24.19.0
@@ -1738,8 +1738,8 @@ packages:
     resolution: {integrity: sha512-Xc3VhU02wqZ1HvHRJUwL09HkZSTvidqY5Ya0NXBSYOxAp+Ln9dcJr9fySI+CkONzP3PekQo9WdzCv0PGER/mOA==}
     engines: {node: '>=14.17.0'}
 
-  '@dotenvx/dotenvx@2.30.0':
-    resolution: {integrity: sha512-+Rk8UhaD3WIREKJBPmH9HHUvKO+ggb4tJhzAoXiZNBjQv6nAiJmI953MQ6sC7msHjAvhRIFlyZT7Oe6bQPslAA==}
+  '@dotenvx/dotenvx@2.32.3':
+    resolution: {integrity: sha512-UNFIHshsxON+DVnq+sDpGvhSmHZCQEaQ0C7PTBa1NAA+L94TtRkYGhjttsiIvs6jyYnZJXy5tn9go77+ossGmA==}
     hasBin: true
 
   '@dotenvx/primitives@3.0.3':
@@ -11219,7 +11219,7 @@ snapshots:
 
   '@discoveryjs/json-ext@1.1.0': {}
 
-  '@dotenvx/dotenvx@2.30.0':
+  '@dotenvx/dotenvx@2.32.3':
     dependencies:
       '@dotenvx/primitives': 3.0.3
       '@dotenvx/tooling': 1.0.3

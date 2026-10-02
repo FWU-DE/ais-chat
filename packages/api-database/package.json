@@ -38,7 +38,7 @@
   "devDependencies": {
     "@ais-chat/eslint-config": "workspace:*",
     "@ais-chat/typescript-config": "workspace:*",
-    "@dotenvx/dotenvx": "2.30.0",
+    "@dotenvx/dotenvx": "2.32.3",
     "@types/node": "24.19.0",
     "@types/pg": "8.23.1",
     "@vitest/coverage-v8": "5.0.2",

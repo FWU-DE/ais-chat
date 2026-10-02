@@ -23,7 +23,7 @@
     "@ais-chat/ai-core": "workspace:*",
     "@ais-chat/api-database": "workspace:*",
     "@ais-chat/shared-core": "workspace:*",
-    "@dotenvx/dotenvx": "2.30.0",
+    "@dotenvx/dotenvx": "2.32.3",
     "@fastify/cors": "11.3.0",
     "@fastify/multipart": "10.1.2",
     "@fastify/otel": "0.21.0",
