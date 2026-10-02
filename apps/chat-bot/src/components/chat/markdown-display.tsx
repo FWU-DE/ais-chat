@@ -1,5 +1,5 @@
 import React from 'react';
-import Markdown from 'react-markdown';
+import Markdown, { type ExtraProps } from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { nightOwl } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import remarkGfm from 'remark-gfm';
@@ -9,7 +9,8 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { cn } from '@/utils/tailwind';
 import CopyToClipboardButton from '../common/clipboard-button';
-import { getCodeTitle } from '@/utils/code-blocks';
+import { PlotBlock } from './plot/plot-block';
+import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
 
 type MarkdownDisplayProps = {
   children: string;
@@ -18,6 +19,58 @@ type MarkdownDisplayProps = {
 const KATEX_RENDER_OPTIONS = {
   strict: false,
 };
+
+// Defined at module level so the component identity stays stable across re-renders (keeps plot state).
+function MarkdownCode({
+  className,
+  children,
+  node,
+  ...props
+}: React.ComponentProps<'code'> & ExtraProps) {
+  // react-markdown passes the fence info after the language (`title="…"`) as `data.meta`.
+  const title = getCodeTitle((node?.data as { meta?: string } | undefined)?.meta);
+  const sanitizedText = String(children).replace(/\n$/, '');
+  const match = /language-([\w-]+)/.exec(className || '');
+
+  const language = match?.[1];
+
+  if (language === undefined) {
+    return (
+      <code className={cn(className, 'wrap-break-word bg-main-200 px-0.5 text-wrap text-sm')}>
+        {children}
+      </code>
+    );
+  }
+
+  if (language === PLOT_LANGUAGE) {
+    return <PlotBlock source={sanitizedText} title={title} />;
+  }
+
+  const codeBlock = (
+    <div className="flex flex-col py-2 text-sm max-w-full">
+      <div className="flex items-center justify-center bg-gray-300 py-2 px-2">
+        <span>{title ? `${language} – ${title}` : language}</span>
+        <div className="grow" />
+        <CopyToClipboardButton text={sanitizedText} />
+      </div>
+      <SyntaxHighlighter
+        // @ts-expect-error wrong typing
+        style={nightOwl}
+        language={language}
+        PreTag="pre"
+        {...props}
+        customStyle={{
+          overflowX: 'auto',
+          margin: '0rem',
+        }}
+      >
+        {sanitizedText}
+      </SyntaxHighlighter>
+    </div>
+  );
+
+  return codeBlock;
+}
 
 function preprocessMathDelimiters(markdown: string) {
   return (
@@ -214,47 +267,7 @@ export default function MarkdownDisplay({ children: _children }: MarkdownDisplay
               </p>
             );
           },
-          code({ className, children, node, ...props }) {
-            // react-markdown passes the fence info after the language (`title="…"`) as `data.meta`.
-            const title = getCodeTitle((node?.data as { meta?: string } | undefined)?.meta);
-            const sanitizedText = String(children).replace(/\n$/, '');
-            const match = /language-(\w+)/.exec(className || '');
-
-            const language = match?.[1];
-
-            if (language === undefined) {
-              return (
-                <code
-                  className={cn(className, 'wrap-break-word bg-main-200 px-0.5 text-wrap text-sm')}
-                >
-                  {children}
-                </code>
-              );
-            }
-
-            return (
-              <div className="flex flex-col py-2 text-sm max-w-full">
-                <div className="flex items-center justify-center bg-gray-300 py-2 px-2">
-                  <span>{title ? `${language} – ${title}` : language}</span>
-                  <div className="grow" />
-                  <CopyToClipboardButton text={sanitizedText} />
-                </div>
-                <SyntaxHighlighter
-                  // @ts-expect-error wrong typing
-                  style={nightOwl}
-                  language={language}
-                  PreTag="pre"
-                  {...props}
-                  customStyle={{
-                    overflowX: 'auto',
-                    margin: '0rem',
-                  }}
-                >
-                  {sanitizedText}
-                </SyntaxHighlighter>
-              </div>
-            );
-          },
+          code: MarkdownCode,
         }}
       >
         {children}
