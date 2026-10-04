@@ -53,6 +53,7 @@
     "open-source": "فتح المصدر: {source}",
     "steps": {
       "analysis": "تحليل",
+      "analysis-summary": "ملخص التحليل",
       "done": "تم",
       "web_search": "بحث في الإنترنت",
       "web_scraper": "تمت قراءة صفحة ويب",

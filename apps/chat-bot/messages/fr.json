@@ -53,6 +53,7 @@
     "open-source": "Ouvrir la source: {source}",
     "steps": {
       "analysis": "Analyse",
+      "analysis-summary": "Résumé de l’analyse",
       "done": "Terminé",
       "web_search": "Recherche web",
       "web_scraper": "Page web lue",

@@ -1,7 +1,8 @@
 import { expect, Page } from '@playwright/test';
 
 export async function startShare(page: Page, { id }: { id: string }) {
-  await page.waitForURL(`**/editor/${id}**`);
+  await page.waitForURL((url) => url.pathname.endsWith(`/editor/${id}`));
+  const editorUrl = page.url();
 
   await page.getByTestId('usage-time-select').click();
   await page.getByTestId('usage-time-option-30').click();
@@ -10,18 +11,21 @@ export async function startShare(page: Page, { id }: { id: string }) {
   await page.waitForURL(`**/editor/${id}/share`);
 
   // Navigate back to editor so the caller can interact with the active share UI
-  await page.goBack();
-  await page.waitForURL(`**/editor/${id}**`);
+  await page.goto(editorUrl, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('stop-share-button')).toBeVisible({ timeout: 30_000 });
 }
 
 export async function stopShare(page: Page) {
   const stopButton = page.getByTestId('stop-share-button');
   await expect(stopButton).toBeVisible();
-  await page.waitForLoadState('networkidle');
-  await stopButton.click();
 
   const stopShareDialog = page.getByTestId('stop-share-dialog');
-  await expect(stopShareDialog).toBeVisible();
+  await expect(async () => {
+    if (!(await stopShareDialog.isVisible())) {
+      await stopButton.click();
+    }
+    await expect(stopShareDialog).toBeVisible();
+  }).toPass({ timeout: 15_000 });
   await page.getByTestId('stop-share-confirm-button').click();
   await expect(stopShareDialog).not.toBeVisible();
 }

@@ -103,6 +103,7 @@ export type TextResponse = {
  */
 export type StreamEvent =
   | { type: 'text'; delta: string }
+  | { type: 'reasoning_summary'; delta: string }
   | { type: 'tool_call'; call: ToolCall }
   | { type: 'finish'; usage: TokenUsage; modelId?: string };
 
