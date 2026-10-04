@@ -112,6 +112,9 @@ export const mockLearningScenario = (): LearningScenarioSelectModel => {
     isWebSearchEnabled: false,
     webSearchScope: 'all-web',
     webSearchIncludedDomains: [],
+    isSpeechEnabled: true,
+    voice: '',
+    speechOnly: false,
     ownerSchoolIds: [generateUUID()],
   };
 };
@@ -179,6 +182,9 @@ export const mockCharacter = (): CharacterSelectModel => {
     isWebSearchEnabled: false,
     webSearchScope: 'all-web',
     webSearchIncludedDomains: [],
+    isSpeechEnabled: true,
+    voice: '',
+    speechOnly: false,
     ownerSchoolIds: [generateUUID()],
   };
 };
