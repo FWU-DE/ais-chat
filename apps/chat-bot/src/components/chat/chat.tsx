@@ -364,7 +364,13 @@ export default function Chat({
               activitySteps={activitySteps}
               showActivityDialog={character !== undefined}
               generateSpeechFn={generateSpeech}
-              isSpeechModelEnabled={federalState?.featureToggles?.isSpeechModelEnabled === true}
+              isSpeechModelEnabled={
+                federalState?.featureToggles?.isSpeechModelEnabled === true &&
+                (assistant?.isSpeechEnabled ??
+                  character?.isSpeechEnabled ??
+                  learningScenario?.isSpeechEnabled ??
+                  false)
+              }
             />
           )}
           {error && (
