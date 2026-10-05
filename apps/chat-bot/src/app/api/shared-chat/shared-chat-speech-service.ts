@@ -41,6 +41,13 @@ export async function generateSharedChatSpeech({
     throw new ForbiddenError('The user assigned to this chat is not a teacher');
   }
 
+  if (
+    teacher.federalState.featureToggles.isSpeechModelEnabled !== true ||
+    !entity.isSpeechEnabled
+  ) {
+    throw new ForbiddenError('Speech is not enabled for this shared chat');
+  }
+
   if (sharedChatHasExpired(entity)) {
     throw new ForbiddenError('Shared chat has expired');
   }
