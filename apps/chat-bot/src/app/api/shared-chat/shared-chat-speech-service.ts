@@ -1,5 +1,6 @@
 import { getUserAndContextByUserId } from '@/auth/utils';
 import { checkProductAccess } from '@/utils/vidis/access';
+import { requireTeacherRole } from '@shared/auth/authorization-service';
 import { ForbiddenError } from '@shared/error';
 import {
   sharedChatHasExpired,
@@ -37,9 +38,7 @@ export async function generateSharedChatSpeech({
     throw new ForbiddenError(`Owner has no product access: ${productAccess.errorType}`);
   }
 
-  if (teacher.userRole !== 'teacher') {
-    throw new ForbiddenError('The user assigned to this chat is not a teacher');
-  }
+  requireTeacherRole(teacher.userRole);
 
   if (
     teacher.federalState.featureToggles.isSpeechModelEnabled !== true ||

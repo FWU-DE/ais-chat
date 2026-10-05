@@ -11,7 +11,7 @@ export const sharedChatCommonRequestSchema = z.object({
   inviteCode: requiredNonEmptyString('inviteCode is required'),
   sharedSessionId: requiredNonEmptyString('sharedSessionId is required'),
   entityType: z.union([z.literal('character'), z.literal('learningScenario')]),
-  entityId: requiredNonEmptyString('entityId is required'),
+  entityId: z.uuid('entityId must be a valid UUID'),
 });
 
 export const sharedChatUploadFormSchema = sharedChatCommonRequestSchema.extend({
@@ -29,7 +29,7 @@ export const sharedChatImageRequestSchema = sharedChatCommonRequestSchema.extend
 export const sharedChatSpeechRequestSchema = z.object({
   inviteCode: requiredNonEmptyString('inviteCode is required'),
   entityType: z.union([z.literal('character'), z.literal('learningScenario')]),
-  entityId: requiredNonEmptyString('entityId is required'),
+  entityId: z.uuid('entityId must be a valid UUID'),
   text: requiredNonEmptyString('text is required'),
 });
 
