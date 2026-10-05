@@ -30,7 +30,7 @@ vi.mock('openai', () => ({
   default: MockOpenAI,
 }));
 
-vi.mock('@sentry/core', () => ({
+vi.mock('@sentry/server-utils', () => ({
   instrumentOpenAiClient: instrumentOpenAiClientMock,
 }));
 
