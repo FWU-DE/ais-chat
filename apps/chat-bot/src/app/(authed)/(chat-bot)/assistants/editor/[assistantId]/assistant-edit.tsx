@@ -53,10 +53,7 @@ import { CustomChatImageUpload } from '@/components/custom-chat/custom-chat-imag
 import { usePendingChangesGuard } from '@/hooks/use-pending-changes-guard';
 import { useForceReloadOnBrowserBackButton } from '@/hooks/use-force-reload-on-browser-back-button';
 import { useFormAutosave } from '@/hooks/use-form-autosave';
-import {
-  CommunitySharingState,
-  useCommunityTemplateRequest,
-} from '@/hooks/use-community-template-request';
+import { useEntitySharing } from '@/hooks/use-entity-sharing';
 import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
 import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
 import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
@@ -200,36 +197,6 @@ export function AssistantEdit({
     mode: 'onBlur',
   });
 
-  const applySharingState = useCallback(
-    ({ entity, request }: CommunitySharingState) => {
-      setValue('isSchoolShared', entity.isSchoolShared, { shouldDirty: false });
-      setValue(
-        'isCommunityShared',
-        isCommunitySharingActive({
-          isCommunityShared: entity.isCommunityShared,
-          requestState: request?.state,
-        }),
-        { shouldDirty: false },
-      );
-      setValue('hasLinkAccess', entity.hasLinkAccess, { shouldDirty: false });
-    },
-    [setValue],
-  );
-
-  const {
-    communityTemplateRequest,
-    setCommunityTemplateRequest,
-    createRequest: createCommunityTemplateRequest,
-    cancelRequest: cancelCommunityTemplateRequest,
-    sendMessage: sendMessageToEditor,
-  } = useCommunityTemplateRequest({
-    initialRequest: initialCommunityTemplateRequest,
-    createRequest: () => createCommunityTemplateRequestAction({ assistantId: assistant.id }),
-    cancelRequest: () => cancelCommunityTemplateRequestAction({ assistantId: assistant.id }),
-    sendMessage: (message) => sendMessageToEditorAction({ assistantId: assistant.id, message }),
-    onSharingStateChange: applySharingState,
-  });
-
   const { isSaving, hasSaveError, flushAutoSave, handleAutoSave } =
     useFormAutosave<AssistantFormValues>({
       initialValues,
@@ -259,6 +226,26 @@ export function AssistantEdit({
         return updateResult.success;
       },
     });
+
+  const {
+    communityTemplateRequest,
+    createCommunityTemplateRequest,
+    sendMessageToEditor,
+    handleSharingChange,
+  } = useEntitySharing({
+    setValue,
+    initialRequest: initialCommunityTemplateRequest,
+    actions: {
+      createRequest: () => createCommunityTemplateRequestAction({ assistantId: assistant.id }),
+      cancelRequest: () => cancelCommunityTemplateRequestAction({ assistantId: assistant.id }),
+      sendMessage: (message) => sendMessageToEditorAction({ assistantId: assistant.id, message }),
+      getSharingState: () => getAssistantSharingStateAction({ assistantId: assistant.id }),
+      updateSchoolSharing: (isSchoolShared) =>
+        updateAssistantSchoolSharingAction({ assistantId: assistant.id, isSchoolShared }),
+    },
+    onError: () => toast.error(t('toasts.edit-toast-error')),
+    onSuccess: flushAutoSave,
+  });
 
   const name = useWatch({ control, name: 'name' });
   const schoolTypes = useWatch({ control, name: 'schoolTypes' });
@@ -357,43 +344,6 @@ export function AssistantEdit({
 
     return result;
   }
-
-  // Resyncs the sharing checkboxes and hasLinkAccess from the server after a failed mutation,
-  // without touching any other (possibly unsaved) form fields.
-  const refreshSharingState = useCallback(async () => {
-    const result = await getAssistantSharingStateAction({ assistantId: assistant.id });
-    if (result.success) {
-      applySharingState(result.value);
-      setCommunityTemplateRequest(result.value.request);
-    }
-  }, [assistant.id, applySharingState, setCommunityTemplateRequest]);
-
-  const handleSharingChange = async ({ name, checked }: { name: string; checked: boolean }) => {
-    if (name === 'isCommunityShared') {
-      const result = checked
-        ? await createCommunityTemplateRequest()
-        : await cancelCommunityTemplateRequest();
-
-      if (!result.success) {
-        await refreshSharingState();
-        toast.error(t('toasts.edit-toast-error'));
-        return;
-      }
-    } else if (name === 'isSchoolShared') {
-      const result = await updateAssistantSchoolSharingAction({
-        assistantId: assistant.id,
-        isSchoolShared: checked,
-      });
-
-      if (!result.success) {
-        await refreshSharingState();
-        toast.error(t('toasts.edit-toast-error'));
-        return;
-      }
-    }
-
-    await flushAutoSave();
-  };
 
   const assistantActions = (
     <CustomChatActions>

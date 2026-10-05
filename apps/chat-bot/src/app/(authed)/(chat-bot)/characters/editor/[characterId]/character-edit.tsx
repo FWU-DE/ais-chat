@@ -37,10 +37,7 @@ import {
   uploadAvatarPictureForCharacterAction,
 } from './actions';
 import { useFormAutosave } from '@/hooks/use-form-autosave';
-import {
-  CommunitySharingState,
-  useCommunityTemplateRequest,
-} from '@/hooks/use-community-template-request';
+import { useEntitySharing } from '@/hooks/use-entity-sharing';
 import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
 import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
 import { usePendingChangesGuard } from '@/hooks/use-pending-changes-guard';
@@ -207,36 +204,6 @@ export function CharacterEdit({
     mode: 'onBlur',
   });
 
-  const applySharingState = useCallback(
-    ({ entity, request }: CommunitySharingState) => {
-      setValue('isSchoolShared', entity.isSchoolShared, { shouldDirty: false });
-      setValue(
-        'isCommunityShared',
-        isCommunitySharingActive({
-          isCommunityShared: entity.isCommunityShared,
-          requestState: request?.state,
-        }),
-        { shouldDirty: false },
-      );
-      setValue('hasLinkAccess', entity.hasLinkAccess, { shouldDirty: false });
-    },
-    [setValue],
-  );
-
-  const {
-    communityTemplateRequest,
-    setCommunityTemplateRequest,
-    createRequest: createCommunityTemplateRequest,
-    cancelRequest: cancelCommunityTemplateRequest,
-    sendMessage: sendMessageToEditor,
-  } = useCommunityTemplateRequest({
-    initialRequest: initialCommunityTemplateRequest,
-    createRequest: () => createCommunityTemplateRequestAction({ characterId: character.id }),
-    cancelRequest: () => cancelCommunityTemplateRequestAction({ characterId: character.id }),
-    sendMessage: (message) => sendMessageToEditorAction({ characterId: character.id, message }),
-    onSharingStateChange: applySharingState,
-  });
-
   const { isSaving, hasSaveError, flushAutoSave, handleAutoSave } =
     useFormAutosave<CharacterFormValues>({
       initialValues,
@@ -266,6 +233,26 @@ export function CharacterEdit({
         return updateResult.success;
       },
     });
+
+  const {
+    communityTemplateRequest,
+    createCommunityTemplateRequest,
+    sendMessageToEditor,
+    handleSharingChange,
+  } = useEntitySharing({
+    setValue,
+    initialRequest: initialCommunityTemplateRequest,
+    actions: {
+      createRequest: () => createCommunityTemplateRequestAction({ characterId: character.id }),
+      cancelRequest: () => cancelCommunityTemplateRequestAction({ characterId: character.id }),
+      sendMessage: (message) => sendMessageToEditorAction({ characterId: character.id, message }),
+      getSharingState: () => getCharacterSharingStateAction({ characterId: character.id }),
+      updateSchoolSharing: (isSchoolShared) =>
+        updateCharacterSchoolSharingAction({ characterId: character.id, isSchoolShared }),
+    },
+    onError: () => toast.error(t('toasts.edit-toast-error')),
+    onSuccess: flushAutoSave,
+  });
 
   const name = useWatch({ control, name: 'name' });
   const schoolTypes = useWatch({ control, name: 'schoolTypes' });
@@ -366,43 +353,6 @@ export function CharacterEdit({
 
     return result;
   }
-
-  // Resyncs the sharing checkboxes and hasLinkAccess from the server after a failed mutation,
-  // without touching any other (possibly unsaved) form fields.
-  const refreshSharingState = useCallback(async () => {
-    const result = await getCharacterSharingStateAction({ characterId: character.id });
-    if (result.success) {
-      applySharingState(result.value);
-      setCommunityTemplateRequest(result.value.request);
-    }
-  }, [character.id, applySharingState, setCommunityTemplateRequest]);
-
-  const handleSharingChange = async ({ name, checked }: { name: string; checked: boolean }) => {
-    if (name === 'isCommunityShared') {
-      const result = checked
-        ? await createCommunityTemplateRequest()
-        : await cancelCommunityTemplateRequest();
-
-      if (!result.success) {
-        await refreshSharingState();
-        toast.error(t('toasts.edit-toast-error'));
-        return;
-      }
-    } else if (name === 'isSchoolShared') {
-      const result = await updateCharacterSchoolSharingAction({
-        characterId: character.id,
-        isSchoolShared: checked,
-      });
-
-      if (!result.success) {
-        await refreshSharingState();
-        toast.error(t('toasts.edit-toast-error'));
-        return;
-      }
-    }
-
-    await flushAutoSave();
-  };
 
   const actionButtons = (
     <CustomChatActions>
