@@ -47,10 +47,14 @@ test.describe('with chat_storage_time=0', () => {
   });
 });
 
-test('should return 403 if authorization header is missing', async ({ request }) => {
-  const response = await request.delete(deleteConversationRoute);
-  expect(response.status()).toBe(403);
-});
+test(
+  'should return 403 if authorization header is missing',
+  { tag: '@smoke' },
+  async ({ request }) => {
+    const response = await request.delete(deleteConversationRoute);
+    expect(response.status()).toBe(403);
+  },
+);
 
 async function createGenericChatWithFileAttachment(page: Page) {
   await login(page, 'teacher');

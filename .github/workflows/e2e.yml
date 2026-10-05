@@ -8,12 +8,30 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Test suite to run'
+        type: choice
+        options:
+          - smoke
+          - regression
+        default: smoke
+  # Nightly full regression run (UTC)
+  schedule:
+    - cron: '0 2 * * 1-5'
+
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
 
     env:
+      # smoke: pipeline subset (@smoke tests, chromium); regression: all tests incl. firefox and real LLMs
+      E2E_SUITE: ${{ (github.event_name == 'schedule' || inputs.suite == 'regression') && 'regression' || 'smoke' }}
       DATABASE_URL: postgresql://admin:test1234@127.0.0.1:5432/app_db
       RABBITMQ_URI: amqp://user:password@127.0.0.1:5672
       VALKEY_URL: redis://127.0.0.1:6379/0
@@ -82,7 +100,12 @@ jobs:
             playwright-${{ runner.os }}-
 
       - name: Install Playwright browsers
-        run: pnpm --filter ais-chat-app exec playwright install chromium firefox
+        run: |
+          if [ "$E2E_SUITE" = "regression" ]; then
+            pnpm --filter ais-chat-app exec playwright install chromium firefox
+          else
+            pnpm --filter ais-chat-app exec playwright install chromium
+          fi
 
       - name: Wait for postgres
         run: docker compose -f devops/docker/docker-compose.local.yml up -d --wait postgres
@@ -199,7 +222,7 @@ jobs:
         run: docker compose -f devops/docker/docker-compose.local.yml logs --no-color --timestamps --follow > "$CONTAINER_LOG_FILE" 2>&1 &
 
       - name: Run E2E tests (app)
-        run: pnpm --filter ais-chat-app e2e
+        run: pnpm --filter ais-chat-app ${{ env.E2E_SUITE == 'regression' && 'e2e' || 'e2e:smoke' }}
         env:
           CI: true
           E2E_GUARD_TEXT_MODEL: GPT-5 nano
@@ -207,12 +230,12 @@ jobs:
           E2E_TEXT_MODEL_2: Mock LLM (2)
 
       - name: Run E2E tests (admin)
-        run: pnpm --filter ais-chat-admin e2e
+        run: pnpm --filter ais-chat-admin ${{ env.E2E_SUITE == 'regression' && 'e2e' || 'e2e:smoke' }}
         env:
           CI: true
 
       - name: Run E2E tests (api)
-        run: pnpm --filter ais-chat-api e2e
+        run: pnpm --filter ais-chat-api ${{ env.E2E_SUITE == 'regression' && 'e2e' || 'e2e:smoke' }}
         env:
           CI: true
           DE_TEST_API_KEY: ${{ env.DE_TEST_API_KEY }}
@@ -221,7 +244,7 @@ jobs:
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: playwright-report
+          name: playwright-report-${{ env.E2E_SUITE }}
           path: apps/chat-bot/playwright-report
           retention-days: 30
 
@@ -229,7 +252,7 @@ jobs:
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: api-playwright-report
+          name: api-playwright-report-${{ env.E2E_SUITE }}
           path: apps/api/playwright-report
           retention-days: 30
 
@@ -237,7 +260,7 @@ jobs:
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: admin-playwright-report
+          name: admin-playwright-report-${{ env.E2E_SUITE }}
           path: apps/admin/playwright-report
           retention-days: 30
 
