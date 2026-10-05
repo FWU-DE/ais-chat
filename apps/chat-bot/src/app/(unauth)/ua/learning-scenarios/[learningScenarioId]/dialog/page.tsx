@@ -68,7 +68,10 @@ export default async function Page(
             {...learningScenario}
             inviteCode={searchParams.inviteCode}
             avatarPictureUrl={avatarPictureUrl}
-            isSpeechModelEnabled={federalState?.featureToggles?.isSpeechModelEnabled === true}
+            isSpeechModelEnabled={
+              federalState?.featureToggles?.isSpeechModelEnabled === true &&
+              learningScenario.isSpeechEnabled
+            }
           />
         </ThemeProvider>
       </LlmModelsProvider>

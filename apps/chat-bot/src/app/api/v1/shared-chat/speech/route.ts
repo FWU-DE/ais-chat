@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
 import { requireValidInviteCode } from '@/auth/requireValidInviteCode';
-import { generateSpeech } from '@/app/api/chat/speech-service';
+import { generateSharedChatSpeech } from '@/app/api/shared-chat/shared-chat-speech-service';
 import { sharedChatSpeechRequestSchema } from '@/app/api/shared-chat/shared-chat-request-schemas';
 
 export async function POST(req: NextRequest) {
@@ -10,7 +10,12 @@ export async function POST(req: NextRequest) {
 
     await requireValidInviteCode(parsed.inviteCode);
 
-    const { buffer, contentType } = await generateSpeech({ text: parsed.text });
+    const { buffer, contentType } = await generateSharedChatSpeech({
+      inviteCode: parsed.inviteCode,
+      entityType: parsed.entityType,
+      entityId: parsed.entityId,
+      text: parsed.text,
+    });
 
     return new NextResponse(new Uint8Array(buffer), {
       headers: {

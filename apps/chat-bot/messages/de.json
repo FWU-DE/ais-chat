@@ -644,6 +644,10 @@
       "presets-title-unassigned": "Selbst hinzugefügt",
       "presets-domain-count": "{count, plural, =1 {# Webseite} other {# Webseiten}}",
       "presets-add-preset-button": "Paket hinzufügen"
+    },
+    "speech": {
+      "heading": "Sprachausgabe",
+      "heading-tooltip": "Falls aktiviert, können Antworten als Sprache ausgegeben werden."
     }
   },
   "assistants": {
