@@ -1,5 +1,5 @@
 import type { UserAndContext } from '@/auth/types';
-import type { FileModel, WebSearchModel, WebSearchResult } from '@shared/db/schema';
+import type { FileModel, WebSearchModel } from '@shared/db/schema';
 import { buildWebSearchTool } from './tools/web-search-tool';
 import { buildWebScraperTool } from './tools/web-scraper-tool';
 import { buildRetrieveEntireFileTool } from './tools/retrieve-entire-file-tool';
@@ -21,7 +21,6 @@ type BuildToolsParams = {
   allowWebTools: boolean;
   allowMundoSearch?: boolean;
   isCalculatorEnabled?: boolean;
-  onWebSearchResults?: (results: WebSearchResult[]) => void;
 };
 
 type BuildToolsResult = {
@@ -41,7 +40,6 @@ export async function buildTools({
   allowWebTools,
   allowMundoSearch,
   isCalculatorEnabled = false,
-  onWebSearchResults,
 }: BuildToolsParams): Promise<BuildToolsResult> {
   const toolRegistry: Record<string, ToolRegistration> = {};
 
@@ -58,7 +56,6 @@ export async function buildTools({
       assistantId,
       conversationId,
       webSearchSettings,
-      onWebSearchResults,
     });
 
     if (webSearchTool) {

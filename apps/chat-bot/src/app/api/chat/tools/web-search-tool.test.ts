@@ -110,36 +110,6 @@ describe('buildWebSearchTool', () => {
     });
   });
 
-  it('calls onWebSearchResults callback when provided', async () => {
-    mocks.resolveWebSearchConfigMock.mockReturnValue(allWebConfig);
-    mocks.searchWebMock.mockResolvedValue([
-      {
-        name: 'Test',
-        url: 'https://example.com',
-        content: 'Content',
-      },
-    ]);
-
-    const { buildWebSearchTool } = await import('./web-search-tool');
-
-    const onWebSearchResults = vi.fn();
-    const tool = await buildWebSearchTool({
-      user,
-      conversationId: 'conversation-1',
-      onWebSearchResults,
-    });
-
-    await tool!.handler({ query: 'test' });
-
-    expect(onWebSearchResults).toHaveBeenCalledWith([
-      {
-        name: 'Test',
-        url: 'https://example.com',
-        content: 'Content',
-      },
-    ]);
-  });
-
   it('forwards includedDomains to searchWeb when scope is included-domains', async () => {
     mocks.resolveWebSearchConfigMock.mockReturnValue({
       enabled: true,

@@ -138,7 +138,6 @@ export function convertMessageModelToMessage(
       role: message.role,
       content: message.content,
       createdAt: message.createdAt,
-      webSearchResults: message.webSearchResults ?? undefined,
       activitySteps: activityByMessageId.get(message.id),
       toolCalls: message.toolCalls ?? undefined,
       toolCallId: message.toolCallId ?? undefined,

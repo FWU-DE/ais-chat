@@ -4,16 +4,6 @@ import type { ChatMessage } from '@/types/chat';
 import type { UserAndContext } from '@/auth/types';
 import { decodeChatStreamEvent } from '@/utils/streaming';
 
-const webSearchResults = [
-  {
-    type: 'text' as const,
-    name: 'Search result',
-    url: 'https://example.com/article',
-    content: 'Current details from the web search.',
-    favicon: 'https://example.com/favicon.ico',
-  },
-];
-
 const buildToolsOutput = {
   toolRegistry: {
     web_search: {
@@ -32,7 +22,6 @@ const buildToolsOutput = {
       parameters: {},
     },
   ],
-  webSearchResults,
 };
 
 const mocks = vi.hoisted(() => ({
@@ -590,54 +579,6 @@ describe('sendChatMessage', () => {
         expect.objectContaining({
           role: 'assistant',
           id: result.messageId,
-        }),
-      ]),
-    );
-  });
-
-  it('persists web search results received during agentic chat', async () => {
-    let onWebSearchResults: ((results: typeof webSearchResults) => void) | undefined;
-
-    mocks.buildToolsMock.mockImplementationOnce(
-      async ({
-        onWebSearchResults: callback,
-      }: {
-        onWebSearchResults: (results: typeof webSearchResults) => void;
-      }) => {
-        onWebSearchResults = callback;
-        return buildToolsOutput;
-      },
-    );
-    mocks.runAgentLoopMock.mockImplementationOnce(
-      ({ onComplete }: Parameters<typeof runAgentLoop>[0]) => {
-        onWebSearchResults?.(webSearchResults);
-        void onComplete({
-          fullText: 'agentic chunk',
-          usage: { promptTokens: 11, completionTokens: 22, totalTokens: 33 },
-          priceInCents: 44,
-          modelId: mainModel.id,
-          modelUsages: [],
-          agentLoopMessages: [],
-        });
-      },
-    );
-
-    const { sendChatMessage } = await import('./chat-service');
-
-    const result = await sendChatMessage({
-      conversationId: conversation.id,
-      messages,
-      modelId: mainModel.id,
-      user: createUser(),
-    });
-
-    await collectStream(result.stream);
-
-    expect(mocks.dbInsertChatContentBatchMock).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: result.messageId,
-          webSearchResults,
         }),
       ]),
     );

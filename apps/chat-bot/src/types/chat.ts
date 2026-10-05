@@ -4,7 +4,6 @@ import type {
   TokenPointsExceededError,
 } from '@ais-chat/ai-core/errors';
 import type { NotFoundError } from '@shared/error';
-import type { WebSearchResult } from '@shared/db/schema';
 import type { ChatAttachment } from '@ais-chat/ai-core';
 import {
   CONVERSATION_ROLES,
@@ -39,7 +38,6 @@ export const chatMessageSchema = z.object({
   content: z.string(),
   createdAt: z.coerce.date().optional(),
   attachments: z.array(z.any()).optional(),
-  webSearchResults: z.array(z.any()).optional(),
   activitySteps: z.array(aiActivityStepSchema).optional(),
   toolCalls: z.array(z.any()).optional(),
   toolCallId: z.string().optional(),
@@ -55,7 +53,6 @@ export type ChatMessage = {
   content: string;
   createdAt?: Date;
   attachments?: ChatAttachment[];
-  webSearchResults?: WebSearchResult[];
   activitySteps?: AiActivityStep[];
   toolCalls?: ToolCall[];
   toolCallId?: string;
@@ -68,7 +65,6 @@ export type ChatMessage = {
 export type SendMessageResult = {
   stream: ReadableStream<string>;
   messageId: string;
-  webSearchResults?: WebSearchResult[];
   error?: SerializedError;
 };
 
