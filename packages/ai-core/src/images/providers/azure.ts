@@ -1,4 +1,4 @@
-import { instrumentOpenAiClient } from '@sentry/core';
+import { instrumentOpenAiClient } from '@sentry/server-utils';
 import * as Sentry from '@sentry/core';
 import { isLlmProvider } from '@ais-chat/api-database/llm-model';
 import OpenAI, { toFile } from 'openai';

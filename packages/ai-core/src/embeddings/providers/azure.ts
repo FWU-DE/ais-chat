@@ -1,4 +1,4 @@
-import { instrumentOpenAiClient } from '@sentry/core';
+import { instrumentOpenAiClient } from '@sentry/server-utils';
 import { isLlmProvider } from '@ais-chat/api-database/llm-model';
 import OpenAI from 'openai';
 import type { AiModel, EmbeddingGenerationFn } from '../types';
