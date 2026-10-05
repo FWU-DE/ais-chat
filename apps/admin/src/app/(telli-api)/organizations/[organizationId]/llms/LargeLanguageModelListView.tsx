@@ -1,14 +1,6 @@
 'use client';
 
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@ui/components/table';
-import {
   Card,
   CardAction,
   CardContent,
@@ -18,13 +10,14 @@ import {
 } from '@ui/components/card';
 import { Button } from '@ui/components/button';
 import { Checkbox } from '@ui/components/checkbox';
+import { FieldLabel } from '@ui/components/field';
+import { DataTable } from '@ui/components/data-table';
 import { logError } from '@shared/logging';
 import { getLargeLanguageModelsAction } from './actions';
 import Link from 'next/link';
-import { Search } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { getColumns } from './columns';
 import type { LargeLanguageModel } from '@/types/large-language-model';
-import { formatDateToGermanTimestamp } from '@shared/utils/date';
 
 export type LargeLanguageModelListViewProps = {
   organizationId: string;
@@ -37,6 +30,15 @@ export function LargeLanguageModelListView({
 }: LargeLanguageModelListViewProps) {
   const [languageModels, setLanguageModels] = useState<LargeLanguageModel[]>(initialData);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showDeletedModels, setShowDeletedModels] = useState(false);
+
+  const columns = useMemo(
+    () => getColumns(organizationId, showDeletedModels),
+    [organizationId, showDeletedModels],
+  );
+  const visibleModels = showDeletedModels
+    ? languageModels
+    : languageModels.filter((model) => !model.isDeleted);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -67,53 +69,17 @@ export function LargeLanguageModelListView({
         </CardAction>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Bifrost</TableHead>
-              <TableHead>Beschreibung</TableHead>
-              <TableHead className="text-center">Neu</TableHead>
-              <TableHead className="text-center">Gelöscht</TableHead>
-              <TableHead>Erstellt am</TableHead>
-              <TableHead className="w-12">Aktionen</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {languageModels.map((model) => (
-              <TableRow key={model.id}>
-                <TableCell>
-                  <div>
-                    <div className="font-medium">{model.displayName || model.name}</div>
-                    {model.displayName && model.displayName !== model.name && (
-                      <div className="text-sm text-gray-500">{model.name}</div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Checkbox checked={model.useBifrost} disabled />
-                </TableCell>
-                <TableCell>
-                  <div className="max-w-xs truncate" title={model.description}>
-                    {model.description || '-'}
-                  </div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Checkbox checked={model.isNew} disabled />
-                </TableCell>
-                <TableCell className="text-center">
-                  <Checkbox checked={model.isDeleted} disabled />
-                </TableCell>
-                <TableCell>{formatDateToGermanTimestamp(model.createdAt)}</TableCell>
-                <TableCell>
-                  <Link href={`/organizations/${organizationId}/llms/${model.id}`}>
-                    <Search className="text-primary" />
-                  </Link>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="show-deleted-models"
+              checked={showDeletedModels}
+              onCheckedChange={(checked) => setShowDeletedModels(checked === true)}
+            />
+            <FieldLabel htmlFor="show-deleted-models">gelöschte Modelle anzeigen</FieldLabel>
+          </div>
+          <DataTable columns={columns} data={visibleModels} />
+        </div>
       </CardContent>
     </Card>
   );
