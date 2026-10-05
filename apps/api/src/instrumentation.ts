@@ -1,5 +1,4 @@
 import * as Sentry from '@sentry/node';
-import { SentryContextManager } from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
@@ -10,18 +9,17 @@ import { resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { SentrySampler, SentrySpanProcessor } from '@sentry/opentelemetry';
 import { scrubSentryEvent } from '@ais-chat/shared-core/sentry/scrub';
 import { env } from '@/env';
 import { logger } from '@/logger';
 
-const sentryClient = Sentry.init({
+Sentry.init({
   dsn: env.sentryDsn,
-  enableLogs: true,
   integrations: (integrations) => [
     // exclude Fastify, to prevent duplicate registration from ./instrumentation.node
     ...integrations.filter((i) => i.name !== 'Fastify'),
     nodeProfilingIntegration(),
+    Sentry.openTelemetryIntegration(),
     Sentry.httpIntegration({ spans: false }),
     Sentry.pinoIntegration({
       // publish fatal and error logs as events
@@ -47,8 +45,8 @@ const sentryClient = Sentry.init({
   // Ensure that only traces from your own organization are continued
   strictTraceContinuation: true,
   // Use custom OpenTelemetry configuration, see https://docs.sentry.io/platforms/javascript/guides/node/opentelemetry/custom-setup/
-  skipOpenTelemetrySetup: true,
-  registerEsmLoaderHooks: false,
+  enableOpenTelemetrySetup: false,
+  enableRuntimeChannelInjection: false,
 });
 
 // For debugging purposes, you can uncomment the following two lines to enable console logging
@@ -56,6 +54,7 @@ const sentryClient = Sentry.init({
 // diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
 
 const SERVICE_NAME = 'ais-chat-api';
+const sentryTraceEndpoint = env.sentryDsn ? Sentry.getOtlpTracesEndpoint(env.sentryDsn) : undefined;
 
 const exporter = new OTLPMetricExporter();
 const periodicExportingMetricReader = new PeriodicExportingMetricReader({
@@ -87,15 +86,16 @@ const sdk = new NodeSDK({
     [ATTR_SERVICE_VERSION]: env.appVersion,
   }),
   metricReaders: [periodicExportingMetricReader],
-  sampler: sentryClient ? new SentrySampler(sentryClient) : undefined,
   serviceName: SERVICE_NAME,
-  spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter()), new SentrySpanProcessor()],
-  contextManager: new SentryContextManager(),
+  spanProcessors: [
+    new BatchSpanProcessor(new OTLPTraceExporter()),
+    ...(sentryTraceEndpoint
+      ? [new BatchSpanProcessor(new OTLPTraceExporter(sentryTraceEndpoint))]
+      : []),
+  ],
 });
 
 sdk.start();
-
-Sentry.validateOpenTelemetrySetup();
 
 export async function shutdownTracing() {
   try {

@@ -46,7 +46,7 @@ vi.mock('@anthropic-ai/vertex-sdk', () => ({
   AnthropicVertex: MockAnthropicVertex,
 }));
 
-vi.mock('@sentry/core', () => ({
+vi.mock('@sentry/server-utils', () => ({
   instrumentAnthropicAiClient: vi.fn((client) => client),
 }));
 

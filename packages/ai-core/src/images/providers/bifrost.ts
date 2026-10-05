@@ -1,4 +1,4 @@
-import { instrumentOpenAiClient } from '@sentry/core';
+import { instrumentOpenAiClient } from '@sentry/server-utils';
 import OpenAI, { toFile } from 'openai';
 import type { AiModel, ImageGenerationFn, ImageResponse } from '../types';
 import { AiGenerationError, ProviderConfigurationError } from '../../errors';

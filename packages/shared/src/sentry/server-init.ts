@@ -1,4 +1,4 @@
-import Sentry, { SentryContextManager } from '@sentry/nextjs';
+import Sentry from '@sentry/nextjs';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
@@ -7,7 +7,6 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
-import { SentrySampler, SentrySpanProcessor } from '@sentry/opentelemetry';
 import { scrubSentryEvent } from '@ais-chat/shared-core/sentry/scrub';
 import { registerCleanupHandler } from '../shutdown/cleanup';
 import { env } from './env';
@@ -34,15 +33,13 @@ export function initSentry({
 }) {
   const aiServerActionNameSet = new Set(aiServerActionNames.map((name) => `serverAction/${name}`));
 
-  const sentryClient = Sentry.init({
+  Sentry.init({
     debug: false,
     dsn: env.sentryDsn,
     environment: env.sentryEnvironment,
-    // Disable streaming so gen_ai spans are ingested in Sentry
-    // (streaming is broken, possibly due to OTel setup, or it's not available in self-hosted Sentry)
-    streamGenAiSpans: false,
     integrations: [
       Sentry.captureConsoleIntegration({ levels: ['fatal', 'error', 'warn', 'info'] }),
+      Sentry.openTelemetryIntegration(),
     ],
     tracesSampler: ({ name, normalizedRequest, inheritOrSampleWith }) => {
       const url = normalizedRequest?.url ?? '';
@@ -73,9 +70,12 @@ export function initSentry({
       beforeSendTransaction: (event) => scrubSentryEvent(event),
     }),
     // Use custom OpenTelemetry configuration, see https://docs.sentry.io/platforms/javascript/guides/node/opentelemetry/custom-setup/
-    skipOpenTelemetrySetup: true,
-    registerEsmLoaderHooks: false,
+    enableOpenTelemetrySetup: false,
+    enableRuntimeChannelInjection: false,
   });
+  const sentryTraceEndpoint = env.sentryDsn
+    ? Sentry.getOtlpTracesEndpoint(env.sentryDsn)
+    : undefined;
 
   // For debugging purposes, you can uncomment the following two lines to enable console logging
   // import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
@@ -106,15 +106,16 @@ export function initSentry({
       [ATTR_SERVICE_VERSION]: env.appVersion,
     }),
     metricReaders: [periodicExportingMetricReader],
-    sampler: sentryClient ? new SentrySampler(sentryClient) : undefined,
     serviceName: serviceName,
-    spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter()), new SentrySpanProcessor()],
-    contextManager: new SentryContextManager(),
+    spanProcessors: [
+      new BatchSpanProcessor(new OTLPTraceExporter()),
+      ...(sentryTraceEndpoint
+        ? [new BatchSpanProcessor(new OTLPTraceExporter(sentryTraceEndpoint))]
+        : []),
+    ],
   });
 
   sdk.start();
-
-  Sentry.validateOpenTelemetrySetup();
 
   registerCleanupHandler(async () => {
     console.log('[shutdown] Shutting down OpenTelemetry SDK...');
