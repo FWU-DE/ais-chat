@@ -18,7 +18,7 @@
     "types": "tsc --noEmit"
   },
   "dependencies": {
-    "@sentry/core": "11.0.0",
+    "@sentry/core": "11.1.0",
     "zod": "4.6.5"
   },
   "devDependencies": {
