@@ -45,8 +45,8 @@ Then you can run the e2e tests from the apps/chat-bot directory.
 
 ### Smoke vs. regression suite
 
-The GitHub workflow `e2e.yml` runs only the `@smoke` tests on pull requests and pushes to `main`.
-The full suite (all tests, Firefox, external-services, isolated) runs as regression on weekdays at 02:00 UTC or manually via `workflow_dispatch` with `suite=regression`.
+The GitHub workflow `e2e.yml` runs only the `@smoke` tests when a pull request is created or updated.
+The full suite (all tests, Firefox, external-services, isolated) runs as regression when a pull request is merged (push to `main`), or manually via `workflow_dispatch` with `suite=regression`.
 
 Tag a test with `{ tag: '@smoke' }` only if it is a core user journey or a cheap check, uses the mock LLM, and runs in chromium:
 
