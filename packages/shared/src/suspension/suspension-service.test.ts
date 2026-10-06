@@ -32,6 +32,7 @@ import {
   dbMarkSuspensionRequestAsChecked,
 } from '@shared/db/functions/suspension-requests';
 import { verifyReadAccess } from '@shared/auth/authorization-service';
+import { AssistantSelectModel } from '@shared/db/schema';
 
 vi.mock('@shared/db/functions/user', () => ({
   dbGetUserById: vi.fn(),
@@ -108,7 +109,6 @@ describe('suspension-request-service', () => {
       } as never);
       (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue({
         id: assistantId,
-        accessLevel: 'private',
         hasLinkAccess: false,
         userId: requesterId,
         ownerSchoolIds: [generateUUID()],
@@ -152,7 +152,6 @@ describe('suspension-request-service', () => {
       } as never);
       (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue({
         id: assistantId,
-        accessLevel: 'private',
         hasLinkAccess: false,
         userId: requesterId,
         ownerSchoolIds: [generateUUID()],
@@ -247,7 +246,6 @@ describe('suspension-request-service', () => {
       } as never);
       (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue({
         id: assistantId,
-        accessLevel: 'private',
         hasLinkAccess: false,
         userId: generateUUID(),
         ownerSchoolIds: [generateUUID()],
@@ -278,7 +276,6 @@ describe('suspension-request-service', () => {
       } as never);
       (dbGetCharacterById as MockedFunction<typeof dbGetCharacterById>).mockResolvedValue({
         id: characterId,
-        accessLevel: 'private',
         hasLinkAccess: false,
         userId: requesterId,
         ownerSchoolIds: [generateUUID()],
