@@ -32,7 +32,6 @@ import {
   dbMarkSuspensionRequestAsChecked,
 } from '@shared/db/functions/suspension-requests';
 import { verifyReadAccess } from '@shared/auth/authorization-service';
-import { AssistantSelectModel } from '@shared/db/schema';
 
 vi.mock('@shared/db/functions/user', () => ({
   dbGetUserById: vi.fn(),

@@ -242,10 +242,13 @@ export function AssistantEdit({
     setValue,
     initialRequest: initialCommunityTemplateRequest,
     actions: {
-      createRequest: () => createCommunityTemplateRequestAction({ assistantId: assistant.id }),
-      cancelRequest: () => cancelCommunityTemplateRequestAction({ assistantId: assistant.id }),
-      sendMessage: (message) => sendMessageToEditorAction({ assistantId: assistant.id, message }),
-      getSharingState: () => getAssistantSharingStateAction({ assistantId: assistant.id }),
+      createCommunityTemplateRequest: () =>
+        createCommunityTemplateRequestAction({ assistantId: assistant.id }),
+      cancelCommunityTemplateRequest: () =>
+        cancelCommunityTemplateRequestAction({ assistantId: assistant.id }),
+      sendMessageToEditor: (message) =>
+        sendMessageToEditorAction({ assistantId: assistant.id, message }),
+      getEntitySharingState: () => getAssistantSharingStateAction({ assistantId: assistant.id }),
       updateSchoolSharing: (isSchoolShared) =>
         updateAssistantSchoolSharingAction({ assistantId: assistant.id, isSchoolShared }),
     },

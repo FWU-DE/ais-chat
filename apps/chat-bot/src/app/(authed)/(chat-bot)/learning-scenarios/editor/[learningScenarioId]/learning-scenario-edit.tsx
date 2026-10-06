@@ -254,13 +254,13 @@ export function LearningScenarioEdit({
     setValue,
     initialRequest: initialCommunityTemplateRequest,
     actions: {
-      createRequest: () =>
+      createCommunityTemplateRequest: () =>
         createCommunityTemplateRequestAction({ learningScenarioId: learningScenario.id }),
-      cancelRequest: () =>
+      cancelCommunityTemplateRequest: () =>
         cancelCommunityTemplateRequestAction({ learningScenarioId: learningScenario.id }),
-      sendMessage: (message) =>
+      sendMessageToEditor: (message) =>
         sendMessageToEditorAction({ learningScenarioId: learningScenario.id, message }),
-      getSharingState: () =>
+      getEntitySharingState: () =>
         getLearningScenarioSharingStateAction({ learningScenarioId: learningScenario.id }),
       updateSchoolSharing: (isSchoolShared) =>
         updateLearningScenarioSchoolSharingAction({

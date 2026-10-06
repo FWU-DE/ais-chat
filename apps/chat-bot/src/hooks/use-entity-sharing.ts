@@ -21,10 +21,10 @@ type UseEntitySharingOptions<TFormValues extends SharingFormFields> = {
   setValue: UseFormSetValue<TFormValues>;
   initialRequest: CommunityTemplateRequestWithEvents | null;
   actions: {
-    createRequest: () => Promise<CommunityTemplateRequestMutationResult>;
-    cancelRequest: () => Promise<CommunityTemplateRequestMutationResult>;
-    sendMessage: (message: string) => Promise<CommunityTemplateRequestMutationResult>;
-    getSharingState: () => Promise<ServerActionResult<CommunitySharingState>>;
+    createCommunityTemplateRequest: () => Promise<CommunityTemplateRequestMutationResult>;
+    cancelCommunityTemplateRequest: () => Promise<CommunityTemplateRequestMutationResult>;
+    sendMessageToEditor: (message: string) => Promise<CommunityTemplateRequestMutationResult>;
+    getEntitySharingState: () => Promise<ServerActionResult<CommunitySharingState>>;
     updateSchoolSharing: (isSchoolShared: boolean) => Promise<{ success: boolean }>;
   };
   onError: () => void;
@@ -68,15 +68,15 @@ export function useEntitySharing<TFormValues extends SharingFormFields>({
     sendMessage,
   } = useCommunityTemplateRequest({
     initialRequest,
-    createRequest: actions.createRequest,
-    cancelRequest: actions.cancelRequest,
-    sendMessage: actions.sendMessage,
+    createRequest: actions.createCommunityTemplateRequest,
+    cancelRequest: actions.cancelCommunityTemplateRequest,
+    sendMessage: actions.sendMessageToEditor,
     onSharingStateChange: applySharingState,
   });
 
   // Resyncs only the sharing fields after a failed mutation, leaving other unsaved fields untouched.
   const refreshSharingState = async () => {
-    const result = await actions.getSharingState();
+    const result = await actions.getEntitySharingState();
     if (result.success) {
       applySharingState(result.value);
       setCommunityTemplateRequest(result.value.request);

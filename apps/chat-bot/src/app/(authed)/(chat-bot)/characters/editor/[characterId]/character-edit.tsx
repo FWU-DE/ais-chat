@@ -249,10 +249,13 @@ export function CharacterEdit({
     setValue,
     initialRequest: initialCommunityTemplateRequest,
     actions: {
-      createRequest: () => createCommunityTemplateRequestAction({ characterId: character.id }),
-      cancelRequest: () => cancelCommunityTemplateRequestAction({ characterId: character.id }),
-      sendMessage: (message) => sendMessageToEditorAction({ characterId: character.id, message }),
-      getSharingState: () => getCharacterSharingStateAction({ characterId: character.id }),
+      createCommunityTemplateRequest: () =>
+        createCommunityTemplateRequestAction({ characterId: character.id }),
+      cancelCommunityTemplateRequest: () =>
+        cancelCommunityTemplateRequestAction({ characterId: character.id }),
+      sendMessageToEditor: (message) =>
+        sendMessageToEditorAction({ characterId: character.id, message }),
+      getEntitySharingState: () => getCharacterSharingStateAction({ characterId: character.id }),
       updateSchoolSharing: (isSchoolShared) =>
         updateCharacterSchoolSharingAction({ characterId: character.id, isSchoolShared }),
     },
