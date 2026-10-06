@@ -4,8 +4,7 @@
   "editor.formatOnSave": true,
   "[typescript][typescriptreact]": {
     "editor.codeActionsOnSave": {
-      "source.organizeImports": "always",
-      "source.removeUnusedImports": "always"
+      "source.organizeImports": "always"
     }
   }
 }
