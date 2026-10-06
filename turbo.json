@@ -129,9 +129,7 @@
       "cache": false,
       "dependsOn": []
     },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
+    "lint": {},
     "test": {
       "dependsOn": ["^test"]
     },
