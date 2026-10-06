@@ -93,6 +93,7 @@ const imageModel = {
   priceMetadata: { type: 'image', pricePerImageInCent: 1 },
   createdAt: new Date('2026-01-01'),
   imageGenerationConfig: { aspectRatio: { quadratic: '1024x1024' } },
+  modelConfig: null,
   supportedImageFormats: ['png'],
   isNew: false,
   isDeleted: false,
