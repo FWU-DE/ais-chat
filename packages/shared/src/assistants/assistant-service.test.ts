@@ -3,7 +3,6 @@ import {
   createNewAssistant,
   deleteAssistant,
   deleteFileMappingAndEntity,
-  getAssistantByAccessLevel,
   getConversationWithMessagesAndAssistant,
   getAssistantForNewChat,
   getAssistantForExistingConversation,
@@ -11,7 +10,7 @@ import {
   getFileMappings,
   linkFileToAssistant,
   updateAssistant,
-  updateAssistantAccessLevel,
+  updateAssistantSchoolSharing,
   getAssistantByUser,
   uploadAvatarPictureForAssistant,
   downloadFileFromAssistant,
@@ -120,9 +119,9 @@ describe('assistant-service', () => {
         testFunction: () => getFileMappings({ assistantId, user: mockUser() }),
       },
       {
-        functionName: 'updateAssistantAccessLevel',
+        functionName: 'updateAssistantSchoolSharing',
         testFunction: () =>
-          updateAssistantAccessLevel({ assistantId, accessLevel: 'school', user: { id: userId } }),
+          updateAssistantSchoolSharing({ assistantId, isSchoolShared: true, user: { id: userId } }),
       },
       {
         functionName: 'updateAssistant',
@@ -222,7 +221,9 @@ describe('assistant-service', () => {
 
     const mockAssistant: Partial<AssistantSelectModel> = {
       userId,
-      accessLevel: 'private',
+      isSchoolShared: false,
+      isCommunityShared: false,
+      isGlobal: false,
     };
 
     beforeEach(() => {
@@ -259,11 +260,11 @@ describe('assistant-service', () => {
           }),
       },
       {
-        functionName: 'updateAssistantAccessLevel',
+        functionName: 'updateAssistantSchoolSharing',
         testFunction: () =>
-          updateAssistantAccessLevel({
+          updateAssistantSchoolSharing({
             assistantId,
-            accessLevel: 'school',
+            isSchoolShared: true,
             user: { id: 'different-user-id' },
           }),
       },
@@ -327,7 +328,6 @@ describe('assistant-service', () => {
       async ({ testFunction }) => {
         const mockAssistant: Partial<AssistantSelectModel> = {
           userId,
-          accessLevel: 'private',
         };
 
         (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
@@ -360,7 +360,7 @@ describe('assistant-service', () => {
       async ({ testFunction }) => {
         const mockAssistant: Partial<AssistantSelectModel> = {
           userId,
-          accessLevel: 'school',
+          isSchoolShared: true,
         };
 
         (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
@@ -400,7 +400,7 @@ describe('assistant-service', () => {
     it('should throw ForbiddenError when user is not owner of private assistant - getFileMappings', async () => {
       const userId = generateUUID();
       const assistantId = generateUUID();
-      const mockAssistant: Partial<AssistantSelectModel> = { accessLevel: 'private', userId };
+      const mockAssistant: Partial<AssistantSelectModel> = { userId };
 
       (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
         mockAssistant as never,
@@ -418,7 +418,7 @@ describe('assistant-service', () => {
       const userId = generateUUID();
       const assistantId = generateUUID();
       const mockAssistant: Partial<AssistantSelectModel> = {
-        accessLevel: 'school',
+        isSchoolShared: true,
         userId,
       };
 
@@ -430,24 +430,6 @@ describe('assistant-service', () => {
         getFileMappings({
           assistantId,
           user: mockUser(),
-        }),
-      ).rejects.toThrow(ForbiddenError);
-    });
-
-    it('should throw ForbiddenError when setting access level to global not possible - updateAssistantAccessLevel', async () => {
-      const userId = generateUUID();
-      const assistantId = generateUUID();
-      const mockAssistant: Partial<AssistantSelectModel> = { userId };
-
-      (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
-        mockAssistant as never,
-      );
-
-      await expect(
-        updateAssistantAccessLevel({
-          assistantId,
-          accessLevel: 'global',
-          user: { id: userId },
         }),
       ).rejects.toThrow(ForbiddenError);
     });
@@ -464,14 +446,14 @@ describe('assistant-service', () => {
   });
 
   describe('sharing updates preserve updatedAt', () => {
-    it('preserves updatedAt when only accessLevel changes', async () => {
+    it('preserves updatedAt when only isSchoolShared changes', async () => {
       const userId = generateUUID();
       const assistantId = generateUUID();
       const updatedAt = new Date('2026-06-01T10:00:00.000Z');
       const assistant = {
         id: assistantId,
         userId,
-        accessLevel: 'private',
+        isSchoolShared: false,
         hasLinkAccess: false,
         updatedAt,
       } as Partial<AssistantSelectModel>;
@@ -480,16 +462,16 @@ describe('assistant-service', () => {
         assistant as never,
       );
       mockDbReturning.mockResolvedValue([
-        { ...assistant, accessLevel: 'school' } as AssistantSelectModel,
+        { ...assistant, isSchoolShared: true } as AssistantSelectModel,
       ]);
 
-      await updateAssistantAccessLevel({
+      await updateAssistantSchoolSharing({
         assistantId,
-        accessLevel: 'school',
+        isSchoolShared: true,
         user: { id: userId },
       });
 
-      expect(mockDbSet).toHaveBeenCalledWith({ accessLevel: 'school', updatedAt });
+      expect(mockDbSet).toHaveBeenCalledWith({ isSchoolShared: true, updatedAt });
     });
 
     it('preserves updatedAt when only hasLinkAccess changes', async () => {
@@ -527,7 +509,7 @@ describe('assistant-service', () => {
       id: templateId,
       name: 'Template Assistant',
       userId: generateUUID(),
-      accessLevel: 'global',
+      isGlobal: true,
       hasLinkAccess: false,
       suspended: false,
       ownerSchoolIds: [],
@@ -551,7 +533,7 @@ describe('assistant-service', () => {
       } as AssistantSelectModel;
 
       (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
-        templateAssistant({ userId: user.id, accessLevel: 'private' }) as never,
+        templateAssistant({ userId: user.id, isGlobal: false }) as never,
       );
 
       (copyAssistant as MockedFunction<typeof copyAssistant>).mockResolvedValue(
@@ -566,7 +548,7 @@ describe('assistant-service', () => {
 
       expect(copyAssistant).toHaveBeenCalledWith(
         templateId,
-        'private',
+        false,
         expect.objectContaining({ id: expect.any(String) }),
         duplicatedAssistantName,
       );
@@ -586,7 +568,7 @@ describe('assistant-service', () => {
       } as AssistantSelectModel;
 
       (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
-        templateAssistant({ userId: user.id, accessLevel: 'private' }) as never,
+        templateAssistant({ userId: user.id, isGlobal: false }) as never,
       );
 
       (copyAssistant as MockedFunction<typeof copyAssistant>).mockResolvedValue(
@@ -600,7 +582,7 @@ describe('assistant-service', () => {
 
       expect(copyAssistant).toHaveBeenCalledWith(
         templateId,
-        'private',
+        false,
         expect.objectContaining({ id: expect.any(String) }),
         undefined,
       );
@@ -614,7 +596,7 @@ describe('assistant-service', () => {
       } as AssistantSelectModel;
 
       (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
-        templateAssistant({ userId: user.id, accessLevel: 'private' }) as never,
+        templateAssistant({ userId: user.id, isGlobal: false }) as never,
       );
       (copyAssistant as MockedFunction<typeof copyAssistant>).mockResolvedValue(
         insertedAssistant as never,
@@ -630,7 +612,7 @@ describe('assistant-service', () => {
     it('should throw ForbiddenError when template is suspended', async () => {
       const user = mockUser('teacher');
       (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
-        templateAssistant({ userId: user.id, accessLevel: 'private', suspended: true }) as never,
+        templateAssistant({ userId: user.id, isGlobal: false, suspended: true }) as never,
       );
 
       await expect(
@@ -707,11 +689,11 @@ describe('assistant-service', () => {
           }),
       },
       {
-        functionName: 'updateAssistantAccessLevel',
+        functionName: 'updateAssistantSchoolSharing',
         testFunction: () =>
-          updateAssistantAccessLevel({
+          updateAssistantSchoolSharing({
             assistantId: 'invalid-uuid',
-            accessLevel: 'school',
+            isSchoolShared: true,
             user: { id: 'user-id' },
           }),
       },
@@ -737,13 +719,13 @@ describe('assistant-service', () => {
     const differentUser = mockUser();
 
     describe.each([
-      { accessLevel: 'private' as const, user: ownerUser },
-      { accessLevel: 'global' as const, user: differentUser },
-    ])('accessLevel=$accessLevel', ({ accessLevel, user }) => {
-      it(`should return assistant with accessLevel=${accessLevel} - getAssistantForNewChat`, async () => {
+      { isGlobal: false, user: ownerUser },
+      { isGlobal: true, user: differentUser },
+    ])('isGlobal=$isGlobal', ({ isGlobal, user }) => {
+      it(`should return assistant with isGlobal=${isGlobal} - getAssistantForNewChat`, async () => {
         const mockAssistant: Partial<AssistantSelectModel> = {
           userId: ownerUser.id,
-          accessLevel,
+          isGlobal,
         };
 
         (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
@@ -768,7 +750,6 @@ describe('assistant-service', () => {
       const user = mockUser();
       const mockAssistant: Partial<AssistantSelectModel> = {
         userId: user.id,
-        accessLevel: 'private',
       };
       (
         dbGetAssistantByIdForConversation as MockedFunction<
@@ -809,7 +790,6 @@ describe('assistant-service', () => {
     it('throws ForbiddenError when the user is not authorized to read the assistant', async () => {
       const mockAssistant: Partial<AssistantSelectModel> = {
         userId: generateUUID(),
-        accessLevel: 'private',
       };
       (
         dbGetAssistantByIdForConversation as MockedFunction<
@@ -833,13 +813,13 @@ describe('assistant-service', () => {
     const differentUser = mockUser();
 
     describe.each([
-      { accessLevel: 'private' as const, user: ownerUser },
-      { accessLevel: 'global' as const, user: differentUser },
-    ])('accessLevel=$accessLevel', ({ accessLevel, user }) => {
-      it(`should return assistant with accessLevel=${accessLevel} - getAssistantByUser`, async () => {
+      { isGlobal: false, user: ownerUser },
+      { isGlobal: true, user: differentUser },
+    ])('isGlobal=$isGlobal', ({ isGlobal, user }) => {
+      it(`should return assistant with isGlobal=${isGlobal} - getAssistantByUser`, async () => {
         const mockAssistant: Partial<AssistantSelectModel> = {
           userId: ownerUser.id,
-          accessLevel,
+          isGlobal,
         };
 
         (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
@@ -863,17 +843,17 @@ describe('assistant-service', () => {
     describe('should allow access when hasLinkAccess is true - bypassing normal restrictions', () => {
       it.each([
         {
-          accessLevel: 'private' as const,
+          isSchoolShared: false,
           description: 'private assistant with link sharing enabled',
         },
         {
-          accessLevel: 'school' as const,
+          isSchoolShared: true,
           description: 'school assistant with link sharing enabled (different school)',
         },
-      ])('getAssistantByUser - $description', async ({ accessLevel }) => {
+      ])('getAssistantByUser - $description', async ({ isSchoolShared }) => {
         const mockAssistant: Partial<AssistantSelectModel> = {
           userId: ownerUserId,
-          accessLevel,
+          isSchoolShared,
           hasLinkAccess: true,
         };
 
@@ -892,17 +872,17 @@ describe('assistant-service', () => {
 
       it.each([
         {
-          accessLevel: 'private' as const,
+          isSchoolShared: false,
           description: 'private assistant with link sharing enabled',
         },
         {
-          accessLevel: 'school' as const,
+          isSchoolShared: true,
           description: 'school assistant with link sharing enabled (different school)',
         },
-      ])('getAssistantForNewChat - $description', async ({ accessLevel }) => {
+      ])('getAssistantForNewChat - $description', async ({ isSchoolShared }) => {
         const mockAssistant: Partial<AssistantSelectModel> = {
           userId: ownerUserId,
-          accessLevel,
+          isSchoolShared,
           hasLinkAccess: true,
         };
 
@@ -921,17 +901,17 @@ describe('assistant-service', () => {
 
       it.each([
         {
-          accessLevel: 'private' as const,
+          isSchoolShared: false,
           description: 'private assistant with link sharing enabled',
         },
         {
-          accessLevel: 'school' as const,
+          isSchoolShared: true,
           description: 'school assistant with link sharing enabled (different school)',
         },
-      ])('getFileMappings - $description', async ({ accessLevel }) => {
+      ])('getFileMappings - $description', async ({ isSchoolShared }) => {
         const mockAssistant: Partial<AssistantSelectModel> = {
           userId: ownerUserId,
-          accessLevel,
+          isSchoolShared,
           hasLinkAccess: true,
         };
 
@@ -956,7 +936,6 @@ describe('assistant-service', () => {
       it('getAssistantByUser - private assistant without link sharing', async () => {
         const mockAssistant: Partial<AssistantSelectModel> = {
           userId: ownerUserId,
-          accessLevel: 'private',
           hasLinkAccess: false,
         };
 
@@ -975,7 +954,6 @@ describe('assistant-service', () => {
       it('getAssistantForNewChat - private assistant without link sharing', async () => {
         const mockAssistant: Partial<AssistantSelectModel> = {
           userId: ownerUserId,
-          accessLevel: 'private',
           hasLinkAccess: false,
         };
 
@@ -999,59 +977,22 @@ describe('assistant-service', () => {
       {
         id: generateUUID(),
         userId: user.id,
-        accessLevel: 'private',
+        isSchoolShared: false,
+        isCommunityShared: false,
+        isGlobal: false,
         hasLinkAccess: false,
         suspended: false,
         ownerSchoolIds: user.schoolIds,
       } as AssistantSelectModel,
     ];
 
-    it.each([
-      {
-        accessLevel: 'community' as const,
-        expectedMock: dbGetCommunityGpts,
-        expectedArgs: [],
-      },
-      {
-        accessLevel: 'global' as const,
-        expectedMock: dbGetGlobalGpts,
-      },
-      {
-        accessLevel: 'school' as const,
-        expectedMock: dbGetGptsByAssociatedSchools,
-      },
-      {
-        accessLevel: 'private' as const,
-        expectedMock: dbGetGptsByUser,
-      },
-    ])(
-      'routes accessLevel=$accessLevel to the correct db function',
-      async ({ accessLevel, expectedMock, expectedArgs = [{ user }] }) => {
-        (expectedMock as MockedFunction<typeof expectedMock>).mockResolvedValue(
-          assistants as never,
-        );
-
-        const result = await getAssistantByAccessLevel({ accessLevel, user });
-
-        expect(result).toEqual(assistants);
-        expect(expectedMock).toHaveBeenCalledWith(...expectedArgs);
-      },
-    );
-
-    it('returns an empty list for unsupported access levels', async () => {
-      const result = await getAssistantByAccessLevel({
-        accessLevel: 'invalid' as never,
-        user,
-      });
-
-      expect(result).toEqual([]);
-    });
-
     it('returns combined lists for filter=all', async () => {
       const privateAssistant = {
         id: generateUUID(),
         userId: user.id,
-        accessLevel: 'private',
+        isSchoolShared: false,
+        isCommunityShared: false,
+        isGlobal: false,
         hasLinkAccess: false,
         suspended: false,
         ownerSchoolIds: user.schoolIds,
@@ -1059,7 +1000,9 @@ describe('assistant-service', () => {
       const schoolAssistant = {
         id: generateUUID(),
         userId: generateUUID(),
-        accessLevel: 'school',
+        isSchoolShared: true,
+        isCommunityShared: false,
+        isGlobal: false,
         hasLinkAccess: false,
         suspended: false,
         ownerSchoolIds: user.schoolIds,
@@ -1067,7 +1010,9 @@ describe('assistant-service', () => {
       const communityAssistant = {
         id: generateUUID(),
         userId: generateUUID(),
-        accessLevel: 'community',
+        isSchoolShared: false,
+        isCommunityShared: true,
+        isGlobal: false,
         hasLinkAccess: false,
         suspended: false,
         ownerSchoolIds: [],
@@ -1075,7 +1020,9 @@ describe('assistant-service', () => {
       const officialAssistant = {
         id: generateUUID(),
         userId: generateUUID(),
-        accessLevel: 'global',
+        isSchoolShared: false,
+        isCommunityShared: false,
+        isGlobal: true,
         hasLinkAccess: false,
         suspended: false,
         ownerSchoolIds: [],
@@ -1108,7 +1055,9 @@ describe('assistant-service', () => {
       const visibleAssistant = {
         id: generateUUID(),
         userId: generateUUID(),
-        accessLevel: 'global',
+        isSchoolShared: false,
+        isCommunityShared: false,
+        isGlobal: true,
         hasLinkAccess: false,
         suspended: false,
         ownerSchoolIds: [],
@@ -1133,7 +1082,9 @@ describe('assistant-service', () => {
       const ownSuspendedAssistant = {
         id: generateUUID(),
         userId: user.id,
-        accessLevel: 'school',
+        isSchoolShared: true,
+        isCommunityShared: false,
+        isGlobal: false,
         hasLinkAccess: false,
         suspended: true,
         ownerSchoolIds: user.schoolIds,
@@ -1152,7 +1103,9 @@ describe('assistant-service', () => {
       const privateAssistant = {
         id: generateUUID(),
         userId: user.id,
-        accessLevel: 'private',
+        isSchoolShared: false,
+        isCommunityShared: false,
+        isGlobal: false,
         hasLinkAccess: false,
         suspended: false,
         ownerSchoolIds: user.schoolIds,
@@ -1160,12 +1113,12 @@ describe('assistant-service', () => {
       const schoolAssistant = {
         ...privateAssistant,
         id: generateUUID(),
-        accessLevel: 'school',
+        isSchoolShared: true,
       } as AssistantSelectModel;
       const communityAssistant = {
         ...privateAssistant,
         id: generateUUID(),
-        accessLevel: 'community',
+        isCommunityShared: true,
       } as AssistantSelectModel;
 
       (dbGetAssistantsByUserId as MockedFunction<typeof dbGetAssistantsByUserId>).mockResolvedValue(
@@ -1192,7 +1145,9 @@ describe('assistant-service', () => {
       const schoolAssistant = {
         id: generateUUID(),
         userId: generateUUID(),
-        accessLevel: 'school',
+        isSchoolShared: true,
+        isCommunityShared: false,
+        isGlobal: false,
         hasLinkAccess: false,
         suspended: false,
         ownerSchoolIds: user.schoolIds,
@@ -1200,7 +1155,9 @@ describe('assistant-service', () => {
       const communityAssistant = {
         id: generateUUID(),
         userId: generateUUID(),
-        accessLevel: 'community',
+        isSchoolShared: false,
+        isCommunityShared: true,
+        isGlobal: false,
         hasLinkAccess: false,
         suspended: false,
         ownerSchoolIds: user.schoolIds,
@@ -1208,7 +1165,9 @@ describe('assistant-service', () => {
       const otherSchoolCommunityAssistant = {
         id: generateUUID(),
         userId: generateUUID(),
-        accessLevel: 'community',
+        isSchoolShared: false,
+        isCommunityShared: true,
+        isGlobal: false,
         hasLinkAccess: false,
         suspended: false,
         ownerSchoolIds: [],
@@ -1228,6 +1187,35 @@ describe('assistant-service', () => {
       expect(dbGetGptsByAssociatedSchools).toHaveBeenCalledWith({ user });
       expect(dbGetCommunityGpts).toHaveBeenCalledWith();
     });
+
+    it.each(['all' as const, 'school' as const])(
+      'does not duplicate school- and community-shared assistants for filter=%s',
+      async (filter) => {
+        const schoolAndCommunityAssistant = {
+          id: generateUUID(),
+          userId: generateUUID(),
+          isSchoolShared: true,
+          isCommunityShared: true,
+          isGlobal: false,
+          hasLinkAccess: false,
+          suspended: false,
+          ownerSchoolIds: user.schoolIds,
+        } as AssistantSelectModel;
+
+        (dbGetGptsByUser as MockedFunction<typeof dbGetGptsByUser>).mockResolvedValue([] as never);
+        (
+          dbGetGptsByAssociatedSchools as MockedFunction<typeof dbGetGptsByAssociatedSchools>
+        ).mockResolvedValue([schoolAndCommunityAssistant] as never);
+        (dbGetCommunityGpts as MockedFunction<typeof dbGetCommunityGpts>).mockResolvedValue([
+          schoolAndCommunityAssistant,
+        ] as never);
+        (dbGetGlobalGpts as MockedFunction<typeof dbGetGlobalGpts>).mockResolvedValue([] as never);
+
+        const result = await getAssistantsByOverviewFilter({ filter, user });
+
+        expect(result).toEqual([schoolAndCommunityAssistant]);
+      },
+    );
 
     it.each([
       { filter: 'mine' as const, expectedMock: dbGetAssistantsByUserId },
@@ -1259,7 +1247,6 @@ describe('assistant-service', () => {
       const mockAssistant: Partial<AssistantSelectModel> = {
         id: assistantId,
         userId,
-        accessLevel: 'private',
         pictureId: null,
       };
       (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(

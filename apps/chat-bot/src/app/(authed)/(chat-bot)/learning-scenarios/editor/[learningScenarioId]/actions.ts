@@ -1,6 +1,6 @@
 'use server';
 
-import { AccessLevel, LearningScenarioSelectModel } from '@shared/db/schema';
+import { LearningScenarioSelectModel } from '@shared/db/schema';
 import { ShareWithLearnersLimitParams } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners-limit-params';
 import { runServerAction } from '@shared/actions/run-server-action';
 import {
@@ -11,26 +11,99 @@ import {
   unshareLearningScenario,
   updateLearningScenarioShareTokenPointsLimit,
   updateLearningScenario,
-  updateLearningScenarioAccessLevel,
+  updateLearningScenarioSchoolSharing,
   uploadAvatarPictureForLearningScenario,
 } from '@shared/learning-scenarios/learning-scenario-service';
+import {
+  cancelCommunityTemplateRequest,
+  createCommunityTemplateRequest,
+  getEntitySharingState,
+  sendMessageToEditor,
+} from '@shared/community-templates/community-template-service';
 import { requireAuth } from '@/auth/requireAuth';
 
-export async function updateLearningScenarioAccessLevelAction({
+export async function createCommunityTemplateRequestAction({
   learningScenarioId,
-  accessLevel,
 }: {
   learningScenarioId: string;
-  accessLevel: AccessLevel;
 }) {
   const { user } = await requireAuth();
 
   return runServerAction(
-    'updateLearningScenarioAccessLevelAction',
-    updateLearningScenarioAccessLevel,
+    'createCommunityTemplateRequestAction',
+    createCommunityTemplateRequest,
+  )({
+    entityRef: { entityType: 'learningScenario', entityId: learningScenarioId },
+    user,
+  });
+}
+
+export async function sendMessageToEditorAction({
+  learningScenarioId,
+  message,
+}: {
+  learningScenarioId: string;
+  message: string;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'sendMessageToEditorAction',
+    sendMessageToEditor,
+  )({
+    entityRef: { entityType: 'learningScenario', entityId: learningScenarioId },
+    user,
+    message,
+  });
+}
+
+export async function cancelCommunityTemplateRequestAction({
+  learningScenarioId,
+}: {
+  learningScenarioId: string;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'cancelCommunityTemplateRequestAction',
+    cancelCommunityTemplateRequest,
+  )({
+    entityRef: { entityType: 'learningScenario', entityId: learningScenarioId },
+    user,
+  });
+}
+
+export async function getLearningScenarioSharingStateAction({
+  learningScenarioId,
+}: {
+  learningScenarioId: string;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'getLearningScenarioSharingStateAction',
+    getEntitySharingState,
+  )({
+    entityRef: { entityType: 'learningScenario', entityId: learningScenarioId },
+    user,
+  });
+}
+
+export async function updateLearningScenarioSchoolSharingAction({
+  learningScenarioId,
+  isSchoolShared,
+}: {
+  learningScenarioId: string;
+  isSchoolShared: boolean;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'updateLearningScenarioSchoolSharingAction',
+    updateLearningScenarioSchoolSharing,
   )({
     learningScenarioId,
-    accessLevel,
+    isSchoolShared,
     user,
   });
 }

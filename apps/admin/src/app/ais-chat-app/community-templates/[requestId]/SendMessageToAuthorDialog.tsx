@@ -1,4 +1,4 @@
-import { FloppyDiskIcon } from '@phosphor-icons/react';
+import { ChatTextIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { ConfirmationDialog } from '@ui/components/dialog/confirmation-dialog';
 import { Textarea } from '@ui/components/textarea';
@@ -36,7 +36,7 @@ export default function SendMessageToAuthorDialog({
       }}
       trigger={
         <Button>
-          <FloppyDiskIcon /> Nachricht an Autor/Autorin
+          <ChatTextIcon /> Nachricht an Autor/Autorin
         </Button>
       }
       content={

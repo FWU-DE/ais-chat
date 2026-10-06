@@ -97,6 +97,12 @@
         "content-no-false-outdated": "Die Vorlage enthält keine falschen oder veralteten Inhalte (z.B. telli statt AIS.chat).",
         "terms-accepted": "Ich habe die [Nutzungsbedingungen](https://ais-chat.schule/terms-of-use/) gelesen und akzeptiere sie."
       }
+    },
+    "community-removal-confirmation": {
+      "title": "Community-Freigabe entfernen?",
+      "description": "Soll die Community-Freigabe entfernt werden? Der Freigabeprozess muss dann erneut durchlaufen werden.",
+      "cancel": "Abbrechen",
+      "accept": "Freigabe entfernen"
     }
   },
   "community-sharing": {
@@ -111,9 +117,23 @@
       "approve": "Genehmigt",
       "cancel": "Zurückgezogen",
       "submit": "Eingereicht",
-      "reject": "Änderung erforderlich",
+      "reject": "Überarbeitung angefordert",
       "user_message": "Nachricht von mir",
       "editor_message": "Nachricht von AIS.chat-Redaktion"
+    },
+    "actions": {
+      "resubmit": "Erneut einreichen",
+      "message-editor": "Nachricht an AIS.chat-Redaktion"
+    },
+    "message-dialog": {
+      "title": "Nachricht an AIS.chat-Redaktion",
+      "message-label": "Nachricht",
+      "message-placeholder": "Nachricht",
+      "send": "Senden"
+    },
+    "toasts": {
+      "resubmit-toast-error": "Die Anfrage konnte nicht erneut eingereicht werden.",
+      "send-message-toast-error": "Die Nachricht konnte nicht gesendet werden."
     }
   },
   "usage-disclaimer": {
@@ -644,6 +664,10 @@
       "presets-title-unassigned": "Selbst hinzugefügt",
       "presets-domain-count": "{count, plural, =1 {# Webseite} other {# Webseiten}}",
       "presets-add-preset-button": "Paket hinzufügen"
+    },
+    "speech": {
+      "heading": "Sprachausgabe",
+      "heading-tooltip": "Falls aktiviert, können Antworten als Sprache ausgegeben werden."
     }
   },
   "assistants": {

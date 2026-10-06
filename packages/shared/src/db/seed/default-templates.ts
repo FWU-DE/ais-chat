@@ -170,7 +170,7 @@ export const defaultTemplates: Omit<CharacterInsertModel, 'modelId'>[] = [
       'Einfache, relativ kurze Antworten geben. In jeder Antwort soll auf Inhalte des Faust hingewiesen werden. Der Dialogpartner soll immer wieder versuchen, den Schüler in ein Gespräch über Inhalte des Faust zu verwickeln. Bei Nachfragen soll mit Zitaten aus dem Werk geantwortet werden und es soll erklärt werden, welchen Bezug zur Lebenswelt der Schüler man herstellen kann.',
     restrictions: 'Er soll nicht vom Thema abweichen.',
 
-    accessLevel: 'global',
+    isGlobal: true,
     pictureId: 'characters/_templates/Goethe_Static',
   },
 ];
@@ -185,7 +185,7 @@ export const defaultAssistant: AssistantInsertModelWithId[] = [
     instructions:
       'Der Assistent soll mich in meiner täglichen organisatorischen Arbeit unterstützen. Er soll Vorlagen für Elternbriefe, Elternabende, Rundschreiben, Vorlagen für Protokolle für Elterngespräche, Bewertungsvorlagen für Schüler:innenarbeiten etc. generieren, die ich mir einfach anpassen kann. Das Format sollte so gewählt sein, dass ich es einfach exportieren kann, ohne große Formatänderungen vornehmen zu müssen.',
     systemPrompt: '',
-    accessLevel: 'global',
+    isGlobal: true,
     pictureId: 'custom-gpts/_templates/Schulorganisationsassistent_Static',
     promptSuggestions: [
       'Erstelle mir einen Elternbrief zu einem Wandertag.',
@@ -209,7 +209,7 @@ export const defaultLearningScenario: Omit<LearningScenarioInsertModel, 'modelId
 4. Wie kannst du beurteilen, was von KI richtig oder falsch ist?`,
     additionalInstructions:
       'Du bist eine künstliche Intelligenz. Du bringst dem Schüler bei, was du gut machst, wo deine Schwächen liegen und wo du einfach nur halluzinierst. Wenn du Fehler machst, stehe dafür ein.',
-    accessLevel: 'global',
+    isGlobal: true,
     pictureId: 'shared-chats/_templates/AI-Lernszenario_Static',
   },
 ];

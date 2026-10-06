@@ -104,7 +104,9 @@ export const mockLearningScenario = (): LearningScenarioSelectModel => {
     additionalInstructions: null,
     restrictions: null,
     pictureId: null,
-    accessLevel: 'private',
+    isSchoolShared: false,
+    isCommunityShared: false,
+    isGlobal: false,
     originalLearningScenarioId: null,
     isDeleted: false,
     suspended: false,
@@ -112,6 +114,9 @@ export const mockLearningScenario = (): LearningScenarioSelectModel => {
     isWebSearchEnabled: false,
     webSearchScope: 'all-web',
     webSearchIncludedDomains: [],
+    isSpeechEnabled: true,
+    voice: '',
+    speechOnly: false,
     ownerSchoolIds: [generateUUID()],
   };
 };
@@ -168,7 +173,9 @@ export const mockCharacter = (): CharacterSelectModel => {
     restrictions: generateRandomString(10),
     pictureId: generateUUID(),
     initialMessage: generateRandomString(10),
-    accessLevel: 'private',
+    isSchoolShared: false,
+    isCommunityShared: false,
+    isGlobal: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     attachedLinks: [],
@@ -179,6 +186,9 @@ export const mockCharacter = (): CharacterSelectModel => {
     isWebSearchEnabled: false,
     webSearchScope: 'all-web',
     webSearchIncludedDomains: [],
+    isSpeechEnabled: true,
+    voice: '',
+    speechOnly: false,
     ownerSchoolIds: [generateUUID()],
   };
 };

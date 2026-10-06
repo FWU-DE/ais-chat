@@ -1,4 +1,5 @@
 import { getCharacterForEditView } from '@shared/characters/character-service';
+import { getCommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
 import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
 import { requireAuth } from '@/auth/requireAuth';
 import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
@@ -41,6 +42,11 @@ export default async function Page(props: PageProps<'/characters/editor/[charact
     redirect(`/characters/${characterId}`);
   }
 
+  const communityTemplateRequest = await getCommunityTemplateRequestWithEvents({
+    entityRef: { entityType: 'character', entityId: characterId },
+    user,
+  }).catch(handleErrorInServerComponent);
+
   const initialLinks = character.attachedLinks
     .filter((l) => l !== '')
     .map(
@@ -58,10 +64,12 @@ export default async function Page(props: PageProps<'/characters/editor/[charact
         relatedFiles={relatedFiles}
         initialLinks={initialLinks}
         avatarPictureUrl={maybeSignedPictureUrl}
+        initialCommunityTemplateRequest={communityTemplateRequest}
         usedBudget={usedBudget ?? 0}
         maxBudget={maxBudget ?? 500}
         budgetUsedBySharedChat={budgetUsedBySharedChat}
         isWebSearchAvailable={isWebSearchAvailableForFederalState(federalState.featureToggles)}
+        isSpeechAvailable={federalState.featureToggles.isSpeechModelEnabled === true}
       />
     </DefaultPageLayout>
   );

@@ -82,7 +82,7 @@ export default function CharacterSharedChat({
     const response = await fetch('/api/v1/shared-chat/speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, inviteCode }),
+      body: JSON.stringify({ text, inviteCode, entityType: 'character', entityId: id }),
     });
 
     if (!response.ok) {

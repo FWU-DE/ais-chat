@@ -43,7 +43,7 @@ const {
 
 vi.mock('openai', () => ({ default: MockOpenAI, toFile: toFileMock }));
 
-vi.mock('@sentry/core', () => ({ instrumentOpenAiClient: instrumentOpenAiClientMock }));
+vi.mock('@sentry/server-utils', () => ({ instrumentOpenAiClient: instrumentOpenAiClientMock }));
 
 vi.mock('../../env', () => ({
   env: {
