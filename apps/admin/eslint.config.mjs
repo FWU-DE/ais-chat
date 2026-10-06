@@ -3,13 +3,6 @@ import nextJsConfig from '@ais-chat/eslint-config/nextjs';
 const eslintConfig = [
   ...nextJsConfig,
   {
-    settings: {
-      next: {
-        rootDir: 'apps/admin/',
-      },
-    },
-  },
-  {
     rules: {
       'jsx-a11y/click-events-have-key-events': 'off',
       'jsx-a11y/no-static-element-interactions': 'off',
