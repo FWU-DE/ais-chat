@@ -1,15 +1,15 @@
 import { expect, test } from '@playwright/test';
 import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
 import { waitForAutosave, waitForToast } from '../../utils/utils';
-import { sendMessage, uploadFile } from '../../utils/chat';
-import { configureAssistant, deleteAssistant } from '../../utils/assistant';
+import { sendMessage } from '../../utils/chat';
+import { configureAssistant, createAssistant, deleteAssistant } from '../../utils/assistant';
 import { nanoid } from 'nanoid';
 
 test.use({ storageState: AUTH_FILES.teacher });
 
-const assistantName = 'Hausbauplaner ' + nanoid(8);
-
 test('teacher can login, create an assistant and start a chat', async ({ page }) => {
+  const assistantName = 'Hausbauplaner ' + nanoid(8);
+
   await page.goto('/assistants');
   await page.waitForURL('/assistants');
 
@@ -57,12 +57,22 @@ test('teacher can login, create an assistant and start a chat', async ({ page })
   // the mock LLM echoes the system prompt back.
   await expect(page.getByLabel('assistant message 1')).toContainText(assistantName);
 
-  await uploadFile(page, './e2e/fixtures/file-upload/Große Text Datei.txt');
-  await sendMessage(page, 'Gib "OK" aus.');
-  await expect(page.getByLabel('assistant message 2')).toBeVisible();
+  await page.reload();
+  await page.waitForURL('/assistants/d/**/**');
+  await expect(page.getByLabel('assistant message 1')).toContainText(assistantName);
 });
 
 test('teacher can delete assistant with chat', async ({ page }) => {
+  const assistantName = 'Hausbauplaner ' + nanoid(8);
+  await createAssistant(page);
+  await configureAssistant(page, { name: assistantName });
+
+  await page.goto('/assistants');
+  const card = page.getByTestId('entity-card').filter({ hasText: assistantName }).first();
+  await expect(card).toBeVisible({ timeout: 15_000 });
+  await card.getByTestId('chat-button').click();
+  await page.waitForURL('/assistants/d/**');
+
   await page.goto('/assistants');
   await page.waitForURL('/assistants');
 

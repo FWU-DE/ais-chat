@@ -1,5 +1,6 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '../db';
+import { isCustomOpenAiProviderId } from '../bifrost-provider-sync/provider-config-builder/openai-compatible';
 import {
   llmModelProviderKeyMappingTable,
   llmModelTable,
@@ -199,7 +200,8 @@ export async function dbGetModelIdByProviderAndUpstreamName({
   upstreamModelName: string;
 }): Promise<string | undefined> {
   if (modelIds.length === 0) return undefined;
-  const normalizedProvider = provider === 'vertex' ? 'google' : provider;
+  const normalizedProvider =
+    provider === 'vertex' ? 'google' : isCustomOpenAiProviderId(provider) ? 'openai' : provider;
   const [mapping] = await db
     .select({ modelId: llmModelProviderKeyMappingTable.llmModelId })
     .from(llmModelProviderKeyMappingTable)

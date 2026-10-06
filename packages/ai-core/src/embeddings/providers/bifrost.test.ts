@@ -23,7 +23,7 @@ const { createMock, openAiConstructorMock, instrumentOpenAiClientMock, MockOpenA
 
 vi.mock('openai', () => ({ default: MockOpenAI }));
 
-vi.mock('@sentry/core', () => ({ instrumentOpenAiClient: instrumentOpenAiClientMock }));
+vi.mock('@sentry/server-utils', () => ({ instrumentOpenAiClient: instrumentOpenAiClientMock }));
 
 vi.mock('../../env', () => ({
   env: {

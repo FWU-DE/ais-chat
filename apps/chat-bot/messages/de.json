@@ -35,6 +35,7 @@
     "copy-clipboard": "In die Zwischenablage kopieren",
     "copy-clipboard-success": "In die Zwischenablage kopiert",
     "copy-clipboard-error": "Fehler beim Kopieren in die Zwischenablage",
+    "message-copy": "Nachricht kopieren",
     "message-download": "Nachricht als Word-Datei herunterladen",
     "message-download-error": "Der Download der Nachricht ist fehlgeschlagen.",
     "regenerate-message": "Antwort erneut generieren",
@@ -173,10 +174,11 @@
     "open-source": "Quelle öffnen: {source}",
     "steps": {
       "analysis": "Analyse",
+      "analysis-summary": "Analyse Zusammenfassung",
       "done": "Fertig",
       "web_search": "Websuche",
       "web_scraper": "Webseite gelesen",
-      "retrieve_text_chunks": "Relevante Dateiausschnitte gelesen",
+      "retrieve_text_chunks": "Relevante Dateiausschnitte gelesen: Suchbegriffe",
       "retrieve_entire_file": "Datei vollständig gelesen",
       "mundo_search": "Mundo durchsucht",
       "math_calculate": "Berechnung durchgeführt"
@@ -662,6 +664,10 @@
       "presets-title-unassigned": "Selbst hinzugefügt",
       "presets-domain-count": "{count, plural, =1 {# Webseite} other {# Webseiten}}",
       "presets-add-preset-button": "Paket hinzufügen"
+    },
+    "speech": {
+      "heading": "Sprachausgabe",
+      "heading-tooltip": "Falls aktiviert, können Antworten als Sprache ausgegeben werden."
     }
   },
   "assistants": {

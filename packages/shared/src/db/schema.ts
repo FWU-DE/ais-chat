@@ -171,6 +171,7 @@ export const conversationMessageTable = pgTable(
     webSearchResults: json('web_search_results').$type<ConversationMessageWebSearchResult[]>(),
     toolCalls: json('tool_calls').$type<ToolCall[]>(),
     toolCallId: text('tool_call_id'),
+    reasoningSummary: text('reasoning_summary'),
   },
   (table) => [
     index().on(table.conversationId),
@@ -577,6 +578,9 @@ export const characterTable = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    isSpeechEnabled: boolean('is_speech_enabled').notNull().default(true),
+    voice: text('voice').notNull().default(''),
+    speechOnly: boolean('speech_only').notNull().default(false),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
       .defaultNow()
@@ -845,6 +849,9 @@ export const learningScenarioTable = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    isSpeechEnabled: boolean('is_speech_enabled').notNull().default(true),
+    voice: text('voice').notNull().default(''),
+    speechOnly: boolean('speech_only').notNull().default(false),
   },
   (table) => [index().on(table.userId)],
 );
@@ -1318,6 +1325,9 @@ export const assistantTable = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    isSpeechEnabled: boolean('is_speech_enabled').notNull().default(true),
+    voice: text('voice').notNull().default(''),
+    speechOnly: boolean('speech_only').notNull().default(false),
     pictureId: text('picture_id'),
     description: text('description'),
     instructions: text('instructions'),

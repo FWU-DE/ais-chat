@@ -64,6 +64,7 @@ import { CustomChatInstructionsExampleDialog } from '@/components/custom-chat/cu
 import { RichText, stripRichTextTags } from '@/components/common/rich-text';
 import { CustomChatHeaderContent } from '@/components/custom-chat/custom-chat-header-content';
 import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
+import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
 import { CustomChatSuspensionError } from '@/components/custom-chat/custom-chat-suspension-error';
 import FilterSelectSection from '@/components/custom-chat/filter/custom-chat-filter-select-section';
 import {
@@ -119,6 +120,7 @@ function createAssistantFormValuesSchema(t: AssistantTranslator) {
     isWebSearchEnabled: z.boolean(),
     webSearchScope: webSearchScopeSchema,
     webSearchIncludedDomains: z.array(z.string()),
+    isSpeechEnabled: z.boolean(),
     promptSuggestions: z
       .array(
         z.object({
@@ -141,6 +143,7 @@ export function AssistantEdit({
   avatarPictureUrl,
   initialCommunityTemplateRequest,
   isWebSearchAvailable,
+  isSpeechAvailable,
 }: {
   assistant: AssistantSelectModel;
   relatedFiles: FileModel[];
@@ -148,6 +151,7 @@ export function AssistantEdit({
   avatarPictureUrl?: string;
   initialCommunityTemplateRequest: CommunityTemplateRequestWithEvents | null;
   isWebSearchAvailable: boolean;
+  isSpeechAvailable: boolean;
 }) {
   useForceReloadOnBrowserBackButton();
   const router = useRouter();
@@ -178,6 +182,7 @@ export function AssistantEdit({
     isWebSearchEnabled: assistant.isWebSearchEnabled,
     webSearchScope: assistant.webSearchScope,
     webSearchIncludedDomains: assistant.webSearchIncludedDomains,
+    isSpeechEnabled: assistant.isSpeechEnabled,
     promptSuggestions:
       assistant.promptSuggestions && assistant.promptSuggestions.length > 0
         ? assistant.promptSuggestions.map((s) => ({ value: s }))
@@ -218,6 +223,7 @@ export function AssistantEdit({
           isWebSearchEnabled: data.isWebSearchEnabled,
           webSearchScope: data.webSearchScope,
           webSearchIncludedDomains: data.webSearchIncludedDomains,
+          isSpeechEnabled: data.isSpeechEnabled,
           promptSuggestions: data.promptSuggestions
             .map((suggestion) => suggestion.value.trim())
             .filter((suggestion) => suggestion.length > 0),
@@ -462,6 +468,15 @@ export function AssistantEdit({
                 void flushAutoSave();
               }}
               onChange={() => {
+                void flushAutoSave();
+              }}
+            />
+          )}
+
+          {isSpeechAvailable && (
+            <CustomChatSpeechEditView
+              control={control}
+              onCheckedChange={() => {
                 void flushAutoSave();
               }}
             />

@@ -31,6 +31,11 @@ export async function dbGetAllLlmModels() {
   return db.select().from(llmModelTable).orderBy(llmModelTable.createdAt).$withCache();
 }
 
+export async function dbGetSpeechModel() {
+  const models = await dbGetAllLlmModels();
+  return models.find((model) => model.priceMetadata.type === 'speech');
+}
+
 export async function dbGetLlmModelsByFederalStateId({
   federalStateId,
 }: {
@@ -108,7 +113,7 @@ export async function dbFindModelsToUpdate({
 }
 
 export async function dbUpdateLlmModelsForAllFederalStates() {
-  const states = await dbGetFederalStates();
+  const states = (await dbGetFederalStates()).filter((state) => state.encryptedApiKey !== null);
 
   const stateUpdates = await Promise.all(
     states.map(async (state) => {

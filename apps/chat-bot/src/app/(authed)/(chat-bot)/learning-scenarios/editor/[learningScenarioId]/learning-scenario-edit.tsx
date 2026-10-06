@@ -80,6 +80,7 @@ import {
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
 import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
+import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
 
 type LearningScenarioTranslator = ReturnType<typeof useTranslations<'learning-scenarios'>>;
 
@@ -132,6 +133,7 @@ function createLearningScenarioFormValuesSchema(t: LearningScenarioTranslator) {
     isWebSearchEnabled: z.boolean(),
     webSearchScope: webSearchScopeSchema,
     webSearchIncludedDomains: z.array(z.string()),
+    isSpeechEnabled: z.boolean(),
   });
 }
 
@@ -149,6 +151,7 @@ export function LearningScenarioEdit({
   maxBudget,
   budgetUsedBySharedChat,
   isWebSearchAvailable,
+  isSpeechAvailable,
 }: {
   learningScenario: LearningScenarioOptionalShareDataModel;
   relatedFiles: FileModel[];
@@ -159,6 +162,7 @@ export function LearningScenarioEdit({
   maxBudget: number;
   budgetUsedBySharedChat: number;
   isWebSearchAvailable: boolean;
+  isSpeechAvailable: boolean;
 }) {
   useForceReloadOnBrowserBackButton();
   const router = useRouter();
@@ -198,6 +202,7 @@ export function LearningScenarioEdit({
     isWebSearchEnabled: learningScenario.isWebSearchEnabled,
     webSearchScope: learningScenario.webSearchScope,
     webSearchIncludedDomains: learningScenario.webSearchIncludedDomains,
+    isSpeechEnabled: learningScenario.isSpeechEnabled,
   };
 
   const {
@@ -573,6 +578,15 @@ export function LearningScenarioEdit({
                   void flushAutoSave();
                 }}
                 onChange={() => {
+                  void flushAutoSave();
+                }}
+              />
+            )}
+
+            {isSpeechAvailable && (
+              <CustomChatSpeechEditView
+                control={control}
+                onCheckedChange={() => {
                   void flushAutoSave();
                 }}
               />

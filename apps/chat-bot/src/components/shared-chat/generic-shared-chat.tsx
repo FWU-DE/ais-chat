@@ -90,6 +90,8 @@ export type SharedChatViewProps = {
    */
   assistantIcon?: ReactNode;
   uploadFileFn?: (file: File, sharedSessionId: string) => Promise<{ fileId: string }>;
+  isSpeechModelEnabled: boolean;
+  generateSpeechFn: (text: string) => Promise<Blob>;
 };
 
 /**
@@ -113,6 +115,8 @@ export default function GenericSharedChat({
   showActivityDialog = false,
   assistantIcon,
   uploadFileFn,
+  isSpeechModelEnabled,
+  generateSpeechFn,
 }: SharedChatViewProps) {
   const tCommon = useTranslations('common');
   const tCustomChat = useTranslations('custom-chat.shared');
@@ -382,6 +386,8 @@ export default function GenericSharedChat({
                 pendingFileMapping={pendingFileMapping}
                 activitySteps={chat.activitySteps}
                 showActivityDialog={showActivityDialog}
+                generateSpeechFn={generateSpeechFn}
+                isSpeechModelEnabled={isSpeechModelEnabled}
               />
             )}
             {/* If there is a TokenPointsExceededError or SharedChatExpiredError we show a dialog instead */}

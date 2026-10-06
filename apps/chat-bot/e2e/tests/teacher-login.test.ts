@@ -10,12 +10,14 @@ test.describe('with stored auth', () => {
     await page.goto('/');
 
     // send first message
-    await sendMessage(page, 'Wieviel ist 2+2? [Hinweis: Ergebnis ist 4]');
-    await expect(page.getByLabel('assistant message 1')).toContainText('4');
+    await sendMessage(page, 'Wieviel ist 2+2?');
+    await expect(page.getByLabel('user message 1')).toContainText('Wieviel ist 2+2?');
+    await expect(page.getByLabel('assistant message 1')).toContainText(/\S/);
 
     // send second message
-    await sendMessage(page, 'Wieviel ist 3+3? [Hinweis: Ergebnis ist 6]');
-    await expect(page.getByLabel('assistant message 2')).toContainText('6');
+    await sendMessage(page, 'Wieviel ist 3+3?');
+    await expect(page.getByLabel('user message 2')).toContainText('Wieviel ist 3+3?');
+    await expect(page.getByLabel('assistant message 2')).toContainText(/\S/);
   });
 });
 

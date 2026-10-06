@@ -1,5 +1,6 @@
 import { getLargeLanguageModelsAction } from '../actions';
 import { LargeLanguageModelDetailView } from './LargeLanguageModelDetailView';
+import { LlmApiKeyAssignmentsView } from './LlmApiKeyAssignmentsView';
 import { getProviderKeysAction } from '../../provider-keys/actions';
 
 export const dynamic = 'force-dynamic';
@@ -39,11 +40,14 @@ export default async function Page(
   }
 
   return (
-    <LargeLanguageModelDetailView
-      organizationId={organizationId}
-      model={model}
-      providerKeys={providerKeys}
-      mode="edit"
-    />
+    <div className="flex flex-col gap-6">
+      <LargeLanguageModelDetailView
+        organizationId={organizationId}
+        model={model}
+        providerKeys={providerKeys}
+        mode="edit"
+      />
+      <LlmApiKeyAssignmentsView organizationId={organizationId} modelId={model.id} />
+    </div>
   );
 }

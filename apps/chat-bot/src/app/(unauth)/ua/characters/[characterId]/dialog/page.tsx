@@ -64,6 +64,10 @@ export default async function Page(props: PageProps<'/ua/characters/[characterId
             initialMessage={character.initialMessage ?? ''}
             inviteCode={searchParams.inviteCode}
             avatarPictureUrl={avatarPictureUrl}
+            isSpeechModelEnabled={
+              federalState?.featureToggles?.isSpeechModelEnabled === true &&
+              character.isSpeechEnabled
+            }
           />
         </ThemeProvider>
       </LlmModelsProvider>

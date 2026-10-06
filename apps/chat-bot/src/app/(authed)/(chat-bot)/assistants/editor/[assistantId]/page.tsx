@@ -44,6 +44,7 @@ export default async function Page(props: PageProps<'/assistants/editor/[assista
         avatarPictureUrl={pictureUrl}
         initialCommunityTemplateRequest={communityTemplateRequest}
         isWebSearchAvailable={isWebSearchAvailableForFederalState(federalState.featureToggles)}
+        isSpeechAvailable={federalState.featureToggles.isSpeechModelEnabled === true}
       />
     </DefaultPageLayout>
   );

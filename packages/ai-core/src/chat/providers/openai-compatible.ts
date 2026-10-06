@@ -65,6 +65,8 @@ export async function* streamOpenAICompatibleAgenticResponse({
       if (chunk.type === 'response.output_text.delta') {
         content += chunk.delta;
         yield { type: 'text', delta: chunk.delta };
+      } else if (chunk.type === 'response.reasoning_summary_text.delta') {
+        yield { type: 'reasoning_summary', delta: chunk.delta };
       } else if (chunk.type === 'response.function_call_arguments.delta') {
         const existingToolCall = toolCalls.get(chunk.output_index) ?? {
           id: '',

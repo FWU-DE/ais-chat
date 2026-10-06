@@ -27,6 +27,7 @@ import { getConversationPath } from '@/utils/chat/path';
 import { Messages, type PendingFileModel } from './messages';
 import { WebSource } from '@shared/db/types';
 import { FloatingText } from './floating-text';
+import { useFederalState } from '../providers/federal-state-provider';
 import { getErrorMessageByType } from '@/error/get-error-message-by-type';
 
 type ChatProps = {
@@ -60,6 +61,7 @@ export default function Chat({
   const tCommon = useTranslations('common');
   const tLearningScenarioShared = useTranslations('learning-scenarios.shared');
 
+  const federalState = useFederalState();
   const { selectedModel, setDownloadConversationEnabled } = useLlmModels();
   const conversationPath = getConversationPath({
     customGptId: assistant?.id,
@@ -259,6 +261,20 @@ export default function Chat({
     });
   }
 
+  async function generateSpeech(text: string): Promise<Blob> {
+    const response = await fetch('/api/v1/speech', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Could not generate speech');
+    }
+
+    return response.blob();
+  }
+
   let placeholderElement: ReactNode;
 
   if (character !== undefined) {
@@ -347,6 +363,14 @@ export default function Chat({
               webSourceMapping={webSourceMapping}
               activitySteps={activitySteps}
               showActivityDialog={character !== undefined}
+              generateSpeechFn={generateSpeech}
+              isSpeechModelEnabled={
+                federalState?.featureToggles?.isSpeechModelEnabled === true &&
+                (assistant?.isSpeechEnabled ??
+                  character?.isSpeechEnabled ??
+                  learningScenario?.isSpeechEnabled ??
+                  false)
+              }
             />
           )}
           {error && (

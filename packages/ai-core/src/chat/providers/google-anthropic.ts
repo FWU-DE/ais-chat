@@ -27,9 +27,10 @@ import {
   ToolDefinition,
 } from '../types';
 import { AnthropicVertex, ClientOptions } from '@anthropic-ai/vertex-sdk';
+import { isLlmProvider } from '@ais-chat/api-database/llm-model';
 import { AiGenerationError, ProviderRateLimitExceededError } from '../../errors';
 import { ParsedMessage } from '@anthropic-ai/sdk';
-import { instrumentAnthropicAiClient } from '@sentry/core';
+import { instrumentAnthropicAiClient } from '@sentry/server-utils';
 import { estimateTokenUsage, isAbortError } from '../utils';
 
 /* used by apps/api when called with stream === false or as auxiliary model in chat-bot */
@@ -153,6 +154,7 @@ export function constructGoogleAnthropicAgenticStreamFn(model: AiModel): Agentic
       );
       const vertexModelName = resolveModelName(modelName);
       const messageParams: MessageCreateParamsStreaming = {
+        ...model.additionalParameters,
         max_tokens: maxTokens ?? 4096,
         messages: conversationMessages,
         model: vertexModelName,
@@ -247,7 +249,7 @@ function createAnthropicClient(options: ClientOptions): AnthropicVertex {
  * @returns
  */
 function getConfigurationByModel(model: AiModel): ClientOptions {
-  if (model.setting.provider !== 'google') {
+  if (!isLlmProvider(model.setting, 'google')) {
     throw new Error('Invalid model configuration for Google Anthropic');
   }
 

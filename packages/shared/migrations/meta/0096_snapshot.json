@@ -1,5 +1,5 @@
 {
-  "id": "f3dc3cef-3f28-41e2-890b-722ece73eb04",
+  "id": "5687de86-aad1-42f0-975f-158c8c2eb69a",
   "prevId": "7ff24dd3-f21d-4376-9f9b-828d04523173",
   "version": "7",
   "dialect": "postgresql",
@@ -843,26 +843,12 @@
           "notNull": true,
           "default": "now()"
         },
-        "is_school_shared": {
-          "name": "is_school_shared",
-          "type": "boolean",
+        "access_level": {
+          "name": "access_level",
+          "type": "access_level",
           "primaryKey": false,
           "notNull": true,
-          "default": false
-        },
-        "is_community_shared": {
-          "name": "is_community_shared",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "is_global": {
-          "name": "is_global",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
+          "default": "'private'"
         },
         "has_link_access": {
           "name": "has_link_access",
@@ -1145,26 +1131,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "is_school_shared": {
-          "name": "is_school_shared",
-          "type": "boolean",
+        "access_level": {
+          "name": "access_level",
+          "type": "access_level",
           "primaryKey": false,
           "notNull": true,
-          "default": false
-        },
-        "is_community_shared": {
-          "name": "is_community_shared",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "is_global": {
-          "name": "is_global",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
+          "default": "'private'"
         },
         "has_link_access": {
           "name": "has_link_access",
@@ -1555,6 +1527,12 @@
         },
         "tool_call_id": {
           "name": "tool_call_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reasoning_summary": {
+          "name": "reasoning_summary",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -2646,26 +2624,12 @@
           "notNull": true,
           "default": false
         },
-        "is_school_shared": {
-          "name": "is_school_shared",
-          "type": "boolean",
+        "access_level": {
+          "name": "access_level",
+          "type": "access_level",
           "primaryKey": false,
           "notNull": true,
-          "default": false
-        },
-        "is_community_shared": {
-          "name": "is_community_shared",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "is_global": {
-          "name": "is_global",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
+          "default": "'private'"
         },
         "original_learning_scenario_id": {
           "name": "original_learning_scenario_id",
@@ -3762,6 +3726,16 @@
     }
   },
   "enums": {
+    "public.access_level": {
+      "name": "access_level",
+      "schema": "public",
+      "values": [
+        "private",
+        "school",
+        "community",
+        "global"
+      ]
+    },
     "public.chunk_source_type": {
       "name": "chunk_source_type",
       "schema": "public",
