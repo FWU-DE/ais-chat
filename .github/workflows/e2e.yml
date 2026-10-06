@@ -16,9 +16,6 @@ on:
           - smoke
           - regression
         default: smoke
-  # Nightly full regression run (UTC)
-  schedule:
-    - cron: '0 2 * * 1-5'
 
 concurrency:
   group: e2e-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
@@ -30,8 +27,8 @@ jobs:
     timeout-minutes: 120
 
     env:
-      # smoke: pipeline subset (@smoke tests, chromium); regression: all tests incl. firefox and real LLMs
-      E2E_SUITE: ${{ (github.event_name == 'schedule' || inputs.suite == 'regression') && 'regression' || 'smoke' }}
+      # smoke: pipeline subset (@smoke tests, chromium) on PR open/update; regression: all tests incl. firefox and real LLMs, run on merge to main
+      E2E_SUITE: ${{ (github.event_name == 'push' || inputs.suite == 'regression') && 'regression' || 'smoke' }}
       DATABASE_URL: postgresql://admin:test1234@127.0.0.1:5432/app_db
       RABBITMQ_URI: amqp://user:password@127.0.0.1:5672
       VALKEY_URL: redis://127.0.0.1:6379/0
