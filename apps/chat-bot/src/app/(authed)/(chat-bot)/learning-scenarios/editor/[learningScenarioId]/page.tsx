@@ -1,6 +1,7 @@
 import { requireAuth } from '@/auth/requireAuth';
 import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
 import { getLearningScenarioForEditView } from '@shared/learning-scenarios/learning-scenario-service';
+import { getCommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
 import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 import { WebSource } from '@shared/db/types';
 import { LearningScenarioEdit } from './learning-scenario-edit';
@@ -43,6 +44,11 @@ export default async function Page(
     redirect(`/learning-scenarios/${learningScenarioId}`);
   }
 
+  const communityTemplateRequest = await getCommunityTemplateRequestWithEvents({
+    entityRef: { entityType: 'learningScenario', entityId: learningScenarioId },
+    user,
+  }).catch(handleErrorInServerComponent);
+
   const initialLinks = learningScenario.attachedLinks
     .filter((l) => l && l !== '')
     .map(
@@ -60,6 +66,7 @@ export default async function Page(
         relatedFiles={relatedFiles}
         initialLinks={initialLinks}
         avatarPictureUrl={avatarPictureUrl}
+        initialCommunityTemplateRequest={communityTemplateRequest}
         usedBudget={usedBudget ?? 0}
         maxBudget={maxBudget ?? 500}
         budgetUsedBySharedChat={budgetUsedBySharedChat}

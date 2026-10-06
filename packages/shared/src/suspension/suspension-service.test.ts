@@ -108,7 +108,6 @@ describe('suspension-request-service', () => {
       } as never);
       (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue({
         id: assistantId,
-        accessLevel: 'private',
         hasLinkAccess: false,
         userId: requesterId,
         ownerSchoolIds: [generateUUID()],
@@ -152,7 +151,6 @@ describe('suspension-request-service', () => {
       } as never);
       (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue({
         id: assistantId,
-        accessLevel: 'private',
         hasLinkAccess: false,
         userId: requesterId,
         ownerSchoolIds: [generateUUID()],
@@ -247,7 +245,6 @@ describe('suspension-request-service', () => {
       } as never);
       (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue({
         id: assistantId,
-        accessLevel: 'private',
         hasLinkAccess: false,
         userId: generateUUID(),
         ownerSchoolIds: [generateUUID()],
@@ -278,7 +275,6 @@ describe('suspension-request-service', () => {
       } as never);
       (dbGetCharacterById as MockedFunction<typeof dbGetCharacterById>).mockResolvedValue({
         id: characterId,
-        accessLevel: 'private',
         hasLinkAccess: false,
         userId: requesterId,
         ownerSchoolIds: [generateUUID()],

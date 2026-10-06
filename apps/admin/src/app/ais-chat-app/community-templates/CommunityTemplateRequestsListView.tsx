@@ -91,7 +91,7 @@ export default function CommunityTemplateRequestsListView() {
           <div className="flex flex-col gap-4">
             <div className="grid max-w-3xl grid-cols-1 items-end gap-4 sm:grid-cols-2">
               <Field>
-                <FieldLabel>Nach Vorlagenname filtern</FieldLabel>
+                <FieldLabel>Nach Name filtern</FieldLabel>
                 <Input
                   className="m-0"
                   placeholder="Vorlagenname"
@@ -103,7 +103,7 @@ export default function CommunityTemplateRequestsListView() {
                 />
               </Field>
               <MultipleSelectDropdown
-                label="Status"
+                label="Nach Status filtern"
                 value={selectedStatuses}
                 onValueChange={(statuses) => updateColumnFilter('state', statuses)}
                 optionGroups={[{ options: communityTemplateRequestStatusOptions }]}

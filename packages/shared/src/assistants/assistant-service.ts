@@ -17,8 +17,6 @@ import {
 } from '@shared/db/functions/assistants';
 import { dbGetFileForAssistant, dbGetRelatedAssistantFiles } from '@shared/db/functions/files';
 import {
-  AccessLevel,
-  accessLevelSchema,
   AssistantFileMapping,
   AssistantSelectModel,
   assistantTable,
@@ -33,6 +31,7 @@ import {
   getAvatarPictureUrl,
 } from '@shared/files/fileService';
 import { buildAssistantPictureKey } from '@shared/utils/picture-key';
+import { uniqueById } from '@shared/utils/arrays';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
 import { copyAssistant, copyRelatedTemplateFiles } from '@shared/templates/template-service';
@@ -52,6 +51,7 @@ import {
   filterCommunitySharedByAssociatedSchool,
   filterReadableCustomChats,
 } from '@shared/auth/authorization-service';
+import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 
 function buildAvatarFilename(hash: string) {
   return `avatar_${hash}`;
@@ -174,35 +174,6 @@ export async function getConversationWithMessagesAndAssistant({
  * Returns a list of custom gpts for the user based on
  * userId, schools associated with the user, federalStateId and access level.
  */
-export async function getAssistantByAccessLevel({
-  accessLevel,
-  user,
-}: {
-  accessLevel: AccessLevel;
-  user: Pick<UserModel, 'id' | 'schoolIds' | 'federalStateId'>;
-}): Promise<AssistantSelectModel[]> {
-  let assistants: AssistantSelectModel[];
-
-  switch (accessLevel) {
-    case 'community':
-      assistants = await dbGetCommunityGpts();
-      break;
-    case 'global':
-      assistants = await dbGetGlobalGpts({ user });
-      break;
-    case 'school':
-      assistants = await dbGetGptsByAssociatedSchools({ user });
-      break;
-    case 'private':
-      assistants = await dbGetGptsByUser({ user });
-      break;
-    default:
-      return [];
-  }
-
-  return filterReadableCustomChats({ items: assistants, user });
-}
-
 export async function getAssistantsByOverviewFilter({
   filter,
   user,
@@ -221,12 +192,13 @@ export async function getAssistantsByOverviewFilter({
           dbGetCommunityGpts(),
           dbGetGlobalGpts({ user }),
         ]);
-      assistants = [
+      // An assistant can match several sharing queries, e.g. school-shared and community-shared
+      assistants = uniqueById([
         ...privateAssistants,
         ...schoolAssistants,
         ...communityAssistants,
         ...globalAssistants,
-      ];
+      ]);
       break;
     }
     case 'mine':
@@ -243,10 +215,10 @@ export async function getAssistantsByOverviewFilter({
         dbGetGptsByAssociatedSchools({ user }),
         dbGetCommunityGpts(),
       ]);
-      assistants = [
+      assistants = uniqueById([
         ...schoolAssistants,
         ...filterCommunitySharedByAssociatedSchool({ items: communityAssistants, user }),
-      ];
+      ]);
       break;
     }
     default:
@@ -280,12 +252,7 @@ export async function createNewAssistant({
     });
     verifySuspensionState({ item: sourceAssistant });
 
-    const insertedAssistant = await copyAssistant(
-      templateId,
-      'private',
-      user,
-      duplicateAssistantName,
-    );
+    const insertedAssistant = await copyAssistant(templateId, false, user, duplicateAssistantName);
 
     await copyRelatedTemplateFiles('assistant', templateId, insertedAssistant.id);
     return insertedAssistant;
@@ -393,47 +360,50 @@ export async function getFileMappings({
 }
 
 /**
- * Update access level, e.g. from private to school/community or back to private.
- * Throws if the user is not the owner of the custom gpt.
+ * User can share an assistant they own with the school, or unshare it (private).
+ * Community sharing is handled separately via the community-template-request workflow;
+ * this function is not authorized to change it.
  */
-export async function updateAssistantAccessLevel({
-  accessLevel,
+export async function updateAssistantSchoolSharing({
+  isSchoolShared,
   assistantId,
   user,
 }: {
-  accessLevel: AccessLevel;
+  isSchoolShared: boolean;
   assistantId: string;
   user: Pick<UserModel, 'id'>;
 }) {
   checkParameterUUID(assistantId);
-  accessLevelSchema.parse(accessLevel);
-
-  if (accessLevel === 'global') {
-    throw new ForbiddenError('Not authorized to set the access level to global');
-  }
 
   const assistant = await dbGetAssistantById({ assistantId });
   verifyWriteAccess({ item: assistant, user });
   verifySuspensionState({ item: assistant });
 
-  if (assistant.accessLevel === accessLevel) {
+  if (assistant.isSchoolShared === isSchoolShared) {
     return assistant;
+  }
+
+  if (!isSchoolShared) {
+    await verifyCommunitySharingInactive({
+      entityRef: { entityType: 'assistant', entityId: assistantId },
+      isCommunityShared: assistant.isCommunityShared,
+    });
   }
 
   const preservedUpdatedAt = getPreservedUpdatedAtForExemptedKeys({
     entity: assistant,
-    values: { accessLevel },
-    exemptedKeys: ['accessLevel'],
+    values: { isSchoolShared },
+    exemptedKeys: ['isSchoolShared'],
   });
 
   const [updatedAssistant] = await db
     .update(assistantTable)
-    .set({ accessLevel, ...(preservedUpdatedAt ? { updatedAt: preservedUpdatedAt } : {}) })
+    .set({ isSchoolShared, ...(preservedUpdatedAt ? { updatedAt: preservedUpdatedAt } : {}) })
     .where(and(eq(assistantTable.id, assistantId), eq(assistantTable.userId, user.id)))
     .returning();
 
   if (!updatedAssistant) {
-    throw new Error('Could not update the access level of the assistant');
+    throw new Error('Could not update the school sharing state of the assistant');
   }
 
   return updatedAssistant;
@@ -443,7 +413,9 @@ const updateAssistantSchema = assistantUpdateSchema.omit({
   id: true,
   isDeleted: true,
   originalAssistantId: true,
-  accessLevel: true,
+  isSchoolShared: true,
+  isCommunityShared: true,
+  isGlobal: true,
   pictureId: true,
 });
 
@@ -472,6 +444,13 @@ export async function updateAssistant({
 
   if (changedKeys.length === 0) {
     return assistant;
+  }
+
+  if (changedKeys.includes('hasLinkAccess') && !parsedValues.hasLinkAccess) {
+    await verifyCommunitySharingInactive({
+      entityRef: { entityType: 'assistant', entityId: assistantId },
+      isCommunityShared: assistant.isCommunityShared,
+    });
   }
 
   const preservedUpdatedAt = getPreservedUpdatedAtForExemptedKeys({

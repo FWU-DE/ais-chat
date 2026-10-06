@@ -24,7 +24,7 @@ import { FieldGroup } from '@ui/components/field';
 import { FormField } from '@ui/components/form/form-field';
 import { useRouter } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 import z from 'zod';
 import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
 import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
@@ -38,7 +38,11 @@ import {
   deleteFileMappingAndEntityAction,
   downloadFileFromAssistantAction,
   linkFileToAssistantAction,
-  updateAssistantAccessLevelAction,
+  createCommunityTemplateRequestAction,
+  cancelCommunityTemplateRequestAction,
+  sendMessageToEditorAction,
+  getAssistantSharingStateAction,
+  updateAssistantSchoolSharingAction,
   updateAssistantAction,
   uploadAvatarPictureForAssistantAction,
 } from '../../actions';
@@ -49,6 +53,9 @@ import { CustomChatImageUpload } from '@/components/custom-chat/custom-chat-imag
 import { usePendingChangesGuard } from '@/hooks/use-pending-changes-guard';
 import { useForceReloadOnBrowserBackButton } from '@/hooks/use-force-reload-on-browser-back-button';
 import { useFormAutosave } from '@/hooks/use-form-autosave';
+import { useEntitySharing } from '@/hooks/use-entity-sharing';
+import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
+import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
 import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
 import { WebSource } from '@shared/db/types';
 import CustomShareSection from '@/components/custom-chat/custom-chat-share-section';
@@ -59,15 +66,12 @@ import { CustomChatHeaderContent } from '@/components/custom-chat/custom-chat-he
 import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
 import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
 import { CustomChatSuspensionError } from '@/components/custom-chat/custom-chat-suspension-error';
-import {
-  getAccessLevelFromShareForm,
-  getShareFormValues,
-} from '@/components/custom-chat/access-level-sharing';
 import FilterSelectSection from '@/components/custom-chat/filter/custom-chat-filter-select-section';
 import {
   extractFilterValues,
   toFilterGroup,
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
+import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
 
 type AssistantTranslator = ReturnType<typeof useTranslations<'assistants'>>;
 
@@ -137,6 +141,7 @@ export function AssistantEdit({
   relatedFiles,
   initialLinks,
   avatarPictureUrl,
+  initialCommunityTemplateRequest,
   isWebSearchAvailable,
   isSpeechAvailable,
 }: {
@@ -144,6 +149,7 @@ export function AssistantEdit({
   relatedFiles: FileModel[];
   initialLinks: WebSource[];
   avatarPictureUrl?: string;
+  initialCommunityTemplateRequest: CommunityTemplateRequestWithEvents | null;
   isWebSearchAvailable: boolean;
   isSpeechAvailable: boolean;
 }) {
@@ -167,7 +173,11 @@ export function AssistantEdit({
     categories: filterValues.categories,
     federalStates: filterValues.federalStates,
     languages: filterValues.languages,
-    ...getShareFormValues(assistant.accessLevel),
+    isSchoolShared: assistant.isSchoolShared,
+    isCommunityShared: isCommunitySharingActive({
+      isCommunityShared: assistant.isCommunityShared,
+      requestState: initialCommunityTemplateRequest?.state,
+    }),
     hasLinkAccess: assistant.hasLinkAccess,
     isWebSearchEnabled: assistant.isWebSearchEnabled,
     webSearchScope: assistant.webSearchScope,
@@ -202,7 +212,7 @@ export function AssistantEdit({
       },
       validate: trigger,
       saveValues: async (data) => {
-        // accessLevel is handled separately in handleSharingChange
+        // isSchoolShared/isCommunityShared are handled separately in handleSharingChange
         const updateResult = await updateAssistantAction({
           assistantId: assistant.id,
           name: data.name.trim(),
@@ -223,6 +233,29 @@ export function AssistantEdit({
       },
     });
 
+  const {
+    communityTemplateRequest,
+    createCommunityTemplateRequest,
+    sendMessageToEditor,
+    handleSharingChange,
+  } = useEntitySharing({
+    setValue,
+    initialRequest: initialCommunityTemplateRequest,
+    actions: {
+      createCommunityTemplateRequest: () =>
+        createCommunityTemplateRequestAction({ assistantId: assistant.id }),
+      cancelCommunityTemplateRequest: () =>
+        cancelCommunityTemplateRequestAction({ assistantId: assistant.id }),
+      sendMessageToEditor: (message) =>
+        sendMessageToEditorAction({ assistantId: assistant.id, message }),
+      getEntitySharingState: () => getAssistantSharingStateAction({ assistantId: assistant.id }),
+      updateSchoolSharing: (isSchoolShared) =>
+        updateAssistantSchoolSharingAction({ assistantId: assistant.id, isSchoolShared }),
+    },
+    onError: () => toast.error(t('toasts.edit-toast-error')),
+    onSuccess: flushAutoSave,
+  });
+
   const name = useWatch({ control, name: 'name' });
   const schoolTypes = useWatch({ control, name: 'schoolTypes' });
   const gradeRanges = useWatch({ control, name: 'gradeRanges' });
@@ -230,7 +263,6 @@ export function AssistantEdit({
   const categories = useWatch({ control, name: 'categories' });
   const federalStates = useWatch({ control, name: 'federalStates' });
   const languages = useWatch({ control, name: 'languages' });
-  const savedAccessLevelRef = useRef(assistant.accessLevel);
   const isSchoolShared = useWatch({ control, name: 'isSchoolShared' });
   const isCommunityShared = useWatch({ control, name: 'isCommunityShared' });
   const hasLinkAccess = useWatch({ control, name: 'hasLinkAccess' });
@@ -321,36 +353,6 @@ export function AssistantEdit({
 
     return result;
   }
-
-  const handleSharingChange = async ({ name, checked }: { name: string; checked: boolean }) => {
-    if (name === 'isSchoolShared' || name === 'isCommunityShared') {
-      const nextShareValues = {
-        isSchoolShared: name === 'isSchoolShared' ? checked : getValues('isSchoolShared'),
-        isCommunityShared: name === 'isCommunityShared' ? checked : getValues('isCommunityShared'),
-      };
-
-      const newAccessLevel = getAccessLevelFromShareForm(nextShareValues);
-
-      if (newAccessLevel !== savedAccessLevelRef.current) {
-        const result = await updateAssistantAccessLevelAction({
-          assistantId: assistant.id,
-          accessLevel: newAccessLevel,
-        });
-
-        if (!result.success) {
-          const savedShareValues = getShareFormValues(savedAccessLevelRef.current);
-          setValue('isSchoolShared', savedShareValues.isSchoolShared);
-          setValue('isCommunityShared', savedShareValues.isCommunityShared);
-          toast.error(t('toasts.edit-toast-error'));
-          return;
-        }
-
-        savedAccessLevelRef.current = newAccessLevel;
-      }
-    }
-
-    await flushAutoSave();
-  };
 
   const assistantActions = (
     <CustomChatActions>
@@ -492,6 +494,13 @@ export function AssistantEdit({
             onShareChange={handleSharingChange}
             suspended={assistant.suspended}
           />
+          {communityTemplateRequest && (
+            <CommunityTemplateRequest
+              requestWithEvents={communityTemplateRequest}
+              onResubmit={createCommunityTemplateRequest}
+              onSendMessage={sendMessageToEditor}
+            />
+          )}
           <FilterSelectSection
             values={{
               schoolTypes,

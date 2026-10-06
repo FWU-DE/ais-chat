@@ -5,7 +5,6 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '@shared/db';
 import {
-  AccessLevel,
   assistantTable,
   assistantTemplateMappingTable,
   characterTable,
@@ -105,7 +104,7 @@ async function getCharacterTemplates(): Promise<TemplateModel[]> {
       isDeleted: characterTable.isDeleted,
     })
     .from(characterTable)
-    .where(eq(characterTable.accessLevel, 'global'));
+    .where(eq(characterTable.isGlobal, true));
 
   return templates.map((template) => ({
     ...template,
@@ -125,7 +124,7 @@ async function getAssistantTemplates(): Promise<TemplateModel[]> {
       isDeleted: assistantTable.isDeleted,
     })
     .from(assistantTable)
-    .where(eq(assistantTable.accessLevel, 'global'));
+    .where(eq(assistantTable.isGlobal, true));
 
   return templates.map((template) => ({
     ...template,
@@ -145,7 +144,7 @@ async function getLearningScenarioTemplates(): Promise<TemplateModel[]> {
       isDeleted: learningScenarioTable.isDeleted,
     })
     .from(learningScenarioTable)
-    .where(eq(learningScenarioTable.accessLevel, 'global'));
+    .where(eq(learningScenarioTable.isGlobal, true));
 
   return templates.map((template) => ({
     ...template,
@@ -540,10 +539,10 @@ export async function copyRelatedTemplateFiles(
 /**
  * Copies an assistant and creates a new one based on an existing assistant.
  * The new assistant inherits all properties from the source but can have customized
- * access level, user, and school assignments.
+ * global/user assignment.
  *
  * @param originalId - The ID of the source assistant to copy
- * @param accessLevel - The access level for the new assistant
+ * @param isGlobal - Whether the new assistant becomes a global template (true) or a private user copy (false)
  * @param userId - The user ID to assign to the new assistant
  * @param duplicateAssistantName - Optional name for the new assistant, defaults to source name if not provided
  * @returns Promise resolving to the newly created assistant object
@@ -551,7 +550,7 @@ export async function copyRelatedTemplateFiles(
  */
 export async function copyAssistant(
   originalId: string,
-  accessLevel: AccessLevel,
+  isGlobal: boolean,
   user: Pick<UserModel, 'id'>,
   duplicateAssistantName?: string,
 ) {
@@ -567,7 +566,9 @@ export async function copyAssistant(
     name: (duplicateAssistantName ?? sourceAssistant.name).substring(0, MAX_ENTITY_NAME_LENGTH),
     id: newAssistantId,
     originalAssistantId: originalId,
-    accessLevel,
+    isSchoolShared: false,
+    isCommunityShared: false,
+    isGlobal,
     userId: user.id,
     isDeleted: false,
     hasLinkAccess: false, // Reset sharing settings for new template
@@ -596,16 +597,16 @@ export async function copyAssistant(
  * @throws Error if source assistant is not found or template creation fails
  */
 async function createAssistantTemplate(originalId: string) {
-  return copyAssistant(originalId, 'global', { id: DUMMY_USER_ID });
+  return copyAssistant(originalId, true, { id: DUMMY_USER_ID });
 }
 
 /**
  * Copies a character and creates a new one based on an existing character.
  * The new character inherits all properties from the source but can have customized
- * access level, user, and school assignments.
+ * global/user assignment.
  *
  * @param originalId - The ID of the source character to copy
- * @param accessLevel - The access level for the new character
+ * @param isGlobal - Whether the new character becomes a global template (true) or a private user copy (false)
  * @param user - The user ID to assign to the new character
  * @param duplicateCharacterName - Optional custom name for the new character. If not provided, uses the source character's name.
  * @returns Promise resolving to the newly created character object
@@ -613,7 +614,7 @@ async function createAssistantTemplate(originalId: string) {
  */
 export async function copyCharacter(
   originalId: string,
-  accessLevel: AccessLevel,
+  isGlobal: boolean,
   user: Pick<UserModel, 'id'>,
   duplicateCharacterName?: string,
 ) {
@@ -629,7 +630,9 @@ export async function copyCharacter(
     name: (duplicateCharacterName ?? sourceCharacter.name).substring(0, MAX_ENTITY_NAME_LENGTH),
     id: newCharacterId,
     originalCharacterId: originalId,
-    accessLevel,
+    isSchoolShared: false,
+    isCommunityShared: false,
+    isGlobal,
     userId: user.id,
     isDeleted: false,
     hasLinkAccess: false, // Reset sharing settings for new template
@@ -658,7 +661,7 @@ export async function copyCharacter(
  * @throws Error if source character is not found or template creation fails
  */
 async function createCharacterTemplate(originalId: string) {
-  return copyCharacter(originalId, 'global', { id: DUMMY_USER_ID });
+  return copyCharacter(originalId, true, { id: DUMMY_USER_ID });
 }
 
 /**
@@ -666,16 +669,16 @@ async function createCharacterTemplate(originalId: string) {
  * @param originalId - The id of the source learning scenario to create a template from.
  */
 async function createLearningScenarioTemplate(originalId: string) {
-  return copyLearningScenario(originalId, 'global', { id: DUMMY_USER_ID });
+  return copyLearningScenario(originalId, true, { id: DUMMY_USER_ID });
 }
 
 /**
  * Copies a learning scenario and creates a new one based on an existing learning scenario.
  * The new learning scenario inherits all properties from the source but can have customized
- * access level, user, and school assignments.
+ * global/user assignment.
  *
  * @param originalId - The id of the source learning scenario to copy
- * @param accessLevel - The access level for the new learning scenario
+ * @param isGlobal - Whether the new learning scenario becomes a global template (true) or a private user copy (false)
  * @param user - The user that is the owner of the new learning scenario
  * @param duplicateLearningScenarioName - Optional custom name for the new learning scenario. If not provided, uses the source learning scenario's name.
  * @returns Promise resolving to the newly created learning scenario object
@@ -683,7 +686,7 @@ async function createLearningScenarioTemplate(originalId: string) {
  */
 async function copyLearningScenario(
   originalId: string,
-  accessLevel: AccessLevel,
+  isGlobal: boolean,
   user: Pick<UserModel, 'id'>,
   duplicateLearningScenarioName?: string,
 ) {
@@ -702,7 +705,9 @@ async function copyLearningScenario(
     ),
     id: newLearningScenarioId,
     originalLearningScenarioId: originalId,
-    accessLevel,
+    isSchoolShared: false,
+    isCommunityShared: false,
+    isGlobal,
     userId: user.id,
     isDeleted: false,
     hasLinkAccess: false, // Reset sharing settings for new template
