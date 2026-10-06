@@ -20,9 +20,10 @@ import { Field, FieldDescription, FieldError, FieldLabel } from '@ui/components/
 import { Input } from '@ui/components/input';
 import { TrashSimpleIcon } from '@phosphor-icons/react';
 import { llmModelPriceMetadataSchema } from '@ais-chat/shared/db/schema';
-import { imageGenerationConfigSchema } from '@ais-chat/api-database/types';
+import { imageGenerationConfigSchema, speechConfigSchema } from '@ais-chat/api-database/types';
 import { PriceMetadataExamplesDialog } from './PriceMetadataExamplesDialog';
 import { ImageGenerationConfigExampleDialog } from './ImageGenerationConfigExampleDialog';
+import { ModelConfigExampleDialog } from './ModelConfigExampleDialog';
 import { createJsonStringSchema, jsonStringSchema } from '@/components/utils/json-schema';
 
 const priceMetadataSchema = createJsonStringSchema(
@@ -41,6 +42,11 @@ const imageGenerationConfigFormSchema = createJsonStringSchema(
   'Muss eine gültige Bildgenerierungs-Konfiguration sein',
 );
 
+const modelConfigFormSchema = createJsonStringSchema(
+  speechConfigSchema,
+  'Muss eine gültige Modell-Konfiguration sein',
+);
+
 const llmFormSchema = z.object({
   name: z.string().min(1, 'Name ist erforderlich'),
   displayName: z.string().min(1, 'Anzeigename ist erforderlich'),
@@ -48,6 +54,7 @@ const llmFormSchema = z.object({
   priceMetadata: priceMetadataSchema,
   supportedImageFormats: supportedImageFormatsSchema.optional().default(''),
   imageGenerationConfig: imageGenerationConfigFormSchema.optional().default(''),
+  modelConfig: modelConfigFormSchema.optional().default(''),
   additionalParameters: jsonStringSchema.optional().default(''),
   isNew: z.boolean().default(false),
   isDeleted: z.boolean().default(false),
@@ -104,6 +111,7 @@ export function LargeLanguageModelDetailView({
           imageGenerationConfig: model.imageGenerationConfig
             ? JSON.stringify(model.imageGenerationConfig, null, 2)
             : '',
+          modelConfig: model.modelConfig ? JSON.stringify(model.modelConfig, null, 2) : '',
           additionalParameters: JSON.stringify(model.additionalParameters, null, 2),
           isNew: model.isNew,
           isDeleted: model.isDeleted,
@@ -125,6 +133,7 @@ export function LargeLanguageModelDetailView({
           priceMetadata: '{}',
           supportedImageFormats: '[]',
           imageGenerationConfig: '',
+          modelConfig: '',
           additionalParameters: '{}',
           isNew: false,
           isDeleted: false,
@@ -265,6 +274,22 @@ export function LargeLanguageModelDetailView({
                 <FieldDescription>
                   JSON mit Konfiguration für die Bildgenerierung{' '}
                   <ImageGenerationConfigExampleDialog />
+                </FieldDescription>
+                {input}
+              </>
+            )}
+          </FormField>
+
+          <FormField
+            name="modelConfig"
+            label="Modell-Konfiguration"
+            control={control}
+            type="textArea"
+          >
+            {(input) => (
+              <>
+                <FieldDescription>
+                  JSON mit modellspezifischer Konfiguration <ModelConfigExampleDialog />
                 </FieldDescription>
                 {input}
               </>

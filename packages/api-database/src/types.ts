@@ -16,3 +16,9 @@ export const imageGenerationConfigSchema = z.object({
 });
 
 export type ImageGenerationConfig = z.infer<typeof imageGenerationConfigSchema>;
+
+export const speechConfigSchema = z.object({
+  voices: z.array(z.string()),
+});
+
+export type SpeechConfig = z.infer<typeof speechConfigSchema>;
