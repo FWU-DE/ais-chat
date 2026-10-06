@@ -10,7 +10,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 3 : 1,
-  // Limit the number of failures on CI to save resources, except for the nightly regression run
+  // Limit the number of failures on CI to save resources, except for the regression run
   maxFailures: process.env.CI && process.env.E2E_SUITE !== 'regression' ? 10 : undefined,
   reporter: [
     ['html', { outputFolder: './playwright-report' }],
