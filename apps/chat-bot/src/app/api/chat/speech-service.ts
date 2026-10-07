@@ -15,7 +15,7 @@ export async function generateSpeech({ text, voice }: { text: string; voice?: st
     throw new Error('No voices configured for the speech model');
   }
 
-  const selectedVoice = voice && voices.includes(voice) ? voice : firstVoice;
+  const selectedVoice = voice && voices.some((v) => v.name === voice) ? voice : firstVoice.name;
 
   const { wavBuffer } = await generateSpeechById({
     modelId: speechModel.id,

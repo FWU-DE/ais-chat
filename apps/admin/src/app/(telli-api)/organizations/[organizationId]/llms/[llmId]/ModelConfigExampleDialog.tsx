@@ -6,7 +6,12 @@ import { JsonExamplesDialog } from './JsonExamplesDialog';
 // Typed as `SpeechConfig` so schema changes force this example to be
 // kept in sync (TS error on missing/renamed fields).
 const modelConfigExample: SpeechConfig = {
-  voices: ['Leda', 'Sulafat', 'Puck', 'Umbriel'],
+  voices: [
+    { name: 'Leda', displayName: 'Leda (weiblich)' },
+    { name: 'Sulafat', displayName: 'Sulafat (weiblich)' },
+    { name: 'Puck', displayName: 'Puck (männlich)' },
+    { name: 'Umbriel', displayName: 'Umbriel (männlich)' },
+  ],
 };
 
 export function ModelConfigExampleDialog() {

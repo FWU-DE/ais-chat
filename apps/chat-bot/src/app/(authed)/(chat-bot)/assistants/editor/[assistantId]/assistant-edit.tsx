@@ -17,6 +17,7 @@ import {
   federalStatesSchema,
   languagesSchema,
   webSearchScopeSchema,
+  type SpeechVoice,
 } from '@shared/db/schema';
 import { BackButton } from '@/components/common/back-button';
 import { Card, CardContent } from '@ui/components/card';
@@ -155,7 +156,7 @@ export function AssistantEdit({
   initialCommunityTemplateRequest: CommunityTemplateRequestWithEvents | null;
   isWebSearchAvailable: boolean;
   isSpeechAvailable: boolean;
-  speechVoices: string[];
+  speechVoices: SpeechVoice[];
 }) {
   useForceReloadOnBrowserBackButton();
   const router = useRouter();

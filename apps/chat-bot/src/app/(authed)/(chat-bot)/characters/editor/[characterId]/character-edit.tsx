@@ -13,6 +13,7 @@ import {
   federalStatesSchema,
   languagesSchema,
   webSearchScopeSchema,
+  type SpeechVoice,
 } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import { useTranslations } from 'next-intl';
@@ -162,7 +163,7 @@ export function CharacterEdit({
   budgetUsedBySharedChat: number;
   isWebSearchAvailable: boolean;
   isSpeechAvailable: boolean;
-  speechVoices: string[];
+  speechVoices: SpeechVoice[];
 }) {
   useForceReloadOnBrowserBackButton();
   const router = useRouter();

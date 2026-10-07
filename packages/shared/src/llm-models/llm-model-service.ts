@@ -7,6 +7,7 @@ import {
 import { dbGetConfiguration, dbUpsertConfiguration } from '@shared/db/functions/configuration';
 import {
   type LlmModelSelectModel,
+  type SpeechVoice,
   staticModelsConfigurationSchema,
   type StaticModelsConfiguration,
   type StaticModelRole,
@@ -61,7 +62,7 @@ export async function updateStaticModelConfiguration(input: unknown) {
 }
 
 /** Returns the available voices configured for the active speech model. */
-export async function getSpeechModelVoices(): Promise<string[]> {
+export async function getSpeechModelVoices(): Promise<SpeechVoice[]> {
   const speechModel = await dbGetSpeechModel();
   return speechModel?.modelConfig?.voices ?? [];
 }

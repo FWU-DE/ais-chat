@@ -10,12 +10,13 @@ import {
 } from '@ui/components/select';
 import { useTranslations } from 'next-intl';
 import { Control, FieldPath, FieldValues, useController } from 'react-hook-form';
+import type { SpeechVoice } from '@shared/db/schema';
 import type { SpeechFields } from './speech.types';
 
 export type SpeechEditViewProps<TFieldValues extends FieldValues = FieldValues> = {
   onCheckedChange: (checked: boolean) => void;
   onVoiceChange?: (voice: string) => void;
-  voices: string[];
+  voices: SpeechVoice[];
   control: Control<TFieldValues & SpeechFields>;
 };
 
@@ -65,8 +66,8 @@ export function SpeechEditView<TFieldValues extends FieldValues = FieldValues>(
             </SelectTrigger>
             <SelectContent align="start">
               {props.voices.map((voice) => (
-                <SelectItem key={voice} value={voice} className="text-base">
-                  {voice}
+                <SelectItem key={voice.name} value={voice.name} className="text-base">
+                  {voice.displayName}
                 </SelectItem>
               ))}
             </SelectContent>
