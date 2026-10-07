@@ -29,6 +29,7 @@ const anthropicModel: LlmModelSelectModel = {
   },
   supportedImageFormats: ['image/png'],
   imageGenerationConfig: null,
+  modelConfig: null,
 };
 
 const openAiModel: LlmModelSelectModel = {
@@ -47,6 +48,7 @@ const openAiModel: LlmModelSelectModel = {
   },
   supportedImageFormats: ['image/png'],
   imageGenerationConfig: null,
+  modelConfig: null,
 };
 
 vi.mock('@shared/logging', () => ({

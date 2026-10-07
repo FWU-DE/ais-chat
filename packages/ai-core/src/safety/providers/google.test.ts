@@ -34,6 +34,7 @@ function createGoogleSafetyModel(): AiModel {
     createdAt: new Date(),
     supportedImageFormats: [],
     imageGenerationConfig: null,
+    modelConfig: null,
     safetyFilterEnabled: true,
     additionalParameters: {
       endpointId: 'endpoint-id',

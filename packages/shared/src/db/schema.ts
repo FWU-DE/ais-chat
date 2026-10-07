@@ -706,6 +706,12 @@ export const imageGenerationConfigSchema = z.object({
 
 export type ImageGenerationConfig = z.infer<typeof imageGenerationConfigSchema>;
 
+export const speechConfigSchema = z.object({
+  voices: z.array(z.string()),
+});
+
+export type SpeechConfig = z.infer<typeof speechConfigSchema>;
+
 export const llmModelTable = pgTable(
   'llm_model',
   {
@@ -718,6 +724,7 @@ export const llmModelTable = pgTable(
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     supportedImageFormats: json('supported_image_formats').$type<string[]>(),
     imageGenerationConfig: jsonb('image_generation_config').$type<ImageGenerationConfig>(),
+    modelConfig: jsonb('model_config').$type<SpeechConfig>(),
     isNew: boolean('is_new').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
   },

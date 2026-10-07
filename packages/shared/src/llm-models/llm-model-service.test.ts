@@ -37,6 +37,7 @@ const textModel = (id: string, name: string): LlmModelSelectModel => ({
   createdAt: new Date(),
   supportedImageFormats: [],
   imageGenerationConfig: null,
+  modelConfig: null,
   isNew: false,
   isDeleted: false,
 });

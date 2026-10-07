@@ -7,7 +7,7 @@ import {
   dbGetOrganizationById,
   dbReplaceModelProviderKeyMappings,
 } from '@ais-chat/api-database';
-import { imageGenerationConfigSchema } from '@ais-chat/api-database/types';
+import { imageGenerationConfigSchema, speechConfigSchema } from '@ais-chat/api-database/types';
 import { llmModelPriceMetadataSchema } from '@ais-chat/shared/db/schema';
 import { CreateLargeLanguageModel, UpdateLargeLanguageModel } from '../types/large-language-model';
 import { logInfo } from '@shared/logging';
@@ -44,6 +44,9 @@ export async function createLargeLanguageModel(
       : [],
     imageGenerationConfig: data.imageGenerationConfig
       ? imageGenerationConfigSchema.parse(JSON.parse(data.imageGenerationConfig))
+      : undefined,
+    modelConfig: data.modelConfig
+      ? speechConfigSchema.parse(JSON.parse(data.modelConfig))
       : undefined,
     additionalParameters: data.additionalParameters ? JSON.parse(data.additionalParameters) : {},
     organizationId,
@@ -87,6 +90,9 @@ export async function updateLargeLanguageModel(
       : undefined,
     imageGenerationConfig: data.imageGenerationConfig
       ? imageGenerationConfigSchema.parse(JSON.parse(data.imageGenerationConfig))
+      : undefined,
+    modelConfig: data.modelConfig
+      ? speechConfigSchema.parse(JSON.parse(data.modelConfig))
       : undefined,
     additionalParameters: data.additionalParameters
       ? JSON.parse(data.additionalParameters)
