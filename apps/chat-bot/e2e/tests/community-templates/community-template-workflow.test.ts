@@ -16,7 +16,7 @@ import {
 
 test.use({ storageState: AUTH_FILES.teacher });
 
-test.describe('community template workflow', () => {
+test.describe('community template workflow', { tag: '@smoke' }, () => {
   test('character is submitted, rejected, resubmitted and approved across chat-bot and admin', async ({
     page,
     browser,
