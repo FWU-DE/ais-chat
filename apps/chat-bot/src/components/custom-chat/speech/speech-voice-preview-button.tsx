@@ -14,16 +14,18 @@ export function SpeechVoicePreviewButton({ voice }: { voice: string }) {
   const [isLoading, setIsLoading] = React.useState(false);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
-  const audioUrlRef = React.useRef<string | null>(null);
+  // Object URLs of already generated previews, keyed by voice name.
+  const cacheRef = React.useRef<Map<string, string>>(new Map());
 
   React.useEffect(() => {
+    const cache = cacheRef.current;
     return () => {
       audioRef.current?.pause();
       audioRef.current = null;
-      if (audioUrlRef.current !== null) {
-        URL.revokeObjectURL(audioUrlRef.current);
-        audioUrlRef.current = null;
+      for (const url of cache.values()) {
+        URL.revokeObjectURL(url);
       }
+      cache.clear();
     };
   }, []);
 
@@ -32,25 +34,25 @@ export function SpeechVoicePreviewButton({ voice }: { voice: string }) {
       return;
     }
 
-    setIsLoading(true);
     try {
-      const response = await fetch('/api/v1/speech', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: t('voice-preview-text'), voice }),
-      });
+      let url = cacheRef.current.get(voice);
 
-      if (!response.ok) {
-        throw new Error('Could not generate speech preview');
+      if (url === undefined) {
+        setIsLoading(true);
+        const response = await fetch('/api/v1/speech', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: t('voice-preview-text'), voice }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Could not generate speech preview');
+        }
+
+        const blob = await response.blob();
+        url = URL.createObjectURL(blob);
+        cacheRef.current.set(voice, url);
       }
-
-      const blob = await response.blob();
-
-      if (audioUrlRef.current !== null) {
-        URL.revokeObjectURL(audioUrlRef.current);
-      }
-      const url = URL.createObjectURL(blob);
-      audioUrlRef.current = url;
 
       const audio = new Audio(url);
       audio.onended = () => setIsPlaying(false);
