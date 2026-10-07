@@ -262,10 +262,11 @@ export default function Chat({
   }
 
   async function generateSpeech(text: string): Promise<Blob> {
+    const voice = assistant?.voice ?? character?.voice ?? learningScenario?.voice;
     const response = await fetch('/api/v1/speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, voice }),
     });
 
     if (!response.ok) {

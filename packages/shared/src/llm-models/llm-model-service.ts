@@ -2,10 +2,12 @@ import {
   dbGetAllLlmModels,
   dbGetLlmModelById,
   dbFindModelByIdAndFederalStateId,
+  dbGetSpeechModel,
 } from '@shared/db/functions/llm-model';
 import { dbGetConfiguration, dbUpsertConfiguration } from '@shared/db/functions/configuration';
 import {
   type LlmModelSelectModel,
+  type SpeechVoice,
   staticModelsConfigurationSchema,
   type StaticModelsConfiguration,
   type StaticModelRole,
@@ -57,6 +59,12 @@ export async function updateStaticModelConfiguration(input: unknown) {
     key: STATIC_MODELS_CONFIGURATION_KEY,
     value: configuration.data,
   });
+}
+
+/** Returns the available voices configured for the active speech model. */
+export async function getSpeechModelVoices(): Promise<SpeechVoice[]> {
+  const speechModel = await dbGetSpeechModel();
+  return speechModel?.modelConfig?.voices ?? [];
 }
 
 /** Finds a configured model only when it is available to the given federal state. */

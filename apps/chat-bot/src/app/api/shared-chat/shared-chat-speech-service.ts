@@ -65,5 +65,5 @@ export async function generateSharedChatSpeech({
     throw new ForbiddenError('Token points limit reached');
   }
 
-  return generateSpeech({ text });
+  return generateSpeech({ text, voice: entity.voice });
 }
