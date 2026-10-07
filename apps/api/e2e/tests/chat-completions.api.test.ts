@@ -3,7 +3,7 @@ import { authorizationHeader, getModel, getTextModel } from '../utils/api.js';
 
 test.describe('POST /v1/chat/completions', () => {
   test.describe('Non-streaming', () => {
-    test('returns 401 without authentication', async ({ request }) => {
+    test('returns 401 without authentication', { tag: '@smoke' }, async ({ request }) => {
       const response = await request.post('/v1/chat/completions', {
         data: {
           model: 'gpt-4o-mini',
@@ -15,7 +15,7 @@ test.describe('POST /v1/chat/completions', () => {
       expect(response.status()).toBe(401);
     });
 
-    test('returns 400 for invalid request body', async ({ request }) => {
+    test('returns 400 for invalid request body', { tag: '@smoke' }, async ({ request }) => {
       const response = await request.post('/v1/chat/completions', {
         headers: authorizationHeader,
         data: { invalid: 'body' },
@@ -26,8 +26,8 @@ test.describe('POST /v1/chat/completions', () => {
       expect(body).toHaveProperty('error');
     });
 
-    test('returns a chat completion response', async ({ request }) => {
-      const textModel = await getTextModel(request);
+    test('returns a chat completion response', { tag: '@smoke' }, async ({ request }) => {
+      const textModel = await getModel(request, 'mock-echo-1');
 
       const response = await request.post('/v1/chat/completions', {
         headers: authorizationHeader,
@@ -104,8 +104,8 @@ test.describe('POST /v1/chat/completions', () => {
   });
 
   test.describe('Streaming', () => {
-    test('returns a streamed response', async ({ request }) => {
-      const textModel = await getTextModel(request);
+    test('returns a streamed response', { tag: '@smoke' }, async ({ request }) => {
+      const textModel = await getModel(request, 'mock-echo-1');
 
       const response = await request.post('/v1/chat/completions', {
         headers: authorizationHeader,

@@ -40,51 +40,55 @@ test.describe('create, share, chat, delete', () => {
     data.name = 'Absolutismus unter Ludwig XIV – ' + nanoid(8);
   });
 
-  test('teacher can login, create and join learning scenario', async ({ page }) => {
-    await createLearningScenario(page);
+  test(
+    'teacher can login, create and join learning scenario',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      await createLearningScenario(page);
 
-    // configure form
-    await configureLearningScenario(page, data);
+      // configure form
+      await configureLearningScenario(page, data);
 
-    // check if created with the correct name (still on the editor page)
-    await expect(page.getByRole('heading', { name: data.name })).toBeVisible();
+      // check if created with the correct name (still on the editor page)
+      await expect(page.getByRole('heading', { name: data.name })).toBeVisible();
 
-    await stopSharingIfActive(page);
-    // test share page
-    await page.getByTestId('token-points-select').click();
-    await page.getByTestId('token-points-option-50').click();
-    await page.getByTestId('usage-time-select').click();
-    await page.getByTestId('usage-time-option-30').click();
-    await page.getByTestId('start-share-button').click();
+      await stopSharingIfActive(page);
+      // test share page
+      await page.getByTestId('token-points-select').click();
+      await page.getByTestId('token-points-option-50').click();
+      await page.getByTestId('usage-time-select').click();
+      await page.getByTestId('usage-time-option-30').click();
+      await page.getByTestId('start-share-button').click();
 
-    await page.waitForURL('/learning-scenarios/**/share');
-    const code = await page.getByTestId('join-code').textContent();
+      await page.waitForURL('/learning-scenarios/**/share');
+      const code = await page.getByTestId('join-code').textContent();
 
-    const countDown = page.getByTestId('countdown-timer');
-    await expect(countDown).toBeVisible();
+      const countDown = page.getByTestId('countdown-timer');
+      await expect(countDown).toBeVisible();
 
-    const qrCode = page.getByTestId('qr-code');
-    await expect(qrCode).toBeVisible();
+      const qrCode = page.getByTestId('qr-code');
+      await expect(qrCode).toBeVisible();
 
-    // verify countdown is also shown on the overview list
-    await page.goto('/learning-scenarios');
-    await page.waitForURL('/learning-scenarios**');
-    const card = page.getByTestId('entity-card').filter({ hasText: data.name }).first();
-    await expect(card).toBeVisible();
-    await expect(card.getByRole('timer')).toBeVisible();
+      // verify countdown is also shown on the overview list
+      await page.goto('/learning-scenarios');
+      await page.waitForURL('/learning-scenarios**');
+      const card = page.getByTestId('entity-card').filter({ hasText: data.name }).first();
+      await expect(card).toBeVisible();
+      await expect(card.getByRole('timer')).toBeVisible();
 
-    // join chat as teacher
-    await page.goto('/logout');
-    await page.waitForURL('/login');
+      // join chat as teacher
+      await page.goto('/logout');
+      await page.waitForURL('/login');
 
-    await page.locator('#login-invite-code').fill(code ?? '');
+      await page.locator('#login-invite-code').fill(code ?? '');
 
-    const loginButton = page.getByRole('button', { name: 'Zum Dialog' });
-    await expect(loginButton).toBeVisible();
-    await loginButton.click();
+      const loginButton = page.getByRole('button', { name: 'Zum Dialog' });
+      await expect(loginButton).toBeVisible();
+      await loginButton.click();
 
-    await page.waitForURL('/ua/learning-scenarios/**/dialog?inviteCode=*');
-  });
+      await page.waitForURL('/ua/learning-scenarios/**/dialog?inviteCode=*');
+    },
+  );
 
   test('teacher can login and create learning scenario, student can join and restart chat', async ({
     page,

@@ -6,7 +6,7 @@ import { login } from '../utils/login';
 test.describe('with stored auth', () => {
   test.use({ storageState: AUTH_FILES.teacher });
 
-  test('can login as teacher and send a message', async ({ page }) => {
+  test('can login as teacher and send a message', { tag: '@smoke' }, async ({ page }) => {
     await page.goto('/');
 
     // send first message
