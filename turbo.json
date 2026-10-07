@@ -130,11 +130,8 @@
       "dependsOn": []
     },
     "lint": {},
-    "test": {
-      "dependsOn": ["^test"]
-    },
+    "test": {},
     "test:coverage": {
-      "dependsOn": ["^test:coverage"],
       "outputs": ["coverage/**"]
     }
   }
