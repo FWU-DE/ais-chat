@@ -313,7 +313,7 @@ pnpm e2e:api      # API tests only
 pnpm e2e:smoke    # only tests tagged @smoke (run in the PR pipeline)
 ```
 
-PR and `main` pipelines run only `@smoke` tests; everything else runs in the nightly regression. Tag a new test with `{ tag: '@smoke' }` only for core user journeys that use the mock LLM and run in chromium.
+PRs run only `@smoke` tests (chromium, mock LLM). Pushing to `main` (i.e. merging a PR) runs the full regression suite (all tests, including firefox and real LLMs); regression can also be triggered manually via the workflow's `workflow_dispatch` input. Tag a new test with `{ tag: '@smoke' }` only for core user journeys that use the mock LLM and run in chromium.
 
 ## When creating tests for the admin app
 
