@@ -87,7 +87,7 @@
     "remark-gfm": "4.0.1",
     "remark-math": "6.0.0",
     "require-in-the-middle": "8.0.1",
-    "sharp": "0.35.4",
+    "sharp": "0.35.5",
     "tailwind-merge": "3.7.0",
     "viem": "2.56.9",
     "zod": "4.6.5"
