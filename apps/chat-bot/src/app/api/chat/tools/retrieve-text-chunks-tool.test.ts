@@ -131,7 +131,7 @@ describe('buildRetrieveTextChunksTool', () => {
         limit: VECTOR_SEARCH_LIMIT,
       }),
     );
-    expect(JSON.parse(result)).toEqual({
+    expect(result).toEqual({
       chunks: [
         {
           fileName: 'Arbeitsblatt.pdf',
@@ -217,7 +217,7 @@ describe('buildRetrieveTextChunksTool', () => {
         sourceUrls: ['https://example.com/shared-page'],
       }),
     );
-    expect(JSON.parse(result)).toEqual({
+    expect(result).toEqual({
       chunks: [
         {
           fileName: null,
@@ -245,7 +245,7 @@ describe('buildRetrieveTextChunksTool', () => {
       search: 'not found',
     });
 
-    const parsed = JSON.parse(result);
+    const parsed = result;
     expect(parsed.chunks).toEqual([]);
     expect(parsed.error).toBe('No matching chunks found.');
   });
@@ -338,7 +338,7 @@ describe('buildRetrieveTextChunksTool', () => {
       });
 
       const result = await tool!.handler({ search: 'irgendwas' });
-      const parsed = JSON.parse(result);
+      const parsed = result;
 
       expect(mocks.retrieveChunksByQueryMock).not.toHaveBeenCalled();
       expect(parsed.chunks).toHaveLength(7);
@@ -377,7 +377,7 @@ describe('buildRetrieveTextChunksTool', () => {
       });
 
       const result = await tool!.handler({ search: 'suche' });
-      const parsed = JSON.parse(result);
+      const parsed = result;
 
       expect(mocks.retrieveChunksByQueryMock).not.toHaveBeenCalled();
       expect(parsed.chunks).toHaveLength(2);
@@ -440,7 +440,7 @@ describe('buildRetrieveTextChunksTool', () => {
       });
 
       const result = await tool!.handler({ search: 'suche' });
-      const parsed = JSON.parse(result);
+      const parsed = result;
 
       expect(parsed.chunks).toEqual([]);
       expect(parsed.error).toBe('No matching chunks found.');

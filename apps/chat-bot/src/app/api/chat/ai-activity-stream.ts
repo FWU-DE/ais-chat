@@ -2,7 +2,7 @@ import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { createAiActivityCollector } from '@/utils/chat/ai-activity';
 import type { AiActivityOptions } from '@/utils/chat/ai-activity';
 import { encodeChatStreamEvent } from '@/utils/streaming';
-import type { ToolRegistration } from './tools/types';
+import type { ToolRegistration, ToolResult } from './tools/types';
 
 /**
  * Collects the agent activity and pushes every update to the client as a stream event.
@@ -26,7 +26,7 @@ export function createAiActivityStream(
     onReasoningSummary: (delta: string) => {
       collector.addReasoningSummary(delta);
     },
-    onToolResult: ({ toolCallId, result }: { toolCallId: string; result: string }) => {
+    onToolResult: ({ toolCallId, result }: { toolCallId: string; result: ToolResult }) => {
       if (collector.addToolResult(toolCallId, result)) {
         publish();
       }

@@ -4,15 +4,13 @@ import type { WebSource } from '@shared/db/types';
 import { webScraper } from '../../web-scraper/web-scraper';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
-import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
+import type {
+  BuildToolsContext,
+  ToolDefinition,
+  ToolRegistration,
+  WebScraperToolResult,
+} from './types';
 import { TOOL_NAMES } from '@/types/tool-names';
-
-type WebScraperToolResult = {
-  title: string | null;
-  url: string | null;
-  content: string | null;
-  error: string | null;
-};
 
 const MAX_WEB_SCRAPER_URLS = 5;
 
@@ -33,16 +31,16 @@ function formatWebScrapedContentForTool(result: WebSource) {
 
   if (result.error) {
     response.error = 'Failed to fetch the page.';
-    return JSON.stringify(response);
+    return response;
   }
 
   if (!content) {
     response.error = 'No usable content found.';
-    return JSON.stringify(response);
+    return response;
   }
 
   response.content = content;
-  return JSON.stringify(response);
+  return response;
 }
 
 function validateWebScraperUrl(inputUrl: string): { url: string; error?: string } {
@@ -80,7 +78,7 @@ type BuildWebScraperToolParams = Pick<
 export function buildWebScraperTool({
   sourceUrls,
   attachedLinks,
-}: BuildWebScraperToolParams): ToolRegistration | null {
+}: BuildWebScraperToolParams): ToolRegistration<WebScraperToolResult[] | string> | null {
   const attachedSourceUrls = sourceUrls.length > 0 ? sourceUrls : attachedLinks;
 
   const definition: ToolDefinition = {
@@ -126,23 +124,23 @@ export function buildWebScraperTool({
         const urlString = typeof url === 'string' ? url.trim() : '';
 
         if (urlString.length === 0) {
-          return JSON.stringify({
+          return {
             title: null,
             url: null,
             content: null,
             error: 'Empty URL.',
-          });
+          };
         }
 
         const validationResult = validateWebScraperUrl(urlString);
 
         if (validationResult.error) {
-          return JSON.stringify({
+          return {
             title: null,
             url: urlString,
             content: null,
             error: validationResult.error,
-          });
+          };
         }
 
         const result = await webScraper(validationResult.url);
@@ -150,7 +148,7 @@ export function buildWebScraperTool({
       }),
     );
 
-    return JSON.stringify(results.map((r) => JSON.parse(r)));
+    return results;
   };
 
   return {
@@ -167,7 +165,7 @@ export function buildWebScraperTool({
         };
       },
       applyResult: (step, result) => {
-        const links = toLinks(parseJsonRecord(result));
+        const links = toLinks(Array.isArray(result) ? result : undefined);
         return links === undefined ? step : { ...step, links };
       },
     },

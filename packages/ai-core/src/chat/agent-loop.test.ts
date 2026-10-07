@@ -66,9 +66,10 @@ describe('agent-loop', () => {
     const toolRegistry = {
       test_tool: {
         definition: { name: 'test_tool', description: 'Test', parameters: {} },
-        handler: async () => 'tool result',
+        handler: async () => ({ value: 'tool result' }),
       },
     };
+    const onToolResult = vi.fn();
 
     runAgentLoop({
       modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
@@ -77,6 +78,7 @@ describe('agent-loop', () => {
       toolRegistry,
       agentName: 'Test Agent',
       onTextChunk,
+      onToolResult,
       onComplete,
       onError,
     });
@@ -96,8 +98,20 @@ describe('agent-loop', () => {
     expect(onComplete).toHaveBeenCalledWith(
       expect.objectContaining({
         fullText: 'Hello world.\n\nMore info.',
+        agentLoopMessages: expect.arrayContaining([
+          expect.objectContaining({
+            role: 'tool',
+            content: '{"value":"tool result"}',
+            toolCallId: 'call_123',
+          }),
+        ]),
       }),
     );
+    expect(onToolResult).toHaveBeenCalledWith({
+      toolCallId: 'call_123',
+      name: 'test_tool',
+      result: { value: 'tool result' },
+    });
   });
 
   it('calls onError with EmptyResponseError when the model produces no text', async () => {

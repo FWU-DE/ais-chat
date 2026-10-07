@@ -4,16 +4,11 @@ import {
   MUNDO_SEARCH_RESULTS_LIMIT,
   MUNDO_SUBJECTS,
 } from '@/configuration-text-inputs/const';
-import {
-  mundoSearch,
-  sanitizeClassLevel,
-  sanitizeSubject,
-  type MundoSearchResult,
-} from '../mundo-search';
+import { mundoSearch, sanitizeClassLevel, sanitizeSubject } from '../mundo-search';
 import { z } from 'zod';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { parseJsonRecord, readString, toLinks } from '@/utils/chat/ai-activity';
-import type { ToolDefinition, ToolRegistration } from './types';
+import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
+import type { MundoSearchToolResponse, ToolDefinition, ToolRegistration } from './types';
 import { TOOL_NAMES } from '@/types/tool-names';
 
 export const mundoSearchArgsSchema = z.object({
@@ -22,13 +17,7 @@ export const mundoSearchArgsSchema = z.object({
   subject: z.string().nullable().optional(),
 });
 
-type MundoSearchToolResponse = {
-  results: MundoSearchResult[];
-  retriedWithoutFilters: boolean;
-  error: string | null;
-};
-
-export function buildMundoSearchTool(): ToolRegistration {
+export function buildMundoSearchTool(): ToolRegistration<MundoSearchToolResponse> {
   const definition: ToolDefinition = {
     name: TOOL_NAMES.mundoSearch,
     description: `Search the public MUNDO educational media library (mundo.schule) for teaching materials, e.g. videos or worksheets. Use this tool when the user asks for lesson materials or media suggestions for a specific topic. Returns up to ${MUNDO_SEARCH_RESULTS_LIMIT} matching MUNDO media entries. If a search with filters returns nothing, filters are automatically dropped and the search is retried. When the response has "retriedWithoutFilters": true, do not retry with different filters — instead retry with a broader, simpler or alternative query, without any filters.`,
@@ -58,7 +47,7 @@ export function buildMundoSearchTool(): ToolRegistration {
     },
   };
 
-  const handler = async (args: Record<string, unknown>): Promise<string> => {
+  const handler = async (args: Record<string, unknown>): Promise<MundoSearchToolResponse> => {
     const parsed = mundoSearchArgsSchema.safeParse(args);
     const rawQuery = parsed.success ? parsed.data.query.trim() : '';
     const query = rawQuery.slice(0, MUNDO_SEARCH_QUERY_LENGTH_LIMIT);
@@ -69,7 +58,7 @@ export function buildMundoSearchTool(): ToolRegistration {
         retriedWithoutFilters: false,
         error: 'Error: Missing search query.',
       };
-      return JSON.stringify(response);
+      return response;
     }
 
     const classLevel = sanitizeClassLevel(parsed.success ? parsed.data.classLevel : undefined);
@@ -90,7 +79,7 @@ export function buildMundoSearchTool(): ToolRegistration {
       error: results.length === 0 ? 'No MUNDO results found.' : null,
     };
 
-    return JSON.stringify(response);
+    return response;
   };
 
   return {
@@ -107,18 +96,11 @@ export function buildMundoSearchTool(): ToolRegistration {
         };
       },
       applyResult: (step, result) => {
-        const parsed = parseJsonRecord(result);
-        const rawResults =
-          parsed !== null && typeof parsed === 'object'
-            ? (parsed as { results?: unknown }).results
-            : undefined;
         const links = toLinks(
-          Array.isArray(rawResults)
-            ? rawResults.map((entry) => ({
-                title: readString(entry, 'title'),
-                url: readString(entry, 'url'),
-              }))
-            : undefined,
+          result.results.map((entry) => ({
+            title: entry.title,
+            url: entry.url,
+          })),
         );
 
         return links === undefined ? step : { ...step, links };

@@ -43,14 +43,14 @@ export type ToolDefinition = {
   parameters: Record<string, unknown>;
 };
 
-export type ToolHandler = (args: Record<string, unknown>) => Promise<string>;
+export type ToolHandler<TResult = unknown> = (args: Record<string, unknown>) => Promise<TResult>;
 
-export type ToolRegistryEntry = {
+export type ToolRegistryEntry<TResult = unknown> = {
   definition: ToolDefinition;
-  handler: ToolHandler;
+  handler: ToolHandler<TResult>;
 };
 
-export type ToolRegistry = Record<string, ToolRegistryEntry>;
+export type ToolRegistry<TResult = unknown> = Record<string, ToolRegistryEntry<TResult>>;
 
 export type Message = {
   role: ConversationRole;

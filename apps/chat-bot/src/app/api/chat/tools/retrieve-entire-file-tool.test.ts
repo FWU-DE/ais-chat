@@ -68,7 +68,7 @@ describe('buildRetrieveEntireFileTool', () => {
     });
 
     expect(mocks.dbGetExtractedFileContentMock).toHaveBeenCalledWith('file-1');
-    expect(JSON.parse(result)).toEqual({
+    expect(result).toEqual({
       fileName: 'Arbeitsblatt.pdf',
       content: 'Erster Abschnitt. Zweiter Abschnitt. Dritter Abschnitt.',
       truncated: false,
@@ -95,7 +95,7 @@ describe('buildRetrieveEntireFileTool', () => {
       fileName: 'Grossdatei.txt',
     });
 
-    const parsed = JSON.parse(result) as {
+    const parsed = result as {
       truncated: boolean;
       maxCharacters: number;
       error: string | null;
@@ -121,7 +121,7 @@ describe('buildRetrieveEntireFileTool', () => {
       fileName: '',
     });
 
-    const parsed = JSON.parse(result);
+    const parsed = result;
     expect(parsed.error).toBe('Missing file name.');
     expect(mocks.dbGetExtractedFileContentMock).not.toHaveBeenCalled();
   });
@@ -137,7 +137,7 @@ describe('buildRetrieveEntireFileTool', () => {
       fileName: 'NonExistent.txt',
     });
 
-    const parsed = JSON.parse(result);
+    const parsed = result;
     expect(parsed.error).toBe('File not found.');
     expect(parsed.fileName).toBe('NonExistent.txt');
     expect(mocks.dbGetExtractedFileContentMock).not.toHaveBeenCalled();

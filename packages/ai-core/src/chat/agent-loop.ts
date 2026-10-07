@@ -25,18 +25,22 @@ function logError(message: string, error: unknown) {
   console.error(message, error);
 }
 
-type RunAgentLoopParams = {
+type RunAgentLoopParams<TResult> = {
   modelSelection: ModelSelection;
   apiKeyId: string;
   messages: AiCoreMessage[];
-  toolRegistry?: ToolRegistry;
+  toolRegistry?: ToolRegistry<TResult>;
   agentName: string;
   /** Tears down the upstream provider stream when the client goes away or the generation times out. */
   abortSignal?: AbortSignal;
   onTextChunk: (delta: string) => void;
   onReasoningSummary?: (delta: string) => void;
   onToolCalls?: (calls: ToolCall[]) => void;
-  onToolResult?: (result: { toolCallId: string; name: string; result: string }) => void;
+  onToolResult?: (result: {
+    toolCallId: string;
+    name: string;
+    result: NoInfer<TResult> | string;
+  }) => void;
   onComplete: (result: {
     fullText: string;
     usage: TokenUsage;
@@ -59,7 +63,7 @@ type RunAgentLoopParams = {
   ) => void;
 };
 
-export function runAgentLoop({
+export function runAgentLoop<TResult = unknown>({
   modelSelection,
   apiKeyId,
   messages,
@@ -72,7 +76,7 @@ export function runAgentLoop({
   onToolResult,
   onComplete,
   onError,
-}: RunAgentLoopParams): void {
+}: RunAgentLoopParams<TResult>): void {
   void (async () => {
     let fullText = '';
     let totalUsage: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
@@ -221,7 +225,7 @@ export function runAgentLoop({
                     const registryEntry = toolRegistry?.[toolCall.name];
                     const startedAt = performance.now();
                     let status = registryEntry ? 'success' : 'unknown_tool';
-                    let result: string;
+                    let result: TResult | string;
 
                     try {
                       if (registryEntry) {
@@ -234,7 +238,7 @@ export function runAgentLoop({
                       }
                     } catch (error) {
                       status = 'error';
-                      // TODO: see tech debt (refactoring of tool calls for error handling). The catch clause is usually never executed, because tool handlers return errors as plain string or in the 'error' key of a stringified json
+                      // TODO: see tech debt (refactoring of tool calls for error handling). Standardize tool errors so handlers throw instead of returning error values.
                       const message =
                         error instanceof Error ? error.message : 'Tool execution failed';
                       toolSpan.setStatus({ code: 2, message });
@@ -249,7 +253,10 @@ export function runAgentLoop({
 
                     onToolResult?.({ toolCallId: toolCall.id, name: toolCall.name, result });
 
-                    return { toolCallId: toolCall.id, result };
+                    return {
+                      toolCallId: toolCall.id,
+                      result: typeof result === 'string' ? result : JSON.stringify(result),
+                    };
                   },
                 ),
               ),

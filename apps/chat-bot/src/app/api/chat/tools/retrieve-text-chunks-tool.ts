@@ -2,7 +2,12 @@ import { VECTOR_SEARCH_LIMIT } from '@/configuration-text-inputs/const';
 import { z } from 'zod';
 import { ingestWebContent } from '../../rag/ingestWebContent';
 import { retrieveChunksByQuery } from '../../rag/rag-service';
-import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
+import type {
+  BuildToolsContext,
+  SemanticFileSearchToolResponse,
+  ToolDefinition,
+  ToolRegistration,
+} from './types';
 import { dbGetAllChunks } from '@shared/db/functions/files';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { TOOL_NAMES } from '@/types/tool-names';
@@ -16,11 +21,6 @@ type SemanticFileSearchChunkResult = {
   fileName: string | null;
   orderIndex: number | null;
   content: string | null;
-};
-
-type SemanticFileSearchToolResponse = {
-  chunks: SemanticFileSearchChunkResult[];
-  error: string | null;
 };
 
 function formatRetrievedChunksForTool(chunks: Awaited<ReturnType<typeof retrieveChunksByQuery>>) {
@@ -39,7 +39,7 @@ function formatRetrievedChunksForTool(chunks: Awaited<ReturnType<typeof retrieve
     response.error = 'No matching chunks found.';
   }
 
-  return JSON.stringify(response);
+  return response;
 }
 
 type BuildRetrieveTextChunksToolParams = Pick<
@@ -52,7 +52,7 @@ export function buildRetrieveTextChunksTool({
   relatedFileEntities,
   sourceUrls,
   attachedLinks,
-}: BuildRetrieveTextChunksToolParams): ToolRegistration | null {
+}: BuildRetrieveTextChunksToolParams): ToolRegistration<SemanticFileSearchToolResponse> | null {
   const attachedSourceUrls = sourceUrls.length > 0 ? sourceUrls : attachedLinks;
 
   if (relatedFileEntities.length === 0 && attachedSourceUrls.length === 0) {
@@ -119,7 +119,7 @@ export function buildRetrieveTextChunksTool({
         })),
         error: allChunks.length === 0 ? 'No matching chunks found.' : null,
       };
-      return JSON.stringify(response);
+      return response;
     }
 
     return formatRetrievedChunksForTool(
