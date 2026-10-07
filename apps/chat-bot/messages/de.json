@@ -667,7 +667,9 @@
     },
     "speech": {
       "heading": "Sprachausgabe",
-      "heading-tooltip": "Falls aktiviert, können Antworten als Sprache ausgegeben werden."
+      "heading-tooltip": "Falls aktiviert, können Antworten als Sprache ausgegeben werden.",
+      "voice-label": "Stimme",
+      "voice-placeholder": "Stimme auswählen"
     }
   },
   "assistants": {

@@ -67,6 +67,7 @@ import { CustomChatModelSelect } from '@/components/custom-chat/custom-chat-mode
 import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
 import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
 import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
+import { resolveInitialVoice } from '@/components/custom-chat/speech/resolve-initial-voice';
 import CustomShareSection from '@/components/custom-chat/custom-chat-share-section';
 import { FormField } from '@ui/components/form/form-field';
 import { createNewCharacterAction } from '../../actions';
@@ -132,6 +133,7 @@ function createCharacterFormValuesSchema(t: CharacterTranslator) {
     webSearchScope: webSearchScopeSchema,
     webSearchIncludedDomains: z.array(z.string()),
     isSpeechEnabled: z.boolean(),
+    voice: z.string(),
   });
 }
 
@@ -148,6 +150,7 @@ export function CharacterEdit({
   budgetUsedBySharedChat,
   isWebSearchAvailable,
   isSpeechAvailable,
+  speechVoices,
 }: {
   character: CharacterOptionalShareDataModel;
   relatedFiles: FileModel[];
@@ -159,6 +162,7 @@ export function CharacterEdit({
   budgetUsedBySharedChat: number;
   isWebSearchAvailable: boolean;
   isSpeechAvailable: boolean;
+  speechVoices: string[];
 }) {
   useForceReloadOnBrowserBackButton();
   const router = useRouter();
@@ -194,6 +198,7 @@ export function CharacterEdit({
     webSearchScope: character.webSearchScope,
     webSearchIncludedDomains: character.webSearchIncludedDomains,
     isSpeechEnabled: character.isSpeechEnabled,
+    voice: resolveInitialVoice(character.voice, speechVoices),
   };
 
   const {
@@ -234,6 +239,7 @@ export function CharacterEdit({
           webSearchScope: data.webSearchScope,
           webSearchIncludedDomains: data.webSearchIncludedDomains,
           isSpeechEnabled: data.isSpeechEnabled,
+          voice: data.voice,
         });
 
         return updateResult.success;
@@ -560,7 +566,11 @@ export function CharacterEdit({
           {isSpeechAvailable && (
             <CustomChatSpeechEditView
               control={control}
+              voices={speechVoices}
               onCheckedChange={() => {
+                void flushAutoSave();
+              }}
+              onVoiceChange={() => {
                 void flushAutoSave();
               }}
             />
