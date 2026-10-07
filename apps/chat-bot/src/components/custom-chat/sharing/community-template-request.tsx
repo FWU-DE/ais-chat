@@ -86,7 +86,7 @@ export function CommunityTemplateRequest({
                 }
               />
             </div>
-            <ScrollArea className="max-h-40">
+            <ScrollArea className="max-h-96">
               <ul className="flex flex-col gap-6 pr-4">
                 {requestWithEvents.events.map((event) => (
                   <li key={event.id}>
