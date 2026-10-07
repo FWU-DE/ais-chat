@@ -1,77 +1,10 @@
 import { ConversationMessageModel } from '@shared/db/types';
 import { type ChatMessage } from '@/types/chat';
+import { type AiActivityStep, type AiActivityToolStep } from '@/types/ai-activity';
 import {
-  isAiActivityToolName,
-  type AiActivityStep,
-  type AiActivityToolStep,
-} from '@/types/ai-activity';
-import { parseJsonRecord, readString, readValue, toLinks } from './ai-activity';
-import { TOOL_NAMES } from '@/types/tool-names';
-import { webSearchArgsSchema } from '@/app/api/chat/tools/web-search-tool';
-import { webScraperArgsSchema } from '@/app/api/chat/tools/web-scraper-tool';
-import { retrieveEntireFileArgsSchema } from '@/app/api/chat/tools/retrieve-entire-file-tool';
-import { mundoSearchArgsSchema } from '@/app/api/chat/tools/mundo-search-tool';
-
-function createActivityStep(
-  toolCall: NonNullable<ConversationMessageModel['toolCalls']>[number],
-): AiActivityToolStep | undefined {
-  if (!isAiActivityToolName(toolCall.name)) {
-    return undefined;
-  }
-
-  const args = parseJsonRecord(toolCall.arguments);
-  let detail: string | undefined;
-  let links: ReturnType<typeof toLinks>;
-
-  switch (toolCall.name) {
-    case TOOL_NAMES.webSearch: {
-      const parsed = webSearchArgsSchema.safeParse(args);
-      detail = parsed.success ? parsed.data.query : undefined;
-      break;
-    }
-    case TOOL_NAMES.mundoSearch: {
-      const parsed = mundoSearchArgsSchema.safeParse(args);
-      detail = parsed.success ? parsed.data.query : undefined;
-      break;
-    }
-    case TOOL_NAMES.retrieveEntireFile: {
-      const parsed = retrieveEntireFileArgsSchema.safeParse(args);
-      detail = parsed.success ? parsed.data.fileName : undefined;
-      break;
-    }
-    case TOOL_NAMES.webScraper: {
-      const parsed = webScraperArgsSchema.safeParse(args);
-      links = parsed.success ? toLinks(parsed.data.urls.map((url) => ({ url }))) : undefined;
-      break;
-    }
-  }
-
-  return {
-    kind: 'tool',
-    id: toolCall.id,
-    tool: toolCall.name,
-    ...(detail === undefined ? {} : { detail }),
-    ...(links === undefined ? {} : { links }),
-  };
-}
-
-function applyActivityResult(step: AiActivityToolStep, content: string): AiActivityToolStep {
-  const parsed = parseJsonRecord(content);
-
-  if (step.tool === TOOL_NAMES.mathCalculate) {
-    const value = readString(parsed, 'result');
-    return value === undefined ? step : { ...step, result: value };
-  }
-
-  const links =
-    step.tool === TOOL_NAMES.webScraper
-      ? toLinks(Array.isArray(parsed) ? parsed : [])
-      : step.tool === TOOL_NAMES.webSearch || step.tool === TOOL_NAMES.mundoSearch
-        ? toLinks(readValue(parsed, 'results'))
-        : undefined;
-
-  return links === undefined ? step : { ...step, links };
-}
+  applyToolActivityResult,
+  createToolActivityStep,
+} from '@/app/api/chat/tools/tool-activity';
 
 function getActivitySteps(
   messages: Array<ConversationMessageModel>,
@@ -83,7 +16,7 @@ function getActivitySteps(
   for (const message of messages) {
     if (message.role === 'assistant' && message.toolCalls?.length) {
       for (const toolCall of message.toolCalls) {
-        const step = createActivityStep(toolCall);
+        const step = createToolActivityStep(toolCall);
         if (step === undefined) {
           continue;
         }
@@ -100,7 +33,7 @@ function getActivitySteps(
     if (message.role === 'tool' && message.toolCallId !== null) {
       const step = stepsByToolCallId.get(message.toolCallId);
       if (step !== undefined) {
-        const updatedStep = applyActivityResult(step, message.content);
+        const updatedStep = applyToolActivityResult(step, message.content);
         steps[steps.indexOf(step)] = updatedStep;
         stepsByToolCallId.set(message.toolCallId, updatedStep);
       }

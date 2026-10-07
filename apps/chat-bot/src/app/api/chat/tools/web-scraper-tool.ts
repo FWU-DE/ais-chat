@@ -5,7 +5,7 @@ import type { WebSource } from '@shared/db/types';
 import { isIP } from 'node:net';
 import { z } from 'zod';
 import { webScraper } from '../../web-scraper/web-scraper';
-import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
+import type { BuildToolsContext, ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 const MAX_WEB_SCRAPER_URLS = 5;
 
@@ -76,6 +76,22 @@ type BuildWebScraperToolParams = Pick<
   BuildToolsContext,
   'characterId' | 'learningScenarioId' | 'sourceUrls' | 'attachedLinks'
 >;
+
+export const webScraperActivity: ToolActivity = {
+  createStep: (toolCall: ToolCall) => {
+    const parsed = webScraperArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.webScraper,
+      links: toLinks(parsed.success ? parsed.data.urls.map((url) => ({ url })) : []),
+    };
+  },
+  applyResult: (step, result) => {
+    const links = toLinks(Array.isArray(result) ? result : undefined);
+    return links === undefined ? step : { ...step, links };
+  },
+};
 
 export function buildWebScraperTool({
   sourceUrls,
@@ -156,20 +172,6 @@ export function buildWebScraperTool({
   return {
     definition,
     handler,
-    activity: {
-      createStep: (toolCall: ToolCall) => {
-        const parsed = webScraperArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
-        return {
-          kind: 'tool',
-          id: toolCall.id,
-          tool: TOOL_NAMES.webScraper,
-          links: toLinks(parsed.success ? parsed.data.urls.map((url) => ({ url })) : []),
-        };
-      },
-      applyResult: (step, result) => {
-        const links = toLinks(result);
-        return links === undefined ? step : { ...step, links };
-      },
-    },
+    activity: webScraperActivity,
   };
 }

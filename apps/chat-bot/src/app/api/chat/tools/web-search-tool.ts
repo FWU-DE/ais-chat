@@ -1,9 +1,9 @@
 import { TOOL_NAMES } from '@/types/tool-names';
-import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
+import { parseJsonRecord, readValue, toLinks } from '@/utils/chat/ai-activity';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { z } from 'zod';
 import { resolveWebSearchConfig, searchWeb } from '../websearch';
-import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
+import type { BuildToolsContext, ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 export const webSearchArgsSchema = z.object({
   query: z.string(),
@@ -29,6 +29,22 @@ type BuildWebSearchToolParams = Pick<
   | 'conversationId'
   | 'webSearchSettings'
 >;
+
+export const webSearchActivity: ToolActivity = {
+  createStep: (toolCall: ToolCall) => {
+    const parsed = webSearchArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.webSearch,
+      detail: parsed.success ? parsed.data.query.trim() : undefined,
+    };
+  },
+  applyResult: (step, result) => {
+    const links = toLinks(readValue(result, 'results'));
+    return links === undefined ? step : { ...step, links };
+  },
+};
 
 export async function buildWebSearchTool({
   user,
@@ -107,21 +123,6 @@ export async function buildWebSearchTool({
   return {
     definition,
     handler,
-    activity: {
-      createStep: (toolCall: ToolCall) => {
-        const parsed = webSearchArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
-        return {
-          kind: 'tool',
-          id: toolCall.id,
-          tool: TOOL_NAMES.webSearch,
-          detail: parsed.success ? parsed.data.query.trim() : undefined,
-        };
-      },
-      applyResult: (step, result) => {
-        const typed = result as WebSearchToolResponse;
-        const links = toLinks(typed.results);
-        return links === undefined ? step : { ...step, links };
-      },
-    },
+    activity: webSearchActivity,
   };
 }

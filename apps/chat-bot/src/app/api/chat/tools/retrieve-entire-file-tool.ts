@@ -5,7 +5,7 @@ import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { dbGetExtractedFileContent } from '@shared/db/functions/files';
 import type { FileModel } from '@shared/db/schema';
 import { z } from 'zod';
-import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
+import type { BuildToolsContext, ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 export const retrieveEntireFileArgsSchema = z.object({
   fileName: z.string(),
@@ -18,6 +18,18 @@ export type RetrieveEntireFileToolResponse = {
   characterCount: number;
   maxCharacters: number;
   error: string | null;
+};
+
+export const retrieveEntireFileActivity: ToolActivity = {
+  createStep: (toolCall: ToolCall) => {
+    const parsed = retrieveEntireFileArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.retrieveEntireFile,
+      detail: parsed.success ? parsed.data.fileName.trim() : undefined,
+    };
+  },
 };
 
 function truncateToCharacterLimit(text: string, maxCharacters: number) {
@@ -115,16 +127,6 @@ export function buildRetrieveEntireFileTool({
   return {
     definition,
     handler,
-    activity: {
-      createStep: (toolCall: ToolCall) => {
-        const parsed = retrieveEntireFileArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
-        return {
-          kind: 'tool',
-          id: toolCall.id,
-          tool: TOOL_NAMES.retrieveEntireFile,
-          detail: parsed.success ? parsed.data.fileName.trim() : undefined,
-        };
-      },
-    },
+    activity: retrieveEntireFileActivity,
   };
 }

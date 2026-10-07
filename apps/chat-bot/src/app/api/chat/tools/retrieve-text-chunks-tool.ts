@@ -6,11 +6,22 @@ import { dbGetAllChunks } from '@shared/db/functions/files';
 import { z } from 'zod';
 import { ingestWebContent } from '../../rag/ingestWebContent';
 import { retrieveChunksByQuery } from '../../rag/rag-service';
-import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
+import type { BuildToolsContext, ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 export const retrieveTextChunksArgsSchema = z.object({
   search: z.string(),
 });
+
+export const retrieveTextChunksActivity: ToolActivity = {
+  createStep: (toolCall: ToolCall) => {
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.retrieveTextChunks,
+      detail: readString(parseJsonRecord(toolCall.arguments), 'search'),
+    };
+  },
+};
 
 type SemanticFileSearchChunkResult = {
   fileName: string | null;
@@ -136,15 +147,6 @@ export function buildRetrieveTextChunksTool({
   return {
     definition,
     handler,
-    activity: {
-      createStep: (toolCall: ToolCall) => {
-        return {
-          kind: 'tool',
-          id: toolCall.id,
-          tool: TOOL_NAMES.retrieveTextChunks,
-          detail: readString(parseJsonRecord(toolCall.arguments), 'search'),
-        };
-      },
-    },
+    activity: retrieveTextChunksActivity,
   };
 }

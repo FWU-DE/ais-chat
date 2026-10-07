@@ -5,11 +5,13 @@ import type { FileModel, WebSearchModel } from '@shared/db/schema';
 
 export type { ToolDefinition };
 
+export type ToolActivity = {
+  createStep: (toolCall: ToolCall) => AiActivityToolStep;
+  applyResult?: (step: AiActivityToolStep, result: unknown) => AiActivityToolStep;
+};
+
 export type ToolRegistration = ToolRegistryEntry & {
-  activity: {
-    createStep: (toolCall: ToolCall) => AiActivityToolStep;
-    applyResult?: (step: AiActivityToolStep, result: unknown) => AiActivityToolStep;
-  };
+  activity: ToolActivity;
 };
 
 export type ToolRegistry = Record<string, ToolRegistration>;

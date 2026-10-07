@@ -7,11 +7,27 @@ import {
   CALCULATOR_MAX_EXPRESSION_LENGTH,
   type CalculatorResponse,
 } from '../calculator';
-import type { ToolDefinition, ToolRegistration } from './types';
+import type { ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 export const expressionSchema = z.object({
   expression: z.string().trim().min(1).max(CALCULATOR_MAX_EXPRESSION_LENGTH),
 });
+
+export const mathCalculateActivity: ToolActivity = {
+  createStep: (toolCall: ToolCall) => {
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.mathCalculate,
+      detail: readString(parseJsonRecord(toolCall.arguments), 'expression'),
+    };
+  },
+  applyResult: (step, result) => {
+    const typed = result as CalculatorResponse;
+    const value = typed.result ?? undefined;
+    return value === undefined ? step : { ...step, result: value };
+  },
+};
 
 export function buildMathCalculateTool(): ToolRegistration {
   const definition: ToolDefinition = {
@@ -49,20 +65,6 @@ export function buildMathCalculateTool(): ToolRegistration {
   return {
     definition,
     handler,
-    activity: {
-      createStep: (toolCall: ToolCall) => {
-        return {
-          kind: 'tool',
-          id: toolCall.id,
-          tool: TOOL_NAMES.mathCalculate,
-          detail: readString(parseJsonRecord(toolCall.arguments), 'expression'),
-        };
-      },
-      applyResult: (step, result) => {
-        const typed = result as CalculatorResponse;
-        const value = typed.result ?? undefined;
-        return value === undefined ? step : { ...step, result: value };
-      },
-    },
+    activity: mathCalculateActivity,
   };
 }

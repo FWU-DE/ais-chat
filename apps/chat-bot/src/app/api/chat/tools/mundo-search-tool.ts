@@ -14,7 +14,7 @@ import {
   sanitizeClassLevel,
   sanitizeSubject,
 } from '../mundo-search';
-import type { ToolDefinition, ToolRegistration } from './types';
+import type { ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 export const mundoSearchArgsSchema = z.object({
   query: z.string(),
@@ -26,6 +26,29 @@ export type MundoSearchToolResponse = {
   results: MundoSearchResult[];
   retriedWithoutFilters: boolean;
   error: string | null;
+};
+
+export const mundoSearchActivity: ToolActivity = {
+  createStep: (toolCall: ToolCall) => {
+    const parsed = mundoSearchArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.mundoSearch,
+      detail: parsed.success ? parsed.data.query.trim() : undefined,
+    };
+  },
+  applyResult: (step, result) => {
+    const typed = result as MundoSearchToolResponse;
+    const links = toLinks(
+      typed.results.map((entry) => ({
+        title: entry.title,
+        url: entry.url,
+      })),
+    );
+
+    return links === undefined ? step : { ...step, links };
+  },
 };
 
 export function buildMundoSearchTool(): ToolRegistration {
@@ -96,27 +119,6 @@ export function buildMundoSearchTool(): ToolRegistration {
   return {
     definition,
     handler,
-    activity: {
-      createStep: (toolCall: ToolCall) => {
-        const parsed = mundoSearchArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
-        return {
-          kind: 'tool',
-          id: toolCall.id,
-          tool: TOOL_NAMES.mundoSearch,
-          detail: parsed.success ? parsed.data.query.trim() : undefined,
-        };
-      },
-      applyResult: (step, result) => {
-        const typed = result as MundoSearchToolResponse;
-        const links = toLinks(
-          typed.results.map((entry) => ({
-            title: entry.title,
-            url: entry.url,
-          })),
-        );
-
-        return links === undefined ? step : { ...step, links };
-      },
-    },
+    activity: mundoSearchActivity,
   };
 }
