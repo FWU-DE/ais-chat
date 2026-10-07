@@ -12,6 +12,7 @@ import { useTranslations } from 'next-intl';
 import { Control, FieldPath, FieldValues, useController } from 'react-hook-form';
 import type { SpeechVoice } from '@shared/db/schema';
 import type { SpeechFields } from './speech.types';
+import { SpeechVoicePreviewButton } from './speech-voice-preview-button';
 
 export type SpeechEditViewProps<TFieldValues extends FieldValues = FieldValues> = {
   onCheckedChange: (checked: boolean) => void;
@@ -50,28 +51,31 @@ export function SpeechEditView<TFieldValues extends FieldValues = FieldValues>(
       {isEnabled && props.voices.length > 0 && (
         <div className="flex flex-col gap-2">
           <span className="leading-none font-medium">{t('voice-label')}</span>
-          <Select
-            value={voiceField.value || undefined}
-            onValueChange={(value) => {
-              voiceField.onChange(value);
-              props.onVoiceChange?.(value);
-            }}
-          >
-            <SelectTrigger
-              aria-label={t('voice-label')}
-              data-testid="speech-voice-select"
-              className="text-base"
+          <div className="flex items-center gap-2">
+            <Select
+              value={voiceField.value || undefined}
+              onValueChange={(value) => {
+                voiceField.onChange(value);
+                props.onVoiceChange?.(value);
+              }}
             >
-              <SelectValue placeholder={t('voice-placeholder')} />
-            </SelectTrigger>
-            <SelectContent align="start">
-              {props.voices.map((voice) => (
-                <SelectItem key={voice.name} value={voice.name} className="text-base">
-                  {voice.displayName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <SelectTrigger
+                aria-label={t('voice-label')}
+                data-testid="speech-voice-select"
+                className="text-base"
+              >
+                <SelectValue placeholder={t('voice-placeholder')} />
+              </SelectTrigger>
+              <SelectContent align="start">
+                {props.voices.map((voice) => (
+                  <SelectItem key={voice.name} value={voice.name} className="text-base">
+                    {voice.displayName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <SpeechVoicePreviewButton voice={voiceField.value} />
+          </div>
         </div>
       )}
     </div>
