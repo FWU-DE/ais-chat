@@ -47,8 +47,8 @@ export function SpeechEditView<TFieldValues extends FieldValues = FieldValues>(
       />
 
       {isEnabled && props.voices.length > 0 && (
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium">{t('voice-label')}</span>
+        <div className="flex flex-col gap-2">
+          <span className="leading-none font-medium">{t('voice-label')}</span>
           <Select
             value={voiceField.value || undefined}
             onValueChange={(value) => {
@@ -56,12 +56,16 @@ export function SpeechEditView<TFieldValues extends FieldValues = FieldValues>(
               props.onVoiceChange?.(value);
             }}
           >
-            <SelectTrigger aria-label={t('voice-label')} data-testid="speech-voice-select">
+            <SelectTrigger
+              aria-label={t('voice-label')}
+              data-testid="speech-voice-select"
+              className="text-base"
+            >
               <SelectValue placeholder={t('voice-placeholder')} />
             </SelectTrigger>
             <SelectContent align="start">
               {props.voices.map((voice) => (
-                <SelectItem key={voice} value={voice}>
+                <SelectItem key={voice} value={voice} className="text-base">
                   {voice}
                 </SelectItem>
               ))}
