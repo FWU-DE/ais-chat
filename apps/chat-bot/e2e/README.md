@@ -41,6 +41,18 @@ Then you can run the e2e tests from the apps/chat-bot directory.
 3. `pnpm e2e:ui` - This starts the playwright ui for the e2e tests.
 4. `pnpm e2e:api` - This runs the api tests.
 5. `pnpm e2e:api:ui` - This starts the playwright ui for the api tests.
+6. `pnpm e2e:smoke` - This runs only the tests tagged `@smoke` (chromium and api project).
+
+### Smoke vs. regression suite
+
+The GitHub workflow `e2e.yml` runs only the `@smoke` tests when a pull request is created or updated.
+The full suite (all tests, Firefox, external-services, isolated) runs as regression when a pull request is merged (push to `main`), or manually via `workflow_dispatch` with `suite=regression`.
+
+Tag a test with `{ tag: '@smoke' }` only if it is a core user journey or a cheap check, uses the mock LLM, and runs in chromium:
+
+```ts
+test('can login and send a message', { tag: '@smoke' }, async ({ page }) => {});
+```
 
 ### Run tests in vscode
 

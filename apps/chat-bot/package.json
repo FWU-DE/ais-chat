@@ -14,6 +14,7 @@
     "e2e:api": "dotenvx run -f .env.local -- playwright test tests/api/",
     "e2e:api:ui": "dotenvx run -f .env.local -- playwright test tests/api/ --ui",
     "e2e:headed": "dotenvx run -f .env.local -- playwright test --headed",
+    "e2e:smoke": "NODE_OPTIONS=--experimental-require-module dotenvx run -f .env.local -- playwright test --grep @smoke --project chromium --project \"api test\"",
     "e2e:ui": "dotenvx run -f .env.local -- playwright test --ui",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -86,7 +87,7 @@
     "remark-gfm": "4.0.1",
     "remark-math": "6.0.0",
     "require-in-the-middle": "8.0.1",
-    "sharp": "0.35.4",
+    "sharp": "0.35.5",
     "tailwind-merge": "3.7.0",
     "viem": "2.56.9",
     "zod": "4.6.5"

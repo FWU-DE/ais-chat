@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { authorizationHeader, getImageModel } from '../utils/api.js';
 
 test.describe('POST /v1/images/generations', () => {
-  test('returns 401 without authentication', async ({ request }) => {
+  test('returns 401 without authentication', { tag: '@smoke' }, async ({ request }) => {
     const response = await request.post('/v1/images/generations', {
       data: {
         model: 'dall-e-3',
@@ -13,7 +13,7 @@ test.describe('POST /v1/images/generations', () => {
     expect(response.status()).toBe(401);
   });
 
-  test('returns 400 for invalid request body', async ({ request }) => {
+  test('returns 400 for invalid request body', { tag: '@smoke' }, async ({ request }) => {
     const response = await request.post('/v1/images/generations', {
       headers: authorizationHeader,
       data: { invalid: 'body' },

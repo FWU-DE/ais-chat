@@ -15,79 +15,83 @@ test.use({ storageState: AUTH_FILES.teacher });
 test.describe('create, share, chat, delete', () => {
   const characterName = 'John Cena ' + nanoid(8);
 
-  test('teacher can login, create and join shared dialogpartner chat', async ({ page }) => {
-    await page.goto('/characters');
-    await page.waitForURL('/characters**');
+  test(
+    'teacher can login, create and join shared dialogpartner chat',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      await page.goto('/characters');
+      await page.waitForURL('/characters**');
 
-    const createButton = page.getByRole('button', { name: 'Dialogpartner erstellen' });
-    await expect(createButton).toBeVisible();
-    await createButton.click();
+      const createButton = page.getByRole('button', { name: 'Dialogpartner erstellen' });
+      await expect(createButton).toBeVisible();
+      await createButton.click();
 
-    await page.waitForURL('/characters/editor/**');
+      await page.waitForURL('/characters/editor/**');
 
-    // configure form
-    await configureCharacter(page, {
-      name: characterName,
-      description: `Er ist bekannt für seinen Spruch „You can't see me“ und seine Wrestling-Karriere.`,
-      instructions: 'John Cena soll über seine Karriere und Erfolge sprechen.',
-    });
+      // configure form
+      await configureCharacter(page, {
+        name: characterName,
+        description: `Er ist bekannt für seinen Spruch „You can't see me“ und seine Wrestling-Karriere.`,
+        instructions: 'John Cena soll über seine Karriere und Erfolge sprechen.',
+      });
 
-    await page.goto('/characters');
+      await page.goto('/characters');
 
-    // check if created with the correct name
-    const chatName = page.getByText(characterName).first();
-    await expect(chatName).toBeVisible();
-    await chatName.click();
+      // check if created with the correct name
+      const chatName = page.getByText(characterName).first();
+      await expect(chatName).toBeVisible();
+      await chatName.click();
 
-    await page.waitForURL('/characters/editor/**');
+      await page.waitForURL('/characters/editor/**');
 
-    // test share page
-    await page.getByTestId('token-points-select').click();
-    await page.getByTestId('token-points-option-50').click();
-    await page.getByTestId('usage-time-select').click();
-    await page.getByTestId('usage-time-option-45').click();
-    await page.getByTestId('start-share-button').click();
+      // test share page
+      await page.getByTestId('token-points-select').click();
+      await page.getByTestId('token-points-option-50').click();
+      await page.getByTestId('usage-time-select').click();
+      await page.getByTestId('usage-time-option-45').click();
+      await page.getByTestId('start-share-button').click();
 
-    await page.waitForURL('/characters/editor/**/share');
-    const code = await page.getByTestId('join-code').textContent();
+      await page.waitForURL('/characters/editor/**/share');
+      const code = await page.getByTestId('join-code').textContent();
 
-    const countDown = page.getByTestId('countdown-timer');
-    await expect(countDown).toBeVisible();
+      const countDown = page.getByTestId('countdown-timer');
+      await expect(countDown).toBeVisible();
 
-    const qrCode = page.getByTestId('qr-code');
-    await expect(qrCode).toBeVisible();
+      const qrCode = page.getByTestId('qr-code');
+      await expect(qrCode).toBeVisible();
 
-    // verify countdown is also shown on the overview list
-    await page.goto('/characters');
-    await page.waitForURL('/characters**');
-    const card = page.getByTestId('entity-card').filter({ hasText: characterName }).first();
-    await expect(card).toBeVisible();
-    await expect(card.getByRole('timer')).toBeVisible();
+      // verify countdown is also shown on the overview list
+      await page.goto('/characters');
+      await page.waitForURL('/characters**');
+      const card = page.getByTestId('entity-card').filter({ hasText: characterName }).first();
+      await expect(card).toBeVisible();
+      await expect(card.getByRole('timer')).toBeVisible();
 
-    // join chat as teacher
-    await page.goto('/logout');
-    await page.waitForURL('/login');
+      // join chat as teacher
+      await page.goto('/logout');
+      await page.waitForURL('/login');
 
-    await page.locator('#login-invite-code').fill(code ?? '');
+      await page.locator('#login-invite-code').fill(code ?? '');
 
-    const loginButton = page.getByRole('button', { name: 'Zum Dialog' });
-    await expect(loginButton).toBeVisible();
-    await loginButton.click();
+      const loginButton = page.getByRole('button', { name: 'Zum Dialog' });
+      await expect(loginButton).toBeVisible();
+      await loginButton.click();
 
-    await page.waitForURL('/ua/characters/**/dialog?inviteCode=*');
+      await page.waitForURL('/ua/characters/**/dialog?inviteCode=*');
 
-    // send first message
-    await sendMessage(page, `${MOCK_LLM_COMMANDS.RETURN_SYSTEM_PROMPT} Wer bist du?`);
-    await page.getByTestId('copy-to-clipboard').click();
+      // send first message
+      await sendMessage(page, `${MOCK_LLM_COMMANDS.RETURN_SYSTEM_PROMPT} Wer bist du?`);
+      await page.getByTestId('copy-to-clipboard').click();
 
-    // 'John Cena' is the character name and is included in the system prompt;
-    // the mock LLM echoes the system prompt back.
-    await expect(page.getByLabel('assistant message 1')).toContainText('John Cena');
+      // 'John Cena' is the character name and is included in the system prompt;
+      // the mock LLM echoes the system prompt back.
+      await expect(page.getByLabel('assistant message 1')).toContainText('John Cena');
 
-    // regenerate last message
-    await regenerateMessage(page);
-    await expect(page.getByLabel('assistant message 1')).toContainText('John Cena');
-  });
+      // regenerate last message
+      await regenerateMessage(page);
+      await expect(page.getByLabel('assistant message 1')).toContainText('John Cena');
+    },
+  );
 
   test('teacher can delete character', async ({ page }) => {
     await page.goto('/characters');

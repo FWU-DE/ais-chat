@@ -10,7 +10,7 @@ async function login(page: Page, username: 'admin' | 'editor') {
   await page.locator('button[type="submit"]').click();
 }
 
-test.describe('admin role access', () => {
+test.describe('admin role access', { tag: '@smoke' }, () => {
   test('allows an Admin to access the API administration and all app navigation', async ({
     page,
   }) => {

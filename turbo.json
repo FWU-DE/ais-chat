@@ -72,6 +72,7 @@
     "LLM_LLAMA_GUARD_ENDPOINT_ID",
     "LLM_LLAMA_GUARD_ENDPOINT_HOST",
     "E2E_GUARD_TEXT_MODEL",
+    "E2E_SUITE",
     "E2E_TEXT_MODEL_1",
     "E2E_TEXT_MODEL_2",
     "API_NAME",
@@ -108,9 +109,7 @@
         "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"
       ]
     },
-    "check-types": {
-      "dependsOn": ["^check-types"]
-    },
+    "check-types": {},
     "dev": {
       "persistent": true,
       "cache": false
@@ -131,14 +130,9 @@
       "cache": false,
       "dependsOn": []
     },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
-    "test": {
-      "dependsOn": ["^test"]
-    },
+    "lint": {},
+    "test": {},
     "test:coverage": {
-      "dependsOn": ["^test:coverage"],
       "outputs": ["coverage/**"]
     }
   }

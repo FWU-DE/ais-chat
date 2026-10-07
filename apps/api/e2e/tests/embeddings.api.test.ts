@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { authorizationHeader, getEmbeddingModel } from '../utils/api.js';
 
 test.describe('POST /v1/embeddings', () => {
-  test('returns 401 without authentication', async ({ request }) => {
+  test('returns 401 without authentication', { tag: '@smoke' }, async ({ request }) => {
     const response = await request.post('/v1/embeddings', {
       data: {
         model: 'text-embedding-ada-002',
@@ -13,7 +13,7 @@ test.describe('POST /v1/embeddings', () => {
     expect(response.status()).toBe(401);
   });
 
-  test('returns 400 for invalid request body', async ({ request }) => {
+  test('returns 400 for invalid request body', { tag: '@smoke' }, async ({ request }) => {
     const response = await request.post('/v1/embeddings', {
       headers: authorizationHeader,
       data: { invalid: 'body' },
