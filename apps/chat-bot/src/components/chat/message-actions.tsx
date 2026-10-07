@@ -1,7 +1,9 @@
 import { type AiActivityStep } from '@/types/ai-activity';
 import { type ChatStatus, type UIMessage } from '@/types/chat';
+import { replacePlotBlocks } from '@/utils/code-blocks';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
+import { useMemo } from 'react';
 import CopyToClipboardButton from '../common/clipboard-button';
 import ReloadIcon from '../icons/reload';
 import { AiActivityDialog } from './activity/ai-activity';
@@ -30,11 +32,19 @@ export function MessageActions({
   activitySteps: AiActivityStep[];
 }) {
   const tCommon = useTranslations('common');
+  // Copy and read-aloud get a short description instead of the plot JSON.
+  const plainText = useMemo(
+    () =>
+      replacePlotBlocks(message.content, (title) =>
+        title ? tCommon('plot.description', { title }) : tCommon('plot.description-untitled'),
+      ),
+    [message.content, tCommon],
+  );
 
   return (
     <div className="flex items-center gap-1 mt-1">
       <CopyToClipboardButton
-        text={message.content}
+        text={plainText}
         className="size-5"
         size="icon-sm"
         title={tCommon('message-copy')}
@@ -59,7 +69,7 @@ export function MessageActions({
         <ReloadIcon className="size-5 text-primary" />
       </Button>
       <SpeechButton
-        text={message.content}
+        text={plainText}
         generateSpeechFn={generateSpeechFn}
         isSpeechModelEnabled={isSpeechModelEnabled}
       />

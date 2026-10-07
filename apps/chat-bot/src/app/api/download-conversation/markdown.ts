@@ -1,4 +1,5 @@
 import MarkdownIt from 'markdown-it';
+import { PLOT_LANGUAGE } from '@/utils/code-blocks';
 import {
   Paragraph,
   HeadingLevel,
@@ -217,6 +218,10 @@ export function markdownToDocx(markdownString: string): SectionType[] {
     } else if (token.type === 'thead_open') {
       continue;
     } else if (token.tag === 'code') {
+      // TODO TD-969: Plots are skipped for now, the export gets adapted later.
+      if (token.info?.trim().split(/\s+/)[0] === PLOT_LANGUAGE) {
+        continue;
+      }
       const codeContent = tokens[i]?.content;
       const lines = codeContent?.split('\n') ?? [];
       const tokenInfo = token.info ?? '';
