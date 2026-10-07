@@ -5,8 +5,13 @@ import type { SpeechVoice } from '@shared/db/schema';
  * otherwise falls back to the first available voice.
  */
 export function resolveInitialVoice(storedVoice: string, voices: SpeechVoice[]): string {
+  const [firstVoice] = voices;
+  if (firstVoice === undefined) {
+    return storedVoice;
+  }
+
   if (storedVoice && voices.some((voice) => voice.name === storedVoice)) {
     return storedVoice;
   }
-  return voices[0]?.name ?? '';
+  return firstVoice.name;
 }

@@ -4,6 +4,7 @@ import { Switch } from '@ui/components/switch';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -67,11 +68,13 @@ export function SpeechEditView<TFieldValues extends FieldValues = FieldValues>(
                 <SelectValue placeholder={t('voice-placeholder')} />
               </SelectTrigger>
               <SelectContent align="start">
-                {props.voices.map((voice) => (
-                  <SelectItem key={voice.name} value={voice.name} className="text-base">
-                    {voice.displayName}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  {props.voices.map((voice) => (
+                    <SelectItem key={voice.name} value={voice.name} className="text-base">
+                      {voice.displayName}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             <SpeechVoicePreviewButton voice={voiceField.value} />
