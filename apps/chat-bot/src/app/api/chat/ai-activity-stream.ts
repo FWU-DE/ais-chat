@@ -1,8 +1,8 @@
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { createAiActivityCollector } from '@/utils/chat/ai-activity';
 import type { AiActivityOptions } from '@/utils/chat/ai-activity';
 import { encodeChatStreamEvent } from '@/utils/streaming';
-import type { ToolRegistration, ToolResult } from './tools/types';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { GenericToolRegistration, ToolResult } from './tools/types';
 
 /**
  * Collects the agent activity and pushes every update to the client as a stream event.
@@ -10,8 +10,12 @@ import type { ToolRegistration, ToolResult } from './tools/types';
  */
 export function createAiActivityStream(
   update: (chunk: string) => void,
+<<<<<<< HEAD
   toolRegistry: Record<string, ToolRegistration>,
   options?: AiActivityOptions,
+=======
+  toolRegistry: Record<string, GenericToolRegistration>,
+>>>>>>> cdca9ef7 (TD-1598: generalize tool registration)
 ) {
   const collector = createAiActivityCollector(toolRegistry, options);
 

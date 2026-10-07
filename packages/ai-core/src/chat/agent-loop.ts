@@ -1,15 +1,16 @@
 import { metrics } from '@opentelemetry/api';
 import * as Sentry from '@sentry/core';
+import { env } from '../env';
+import { EmptyResponseError } from '../errors';
+import { generateAgenticStreamWithBilling } from './agentic-stream';
 import type {
   Message as AiCoreMessage,
+  JsonValue,
   ModelSelection,
   TokenUsage,
   ToolCall,
   ToolRegistry,
 } from './types';
-import { EmptyResponseError } from '../errors';
-import { generateAgenticStreamWithBilling } from './agentic-stream';
-import { env } from '../env';
 
 export const MAX_AGENTIC_ITERATIONS = env.maxAgenticIterations;
 export const MAX_TOOL_CALLS_PER_ITERATION = env.maxToolCallsPerIteration;
@@ -25,7 +26,7 @@ function logError(message: string, error: unknown) {
   console.error(message, error);
 }
 
-type RunAgentLoopParams<TResult> = {
+type RunAgentLoopParams<TResult extends JsonValue> = {
   modelSelection: ModelSelection;
   apiKeyId: string;
   messages: AiCoreMessage[];
@@ -63,7 +64,7 @@ type RunAgentLoopParams<TResult> = {
   ) => void;
 };
 
-export function runAgentLoop<TResult = unknown>({
+export function runAgentLoop<TResult extends JsonValue = JsonValue>({
   modelSelection,
   apiKeyId,
   messages,
@@ -226,6 +227,7 @@ export function runAgentLoop<TResult = unknown>({
                     const startedAt = performance.now();
                     let status = registryEntry ? 'success' : 'unknown_tool';
                     let result: TResult | string;
+                    let serializedResult: string;
 
                     try {
                       if (registryEntry) {
@@ -236,6 +238,16 @@ export function runAgentLoop<TResult = unknown>({
                         toolSpan.setStatus({ code: 2, message });
                         result = `Error: ${message}`;
                       }
+
+                      if (typeof result === 'string') {
+                        serializedResult = result;
+                      } else {
+                        const serialized = JSON.stringify(result);
+                        if (serialized === undefined) {
+                          throw new Error('Tool result could not be serialized as JSON');
+                        }
+                        serializedResult = serialized;
+                      }
                     } catch (error) {
                       status = 'error';
                       // TODO: see tech debt (refactoring of tool calls for error handling). Standardize tool errors so handlers throw instead of returning error values.
@@ -244,6 +256,7 @@ export function runAgentLoop<TResult = unknown>({
                       toolSpan.setStatus({ code: 2, message });
                       logError(`Error executing tool ${toolCall.name}:`, error);
                       result = `Error: ${message}`;
+                      serializedResult = result;
                     } finally {
                       toolCallDuration.record(performance.now() - startedAt, {
                         'gen_ai.tool.name': registryEntry ? toolCall.name : 'unknown',
@@ -255,7 +268,7 @@ export function runAgentLoop<TResult = unknown>({
 
                     return {
                       toolCallId: toolCall.id,
-                      result: typeof result === 'string' ? result : JSON.stringify(result),
+                      result: serializedResult,
                     };
                   },
                 ),

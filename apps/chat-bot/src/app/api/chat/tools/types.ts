@@ -59,13 +59,35 @@ export type ToolResult =
   | WebScraperToolResult[]
   | string;
 
-export type ToolRegistration<TResult extends ToolResult = ToolResult> =
-  ToolRegistryEntry<TResult> & {
+type ToolActivity<TResult extends ToolResult> = {
+  createStep: (toolCall: ToolCall) => AiActivityToolStep;
+  applyResult?(step: AiActivityToolStep, result: TResult): AiActivityToolStep;
+};
+
+export type ToolRegistration<TResult extends ToolResult> = ToolRegistryEntry<TResult> & {
+  activity: ToolActivity<TResult>;
+};
+
+export type GenericToolRegistration = ToolRegistryEntry<ToolResult> & {
+  activity: ToolActivity<ToolResult>;
+};
+
+export function generalizeToolRegistration<TResult extends ToolResult>(
+  registration: ToolRegistration<TResult>,
+): GenericToolRegistration {
+  const { applyResult, ...activity } = registration.activity;
+
+  return {
+    ...registration,
     activity: {
-      createStep: (toolCall: ToolCall) => AiActivityToolStep;
-      applyResult?(step: AiActivityToolStep, result: TResult): AiActivityToolStep;
-    };
+      ...activity,
+      applyResult:
+        applyResult === undefined
+          ? undefined
+          : (step, result) => applyResult(step, result as TResult),
+    },
   };
+}
 
 export type BuildToolsContext = {
   user: UserAndContext;

@@ -1,12 +1,17 @@
 import type { UserAndContext } from '@/auth/types';
 import type { FileModel, WebSearchModel } from '@shared/db/schema';
-import { buildWebSearchTool } from './tools/web-search-tool';
-import { buildWebScraperTool } from './tools/web-scraper-tool';
+import { buildMathCalculateTool } from './tools/math-calculate-tool';
+import { buildMundoSearchTool } from './tools/mundo-search-tool';
 import { buildRetrieveEntireFileTool } from './tools/retrieve-entire-file-tool';
 import { buildRetrieveTextChunksTool } from './tools/retrieve-text-chunks-tool';
-import { buildMundoSearchTool } from './tools/mundo-search-tool';
-import { buildMathCalculateTool } from './tools/math-calculate-tool';
-import type { ToolRegistration } from './tools/types';
+import {
+  generalizeToolRegistration,
+  type GenericToolRegistration,
+  type ToolRegistration,
+  type ToolResult,
+} from './tools/types';
+import { buildWebScraperTool } from './tools/web-scraper-tool';
+import { buildWebSearchTool } from './tools/web-search-tool';
 
 type BuildToolsParams = {
   user: UserAndContext;
@@ -24,8 +29,15 @@ type BuildToolsParams = {
 };
 
 type BuildToolsResult = {
-  toolRegistry: Record<string, ToolRegistration>;
+  toolRegistry: Record<string, GenericToolRegistration>;
 };
+
+function registerTool<TResult extends ToolResult>(
+  registry: Record<string, GenericToolRegistration>,
+  registration: ToolRegistration<TResult>,
+) {
+  registry[registration.definition.name] = generalizeToolRegistration(registration);
+}
 
 export async function buildTools({
   user,
@@ -41,11 +53,10 @@ export async function buildTools({
   allowMundoSearch,
   isCalculatorEnabled = false,
 }: BuildToolsParams): Promise<BuildToolsResult> {
-  const toolRegistry: Record<string, ToolRegistration> = {};
+  const toolRegistry: Record<string, GenericToolRegistration> = {};
 
   if (isCalculatorEnabled) {
-    const calculatorTool = buildMathCalculateTool();
-    toolRegistry[calculatorTool.definition.name] = calculatorTool;
+    registerTool(toolRegistry, buildMathCalculateTool());
   }
 
   if (allowWebTools) {
@@ -59,7 +70,7 @@ export async function buildTools({
     });
 
     if (webSearchTool) {
-      toolRegistry[webSearchTool.definition.name] = webSearchTool;
+      registerTool(toolRegistry, webSearchTool);
     }
   }
 
@@ -70,13 +81,12 @@ export async function buildTools({
     });
 
     if (webScraperTool) {
-      toolRegistry[webScraperTool.definition.name] = webScraperTool;
+      registerTool(toolRegistry, webScraperTool);
     }
   }
 
   if (allowMundoSearch) {
-    const mundoSearchTool = buildMundoSearchTool();
-    toolRegistry[mundoSearchTool.definition.name] = mundoSearchTool;
+    registerTool(toolRegistry, buildMundoSearchTool());
   }
 
   const retrieveEntireFileTool = buildRetrieveEntireFileTool({
@@ -84,7 +94,7 @@ export async function buildTools({
   });
 
   if (retrieveEntireFileTool) {
-    toolRegistry[retrieveEntireFileTool.definition.name] = retrieveEntireFileTool;
+    registerTool(toolRegistry, retrieveEntireFileTool);
   }
 
   const retrieveTextChunksTool = buildRetrieveTextChunksTool({
@@ -95,7 +105,7 @@ export async function buildTools({
   });
 
   if (retrieveTextChunksTool) {
-    toolRegistry[retrieveTextChunksTool.definition.name] = retrieveTextChunksTool;
+    registerTool(toolRegistry, retrieveTextChunksTool);
   }
 
   return { toolRegistry };

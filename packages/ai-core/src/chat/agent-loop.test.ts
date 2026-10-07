@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runAgentLoop } from './agent-loop';
-import type { Message, TokenUsage, StreamEvent } from './types';
+import type { JsonValue, Message, StreamEvent, TokenUsage } from './types';
 
 // Mock the generateAgenticStreamWithBilling import
 const mockGenerateAgenticStreamWithBilling = vi.fn();
@@ -11,7 +11,9 @@ vi.mock('./agentic-stream', () => ({
 }));
 
 // Mock Sentry to verify spans are created
-const mockStartSpan = vi.fn((options, callback) => callback({ setAttribute: vi.fn() }));
+const mockStartSpan = vi.fn((options, callback) =>
+  callback({ setAttribute: vi.fn(), setStatus: vi.fn() }),
+);
 
 vi.mock('@sentry/core', () => ({
   startSpan: (options: unknown, callback: unknown) => mockStartSpan(options, callback),
@@ -142,6 +144,58 @@ describe('agent-loop', () => {
     expect(onError).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'EmptyResponseError' }),
       expect.objectContaining({ modelUsages: [] }),
+    );
+  });
+
+  it('converts tool result serialization failures into tool errors', async () => {
+    const messages: Message[] = [{ role: 'user', content: 'Test query' }];
+    const onComplete = vi.fn();
+    const onError = vi.fn();
+    const cyclicResult: Record<string, unknown> = {};
+    cyclicResult.self = cyclicResult;
+    let callCount = 0;
+
+    mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+      callCount++;
+      if (callCount === 1) {
+        yield {
+          type: 'tool_call',
+          call: { id: 'call_cyclic', name: 'cyclic_tool', arguments: '{}' },
+        } satisfies StreamEvent;
+      } else {
+        yield { type: 'text', delta: 'Recovered.' } satisfies StreamEvent;
+      }
+      yield { type: 'finish', usage } satisfies StreamEvent;
+    });
+
+    runAgentLoop({
+      modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+      apiKeyId: 'test-key',
+      messages,
+      toolRegistry: {
+        cyclic_tool: {
+          definition: { name: 'cyclic_tool', description: 'Test', parameters: {} },
+          handler: async () => cyclicResult as JsonValue,
+        },
+      },
+      agentName: 'Test Agent',
+      onTextChunk: vi.fn(),
+      onComplete,
+      onError,
+    });
+
+    await vi.waitFor(() => {
+      expect(onComplete).toHaveBeenCalled();
+    });
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(onComplete.mock.calls[0]?.[0].agentLoopMessages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'tool',
+          content: expect.stringContaining('Error: Converting circular structure to JSON'),
+        }),
+      ]),
     );
   });
 
