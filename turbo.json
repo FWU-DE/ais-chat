@@ -109,9 +109,7 @@
         "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"
       ]
     },
-    "check-types": {
-      "dependsOn": ["^check-types"]
-    },
+    "check-types": {},
     "dev": {
       "persistent": true,
       "cache": false
@@ -132,14 +130,9 @@
       "cache": false,
       "dependsOn": []
     },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
-    "test": {
-      "dependsOn": ["^test"]
-    },
+    "lint": {},
+    "test": {},
     "test:coverage": {
-      "dependsOn": ["^test:coverage"],
       "outputs": ["coverage/**"]
     }
   }
