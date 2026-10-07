@@ -32,7 +32,7 @@ export default function RejectCommunityTemplateRequestDialog({
   return (
     <ConfirmationDialog
       trigger={
-        <Button disabled={!isRejectPossible}>
+        <Button disabled={!isRejectPossible} data-testid="community-template-reject-button">
           <PencilSimpleIcon /> Überarbeitung anfordern
         </Button>
       }
@@ -41,6 +41,7 @@ export default function RejectCommunityTemplateRequestDialog({
           ref={focusMessageTextarea}
           className="h-30"
           aria-label="Nachricht an Autor/Autorin"
+          data-testid="community-template-reject-message-input"
           value={message}
           onChange={(event) => setMessage(event.target.value)}
         />
@@ -49,6 +50,8 @@ export default function RejectCommunityTemplateRequestDialog({
       description="Welche Änderungen sollen vom Autor/Autorin vorgenommen werden?"
       cancelLabel="Abbrechen"
       confirmLabel="Senden"
+      cancelTestId="community-template-reject-cancel"
+      confirmTestId="community-template-reject-confirm"
       onConfirm={async () => {
         const success = await onReject(message);
         if (success) {

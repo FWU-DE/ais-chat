@@ -69,14 +69,23 @@ export function CommunityTemplateMessageDialog({
           aria-required
           disabled={isSending}
           className="min-h-32"
+          data-testid="community-template-message-input"
         />
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline" disabled={isSending}>
+            <Button
+              variant="outline"
+              disabled={isSending}
+              data-testid="community-template-message-cancel"
+            >
               {tCommon('cancel')}
             </Button>
           </DialogClose>
-          <Button disabled={isSending || isMessageEmpty} onClick={() => void handleSend()}>
+          <Button
+            disabled={isSending || isMessageEmpty}
+            onClick={() => void handleSend()}
+            data-testid="community-template-message-send"
+          >
             {t('message-dialog.send')}
           </Button>
         </DialogFooter>

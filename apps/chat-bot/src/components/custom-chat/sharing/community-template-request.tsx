@@ -49,11 +49,12 @@ export function CommunityTemplateRequest({
 
   return requestWithEvents.state === 'approved' ? null : (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className="mt-3">
+      <Card className="mt-3" data-testid="community-template-request">
         <CardRow className="flex flex-col gap-4">
           <div className="flex flex-row gap-2 items-center">
             <span className="text-base font-medium">{t('title')}</span>
             <Chip
+              data-testid="community-template-request-status"
               className={
                 requestWithEvents.state === 'rejected'
                   ? 'bg-warning/30 text-warning-foreground'
@@ -63,7 +64,11 @@ export function CommunityTemplateRequest({
               {t(`status.${requestWithEvents.state}`)}
             </Chip>
             <CollapsibleTrigger asChild>
-              <Button className="ml-auto" variant="ghost">
+              <Button
+                className="ml-auto"
+                variant="ghost"
+                data-testid="community-template-request-toggle"
+              >
                 {isOpen ? <CaretUpIcon /> : <CaretDownIcon />}
               </Button>
             </CollapsibleTrigger>
@@ -71,7 +76,12 @@ export function CommunityTemplateRequest({
           <CollapsibleContent className="flex flex-col gap-4">
             <div className="flex flex-row gap-4">
               {canResubmit && (
-                <Button type="button" onClick={handleResubmit} disabled={isResubmitting}>
+                <Button
+                  type="button"
+                  onClick={handleResubmit}
+                  disabled={isResubmitting}
+                  data-testid="community-template-request-resubmit"
+                >
                   <PaperPlaneRightIcon />
                   {t('actions.resubmit')}
                 </Button>
@@ -79,7 +89,7 @@ export function CommunityTemplateRequest({
               <CommunityTemplateMessageDialog
                 onSendMessage={onSendMessage}
                 trigger={
-                  <Button type="button">
+                  <Button type="button" data-testid="community-template-request-message-editor">
                     <ChatTextIcon />
                     {t('actions.message-editor')}
                   </Button>

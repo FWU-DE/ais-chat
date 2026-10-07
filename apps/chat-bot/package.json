@@ -15,7 +15,7 @@
     "e2e:api:ui": "dotenvx run -f .env.local -- playwright test tests/api/ --ui",
     "e2e:headed": "dotenvx run -f .env.local -- playwright test --headed",
     "e2e:smoke": "NODE_OPTIONS=--experimental-require-module dotenvx run -f .env.local -- playwright test --grep @smoke --project chromium --project \"api test\"",
-    "e2e:ui": "dotenvx run -f .env.local -- playwright test --ui",
+    "e2e:ui": "DEBUG=pw:api,pw:webserver dotenvx run -f .env.local -- playwright test --ui",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "k6:build": "node e2e/load_test/esbuild.k6.config.mjs",
