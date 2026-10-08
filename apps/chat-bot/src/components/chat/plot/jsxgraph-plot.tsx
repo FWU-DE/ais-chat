@@ -4,9 +4,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import JXG from 'jsxgraph';
 import { logError, logWarning } from '@shared/logging/logging';
 import { applyInteractionOptions, createBoard, type ViewState } from './jsxgraph-board';
+import { registerLivePlot, releaseOverflow, type LivePlot } from './live-plots';
 import { PlotFrame } from './plot-frame';
 import { getSliderDefinitions } from './slider-definitions';
 import type { PlotSpec } from '@/utils/plot/plot-spec';
+
+const ACTIVATE_DELAY_MS = 150;
 
 export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -18,8 +21,42 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
   const sliders = useMemo(() => getSliderDefinitions(spec.elements), [spec]);
   const [sliderValues, setSliderValues] = useState(() => sliders.map((slider) => slider.start));
   const sliderValuesRef = useRef(sliderValues);
+  const [isActive, setIsActive] = useState(false);
   const [resetCount, setResetCount] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [livePlot] = useState<LivePlot>(() => ({
+    isVisible: false,
+    lastSeen: 0,
+    release: () => setIsActive(false),
+  }));
+
+  // Boards are expensive: build them shortly after the plot scrolls into view and drop
+  // the least recently seen ones once more than a few are alive.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container === null) {
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        livePlot.isVisible = entry?.isIntersecting === true;
+        livePlot.lastSeen = Date.now();
+        clearTimeout(timer);
+        if (livePlot.isVisible) {
+          timer = setTimeout(() => setIsActive(true), ACTIVATE_DELAY_MS);
+        } else {
+          releaseOverflow();
+        }
+      },
+      { rootMargin: '300px' },
+    );
+    observer.observe(container);
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [livePlot]);
 
   // A new spec invalidates the remembered view. Declared before the board effect so it runs first.
   useEffect(() => {
@@ -28,7 +65,7 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
 
   useEffect(() => {
     const container = containerRef.current;
-    if (container === null) {
+    if (container === null || !isActive) {
       return;
     }
 
@@ -47,6 +84,7 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
     );
     setSliderRef.current = setSlider;
     boardRef.current = board;
+    const unregister = registerLivePlot(livePlot);
 
     const resizeObserver = new ResizeObserver(() => {
       if (boardDiv.clientWidth > 0 && boardDiv.clientHeight > 0) {
@@ -70,12 +108,13 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
         viewStateRef.current = undefined;
       }
       discardViewRef.current = false;
+      unregister();
       JXG.JSXGraph.freeBoard(board);
       container.replaceChildren();
     };
     // isFullscreen is read for the initial pan/zoom options only; the sync effect below handles changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spec, resetCount]);
+  }, [spec, isActive, livePlot, resetCount]);
 
   // Keep pan/zoom interaction options in sync without rebuilding the board.
   useEffect(() => {
