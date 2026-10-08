@@ -51,11 +51,8 @@ export function CommunityTemplateRequest({
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card className="mt-3">
         <CardRow className="flex flex-col gap-4">
-          <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className="flex flex-row gap-2 items-center outline-none focus-visible:ring-offset-3 focus-visible:ring-2 focus-visible:ring-ring/50 rounded-lg"
-            >
+          <CollapsibleTrigger>
+            <div className="flex flex-row gap-2 items-center">
               <span className="text-base font-medium">{t('title')}</span>
               <Chip
                 className={
@@ -67,7 +64,7 @@ export function CommunityTemplateRequest({
                 {t(`status.${requestWithEvents.state}`)}
               </Chip>
               <span className="ml-auto">{isOpen ? <CaretUpIcon /> : <CaretDownIcon />}</span>
-            </button>
+            </div>
           </CollapsibleTrigger>
           <CollapsibleContent className="flex flex-col gap-4">
             <div className="flex flex-row gap-4">
