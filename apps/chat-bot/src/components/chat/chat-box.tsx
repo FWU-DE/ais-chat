@@ -137,7 +137,7 @@ export function ChatBox({
     allFiles !== undefined || userWebSources.length > 0 || AiActivity !== null ? 'm-0 mt-4' : 'm-4';
 
   const maybeShowMessageIcons =
-    isLastNonUser && status !== 'streaming' ? (
+    message.role === 'assistant' && (!isLastNonUser || status !== 'streaming') ? (
       <MessageActions
         message={message}
         status={status}
@@ -148,6 +148,12 @@ export function ChatBox({
         isSpeechModelEnabled={isSpeechModelEnabled}
         showActivityDialog={showActivityDialog}
         activitySteps={activitySteps}
+        isLastMessage={isLastNonUser}
+        className={cn(
+          // Older messages reveal their actions on hover/focus, but stay visible on touch devices.
+          !isLastNonUser &&
+            'transition-opacity pointer-fine:opacity-0 pointer-fine:pointer-events-none pointer-fine:group-hover/message:opacity-100 pointer-fine:group-hover/message:pointer-events-auto pointer-fine:focus-within:opacity-100 pointer-fine:focus-within:pointer-events-auto',
+        )}
       />
     ) : null;
 
@@ -156,7 +162,7 @@ export function ChatBox({
   return (
     <>
       {AiActivity}
-      <div key={index} className={cn('w-full', userClassName, margin)}>
+      <div key={index} className={cn('w-full group/message', userClassName, margin)}>
         <div aria-label={`${message.role} message ${Math.floor(index / 2 + 1)}`}>
           <div className={cn('flex min-w-0', isAtLeast.sm ? 'flex-row' : 'flex-col')}>
             {message.role === 'assistant' && assistantIcon}

@@ -1,5 +1,6 @@
 import { type AiActivityStep } from '@/types/ai-activity';
 import { type ChatStatus, type UIMessage } from '@/types/chat';
+import { cn } from '@/utils/tailwind';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
 import CopyToClipboardButton from '../common/clipboard-button';
@@ -18,6 +19,8 @@ export function MessageActions({
   isSpeechModelEnabled,
   showActivityDialog,
   activitySteps,
+  isLastMessage,
+  className,
 }: {
   message: UIMessage;
   status: ChatStatus;
@@ -28,11 +31,13 @@ export function MessageActions({
   isSpeechModelEnabled: boolean;
   showActivityDialog?: boolean;
   activitySteps: AiActivityStep[];
+  isLastMessage: boolean;
+  className?: string;
 }) {
   const tCommon = useTranslations('common');
 
   return (
-    <div className="flex items-center gap-1 mt-1">
+    <div className={cn('flex items-center gap-1 mt-1', className)}>
       <CopyToClipboardButton
         text={message.content}
         className="size-5"
@@ -40,24 +45,28 @@ export function MessageActions({
         title={tCommon('message-copy')}
         aria-label={tCommon('message-copy')}
       />
-      {status === 'ready' && conversationId !== undefined && message.id !== 'initial-message' && (
-        <DownloadConversationMessageButton
-          conversationId={conversationId}
-          messageId={message.id}
-          characterName={characterName}
-        />
+      {conversationId !== undefined &&
+        message.id !== 'initial-message' &&
+        (!isLastMessage || status === 'ready') && (
+          <DownloadConversationMessageButton
+            conversationId={conversationId}
+            messageId={message.id}
+            characterName={characterName}
+          />
+        )}
+      {isLastMessage && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          type="button"
+          title={tCommon('regenerate-message')}
+          onClick={() => regenerateMessage()}
+          aria-label="Reload"
+          className="text-primary"
+        >
+          <ReloadIcon className="size-5 text-primary" />
+        </Button>
       )}
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        type="button"
-        title={tCommon('regenerate-message')}
-        onClick={() => regenerateMessage()}
-        aria-label="Reload"
-        className="text-primary"
-      >
-        <ReloadIcon className="size-5 text-primary" />
-      </Button>
       <SpeechButton
         text={message.content}
         generateSpeechFn={generateSpeechFn}
