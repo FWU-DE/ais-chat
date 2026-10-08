@@ -1,23 +1,23 @@
 'use client';
 
+import { useToast } from '@/components/common/toast';
 import { CommunityTemplateRequestMutationResult } from '@/hooks/use-community-template-request';
-import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
-import { Chip } from '@ui/components/chip';
-import { useTranslations } from 'next-intl';
-import { Card, CardRow } from '@ui/components/card';
-import { CommunityTemplateRequestEvent } from './community-template-request-event';
-import { Button } from '@ui/components/button';
-import { ScrollArea } from '@ui/components/scroll-area';
 import {
   CaretDownIcon,
   CaretUpIcon,
   ChatTextIcon,
   PaperPlaneRightIcon,
 } from '@phosphor-icons/react';
-import { useToast } from '@/components/common/toast';
+import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
+import { Button } from '@ui/components/button';
+import { Card, CardRow } from '@ui/components/card';
+import { Chip } from '@ui/components/chip';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui/components/collapsible';
+import { ScrollArea } from '@ui/components/scroll-area';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { CommunityTemplateMessageDialog } from './community-template-message-dialog';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui/components/collapsible';
+import { CommunityTemplateRequestEvent } from './community-template-request-event';
 
 type CommunityTemplateRequestProps = {
   requestWithEvents: CommunityTemplateRequestWithEvents;
@@ -51,23 +51,21 @@ export function CommunityTemplateRequest({
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card className="mt-3">
         <CardRow className="flex flex-col gap-4">
-          <div className="flex flex-row gap-2 items-center">
-            <span className="text-base font-medium">{t('title')}</span>
-            <Chip
-              className={
-                requestWithEvents.state === 'rejected'
-                  ? 'bg-warning/30 text-warning-foreground'
-                  : ''
-              }
-            >
-              {t(`status.${requestWithEvents.state}`)}
-            </Chip>
-            <CollapsibleTrigger asChild>
-              <Button className="ml-auto" variant="ghost">
-                {isOpen ? <CaretUpIcon /> : <CaretDownIcon />}
-              </Button>
-            </CollapsibleTrigger>
-          </div>
+          <CollapsibleTrigger>
+            <div className="flex flex-row gap-2 items-center">
+              <span className="text-base font-medium">{t('title')}</span>
+              <Chip
+                className={
+                  requestWithEvents.state === 'rejected'
+                    ? 'bg-warning/30 text-warning-foreground'
+                    : ''
+                }
+              >
+                {t(`status.${requestWithEvents.state}`)}
+              </Chip>
+              <span className="ml-auto">{isOpen ? <CaretUpIcon /> : <CaretDownIcon />}</span>
+            </div>
+          </CollapsibleTrigger>
           <CollapsibleContent className="flex flex-col gap-4">
             <div className="flex flex-row gap-4">
               {canResubmit && (
@@ -86,7 +84,7 @@ export function CommunityTemplateRequest({
                 }
               />
             </div>
-            <ScrollArea className="max-h-40">
+            <ScrollArea className="max-h-96">
               <ul className="flex flex-col gap-6 pr-4">
                 {requestWithEvents.events.map((event) => (
                   <li key={event.id}>

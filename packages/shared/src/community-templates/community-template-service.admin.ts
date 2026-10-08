@@ -23,6 +23,7 @@ export type CommunityTemplateRequestSummary = CommunityTemplateRequestSelectMode
   entityType: EntityType;
   latestEventCreatedAt: Date;
   latestEventCreatedByRole: z.infer<typeof templateRequestCreatorRoleSchema>;
+  latestEventCreatedByName: string | null;
 };
 
 export type CommunityTemplateRequestWithEventsAdmin = CommunityTemplateRequestSelectModel & {
@@ -94,6 +95,7 @@ export function mapRequestRowsToSummaries(
       request: CommunityTemplateRequestSelectModel;
       latestEventCreatedAt: Date;
       latestEventCreatedByRole: z.infer<typeof templateRequestCreatorRoleSchema>;
+      latestEventCreatedByName: string | null;
     }
   >,
 ): CommunityTemplateRequestSummary[] {
@@ -102,6 +104,7 @@ export function mapRequestRowsToSummaries(
     ...resolveEntityNameAndType(row.request, row),
     latestEventCreatedAt: row.latestEventCreatedAt,
     latestEventCreatedByRole: row.latestEventCreatedByRole,
+    latestEventCreatedByName: row.latestEventCreatedByName,
   }));
 }
 

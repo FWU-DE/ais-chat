@@ -1,7 +1,5 @@
 'use client';
 
-import { type ReactElement, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/common/toast';
 import { CommunityTemplateRequestMutationResult } from '@/hooks/use-community-template-request';
 import { Button } from '@ui/components/button';
@@ -15,6 +13,8 @@ import {
   DialogTrigger,
 } from '@ui/components/dialog';
 import { Textarea } from '@ui/components/textarea';
+import { useTranslations } from 'next-intl';
+import { type ReactElement, useState } from 'react';
 
 type CommunityTemplateMessageDialogProps = {
   trigger: ReactElement;
@@ -68,7 +68,7 @@ export function CommunityTemplateMessageDialog({
           required
           aria-required
           disabled={isSending}
-          className="min-h-32"
+          className="min-h-32 max-h-[50vh] overflow-y-auto"
         />
         <DialogFooter>
           <DialogClose asChild>

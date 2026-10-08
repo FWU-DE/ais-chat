@@ -76,7 +76,7 @@
       "title": "Community-Freigabe bestätigen",
       "description": "Damit alle geteilten Inhalte in der Community hilfreich, hochwertig und rechtlich unbedenklich bleiben, sind vor dem Teilen die folgenden Kriterien sorgfältig zu prüfen und per Checkbox zu bestätigen.",
       "cancel": "Abbrechen",
-      "accept": "Akzeptieren",
+      "accept": "Einreichen",
       "sections": {
         "copyright": "Urheberrecht",
         "personal-data": "Personenbezogene oder ‑beziehbare Daten",
