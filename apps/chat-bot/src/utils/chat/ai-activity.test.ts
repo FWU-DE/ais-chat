@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import type { ToolRegistration } from '@/app/api/chat/tools/types';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import { describe, expect, it, vi } from 'vitest';
 import {
   createAiActivityCollector,
   parseJsonRecord,
@@ -8,7 +9,6 @@ import {
   toLinks,
   truncate,
 } from './ai-activity';
-import type { ToolRegistration } from '@/app/api/chat/tools/types';
 
 const toolCall: ToolCall = {
   id: 'call-1',
@@ -128,6 +128,48 @@ describe('createAiActivityCollector', () => {
       { kind: 'done' },
       { kind: 'done' },
     ]);
+  });
+
+  it('hides retrieved file names when configured for shared chats', () => {
+    const retrieveFileCall: ToolCall = {
+      id: 'call-file',
+      name: 'retrieve_entire_file',
+      arguments: '{"fileName":"private.pdf"}',
+    };
+    const toolRegistry = {
+      retrieve_entire_file: {
+        definition: { name: 'retrieve_entire_file', description: '', parameters: {} },
+        handler: vi.fn(),
+        activity: {
+          createStep: (call: ToolCall) => ({
+            kind: 'tool' as const,
+            id: call.id,
+            tool: 'retrieve_entire_file' as const,
+            detail: 'private.pdf',
+          }),
+        },
+      },
+    } satisfies Record<string, ToolRegistration>;
+
+    const defaultCollector = createAiActivityCollector(toolRegistry);
+    const sharedCollector = createAiActivityCollector(toolRegistry, { hideSensitiveDetails: true });
+
+    defaultCollector.addToolCalls([retrieveFileCall]);
+    sharedCollector.addToolCalls([retrieveFileCall]);
+
+    expect(defaultCollector.getSteps()[0]).toMatchObject({
+      kind: 'tool',
+      id: 'call-file',
+      tool: 'retrieve_entire_file',
+      detail: 'private.pdf',
+    });
+    expect(sharedCollector.getSteps()[0]).toMatchObject({
+      kind: 'tool',
+      id: 'call-file',
+      tool: 'retrieve_entire_file',
+    });
+    const sharedStep = sharedCollector.getSteps()[0];
+    expect(sharedStep?.kind === 'tool' ? sharedStep.detail : undefined).toBeUndefined();
   });
 
   it('ignores calls without registered activity and handles activity without result enrichment', () => {

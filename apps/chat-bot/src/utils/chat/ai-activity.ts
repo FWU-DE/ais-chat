@@ -1,10 +1,11 @@
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import type { ToolRegistration } from '@/app/api/chat/tools/types';
 import {
   type AiActivityLink,
   type AiActivityStep,
   type AiActivityToolStep,
 } from '@/types/ai-activity';
+import { TOOL_NAMES } from '@/types/tool-names';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 
 const MAX_DETAIL_LENGTH = 300;
 const MAX_LINKS = 10;
@@ -71,7 +72,14 @@ export function toLinks(entries: unknown): AiActivityLink[] | undefined {
   return links.length > 0 ? links : undefined;
 }
 
-export function createAiActivityCollector(toolRegistry: Record<string, ToolRegistration>) {
+export type AiActivityOptions = {
+  hideSensitiveDetails?: boolean;
+};
+
+export function createAiActivityCollector(
+  toolRegistry: Record<string, ToolRegistration>,
+  { hideSensitiveDetails = false }: AiActivityOptions = {},
+) {
   const steps: AiActivityStep[] = [];
   const stepsById = new Map<string, AiActivityToolStep>();
   let hasToolActivity = false;
@@ -89,7 +97,16 @@ export function createAiActivityCollector(toolRegistry: Record<string, ToolRegis
     addToolCalls(toolCalls: ToolCall[]): boolean {
       const toolSteps = toolCalls.flatMap((toolCall) => {
         const activity = toolRegistry[toolCall.name]?.activity;
-        return activity === undefined ? [] : [activity.createStep(toolCall)];
+        if (activity === undefined) {
+          return [];
+        }
+
+        const step = activity.createStep(toolCall);
+        return [
+          hideSensitiveDetails && step.tool === TOOL_NAMES.retrieveEntireFile
+            ? { ...step, detail: undefined }
+            : step,
+        ];
       });
 
       if (toolSteps.length === 0) {

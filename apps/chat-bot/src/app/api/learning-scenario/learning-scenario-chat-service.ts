@@ -1,46 +1,46 @@
+import { getUserAndContextByUserId } from '@/auth/utils';
+import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
+import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
+import { sendRabbitmqEvent } from '@/rabbitmq/send';
+import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
+import { createTextStream } from '@/utils/streaming';
+import { checkProductAccess } from '@/utils/vidis/access';
 import {
-  TokenPointsExceededError,
-  SharedChatExpiredError,
-  runAgentLoop,
   ResponsibleAIError,
+  SharedChatExpiredError,
+  TokenPointsExceededError,
+  runAgentLoop,
   type TokenUsage,
 } from '@ais-chat/ai-core';
-import { NotFoundError } from '@shared/error';
-import { createTextStream } from '@/utils/streaming';
-import { createAiActivityStream } from '../chat/ai-activity-stream';
-import { getUserAndContextByUserId } from '@/auth/utils';
-import { checkProductAccess } from '@/utils/vidis/access';
-import { getModelAndApiKeyWithResult, getSafetyModel } from '../utils/utils';
-import { getChatModelSelection } from '../utils/model-circuit-breaker';
+import { dbGetRelatedLearningScenarioFiles } from '@shared/db/functions/files';
 import {
   dbGetLearningScenarioByIdAndInviteCode,
   dbUpdateTokenUsageBySharedLearningScenarioId,
 } from '@shared/db/functions/learning-scenario';
-import { dbGetRelatedLearningScenarioFiles } from '@shared/db/functions/files';
-import { sendRabbitmqEvent } from '@/rabbitmq/send';
-import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
-import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
-import { constructLearningScenarioSystemPrompt } from './system-prompt';
-import {
-  convertToAiCoreMessages,
-  getMostRecentUserMessage,
-  limitChatHistory,
-  annotateMessageAttachmentNames,
-} from '../chat/utils';
+import { NotFoundError } from '@shared/error';
 import { logError } from '@shared/logging';
-import { buildTools } from '../chat/build-tools';
-import { isWebSearchEnabledForEntity } from '../chat/websearch';
-import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
-import { ingestWebContent } from '../rag/ingestWebContent';
-import { resolveAgentNameForTracing } from '../utils/agent-name';
-import { extractUrls } from '../utils/extract-urls';
-import { prepareAgentMessages } from '../chat/prepare-agent-messages';
-import { combineSharedRelatedFiles } from '../shared-chat/shared-chat-file-service';
 import {
   sharedChatHasExpired,
   sharedLearningScenarioChatHasReachedTokenPointsLimit,
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
+import { createAiActivityStream } from '../chat/ai-activity-stream';
+import { buildTools } from '../chat/build-tools';
+import { prepareAgentMessages } from '../chat/prepare-agent-messages';
+import {
+  annotateMessageAttachmentNames,
+  convertToAiCoreMessages,
+  getMostRecentUserMessage,
+  limitChatHistory,
+} from '../chat/utils';
+import { isWebSearchEnabledForEntity } from '../chat/websearch';
+import { ingestWebContent } from '../rag/ingestWebContent';
+import { combineSharedRelatedFiles } from '../shared-chat/shared-chat-file-service';
+import { resolveAgentNameForTracing } from '../utils/agent-name';
+import { extractUrls } from '../utils/extract-urls';
+import { getChatModelSelection } from '../utils/model-circuit-breaker';
+import { getModelAndApiKeyWithResult, getSafetyModel } from '../utils/utils';
+import { constructLearningScenarioSystemPrompt } from './system-prompt';
 
 /**
  * Server Action to send a learning scenario message and stream the response.
@@ -188,7 +188,9 @@ export async function sendLearningScenarioMessage({
     isCalculatorEnabled: teacherUserAndContext.federalState.featureToggles.isCalculatorEnabled,
   });
 
-  const aiActivity = createAiActivityStream(update, tools.toolRegistry);
+  const aiActivity = createAiActivityStream(update, tools.toolRegistry, {
+    hideSensitiveDetails: true,
+  });
 
   // Build system prompt
   const systemPrompt = constructLearningScenarioSystemPrompt({

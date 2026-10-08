@@ -1,35 +1,34 @@
 'use client';
 
-import { ReactNode, RefObject, SyntheticEvent, useEffect, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
-import ExpiredChatModal from '@/components/common/expired-chat-modal';
-import { SharedChatHeader } from '@/components/chat/shared-header-bar';
-import { InitialChatContentDisplay } from '@/components/chat/initial-content-display';
 import { ChatInputBox } from '@/components/chat/chat-input-box';
-import { FloatingText } from '../chat/floating-text';
-import { Messages } from '../chat/messages';
-import StreamingFinishedMarker from '../chat/streaming-finished-marker';
-import { useAutoScroll } from '@/hooks/use-auto-scroll';
-import {
-  calculateShareSessionState,
-  ShareSessionState,
-} from '@shared/sharing/calculate-share-session-state';
-import { logError } from '@shared/logging';
-import type { UseChatReturn } from '@/hooks/use-chat-hooks';
-import { SharedChatExpiredError, TokenPointsExceededError } from '@ais-chat/ai-core/errors';
+import { InitialChatContentDisplay } from '@/components/chat/initial-content-display';
+import { SharedChatHeader } from '@/components/chat/shared-header-bar';
+import ExpiredChatModal from '@/components/common/expired-chat-modal';
 import { getErrorMessageByType } from '@/error/get-error-message-by-type';
-import { ErrorChatPlaceholder } from '../chat/error-chat-placeholder';
-import { LocalFileState } from '../chat/send-message-form';
+import { useAutoScroll } from '@/hooks/use-auto-scroll';
+import type { UseChatReturn } from '@/hooks/use-chat-hooks';
 import { getFileExtension, isImageFile } from '@/utils/files/generic';
-import { PendingFileModel } from '../chat/messages';
+import { getSharedChatImageUrl } from '@/utils/shared-chat-files';
 import {
   clearSharedChat,
   loadSharedChat,
   newSharedChatSessionId,
   saveSharedChat,
 } from '@/utils/shared-chat-storage';
-import { getSharedChatImageUrl } from '@/utils/shared-chat-files';
+import { SharedChatExpiredError, TokenPointsExceededError } from '@ais-chat/ai-core/errors';
+import { logError } from '@shared/logging';
 import { cnanoid } from '@shared/random/randomService';
+import {
+  calculateShareSessionState,
+  ShareSessionState,
+} from '@shared/sharing/calculate-share-session-state';
+import { useTranslations } from 'next-intl';
+import { ReactNode, RefObject, SyntheticEvent, useEffect, useRef, useState } from 'react';
+import { ErrorChatPlaceholder } from '../chat/error-chat-placeholder';
+import { FloatingText } from '../chat/floating-text';
+import { Messages, PendingFileModel } from '../chat/messages';
+import { LocalFileState } from '../chat/send-message-form';
+import StreamingFinishedMarker from '../chat/streaming-finished-marker';
 
 type ShareSessionInput = Parameters<typeof calculateShareSessionState>[0];
 type Translator = ReturnType<typeof useTranslations>;

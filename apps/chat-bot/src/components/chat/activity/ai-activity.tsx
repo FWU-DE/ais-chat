@@ -1,5 +1,8 @@
 'use client';
 
+import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
+import { truncate } from '@/utils/chat/ai-activity';
+import { cn } from '@/utils/tailwind';
 import {
   BooksIcon,
   CalculatorIcon,
@@ -12,8 +15,6 @@ import {
   SparkleIcon,
   type Icon,
 } from '@phosphor-icons/react';
-import { useTranslations } from 'next-intl';
-import { useState } from 'react';
 import { Button } from '@ui/components/button';
 import {
   Dialog,
@@ -22,9 +23,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@ui/components/dialog';
-import { truncate } from '@/utils/chat/ai-activity';
-import { cn } from '@/utils/tailwind';
-import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 
 const TOOL_ICONS: Record<AiActivityToolName, Icon> = {
   web_search: MagnifyingGlassIcon,
