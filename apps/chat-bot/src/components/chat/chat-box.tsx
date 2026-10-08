@@ -32,7 +32,6 @@ export function ChatBox({
   showActivityDialog,
   generateSpeechFn,
   isSpeechModelEnabled,
-  hideFileName,
 }: {
   assistantIcon?: ReactNode;
   message: UIMessage;
@@ -49,7 +48,6 @@ export function ChatBox({
   showActivityDialog?: boolean;
   generateSpeechFn: (text: string) => Promise<Blob>;
   isSpeechModelEnabled: boolean;
-  hideFileName?: boolean;
 }) {
   const { isAtLeast } = useBreakpoints();
 
@@ -132,11 +130,7 @@ export function ChatBox({
 
   const AiActivity =
     activitySteps.length > 0 && !showActivityDialog && !(isLoading && isLastNonUser) ? (
-      <AiActivityPanel
-        steps={activitySteps}
-        panelId={`assistant-ai-activity-${message.id}`}
-        hideFileName={hideFileName}
-      />
+      <AiActivityPanel steps={activitySteps} panelId={`assistant-ai-activity-${message.id}`} />
     ) : null;
 
   const margin =

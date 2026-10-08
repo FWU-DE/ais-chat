@@ -75,16 +75,8 @@ function StepIcon({ step }: { step: AiActivityStep }) {
   return <ToolIcon className="size-4" />;
 }
 
-function StepDetail({
-  step,
-  hideFileName,
-}: {
-  step: Extract<AiActivityStep, { kind: 'tool' }>;
-  hideFileName?: boolean;
-}) {
-  const visibleDetail = truncate(
-    hideFileName && step.tool === 'retrieve_entire_file' ? undefined : step.detail,
-  );
+function StepDetail({ step }: { step: Extract<AiActivityStep, { kind: 'tool' }> }) {
+  const visibleDetail = truncate(step.detail);
   const visibleResult = truncate(step.result);
   const text =
     visibleDetail === undefined
@@ -110,15 +102,7 @@ function AnalysisSummaryContent({ content }: { content: string }) {
   return <p className="whitespace-pre-wrap text-sm text-black/70">{content}</p>;
 }
 
-function ActivityStep({
-  step,
-  isLast,
-  hideFileName,
-}: {
-  step: AiActivityStep;
-  isLast: boolean;
-  hideFileName?: boolean;
-}) {
+function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean }) {
   const t = useTranslations('ai-activity');
   const links = step.kind === 'tool' ? (step.links ?? []) : [];
 
@@ -134,7 +118,7 @@ function ActivityStep({
       <div className={cn('flex min-w-0 flex-1 flex-col gap-2 pt-1', isLast ? 'pb-0' : 'pb-4')}>
         <div className="flex flex-wrap items-baseline gap-2">
           <span className="text-sm font-medium text-black">{getAiActivityStepTitle(step, t)}</span>
-          {step.kind === 'tool' && <StepDetail step={step} hideFileName={hideFileName} />}
+          {step.kind === 'tool' && <StepDetail step={step} />}
         </div>
 
         {step.kind === 'analysis-summary' && <AnalysisSummaryContent content={step.content} />}
@@ -164,13 +148,7 @@ function ActivityStep({
   );
 }
 
-export function ActivityStepList({
-  steps,
-  hideFileName = false,
-}: {
-  steps: AiActivityStep[];
-  hideFileName?: boolean;
-}) {
+export function ActivityStepList({ steps }: { steps: AiActivityStep[] }) {
   // Since the raw reasoning is never shown in the step 'analysis' and also not saved in the DB
   // it should not be displayed in the ai activity panel does not make sense, only the summary step should be shown, if summary exists
   const displaySteps = steps.filter((step) => step.kind !== 'analysis');
@@ -186,20 +164,13 @@ export function ActivityStepList({
           key={step.kind === 'tool' ? step.id : `${step.kind}-${index}`}
           step={step}
           isLast={index === displaySteps.length - 1}
-          hideFileName={hideFileName}
         />
       ))}
     </ul>
   );
 }
 
-export function AiActivityDialog({
-  steps,
-  hideFileName = false,
-}: {
-  steps: AiActivityStep[];
-  hideFileName?: boolean;
-}) {
+export function AiActivityDialog({ steps }: { steps: AiActivityStep[] }) {
   const t = useTranslations('ai-activity');
 
   if (steps.every((step) => step.kind === 'analysis')) {
@@ -224,22 +195,14 @@ export function AiActivityDialog({
           <DialogTitle>{t('title')}</DialogTitle>
         </DialogHeader>
         <div className="min-h-0 overflow-y-auto">
-          <ActivityStepList steps={steps} hideFileName={hideFileName} />
+          <ActivityStepList steps={steps} />
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-export function AiActivityPanel({
-  steps,
-  panelId,
-  hideFileName = false,
-}: {
-  steps: AiActivityStep[];
-  panelId: string;
-  hideFileName?: boolean;
-}) {
+export function AiActivityPanel({ steps, panelId }: { steps: AiActivityStep[]; panelId: string }) {
   const t = useTranslations('ai-activity');
   const [isOpen, setIsOpen] = useState(false);
 
@@ -269,7 +232,7 @@ export function AiActivityPanel({
           id={panelId}
           className="w-full overflow-hidden rounded-xl border border-border bg-white p-4"
         >
-          <ActivityStepList steps={steps} hideFileName={hideFileName} />
+          <ActivityStepList steps={steps} />
         </div>
       )}
     </div>

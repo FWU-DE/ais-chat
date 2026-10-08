@@ -1,5 +1,6 @@
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { createAiActivityCollector } from '@/utils/chat/ai-activity';
+import type { AiActivityOptions } from '@/utils/chat/ai-activity';
 import { encodeChatStreamEvent } from '@/utils/streaming';
 import type { ToolRegistration } from './tools/types';
 
@@ -10,8 +11,9 @@ import type { ToolRegistration } from './tools/types';
 export function createAiActivityStream(
   update: (chunk: string) => void,
   toolRegistry: Record<string, ToolRegistration>,
+  options?: AiActivityOptions,
 ) {
-  const collector = createAiActivityCollector(toolRegistry);
+  const collector = createAiActivityCollector(toolRegistry, options);
 
   function publish() {
     update(encodeChatStreamEvent({ type: 'ai_activity', steps: collector.getSteps() }));

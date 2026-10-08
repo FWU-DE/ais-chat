@@ -387,7 +387,6 @@ export default function GenericSharedChat({
                 showActivityDialog={showActivityDialog}
                 generateSpeechFn={generateSpeechFn}
                 isSpeechModelEnabled={isSpeechModelEnabled}
-                hideFileName
               />
             )}
             {/* If there is a TokenPointsExceededError or SharedChatExpiredError we show a dialog instead */}
