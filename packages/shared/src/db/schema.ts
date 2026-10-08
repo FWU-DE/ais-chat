@@ -168,7 +168,6 @@ export const conversationMessageTable = pgTable(
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp('deleted_at', { mode: 'date', withTimezone: true }),
     parameters: json('parameters').$type<ConversationMessageParameters>(),
-    webSearchResults: json('web_search_results').$type<ConversationMessageWebSearchResult[]>(),
     toolCalls: json('tool_calls').$type<ToolCall[]>(),
     toolCallId: text('tool_call_id'),
     reasoningSummary: text('reasoning_summary'),
@@ -706,10 +705,16 @@ export const imageGenerationConfigSchema = z.object({
 
 export type ImageGenerationConfig = z.infer<typeof imageGenerationConfigSchema>;
 
-export const speechConfigSchema = z.object({
-  voices: z.array(z.string()),
+export const speechVoiceSchema = z.object({
+  name: z.string().trim().min(1),
+  displayName: z.string().trim().min(1),
 });
 
+export const speechConfigSchema = z.object({
+  voices: z.array(speechVoiceSchema),
+});
+
+export type SpeechVoice = z.infer<typeof speechVoiceSchema>;
 export type SpeechConfig = z.infer<typeof speechConfigSchema>;
 
 export const llmModelTable = pgTable(

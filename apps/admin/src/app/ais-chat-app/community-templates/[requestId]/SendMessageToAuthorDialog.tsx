@@ -42,7 +42,7 @@ export default function SendMessageToAuthorDialog({
       content={
         <Textarea
           ref={focusMessageTextarea}
-          className="h-30"
+          className="min-h-30 max-h-[50vh] overflow-y-auto"
           aria-label="Nachricht an Autor/Autorin"
           value={message}
           onChange={(event) => setMessage(event.target.value)}

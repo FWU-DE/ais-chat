@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { decodeChatStreamEvent, readTextStream } from '@/utils/streaming';
-import type { WebSearchResult } from '@shared/db/schema';
 import type { AiActivityStep } from '@/types/ai-activity';
 import {
   deserializeError,
@@ -138,7 +137,6 @@ export function useAisChat({
 
         // We need to handle the first chunk separately to avoid missing content
         let firstChunk = true;
-        let assistantWebSearchResults: WebSearchResult[] = result.webSearchResults ?? [];
         let assistantActivitySteps: AiActivityStep[] = [];
 
         const ensureAssistantMessage = () => {
@@ -150,7 +148,6 @@ export function useAisChat({
             id: result.messageId,
             role: 'assistant',
             content: '',
-            webSearchResults: assistantWebSearchResults,
             activitySteps: assistantActivitySteps.length > 0 ? assistantActivitySteps : undefined,
           };
 
@@ -167,30 +164,6 @@ export function useAisChat({
 
           if (content !== undefined && content !== null) {
             const streamEvent = decodeChatStreamEvent(content);
-
-            if (streamEvent?.type === 'web_search_results') {
-              assistantWebSearchResults = streamEvent.webSearchResults;
-
-              if (firstChunk) {
-                continue;
-              }
-
-              setMessages((prev) => {
-                const updated = [...prev];
-                const lastIdx = updated.length - 1;
-
-                if (updated[lastIdx]?.role === 'assistant') {
-                  updated[lastIdx] = {
-                    ...updated[lastIdx]!,
-                    webSearchResults: assistantWebSearchResults,
-                  };
-                }
-
-                return updated;
-              });
-
-              continue;
-            }
 
             if (streamEvent?.type === 'ai_activity') {
               assistantActivitySteps = streamEvent.steps;

@@ -22,6 +22,7 @@ function latestTemplateRequestEvent() {
       templateRequestId: CommunityTemplateRequestEventTable.templateRequestId,
       createdAt: CommunityTemplateRequestEventTable.createdAt,
       createdByRole: CommunityTemplateRequestEventTable.createdByRole,
+      createdByName: CommunityTemplateRequestEventTable.createdByName,
     })
     .from(CommunityTemplateRequestEventTable)
     .orderBy(
@@ -45,6 +46,7 @@ export async function dbGetCommunityTemplateRequestRows() {
       learningScenarioName: learningScenarioTable.name,
       latestEventCreatedAt: latestEvent.createdAt,
       latestEventCreatedByRole: latestEvent.createdByRole,
+      latestEventCreatedByName: latestEvent.createdByName,
     })
     .from(CommunityTemplateRequestTable)
     .leftJoin(assistantTable, eq(CommunityTemplateRequestTable.assistantId, assistantTable.id))

@@ -1,11 +1,11 @@
 'use client';
 
-import { ConfirmationDialog } from '@ui/components/dialog/confirmation-dialog';
-import { Button } from '@ui/components/button';
 import { PencilSimpleIcon } from '@phosphor-icons/react';
+import { TemplateRequestStatus } from '@shared/db/schema';
+import { Button } from '@ui/components/button';
+import { ConfirmationDialog } from '@ui/components/dialog/confirmation-dialog';
 import { Textarea } from '@ui/components/textarea';
 import { useCallback, useState } from 'react';
-import { TemplateRequestStatus } from '@shared/db/schema';
 
 export type RejectCommunityTemplateRequestDialogProps = {
   requestState: TemplateRequestStatus;
@@ -39,7 +39,7 @@ export default function RejectCommunityTemplateRequestDialog({
       content={
         <Textarea
           ref={focusMessageTextarea}
-          className="h-30"
+          className="min-h-30 max-h-[50vh] overflow-y-auto"
           aria-label="Nachricht an Autor/Autorin"
           data-testid="community-template-reject-message-input"
           value={message}

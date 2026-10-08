@@ -76,7 +76,7 @@
       "title": "Community-Freigabe bestätigen",
       "description": "Damit alle geteilten Inhalte in der Community hilfreich, hochwertig und rechtlich unbedenklich bleiben, sind vor dem Teilen die folgenden Kriterien sorgfältig zu prüfen und per Checkbox zu bestätigen.",
       "cancel": "Abbrechen",
-      "accept": "Akzeptieren",
+      "accept": "Einreichen",
       "sections": {
         "copyright": "Urheberrecht",
         "personal-data": "Personenbezogene oder ‑beziehbare Daten",
@@ -667,7 +667,11 @@
     },
     "speech": {
       "heading": "Sprachausgabe",
-      "heading-tooltip": "Falls aktiviert, können Antworten als Sprache ausgegeben werden."
+      "heading-tooltip": "Falls aktiviert, können Antworten als Sprache ausgegeben werden.",
+      "voice-label": "Stimme",
+      "voice-placeholder": "Stimme auswählen",
+      "voice-preview-label": "Stimme anhören",
+      "voice-preview-text": "Hallo, schön, dass du da bist. Wie kann ich dir heute helfen?"
     }
   },
   "assistants": {

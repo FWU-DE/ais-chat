@@ -35,4 +35,5 @@ export const sharedChatSpeechRequestSchema = z.object({
 
 export const speechRequestSchema = z.object({
   text: requiredNonEmptyString('text is required'),
+  voice: z.string().optional(),
 });

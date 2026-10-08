@@ -1,3 +1,8 @@
+import type {
+  CommunityTemplateRequestEventSelectModel,
+  CommunityTemplateRequestSelectModel,
+} from '@shared/db/schema';
+import { InvalidArgumentError, NotFoundError } from '@shared/error';
 import { describe, expect, it } from 'vitest';
 import {
   getApprovableStates,
@@ -7,11 +12,6 @@ import {
   resolveEntityNameAndType,
   resolveEntityReference,
 } from './community-template-service.admin';
-import { InvalidArgumentError, NotFoundError } from '@shared/error';
-import type {
-  CommunityTemplateRequestEventSelectModel,
-  CommunityTemplateRequestSelectModel,
-} from '@shared/db/schema';
 
 function buildRequest(
   overrides: Partial<CommunityTemplateRequestSelectModel> = {},
@@ -120,6 +120,7 @@ describe('mapRequestRowsToSummaries', () => {
         learningScenarioName: null,
         latestEventCreatedAt: new Date('2026-02-01T00:00:00Z'),
         latestEventCreatedByRole: 'user',
+        latestEventCreatedByName: null,
       },
     ]);
 
@@ -130,6 +131,7 @@ describe('mapRequestRowsToSummaries', () => {
         entityName: 'My Character',
         latestEventCreatedAt: new Date('2026-02-01T00:00:00Z'),
         latestEventCreatedByRole: 'user',
+        latestEventCreatedByName: null,
       },
     ]);
   });
@@ -145,6 +147,7 @@ describe('mapRequestRowsToSummaries', () => {
         learningScenarioName: null,
         latestEventCreatedAt: new Date('2026-02-01T00:00:00Z'),
         latestEventCreatedByRole: 'editor',
+        latestEventCreatedByName: 'Edith Editor',
       },
       {
         request: requestB,
@@ -153,6 +156,7 @@ describe('mapRequestRowsToSummaries', () => {
         learningScenarioName: 'Scenario B',
         latestEventCreatedAt: new Date('2026-02-02T00:00:00Z'),
         latestEventCreatedByRole: 'user',
+        latestEventCreatedByName: 'Edith Editor',
       },
     ]);
 

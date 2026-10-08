@@ -1,12 +1,12 @@
 'use client';
 
+import { mapEntityTypeToAbbreviation } from '@/utils/mapEntityTypeToLabel';
 import type { CommunityTemplateRequestSummary } from '@shared/community-templates/community-template-service.admin';
-import { ColumnDef } from '@tanstack/react-table';
-import { DataTableFeatures } from '@ui/components/data-table';
-import { Button } from '@ui/components/button';
-import { ArrowUpDownIcon } from 'lucide-react';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
-import { mapEntityTypeToLabel } from '@/utils/mapEntityTypeToLabel';
+import { ColumnDef } from '@tanstack/react-table';
+import { Button } from '@ui/components/button';
+import { DataTableFeatures } from '@ui/components/data-table';
+import { ArrowUpDownIcon } from 'lucide-react';
 
 export type CommunityTemplateRequestStatus = CommunityTemplateRequestSummary['state'];
 
@@ -52,25 +52,7 @@ export const columns: ColumnDef<DataTableFeatures, CommunityTemplateRequestSumma
       );
     },
     cell: ({ row }) => {
-      return mapEntityTypeToLabel(row.original.entityType);
-    },
-  },
-  {
-    accessorKey: 'createdAt',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="link"
-          className="p-0"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Erstellt am
-          <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => {
-      return formatDateToGermanTimestamp(row.original.createdAt);
+      return mapEntityTypeToAbbreviation(row.original.entityType);
     },
   },
   {
@@ -82,7 +64,7 @@ export const columns: ColumnDef<DataTableFeatures, CommunityTemplateRequestSumma
           className="p-0"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          Zuletzt aktualisiert
+          Zuletzt aktualisiert am
           <ArrowUpDownIcon className="ml-2 h-4 w-4" />
         </Button>
       );
@@ -92,7 +74,7 @@ export const columns: ColumnDef<DataTableFeatures, CommunityTemplateRequestSumma
     },
   },
   {
-    accessorKey: 'latestEventCreatedByRole',
+    accessorKey: 'latestEventCreatedByName',
     header: ({ column }) => {
       return (
         <Button
@@ -106,7 +88,10 @@ export const columns: ColumnDef<DataTableFeatures, CommunityTemplateRequestSumma
       );
     },
     cell: ({ row }) => {
-      return mapCreatedByRoleToLabel(row.original.latestEventCreatedByRole);
+      return buildCreatedByRoleAndNameLabel(
+        row.original.latestEventCreatedByRole,
+        row.original.latestEventCreatedByName,
+      );
     },
   },
   {
@@ -131,17 +116,13 @@ export const columns: ColumnDef<DataTableFeatures, CommunityTemplateRequestSumma
   },
 ];
 
-export function mapCreatedByRoleToLabel(
+export function buildCreatedByRoleAndNameLabel(
   createdByRole: CommunityTemplateRequestSummary['latestEventCreatedByRole'],
+  createdByName: CommunityTemplateRequestSummary['latestEventCreatedByName'],
 ) {
-  switch (createdByRole) {
-    case 'user':
-      return 'Benutzer';
-    case 'editor':
-      return 'Redakteur';
-    default:
-      return 'unbekannt';
-  }
+  if (createdByRole === 'user') return 'Benutzer';
+  if (createdByRole === 'editor' && createdByName) return `${createdByName} (Redakteur)`;
+  return 'unbekannt';
 }
 
 export function mapStateToLabel(status: CommunityTemplateRequestSummary['state']) {

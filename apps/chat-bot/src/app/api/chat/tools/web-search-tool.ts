@@ -1,4 +1,3 @@
-import type { WebSearchResult } from '@shared/db/schema';
 import { z } from 'zod';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
@@ -29,9 +28,7 @@ type BuildWebSearchToolParams = Pick<
   | 'assistantId'
   | 'conversationId'
   | 'webSearchSettings'
-> & {
-  onWebSearchResults?: (results: WebSearchResult[]) => void;
-};
+>;
 
 export async function buildWebSearchTool({
   user,
@@ -40,7 +37,6 @@ export async function buildWebSearchTool({
   assistantId,
   conversationId,
   webSearchSettings,
-  onWebSearchResults,
 }: BuildWebSearchToolParams): Promise<ToolRegistration | null> {
   const config = resolveWebSearchConfig({
     user,
@@ -99,8 +95,6 @@ export async function buildWebSearchTool({
       })),
       error: null,
     };
-
-    onWebSearchResults?.(results);
 
     if (results.length === 0) {
       response.error = 'No results found.';

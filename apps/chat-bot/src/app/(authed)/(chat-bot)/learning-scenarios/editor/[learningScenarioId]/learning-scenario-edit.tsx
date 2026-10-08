@@ -16,6 +16,7 @@ import {
   federalStatesSchema,
   languagesSchema,
   webSearchScopeSchema,
+  type SpeechVoice,
 } from '@shared/db/schema';
 import { BackButton } from '@/components/common/back-button';
 import { Card, CardContent } from '@ui/components/card';
@@ -81,6 +82,7 @@ import {
 import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
 import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
 import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
+import { resolveInitialVoice } from '@/components/custom-chat/speech/resolve-initial-voice';
 
 type LearningScenarioTranslator = ReturnType<typeof useTranslations<'learning-scenarios'>>;
 
@@ -134,6 +136,7 @@ function createLearningScenarioFormValuesSchema(t: LearningScenarioTranslator) {
     webSearchScope: webSearchScopeSchema,
     webSearchIncludedDomains: z.array(z.string()),
     isSpeechEnabled: z.boolean(),
+    voice: z.string(),
   });
 }
 
@@ -152,6 +155,7 @@ export function LearningScenarioEdit({
   budgetUsedBySharedChat,
   isWebSearchAvailable,
   isSpeechAvailable,
+  speechVoices,
 }: {
   learningScenario: LearningScenarioOptionalShareDataModel;
   relatedFiles: FileModel[];
@@ -163,6 +167,7 @@ export function LearningScenarioEdit({
   budgetUsedBySharedChat: number;
   isWebSearchAvailable: boolean;
   isSpeechAvailable: boolean;
+  speechVoices: SpeechVoice[];
 }) {
   useForceReloadOnBrowserBackButton();
   const router = useRouter();
@@ -203,6 +208,7 @@ export function LearningScenarioEdit({
     webSearchScope: learningScenario.webSearchScope,
     webSearchIncludedDomains: learningScenario.webSearchIncludedDomains,
     isSpeechEnabled: learningScenario.isSpeechEnabled,
+    voice: resolveInitialVoice(learningScenario.voice, speechVoices),
   };
 
   const {
@@ -586,7 +592,11 @@ export function LearningScenarioEdit({
             {isSpeechAvailable && (
               <CustomChatSpeechEditView
                 control={control}
+                voices={speechVoices}
                 onCheckedChange={() => {
+                  void flushAutoSave();
+                }}
+                onVoiceChange={() => {
                   void flushAutoSave();
                 }}
               />

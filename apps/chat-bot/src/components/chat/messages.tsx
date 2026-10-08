@@ -1,10 +1,10 @@
-import { type UIMessage, type ChatStatus } from '@/types/chat';
-import { ChatBox, type PendingFileModel } from './chat-box';
-import { AiActivityPanel } from './activity/ai-activity';
-import LoadingAnimation from './loading-animation';
+import type { AiActivityStep } from '@/types/ai-activity';
+import { type ChatStatus, type UIMessage } from '@/types/chat';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
-import type { AiActivityStep } from '@/types/ai-activity';
+import { AiActivityPanel } from './activity/ai-activity';
+import { ChatBox, type PendingFileModel } from './chat-box';
+import LoadingAnimation from './loading-animation';
 
 // Re-export for consumers that import from this file
 export type { ChatStatus, PendingFileModel };
@@ -48,6 +48,7 @@ export function Messages({
         <ChatBox
           key={index}
           index={index}
+          message={message}
           fileMapping={fileMapping}
           pendingFileMapping={pendingFileMapping}
           isLastNonUser={index === messages.length - 1 && message.role !== 'user'}
@@ -60,9 +61,7 @@ export function Messages({
           showActivityDialog={showActivityDialog}
           generateSpeechFn={generateSpeechFn}
           isSpeechModelEnabled={isSpeechModelEnabled}
-        >
-          {message}
-        </ChatBox>
+        />
       ))}
       {isLoading && <LoadingAnimation activitySteps={activitySteps} />}
       {isLoading && !showActivityDialog && activitySteps.length > 0 && (

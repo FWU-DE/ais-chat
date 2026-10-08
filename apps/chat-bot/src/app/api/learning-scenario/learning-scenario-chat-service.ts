@@ -6,7 +6,7 @@ import {
   type TokenUsage,
 } from '@ais-chat/ai-core';
 import { NotFoundError } from '@shared/error';
-import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
+import { createTextStream } from '@/utils/streaming';
 import { createAiActivityStream } from '../chat/ai-activity-stream';
 import { getUserAndContextByUserId } from '@/auth/utils';
 import { checkProductAccess } from '@/utils/vidis/access';
@@ -186,14 +186,6 @@ export async function sendLearningScenarioMessage({
     allowWebTools,
     allowMundoSearch: false,
     isCalculatorEnabled: teacherUserAndContext.federalState.featureToggles.isCalculatorEnabled,
-    onWebSearchResults: (results) => {
-      update(
-        encodeChatStreamEvent({
-          type: 'web_search_results',
-          webSearchResults: results,
-        }),
-      );
-    },
   });
 
   const aiActivity = createAiActivityStream(update, tools.toolRegistry);

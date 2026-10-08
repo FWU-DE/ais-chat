@@ -2,6 +2,7 @@ import { requireAuth } from '@/auth/requireAuth';
 import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
 import { getLearningScenarioForEditView } from '@shared/learning-scenarios/learning-scenario-service';
 import { getCommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
+import { getSpeechModelVoices } from '@shared/llm-models/llm-model-service';
 import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 import { WebSource } from '@shared/db/types';
 import { LearningScenarioEdit } from './learning-scenario-edit';
@@ -59,6 +60,9 @@ export default async function Page(
         }) as WebSource,
     );
 
+  const isSpeechAvailable = federalState.featureToggles.isSpeechModelEnabled === true;
+  const speechVoices = isSpeechAvailable ? await getSpeechModelVoices() : [];
+
   return (
     <DefaultPageLayout layoutConfig={{ layout: 'form' }}>
       <LearningScenarioEdit
@@ -71,7 +75,8 @@ export default async function Page(
         maxBudget={maxBudget ?? 500}
         budgetUsedBySharedChat={budgetUsedBySharedChat}
         isWebSearchAvailable={isWebSearchAvailableForFederalState(federalState.featureToggles)}
-        isSpeechAvailable={federalState.featureToggles.isSpeechModelEnabled === true}
+        isSpeechAvailable={isSpeechAvailable}
+        speechVoices={speechVoices}
       />
     </DefaultPageLayout>
   );

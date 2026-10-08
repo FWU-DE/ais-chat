@@ -13,7 +13,10 @@ export async function POST(req: NextRequest) {
 
     const parsed = speechRequestSchema.parse(await req.json());
 
-    const { buffer, contentType } = await generateSpeech({ text: parsed.text });
+    const { buffer, contentType } = await generateSpeech({
+      text: parsed.text,
+      voice: parsed.voice,
+    });
 
     return new NextResponse(new Uint8Array(buffer), {
       headers: {

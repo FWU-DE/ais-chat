@@ -12,3 +12,16 @@ export function mapEntityTypeToLabel(entityType: EntityType): string {
       throwEntityInvalidArgumentError();
   }
 }
+
+export function mapEntityTypeToAbbreviation(entityType: EntityType): string {
+  switch (entityType) {
+    case 'character':
+      return 'DP';
+    case 'assistant':
+      return 'AS';
+    case 'learningScenario':
+      return 'LS';
+    default:
+      throwEntityInvalidArgumentError();
+  }
+}
