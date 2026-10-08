@@ -1,5 +1,6 @@
 import { generateSpeechById } from '@ais-chat/ai-core';
 import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
+import { calculateSpeechCostsInCent } from '@/app/api/utils/utils';
 
 export async function generateSpeech({ text, voice }: { text: string; voice?: string }) {
   const speechModel = await dbGetSpeechModel();
@@ -17,11 +18,20 @@ export async function generateSpeech({ text, voice }: { text: string; voice?: st
 
   const selectedVoice = voice && voices.some((v) => v.name === voice) ? voice : firstVoice.name;
 
-  const { wavBuffer } = await generateSpeechById({
+  const { wavBuffer, usage } = await generateSpeechById({
     modelId: speechModel.id,
     text,
     voice: selectedVoice,
   });
 
-  return { buffer: wavBuffer, contentType: 'audio/wav' };
+  const costsInCent = calculateSpeechCostsInCent(speechModel, usage);
+
+  return {
+    buffer: wavBuffer,
+    contentType: 'audio/wav',
+    costsInCent,
+    usage,
+    modelId: speechModel.id,
+    provider: speechModel.provider,
+  };
 }

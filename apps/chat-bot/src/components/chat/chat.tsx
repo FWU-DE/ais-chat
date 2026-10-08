@@ -266,7 +266,7 @@ export default function Chat({
     const response = await fetch('/api/v1/speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, voice }),
+      body: JSON.stringify({ conversationId: id, text, voice }),
     });
 
     if (!response.ok) {
