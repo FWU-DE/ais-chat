@@ -51,7 +51,7 @@ export function CommunityTemplateRequest({
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card className="mt-3">
         <CardRow className="flex flex-col gap-4">
-          <CollapsibleTrigger asChild className="cursor-pointer">
+          <CollapsibleTrigger asChild>
             <button
               type="button"
               className="flex flex-row gap-2 items-center outline-none focus-visible:ring-offset-3 focus-visible:ring-2 focus-visible:ring-ring/50 rounded-lg"
