@@ -1,29 +1,24 @@
-import { FileModel } from '@shared/db/schema';
-import MessageImageAttachment, { type PendingFileModel } from './message-image-attachment';
-import CopyToClipboardButton from '../common/clipboard-button';
-import ReloadIcon from '../icons/reload';
-import MarkdownDisplay from './markdown-display';
-import { cn } from '@/utils/tailwind';
-import { useTranslations } from 'next-intl';
-import Citation from './sources/citation';
-import { Button } from '@ui/components/button';
-import useBreakpoints from '../hooks/use-breakpoints';
+import { type ChatStatus, type UIMessage } from '@/types/chat';
 import { isImageFile } from '@/utils/files/generic';
-import { type UIMessage, type ChatStatus } from '@/types/chat';
-import { ReactNode } from 'react';
+import { cn } from '@/utils/tailwind';
+import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
-import { AiActivityDialog, AiActivityPanel } from './activity/ai-activity';
-import DownloadConversationMessageButton from './download-conversation-message-button';
 import { utils } from '@shared/utils';
+import { ReactNode } from 'react';
+import useBreakpoints from '../hooks/use-breakpoints';
+import { AiActivityPanel } from './activity/ai-activity';
 import DisplayFileAttachment from './display-file-attachment';
-import SpeechButton from './speech-button';
+import MarkdownDisplay from './markdown-display';
+import { MessageActions } from './message-actions';
+import MessageImageAttachment, { type PendingFileModel } from './message-image-attachment';
+import Citation from './sources/citation';
 
 // Re-export for consumers
 export type { PendingFileModel };
 
 export function ChatBox({
   assistantIcon,
-  children,
+  message,
   fileMapping,
   pendingFileMapping,
   index,
@@ -39,7 +34,7 @@ export function ChatBox({
   isSpeechModelEnabled,
 }: {
   assistantIcon?: ReactNode;
-  children: UIMessage;
+  message: UIMessage;
   fileMapping?: Map<string, FileModel[]>;
   pendingFileMapping?: Map<string, PendingFileModel[]>;
   index: number;
@@ -54,17 +49,16 @@ export function ChatBox({
   generateSpeechFn: (text: string) => Promise<Blob>;
   isSpeechModelEnabled: boolean;
 }) {
-  const tCommon = useTranslations('common');
   const { isAtLeast } = useBreakpoints();
 
   const userClassName =
-    children.role === 'user'
+    message.role === 'user'
       ? 'w-fit p-4 rounded-2xl rounded-br-none self-end bg-secondary/30 max-w-[70%] wrap-break-word'
       : 'w-full min-w-0';
 
   // Check both DB file mapping and pending files for this message
-  const dbFiles = fileMapping?.get(children.id);
-  const pendingFiles = pendingFileMapping?.get(children.id);
+  const dbFiles = fileMapping?.get(message.id);
+  const pendingFiles = pendingFileMapping?.get(message.id);
   // Prefer DB files if available (they're persisted), otherwise use pending files.
   // Reuse an already created blob URL so the image does not have to be fetched again.
   const allFiles =
@@ -75,9 +69,9 @@ export function ChatBox({
   const hasFiles = allFiles !== undefined && allFiles.length > 0;
 
   const parsedUrls =
-    children.role === 'user' ? (utils.url.parseHyperlinks(children.content) ?? []) : [];
-  const userWebSources = children.role === 'user' ? [...(webSources ?? [])] : [];
-  const activitySteps = children.role === 'assistant' ? (children.activitySteps ?? []) : [];
+    message.role === 'user' ? (utils.url.parseHyperlinks(message.content) ?? []) : [];
+  const userWebSources = message.role === 'user' ? [...(webSources ?? [])] : [];
+  const activitySteps = message.role === 'assistant' ? (message.activitySteps ?? []) : [];
 
   for (const url of parsedUrls) {
     if (userWebSources.find((source) => source.link === url) === undefined) {
@@ -90,7 +84,7 @@ export function ChatBox({
   const nonImageFiles = allFiles?.filter((file) => !isImageFile(file.name)) ?? [];
 
   const maybeFileAttachment =
-    hasFiles && children.role === 'user' ? (
+    hasFiles && message.role === 'user' ? (
       <div className="flex w-full min-w-0 flex-col items-end gap-4 self-end pb-0 pt-0 mb-4">
         {/* Display images */}
         {imageFiles.length > 0 && (
@@ -136,7 +130,7 @@ export function ChatBox({
 
   const AiActivity =
     activitySteps.length > 0 && !showActivityDialog && !(isLoading && isLastNonUser) ? (
-      <AiActivityPanel steps={activitySteps} panelId={`assistant-ai-activity-${children.id}`} />
+      <AiActivityPanel steps={activitySteps} panelId={`assistant-ai-activity-${message.id}`} />
     ) : null;
 
   const margin =
@@ -144,56 +138,32 @@ export function ChatBox({
 
   const maybeShowMessageIcons =
     isLastNonUser && status !== 'streaming' ? (
-      <div className="flex items-center gap-1 mt-1">
-        <CopyToClipboardButton
-          text={children.content}
-          className="size-5"
-          size="icon-sm"
-          title={tCommon('message-copy')}
-          aria-label={tCommon('message-copy')}
-        />
-        {status === 'ready' &&
-          conversationId !== undefined &&
-          children.id !== 'initial-message' && (
-            <DownloadConversationMessageButton
-              conversationId={conversationId}
-              messageId={children.id}
-              characterName={characterName}
-            />
-          )}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          type="button"
-          title={tCommon('regenerate-message')}
-          onClick={() => regenerateMessage()}
-          aria-label="Reload"
-          className="text-primary"
-        >
-          <ReloadIcon className="size-5 text-primary" />
-        </Button>
-        <SpeechButton
-          text={children.content}
-          generateSpeechFn={generateSpeechFn}
-          isSpeechModelEnabled={isSpeechModelEnabled}
-        />
-        {showActivityDialog && <AiActivityDialog steps={activitySteps} />}
-      </div>
+      <MessageActions
+        message={message}
+        status={status}
+        conversationId={conversationId}
+        characterName={characterName}
+        regenerateMessage={regenerateMessage}
+        generateSpeechFn={generateSpeechFn}
+        isSpeechModelEnabled={isSpeechModelEnabled}
+        showActivityDialog={showActivityDialog}
+        activitySteps={activitySteps}
+      />
     ) : null;
 
-  const messageContent = <MarkdownDisplay>{children.content}</MarkdownDisplay>;
+  const messageContent = <MarkdownDisplay>{message.content}</MarkdownDisplay>;
 
   return (
     <>
       {AiActivity}
       <div key={index} className={cn('w-full', userClassName, margin)}>
-        <div aria-label={`${children.role} message ${Math.floor(index / 2 + 1)}`}>
+        <div aria-label={`${message.role} message ${Math.floor(index / 2 + 1)}`}>
           <div className={cn('flex min-w-0', isAtLeast.sm ? 'flex-row' : 'flex-col')}>
-            {children.role === 'assistant' && assistantIcon}
+            {message.role === 'assistant' && assistantIcon}
             <div
               className={cn(
                 'flex flex-col items-start gap-2',
-                children.role === 'assistant' && 'w-full min-w-0',
+                message.role === 'assistant' && 'w-full min-w-0',
               )}
             >
               {messageContent}
