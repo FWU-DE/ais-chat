@@ -1,16 +1,18 @@
+import { generateSpeech } from '@/app/api/chat/speech-service';
 import { getUserAndContextByUserId } from '@/auth/utils';
 import { checkProductAccess } from '@/utils/vidis/access';
 import { requireTeacherRole } from '@shared/auth/authorization-service';
+import { dbUpdateTokenUsageByCharacterChatId } from '@shared/db/functions/character';
+import { dbUpdateTokenUsageBySharedLearningScenarioId } from '@shared/db/functions/learning-scenario';
 import { ForbiddenError } from '@shared/error';
 import {
-  sharedChatHasExpired,
   sharedCharacterChatHasReachedTokenPointsLimit,
+  sharedChatHasExpired,
   sharedLearningScenarioChatHasReachedTokenPointsLimit,
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
-import { generateSpeech } from '@/app/api/chat/speech-service';
-import { getSharedChatEntity } from './shared-chat-get-entity';
 import { verify } from '.';
+import { getSharedChatEntity } from './shared-chat-get-entity';
 
 export async function generateSharedChatSpeech({
   inviteCode,
@@ -65,5 +67,27 @@ export async function generateSharedChatSpeech({
     throw new ForbiddenError('Token points limit reached');
   }
 
-  return generateSpeech({ text, voice: entity.voice });
+  const speechResult = await generateSpeech({ text, voice: entity.voice });
+
+  if (entityType === 'character') {
+    await dbUpdateTokenUsageByCharacterChatId({
+      characterId: entityId,
+      userId: entity.startedBy,
+      modelId: speechResult.modelId,
+      completionTokens: 0,
+      promptTokens: 0,
+      costsInCent: speechResult.costsInCent,
+    });
+  } else {
+    await dbUpdateTokenUsageBySharedLearningScenarioId({
+      learningScenarioId: entityId,
+      userId: entity.startedBy,
+      modelId: speechResult.modelId,
+      completionTokens: 0,
+      promptTokens: 0,
+      costsInCent: speechResult.costsInCent,
+    });
+  }
+
+  return speechResult;
 }
