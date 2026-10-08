@@ -52,7 +52,10 @@ export function CommunityTemplateRequest({
       <Card className="mt-3">
         <CardRow className="flex flex-col gap-4">
           <CollapsibleTrigger asChild className="cursor-pointer">
-            <div className="flex flex-row gap-2 items-center">
+            <button
+              type="button"
+              className="flex flex-row gap-2 items-center outline-none focus-visible:ring-offset-3 focus-visible:ring-2 focus-visible:ring-ring/50 rounded-lg"
+            >
               <span className="text-base font-medium">{t('title')}</span>
               <Chip
                 className={
@@ -63,10 +66,8 @@ export function CommunityTemplateRequest({
               >
                 {t(`status.${requestWithEvents.state}`)}
               </Chip>
-              <Button className="ml-auto" variant="ghost">
-                {isOpen ? <CaretUpIcon /> : <CaretDownIcon />}
-              </Button>
-            </div>
+              <span className="ml-auto">{isOpen ? <CaretUpIcon /> : <CaretDownIcon />}</span>
+            </button>
           </CollapsibleTrigger>
           <CollapsibleContent className="flex flex-col gap-4">
             <div className="flex flex-row gap-4">
