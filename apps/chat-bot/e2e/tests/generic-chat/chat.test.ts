@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { AUTH_FILES } from '../../utils/const';
-import { deleteChat, enterMessage, regenerateMessage, sendMessage } from '../../utils/chat';
 import path from 'path';
+import { deleteChat, enterMessage, regenerateMessage, sendMessage } from '../../utils/chat';
+import { AUTH_FILES } from '../../utils/const';
 
 test.use({ storageState: AUTH_FILES.teacher });
 
@@ -26,7 +26,7 @@ test('should copy response to clipboard', async ({ page }) => {
   const assistantMessage = page.getByLabel('assistant message 1');
   await expect(assistantMessage).toBeVisible();
 
-  await page.getByTestId('copy-to-clipboard').click();
+  await assistantMessage.getByTestId('copy-to-clipboard').click();
   const text = await assistantMessage.innerText();
   const clipboardContent = await page.evaluate(() => navigator.clipboard.readText());
   expect(clipboardContent).toBe(text);
