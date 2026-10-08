@@ -20,7 +20,6 @@ export function MessageActions({
   showActivityDialog,
   activitySteps,
   isLastMessage,
-  className,
 }: {
   message: UIMessage;
   status: ChatStatus;
@@ -32,12 +31,19 @@ export function MessageActions({
   showActivityDialog?: boolean;
   activitySteps: AiActivityStep[];
   isLastMessage: boolean;
-  className?: string;
 }) {
   const tCommon = useTranslations('common');
 
   return (
-    <div className={cn('flex items-center gap-1 mt-1', className)}>
+    <div
+      className={cn(
+        'flex items-center gap-1 mt-1',
+        // Older messages reveal their actions on hover/focus of the surrounding `group/message`,
+        // but stay visible on touch devices, where there is no hover.
+        !isLastMessage &&
+          'transition-opacity pointer-fine:opacity-0 pointer-fine:pointer-events-none pointer-fine:group-hover/message:opacity-100 pointer-fine:group-hover/message:pointer-events-auto pointer-fine:focus-within:opacity-100 pointer-fine:focus-within:pointer-events-auto',
+      )}
+    >
       <CopyToClipboardButton
         text={message.content}
         className="size-5"
