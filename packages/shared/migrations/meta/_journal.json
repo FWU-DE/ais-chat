@@ -701,6 +701,13 @@
       "when": 1791316730130,
       "tag": "0099_zippy_night_nurse",
       "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1791375149615,
+      "tag": "0100_daffy_vision",
+      "breakpoints": true
     }
   ]
 }

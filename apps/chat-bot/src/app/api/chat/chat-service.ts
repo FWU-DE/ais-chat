@@ -5,7 +5,7 @@ import {
   ResponsibleAIError,
   runAgentLoop,
 } from '@ais-chat/ai-core';
-import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
+import { createTextStream } from '@/utils/streaming';
 import { getModelAndApiKeyWithResult, getAuxiliaryModel, getSafetyModel } from '../utils/utils';
 import { createAiActivityStream } from './ai-activity-stream';
 import { getChatModelSelection } from '../utils/model-circuit-breaker';
@@ -39,7 +39,6 @@ import { UserAndContext } from '@/auth/types';
 import { ingestWebContent } from '../rag/ingestWebContent';
 import { buildTools } from './build-tools';
 import { isWebSearchEnabledForEntity } from './websearch';
-import type { WebSearchResult } from '@shared/db/schema';
 import type {
   AssistantSelectModel,
   CharacterSelectModel,
@@ -355,7 +354,6 @@ export async function sendChatMessage({
     learningScenarioId,
     assistantId,
   });
-  let webSearchResults: WebSearchResult[] = [];
 
   const urls = extractUrls({
     assistant: activeAssistant,
@@ -426,15 +424,6 @@ export async function sendChatMessage({
     allowWebTools,
     allowMundoSearch: true,
     isCalculatorEnabled: user.federalState.featureToggles.isCalculatorEnabled,
-    onWebSearchResults: (results) => {
-      webSearchResults = results;
-      update(
-        encodeChatStreamEvent({
-          type: 'web_search_results',
-          webSearchResults: results,
-        }),
-      );
-    },
   });
   const aiActivity = createAiActivityStream(update, tools.toolRegistry);
 
@@ -527,7 +516,6 @@ export async function sendChatMessage({
         orderNumber: assistantMessageOrderNumber + agentLoopMessages.length,
         modelName: definedModel.name,
         conversationId: activeConversation.id,
-        webSearchResults,
         reasoningSummary: reasoningSummary ?? null,
       },
     ];
@@ -607,6 +595,5 @@ export async function sendChatMessage({
   return {
     stream,
     messageId: assistantMessageId,
-    webSearchResults,
   };
 }

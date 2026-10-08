@@ -1,0 +1,1 @@
+ALTER TABLE "conversation_message" DROP COLUMN "web_search_results";

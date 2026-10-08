@@ -2,7 +2,7 @@ import { type ToolDefinition, type ToolRegistry, type ToolRegistryEntry } from '
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import type { UserAndContext } from '@/auth/types';
 import type { AiActivityToolStep } from '@/types/ai-activity';
-import type { FileModel, WebSearchModel, WebSearchResult } from '@shared/db/schema';
+import type { FileModel, WebSearchModel } from '@shared/db/schema';
 
 export type { ToolDefinition, ToolRegistry };
 
@@ -23,5 +23,4 @@ export type BuildToolsContext = {
   relatedFileEntities: FileModel[];
   sourceUrls: string[];
   attachedLinks: string[];
-  onWebSearchResults?: (results: WebSearchResult[]) => void;
 };

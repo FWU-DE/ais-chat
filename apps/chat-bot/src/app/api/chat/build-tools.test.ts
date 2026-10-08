@@ -154,26 +154,6 @@ describe('buildTools', () => {
     expect(Object.keys(toolRegistry)).toEqual(['retrieve_entire_file', 'retrieve_text_chunks']);
   });
 
-  it('passes onWebSearchResults callback to web search tool', async () => {
-    const { buildTools } = await import('./build-tools');
-
-    const onWebSearchResults = vi.fn();
-
-    await buildTools({
-      user,
-      conversationId: 'conv-1',
-      relatedFileEntities,
-      allowWebTools: true,
-      onWebSearchResults,
-    });
-
-    expect(mocks.buildWebSearchToolMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        onWebSearchResults,
-      }),
-    );
-  });
-
   it('does not build web tools when allowWebTools is false', async () => {
     const { buildTools } = await import('./build-tools');
 

@@ -12,18 +12,10 @@ vi.mock('@shared/logging', () => ({
 }));
 
 describe('encodeChatStreamEvent / decodeChatStreamEvent', () => {
-  it('round-trips a web search result event', () => {
+  it('round-trips an ai activity event', () => {
     const event: ChatStreamEvent = {
-      type: 'web_search_results',
-      webSearchResults: [
-        {
-          type: 'text',
-          name: 'Example',
-          url: 'https://example.com',
-          content: 'Example content',
-          favicon: 'https://example.com/favicon.ico',
-        },
-      ],
+      type: 'ai_activity',
+      steps: [],
     };
 
     expect(decodeChatStreamEvent(encodeChatStreamEvent(event))).toEqual(event);
