@@ -107,8 +107,8 @@ services:
   xberg:
     image: ghcr.io/xberg-io/xberg:1.3.6-core
     environment:
-      XBERG_MAX_UPLOAD_SIZE_MB: '50'
-      XBERG_OCR_LANGUAGE: 'deu'
+      XBERG_MAX_REQUEST_BODY_BYTES: '26214400'
+      XBERG_MAX_MULTIPART_FIELD_BYTES: '26214400'
     ports:
       - '8000:8000'
     read_only: true

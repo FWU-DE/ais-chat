@@ -61,7 +61,6 @@ jobs:
       CRAWL4AI_API_TOKEN: ais-chat-crawl4ai-token
       # Xberg
       XBERG_URL: http://localhost:8000
-      XBERG_MAX_UPLOAD_SIZE_MB: '50'
       # Bifrost
       BIFROST_BASE_URL: http://localhost:8089/openai/v1
       BIFROST_API_KEY: sk-bf-example-key

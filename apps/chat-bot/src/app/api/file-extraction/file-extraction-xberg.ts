@@ -29,6 +29,15 @@ export async function fileExtractionXberg({
     const formData = new FormData();
     formData.append('files', new Blob([buffer as BlobPart]), filename);
     formData.append('output_format', 'markdown');
+    // xberg's /extract replaces its server-side configuration with this object instead of
+    // merging into it, so it has to carry the complete effective extraction config.
+    formData.append(
+      'config',
+      JSON.stringify({
+        extraction_timeout_secs: timeout / 1000,
+        ocr: { language: ['deu'] },
+      }),
+    );
 
     const response = await fetch(new URL('/extract', env.xbergUrl), {
       method: 'POST',
