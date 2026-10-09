@@ -15,6 +15,7 @@ export function MessageActions({
   conversationId,
   characterName,
   regenerateMessage,
+  canRegenerateMessage,
   generateSpeechFn,
   isSpeechModelEnabled,
   showActivityDialog,
@@ -26,6 +27,7 @@ export function MessageActions({
   conversationId?: string;
   characterName?: string;
   regenerateMessage: () => void;
+  canRegenerateMessage: boolean;
   generateSpeechFn: (text: string) => Promise<Blob>;
   isSpeechModelEnabled: boolean;
   showActivityDialog?: boolean;
@@ -60,7 +62,7 @@ export function MessageActions({
             characterName={characterName}
           />
         )}
-      {isLastMessage && (
+      {isLastMessage && canRegenerateMessage && (
         <Button
           variant="ghost"
           size="icon-sm"

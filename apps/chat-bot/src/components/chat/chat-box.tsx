@@ -26,6 +26,7 @@ export function ChatBox({
   isLastNonUser,
   isLoading,
   regenerateMessage,
+  canRegenerateMessage,
   conversationId,
   characterName,
   status,
@@ -42,6 +43,7 @@ export function ChatBox({
   isLastNonUser: boolean;
   isLoading: boolean;
   regenerateMessage: () => void;
+  canRegenerateMessage: boolean;
   conversationId?: string;
   characterName?: string;
   status: ChatStatus;
@@ -144,6 +146,7 @@ export function ChatBox({
         conversationId={conversationId}
         characterName={characterName}
         regenerateMessage={regenerateMessage}
+        canRegenerateMessage={canRegenerateMessage}
         generateSpeechFn={generateSpeechFn}
         isSpeechModelEnabled={isSpeechModelEnabled}
         showActivityDialog={showActivityDialog}
