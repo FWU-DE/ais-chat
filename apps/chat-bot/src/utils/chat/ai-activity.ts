@@ -5,6 +5,10 @@ import {
   type AiActivityToolStep,
 } from '@/types/ai-activity';
 import { TOOL_NAMES } from '@/types/tool-names';
+import { ToolCall } from '@ais-chat/ai-core';
+
+const MAX_DETAIL_LENGTH = 300;
+const MAX_LINKS = 10;
 
 export function parseJsonRecord(value: string | undefined): unknown {
   if (value === undefined || value.trim().length === 0) {

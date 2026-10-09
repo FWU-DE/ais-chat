@@ -19,11 +19,7 @@ type SemanticFileSearchChunkResult = {
 };
 
 export type SemanticFileSearchToolResponse = {
-  chunks: Array<{
-    fileName: string | null;
-    orderIndex: number | null;
-    content: string | null;
-  }>;
+  chunks: SemanticFileSearchChunkResult[];
   error: string | null;
 };
 
