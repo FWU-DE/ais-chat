@@ -12,7 +12,8 @@ export function MarkdownCode({
   node,
   ...props
 }: React.ComponentProps<'code'> & ExtraProps) {
-  const sanitizedText = String(children).replace(/\n$/, '');
+  const rawText = String(children);
+  const sanitizedText = rawText.replace(/\n$/, '');
   // remark only treats the fence info's first word as the language; without one, an attribute
   // like `title="…"` ends up split across the className and `data.meta` — rejoin them to get
   // back the original info string before parsing the title.
@@ -21,9 +22,11 @@ export function MarkdownCode({
   const title = getCodeTitle(info);
 
   const language = rawToken && /^[\w-]+$/.test(rawToken) ? rawToken : undefined;
-  // A missing language class means either inline code or an untagged fenced block;
-  // only single-line content without a language is treated as inline.
-  const isInlineCode = language === undefined && !sanitizedText.includes('\n');
+  // A missing language class means either inline code or an untagged fenced block. Fenced
+  // blocks always get a trailing newline appended to their raw text (even single-line ones),
+  // while inline code never does, so check the raw (pre-stripped) text for that trailing
+  // newline instead of checking the sanitized text for an internal one.
+  const isInlineCode = language === undefined && !rawText.endsWith('\n');
 
   if (isInlineCode) {
     return (
