@@ -64,10 +64,7 @@ export function CommunityTemplateRequest({
               >
                 {t(`status.${requestWithEvents.state}`)}
               </Chip>
-              <span
-                className="ml-auto"
-                data-testid="community-template-request-toggle"
-              >
+              <span className="ml-auto" data-testid="community-template-request-toggle">
                 {isOpen ? <CaretUpIcon /> : <CaretDownIcon />}
               </span>
             </div>
