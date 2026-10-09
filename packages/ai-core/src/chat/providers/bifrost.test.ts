@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { constructBifrostTextGenerationFn, constructBifrostTextStreamFn } from './bifrost';
 import type { AiModel } from '../types';
+import {
+  constructBifrostAgenticStreamFn,
+  constructBifrostTextGenerationFn,
+  constructBifrostTextStreamFn,
+} from './bifrost';
 
 const { responsesCreateMock, openAiConstructorMock, instrumentOpenAiClientMock, MockOpenAI } =
   vi.hoisted(() => {
@@ -230,5 +234,36 @@ describe('Bifrost chat provider', () => {
       expect.anything(),
     );
     expect(result.modelId).toBe('model-fallback');
+  });
+
+  it('reports the upstream provider that served an agentic request', async () => {
+    responsesCreateMock.mockResolvedValue({
+      async *[Symbol.asyncIterator]() {
+        yield { type: 'response.output_text.delta', delta: 'Hello' };
+        yield {
+          type: 'response.completed',
+          response: {
+            usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
+            extra_fields: { provider: 'vertex', model_deployment: 'vertex/gpt-5' },
+          },
+        };
+      },
+    });
+
+    const model = createBifrostModel('google');
+    const events = [];
+    for await (const event of constructBifrostAgenticStreamFn(model)({
+      messages: [{ role: 'user', content: 'Hello' }],
+      model: model.name,
+    })) {
+      events.push(event);
+    }
+
+    expect(events.at(-1)).toEqual({
+      type: 'finish',
+      usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
+      modelId: 'model-bifrost',
+      provider: 'google',
+    });
   });
 });

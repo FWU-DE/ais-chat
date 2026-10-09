@@ -1,6 +1,6 @@
 import type OpenAI from 'openai';
-import type { Message, StreamEvent, TokenUsage, ToolCall, ToolDefinition } from '../types';
 import { AiGenerationError } from '../../errors';
+import type { Message, StreamEvent, TokenUsage, ToolCall, ToolDefinition } from '../types';
 import { estimateTokenUsage, isAbortError, toOpenAIResponsesInput, toOpenAITools } from '../utils';
 
 type OpenAICompatibleAgenticStreamArgs = {
@@ -16,7 +16,9 @@ type OpenAICompatibleAgenticStreamArgs = {
   providerName: string;
   createOptions?: Parameters<OpenAI['responses']['create']>[1];
   additionalParameters?: Record<string, unknown>;
-  getModelId?: (extraFields: unknown) => string | undefined | Promise<string | undefined>;
+  resolveUsedModel?: (
+    extraFields: unknown,
+  ) => { modelId?: string; provider?: string } | Promise<{ modelId?: string; provider?: string }>;
 };
 
 type ToolCallAccumulator = {
@@ -39,7 +41,7 @@ export async function* streamOpenAICompatibleAgenticResponse({
   providerName,
   createOptions,
   additionalParameters,
-  getModelId,
+  resolveUsedModel,
 }: OpenAICompatibleAgenticStreamArgs): AsyncGenerator<StreamEvent> {
   const stream = await client.responses.create(
     {
@@ -58,6 +60,7 @@ export async function* streamOpenAICompatibleAgenticResponse({
   let content = '';
   let usage: TokenUsage | undefined;
   let modelId: string | undefined;
+  let provider: string | undefined;
   const toolCalls = new Map<number, ToolCallAccumulator>();
 
   try {
@@ -114,9 +117,11 @@ export async function* streamOpenAICompatibleAgenticResponse({
           promptTokens: chunk.response.usage.input_tokens,
           totalTokens: chunk.response.usage.total_tokens,
         };
-        modelId = await getModelId?.(
+        const usedModel = await resolveUsedModel?.(
           (chunk.response as typeof chunk.response & { extra_fields?: unknown }).extra_fields,
         );
+        modelId = usedModel?.modelId;
+        provider = usedModel?.provider;
       }
     }
   } catch (error) {
@@ -157,5 +162,10 @@ export async function* streamOpenAICompatibleAgenticResponse({
     };
   }
 
-  yield { type: 'finish', usage, ...(modelId ? { modelId } : {}) };
+  yield {
+    type: 'finish',
+    usage,
+    ...(modelId ? { modelId } : {}),
+    ...(provider ? { provider } : {}),
+  };
 }

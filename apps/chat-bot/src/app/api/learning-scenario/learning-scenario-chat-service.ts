@@ -10,6 +10,7 @@ import {
   SharedChatExpiredError,
   TokenPointsExceededError,
   runAgentLoop,
+  type ModelUsage,
   type TokenUsage,
 } from '@ais-chat/ai-core';
 import { dbGetRelatedLearningScenarioFiles } from '@shared/db/functions/files';
@@ -205,9 +206,10 @@ export async function sendLearningScenarioMessage({
   }: {
     usage: TokenUsage;
     priceInCents: number;
-    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+    modelUsages: ModelUsage[];
   }) => {
-    if (modelUsages.length === 0) {
+    const lastModelUsage = modelUsages.at(-1);
+    if (lastModelUsage === undefined) {
       return;
     }
 
@@ -227,7 +229,8 @@ export async function sendLearningScenarioMessage({
     await sendRabbitmqEvent(
       constructNewMessageEvent({
         user: teacherUserAndContext,
-        provider: definedModel.provider,
+        provider: lastModelUsage.provider,
+        modelName: lastModelUsage.modelName,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
         costsInCent: priceInCents,

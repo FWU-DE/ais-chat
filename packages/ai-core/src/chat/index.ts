@@ -1,29 +1,30 @@
 import { billTextGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
-import { generateText, generateTextStream } from './providers';
 import { hasAccessToModel } from '../api-keys/model-access';
 import { ApiKeyQuotaExceededError, InvalidModelError, normalizeAiGenerationError } from '../errors';
 import { getTextModelById, getTextModelByName } from '../models';
 import { getUsedModelId, normalizeModelSelection } from './model-selection';
-import type { Message, TokenUsage, GenerationOptions, ModelSelection } from './types';
-export { runAgentLoop, MAX_AGENTIC_ITERATIONS, MAX_TOOL_CALLS_PER_ITERATION } from './agent-loop';
+import { generateText, generateTextStream } from './providers';
+import type { GenerationOptions, Message, ModelSelection, TokenUsage } from './types';
+export { MAX_AGENTIC_ITERATIONS, MAX_TOOL_CALLS_PER_ITERATION, runAgentLoop } from './agent-loop';
 export { generateAgenticStreamWithBilling } from './agentic-stream';
 export { countTokens } from './utils';
 
 // Re-export types for external consumers
 export type {
-  Message,
-  TokenUsage,
+  AgenticStreamFn,
   ChatAttachment,
   ChatImageAttachment,
   GenerationOptions,
+  Message,
+  ModelSelection,
+  ModelUsage,
+  StreamEvent,
+  TokenUsage,
   ToolCall,
   ToolDefinition,
   ToolHandler,
   ToolRegistry,
   ToolRegistryEntry,
-  StreamEvent,
-  AgenticStreamFn,
-  ModelSelection,
 } from './types';
 
 // Re-export utility functions and guards

@@ -1,8 +1,9 @@
+import { normalizeBifrostProviderName } from '@ais-chat/api-database/llm-model';
 import { instrumentOpenAiClient } from '@sentry/server-utils';
 import OpenAI, { toFile } from 'openai';
-import type { AiModel, ImageGenerationFn, ImageResponse } from '../types';
-import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { env } from '../../env';
+import { AiGenerationError, ProviderConfigurationError } from '../../errors';
+import type { AiModel, ImageGenerationFn, ImageResponse } from '../types';
 
 function createBifrostClient(model: AiModel): {
   client: OpenAI;
@@ -41,9 +42,13 @@ function mapBifrostResult(result: OpenAI.Images.ImagesResponse): ImageResponse {
     throw new AiGenerationError('No image data received from Bifrost');
   }
 
+  const provider = (result as typeof result & { extra_fields?: { provider?: string } }).extra_fields
+    ?.provider;
+
   return {
     data,
     output_format: result.output_format,
+    ...(provider ? { provider: normalizeBifrostProviderName(provider) } : {}),
     usage: result.usage
       ? {
           input_text_tokens: result.usage.input_tokens_details.text_tokens,

@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { runAgentLoop } from '@ais-chat/ai-core';
 import type { ChatMessage } from '@/types/chat';
+import type { runAgentLoop } from '@ais-chat/ai-core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   runAgentLoopMock: vi.fn(),
@@ -248,6 +248,8 @@ beforeEach(() => {
         modelUsages: [
           {
             modelId: model.id,
+            modelName: model.name,
+            provider: 'azure',
             usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
             priceInCents: 4,
           },

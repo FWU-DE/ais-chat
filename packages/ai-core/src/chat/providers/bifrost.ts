@@ -1,5 +1,9 @@
+import { dbGetModelIdByProviderAndUpstreamName } from '@ais-chat/api-database';
+import { normalizeBifrostProviderName } from '@ais-chat/api-database/llm-model';
 import { instrumentOpenAiClient } from '@sentry/server-utils';
 import OpenAI from 'openai';
+import { env } from '../../env';
+import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import type {
   AgenticStreamFn,
   AiModel,
@@ -7,11 +11,8 @@ import type {
   TextStreamFn,
   TokenUsage,
 } from '../types';
-import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { toOpenAIResponsesInput } from '../utils';
 import { streamOpenAICompatibleAgenticResponse } from './openai-compatible';
-import { env } from '../../env';
-import { dbGetModelIdByProviderAndUpstreamName } from '@ais-chat/api-database';
 
 type BifrostExtraFields = {
   provider?: string;
@@ -47,12 +48,13 @@ function getBifrostModelName(model: AiModel): string {
   return model.name.replace(/^anthropic\//, '');
 }
 
-async function getUsedModelId(
+async function resolveUsedModel(
   extraFields: unknown,
   models: AiModel[],
-): Promise<string | undefined> {
-  if (!extraFields || typeof extraFields !== 'object') return undefined;
+): Promise<{ modelId?: string; provider?: string }> {
+  if (!extraFields || typeof extraFields !== 'object') return {};
   const fields = extraFields as BifrostExtraFields;
+  const provider = fields.provider ? normalizeBifrostProviderName(fields.provider) : undefined;
   const returnedNames = [fields.model_deployment, fields.model_requested].filter(
     (value): value is string => typeof value === 'string',
   );
@@ -61,17 +63,18 @@ async function getUsedModelId(
       const candidateName = getBifrostModelName(candidate);
       return returnedName === candidateName || returnedName.endsWith(`/${candidateName}`);
     });
-    if (matchingModel) return matchingModel.id;
+    if (matchingModel) return { modelId: matchingModel.id, provider };
   }
   if (fields.provider && fields.model_deployment) {
     const upstreamModelName = fields.model_deployment.replace(`${fields.provider}/`, '');
-    return dbGetModelIdByProviderAndUpstreamName({
+    const modelId = await dbGetModelIdByProviderAndUpstreamName({
       modelIds: models.map(({ id }) => id),
       provider: fields.provider,
       upstreamModelName,
     });
+    return { modelId, provider };
   }
-  return undefined;
+  return { provider };
 }
 
 export function constructBifrostTextStreamFn(model: AiModel): TextStreamFn {
@@ -112,10 +115,12 @@ export function constructBifrostTextStreamFn(model: AiModel): TextStreamFn {
           promptTokens: event.response.usage.input_tokens,
           totalTokens: event.response.usage.total_tokens,
         };
-        modelId = await getUsedModelId(
-          (event.response as typeof event.response & { extra_fields?: unknown }).extra_fields,
-          [model, ...(fallbackModels ?? [])],
-        );
+        modelId = (
+          await resolveUsedModel(
+            (event.response as typeof event.response & { extra_fields?: unknown }).extra_fields,
+            [model, ...(fallbackModels ?? [])],
+          )
+        ).modelId;
       }
     }
 
@@ -157,7 +162,8 @@ export function constructBifrostAgenticStreamFn(model: AiModel): AgenticStreamFn
         ...(model.additionalParameters as Record<string, unknown>),
         ...(fallbackModels?.length ? { fallbacks: fallbackModels.map(getBifrostModelName) } : {}),
       },
-      getModelId: (extraFields) => getUsedModelId(extraFields, [model, ...(fallbackModels ?? [])]),
+      resolveUsedModel: (extraFields) =>
+        resolveUsedModel(extraFields, [model, ...(fallbackModels ?? [])]),
     });
   };
 }
@@ -205,10 +211,12 @@ export function constructBifrostTextGenerationFn(model: AiModel): TextGeneration
         promptTokens: usage.input_tokens,
         totalTokens: usage.total_tokens,
       },
-      modelId: await getUsedModelId(
-        (response as typeof response & { extra_fields?: unknown }).extra_fields,
-        [model, ...(fallbackModels ?? [])],
-      ),
+      modelId: (
+        await resolveUsedModel(
+          (response as typeof response & { extra_fields?: unknown }).extra_fields,
+          [model, ...(fallbackModels ?? [])],
+        )
+      ).modelId,
     };
   };
 }

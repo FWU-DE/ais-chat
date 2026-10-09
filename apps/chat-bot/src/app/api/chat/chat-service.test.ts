@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { runAgentLoop } from '@ais-chat/ai-core';
-import type { ChatMessage } from '@/types/chat';
 import type { UserAndContext } from '@/auth/types';
+import type { ChatMessage } from '@/types/chat';
 import { decodeChatStreamEvent } from '@/utils/streaming';
+import type { runAgentLoop } from '@ais-chat/ai-core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const buildToolsOutput = {
   toolRegistry: {
@@ -358,6 +358,8 @@ beforeEach(() => {
         modelUsages: [
           {
             modelId: mainModel.id,
+            modelName: mainModel.name,
+            provider: 'azure',
             usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
             priceInCents: 4,
           },
@@ -455,6 +457,10 @@ describe('sendChatMessage', () => {
         }),
       ]),
     );
+
+    expect(mocks.constructNewMessageEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'azure', modelName: mainModel.name }),
+    );
   });
 
   it('persists usage that was already billed when the generation fails', async () => {
@@ -466,6 +472,8 @@ describe('sendChatMessage', () => {
           modelUsages: [
             {
               modelId: mainModel.id,
+              modelName: mainModel.name,
+              provider: 'azure',
               usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
               priceInCents: 4,
             },

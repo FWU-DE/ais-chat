@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runAgentLoop } from './agent-loop';
-import type { Message, TokenUsage, StreamEvent } from './types';
+import type { Message, StreamEvent, TokenUsage } from './types';
 
 // Mock the generateAgenticStreamWithBilling import
 const mockGenerateAgenticStreamWithBilling = vi.fn();
@@ -887,10 +887,18 @@ describe('agent-loop', () => {
           usage: TokenUsage;
           priceInCents: number;
           modelId: string;
+          modelName: string;
+          provider: string;
         }) => Promise<void>,
       ) {
         yield { type: 'finish', usage } satisfies StreamEvent;
-        await onUsage({ usage, priceInCents: 7, modelId: 'test-model' });
+        await onUsage({
+          usage,
+          priceInCents: 7,
+          modelId: 'test-model',
+          modelName: 'Test Model',
+          provider: 'azure',
+        });
         abortController.abort();
       });
 
@@ -914,7 +922,15 @@ describe('agent-loop', () => {
         expect.objectContaining({
           fullText: '',
           priceInCents: 7,
-          modelUsages: [{ modelId: 'test-model', usage, priceInCents: 7 }],
+          modelUsages: [
+            {
+              modelId: 'test-model',
+              modelName: 'Test Model',
+              provider: 'azure',
+              usage,
+              priceInCents: 7,
+            },
+          ],
         }),
       );
     });
@@ -935,6 +951,8 @@ describe('agent-loop', () => {
           usage: TokenUsage;
           priceInCents: number;
           modelId: string;
+          modelName: string;
+          provider: string;
         }) => Promise<void>,
       ) {
         callCount++;
@@ -945,7 +963,13 @@ describe('agent-loop', () => {
             call: { id: 'call_1', name: 'test_tool', arguments: '{}' },
           } satisfies StreamEvent;
           yield { type: 'finish', usage } satisfies StreamEvent;
-          await onUsage({ usage, priceInCents: 3, modelId: 'test-model' });
+          await onUsage({
+            usage,
+            priceInCents: 3,
+            modelId: 'test-model',
+            modelName: 'Test Model',
+            provider: 'azure',
+          });
           return;
         }
 
@@ -979,7 +1003,15 @@ describe('agent-loop', () => {
         expect.any(Error),
         expect.objectContaining({
           priceInCents: 3,
-          modelUsages: [{ modelId: 'test-model', usage, priceInCents: 3 }],
+          modelUsages: [
+            {
+              modelId: 'test-model',
+              modelName: 'Test Model',
+              provider: 'azure',
+              usage,
+              priceInCents: 3,
+            },
+          ],
         }),
       );
     });
