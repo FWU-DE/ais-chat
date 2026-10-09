@@ -92,6 +92,15 @@ export type ModelSelection = {
   onModelUsed?: (modelId: string) => void | Promise<void>;
 };
 
+/** Usage billed to a single model within one generation; agentic runs can produce several. */
+export type ModelUsage = {
+  modelId: string;
+  modelName: string;
+  provider: string;
+  usage: TokenUsage;
+  priceInCents: number;
+};
+
 export type TextResponse = {
   text: string;
   usage: TokenUsage;
@@ -105,7 +114,7 @@ export type StreamEvent =
   | { type: 'text'; delta: string }
   | { type: 'reasoning_summary'; delta: string }
   | { type: 'tool_call'; call: ToolCall }
-  | { type: 'finish'; usage: TokenUsage; modelId?: string };
+  | { type: 'finish'; usage: TokenUsage; modelId?: string; provider?: string };
 
 export type TextGenerationFn = (args: TextGenerationArgs) => Promise<TextResponse>;
 

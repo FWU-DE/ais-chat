@@ -10,6 +10,7 @@ import {
   SharedChatExpiredError,
   TokenPointsExceededError,
   runAgentLoop,
+  type ModelUsage,
   type TokenUsage,
 } from '@ais-chat/ai-core';
 import {
@@ -200,9 +201,10 @@ export async function sendCharacterMessage({
   }: {
     usage: TokenUsage;
     priceInCents: number;
-    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+    modelUsages: ModelUsage[];
   }) => {
-    if (modelUsages.length === 0) {
+    const lastModelUsage = modelUsages.at(-1);
+    if (lastModelUsage === undefined) {
       return;
     }
 
@@ -225,7 +227,8 @@ export async function sendCharacterMessage({
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
         costsInCent: priceInCents,
-        provider: definedModel.provider,
+        provider: lastModelUsage.provider,
+        modelName: lastModelUsage.modelName,
         anonymous: true,
         character,
       }),

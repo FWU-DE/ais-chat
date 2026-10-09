@@ -1,15 +1,16 @@
 import { metrics } from '@opentelemetry/api';
 import * as Sentry from '@sentry/core';
+import { env } from '../env';
+import { EmptyResponseError } from '../errors';
+import { generateAgenticStreamWithBilling } from './agentic-stream';
 import type {
   Message as AiCoreMessage,
   ModelSelection,
+  ModelUsage,
   TokenUsage,
   ToolCall,
   ToolRegistry,
 } from './types';
-import { EmptyResponseError } from '../errors';
-import { generateAgenticStreamWithBilling } from './agentic-stream';
-import { env } from '../env';
 
 export const MAX_AGENTIC_ITERATIONS = env.maxAgenticIterations;
 export const MAX_TOOL_CALLS_PER_ITERATION = env.maxToolCallsPerIteration;
@@ -42,7 +43,7 @@ type RunAgentLoopParams = {
     usage: TokenUsage;
     priceInCents: number;
     modelId: string;
-    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+    modelUsages: ModelUsage[];
     agentLoopMessages: AiCoreMessage[];
   }) => void;
   /**
@@ -54,7 +55,7 @@ type RunAgentLoopParams = {
     billedUsage: {
       usage: TokenUsage;
       priceInCents: number;
-      modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+      modelUsages: ModelUsage[];
     },
   ) => void;
 };
@@ -78,7 +79,7 @@ export function runAgentLoop({
     let totalUsage: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
     let totalPriceInCents = 0;
     let lastModelId = modelSelection.modelIds[0];
-    const modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }> = [];
+    const modelUsages: ModelUsage[] = [];
     const loopMessages = [...messages];
     const tools = toolRegistry ? Object.values(toolRegistry).map((entry) => entry.definition) : [];
 
@@ -132,10 +133,16 @@ export function runAgentLoop({
               modelSelection,
               loopMessages,
               apiKeyId,
-              async ({ usage, priceInCents, modelId: usedModelId }) => {
+              async ({ usage, priceInCents, modelId: usedModelId, modelName, provider }) => {
                 await modelSelection.onModelUsed?.(usedModelId);
                 lastModelId = usedModelId;
-                modelUsages.push({ modelId: usedModelId, usage, priceInCents });
+                modelUsages.push({
+                  modelId: usedModelId,
+                  modelName,
+                  provider,
+                  usage,
+                  priceInCents,
+                });
                 totalUsage = {
                   promptTokens: totalUsage.promptTokens + usage.promptTokens,
                   completionTokens: totalUsage.completionTokens + usage.completionTokens,

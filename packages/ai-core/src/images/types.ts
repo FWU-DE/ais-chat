@@ -12,6 +12,8 @@ export type ImageResponse = {
   data: Array<string>;
   output_format?: 'png' | 'webp' | 'jpeg';
   usage?: Usage;
+  /** Upstream vendor that served the request, when the gateway reports it. */
+  provider?: string;
 };
 
 /** Reference image passed to an image editing endpoint */

@@ -27,10 +27,6 @@ export function buildCustomOpenAiProviderId(name: string): string {
   return `${slug}${CUSTOM_OPENAI_PROVIDER_SUFFIX}`;
 }
 
-export function isCustomOpenAiProviderId(id: string): boolean {
-  return id.endsWith(CUSTOM_OPENAI_PROVIDER_SUFFIX);
-}
-
 /**
  * Builds a Bifrost provider config for an OpenAI-API-compatible upstream (e.g. Ionos, or an
  * `openai`-typed key with a custom base URL) using Bifrost's custom provider mechanism.

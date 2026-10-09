@@ -1,11 +1,11 @@
 import { metrics } from '@opentelemetry/api';
 import { billTextGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
-import { generateAgenticStream } from './providers';
 import { hasAccessToModel } from '../api-keys/model-access';
 import { ApiKeyQuotaExceededError, InvalidModelError, normalizeAiGenerationError } from '../errors';
 import { getTextModelById } from '../models';
 import { getUsedModelId } from './model-selection';
-import type { TokenUsage, GenerationOptions, StreamEvent, Message, ModelSelection } from './types';
+import { generateAgenticStream } from './providers';
+import type { GenerationOptions, Message, ModelSelection, StreamEvent, TokenUsage } from './types';
 
 const estimatedUsageCounter = metrics
   .getMeter('ais-chat.billing', '0.0.1')
@@ -35,6 +35,8 @@ export async function* generateAgenticStreamWithBilling(
     usage: TokenUsage;
     priceInCents: number;
     modelId: string;
+    modelName: string;
+    provider: string;
   }) => void | Promise<void>,
   options?: GenerationOptions,
 ): AsyncGenerator<StreamEvent> {
@@ -89,7 +91,14 @@ export async function* generateAgenticStreamWithBilling(
           });
         }
         if (onComplete) {
-          await onComplete({ usage: event.usage, priceInCents, modelId: usedModelId });
+          await onComplete({
+            usage: event.usage,
+            priceInCents,
+            modelId: usedModelId,
+            modelName: billingModel.name,
+            // Only the gateway knows which vendor actually served the request.
+            provider: event.provider ?? billingModel.provider,
+          });
         }
       }
     }

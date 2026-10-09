@@ -1,37 +1,37 @@
+import { getSafetyModel } from '@/app/api/utils/utils';
 import { getUser, userHasCompletedTraining } from '@/auth/utils';
-import { checkProductAccess } from '@/utils/vidis/access';
-import { dbGetFederalStateWithDecryptedApiKeyWithResult } from '@shared/db/functions/federal-state';
-import { sendRabbitmqEvent } from '@/rabbitmq/send';
+import { ImageGenerationOptions } from '@/components/image-generation/image-generation-types';
 import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
 import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
-import {
-  dbInsertChatContent,
-  dbGetOrCreateConversation,
-  dbGetConversationAndMessages,
-  dbDeleteRegeneratedConversationMessage,
-} from '@shared/db/functions/chat';
-import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
-import { logError } from '@shared/logging';
+import { sendRabbitmqEvent } from '@/rabbitmq/send';
+import { checkProductAccess } from '@/utils/vidis/access';
 import { generateImageWithBilling } from '@ais-chat/ai-core';
-import { LlmModelSelectModel } from '@shared/db/schema';
-import { ImageStyle } from '@shared/utils/chat';
-import { generateUUID } from '@shared/utils/uuid';
-import { deleteFileFromS3, uploadFileToS3, getReadOnlySignedUrl } from '@shared/s3';
-import { cnanoid } from '@shared/random/randomService';
+import { ImageGenerationRequestOptions } from '@ais-chat/ai-core/images/types';
+import {
+  dbDeleteRegeneratedConversationMessage,
+  dbGetConversationAndMessages,
+  dbGetOrCreateConversation,
+  dbInsertChatContent,
+} from '@shared/db/functions/chat';
+import { dbDeleteConversationByIdAndUserId } from '@shared/db/functions/conversation';
+import { dbGetFederalStateWithDecryptedApiKeyWithResult } from '@shared/db/functions/federal-state';
 import {
   dbDeleteFileAndDetachFromConversation,
   dbDetachFilesFromConversationMessages,
-  linkFilesToConversation,
   dbInsertFile,
+  linkFilesToConversation,
 } from '@shared/db/functions/files';
-import { dbDeleteConversationByIdAndUserId } from '@shared/db/functions/conversation';
+import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
+import { LlmModelSelectModel } from '@shared/db/schema';
 import { NotFoundError } from '@shared/error';
 import { getAvailableImageModelsForFederalState } from '@shared/image-generation/image-generation-service';
-import { getSafetyModel } from '@/app/api/utils/utils';
+import { logError } from '@shared/logging';
+import { cnanoid } from '@shared/random/randomService';
+import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
-import { ImageGenerationRequestOptions } from '@ais-chat/ai-core/images/types';
-import { ImageGenerationOptions } from '@/components/image-generation/image-generation-types';
-import { validateInputFiles, fetchInputImages } from './image-generation-input-files';
+import { ImageStyle } from '@shared/utils/chat';
+import { generateUUID } from '@shared/utils/uuid';
+import { fetchInputImages, validateInputFiles } from './image-generation-input-files';
 
 export interface ImageGenerationParams {
   prompt: string;
@@ -361,7 +361,8 @@ export async function generateImage({
           promptTokens: 0, // Images don't use tokens
           completionTokens: 0, // Images don't use tokens
           costsInCent: costsInCent,
-          provider: model.provider,
+          provider: result.provider ?? model.provider,
+          modelName: model.name,
           anonymous: false,
           conversation,
         }),

@@ -1,4 +1,18 @@
-import { PRICE_AND_CENT_MULTIPLIER } from './const';
+import { CUSTOM_OPENAI_PROVIDER_SUFFIX, PRICE_AND_CENT_MULTIPLIER } from './const';
+
+export function isCustomOpenAiProviderId(id: string): boolean {
+  return id.endsWith(CUSTOM_OPENAI_PROVIDER_SUFFIX);
+}
+
+/**
+ * Translates a provider id as reported by Bifrost into the provider name used by
+ * `llm_provider_key.provider`.
+ */
+export function normalizeBifrostProviderName(provider: string): string {
+  if (provider === 'vertex') return 'google';
+  if (isCustomOpenAiProviderId(provider)) return 'openai';
+  return provider;
+}
 
 export function calculatePriceInCentByTextModelAndUsage({
   completionTokens,
