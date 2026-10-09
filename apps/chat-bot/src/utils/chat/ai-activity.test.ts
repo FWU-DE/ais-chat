@@ -1,5 +1,5 @@
-import type { ToolRegistration } from '@/app/api/chat/tools/types';
 import type { CalculatorResponse } from '@/app/api/chat/calculator';
+import type { ToolRegistration } from '@/app/api/chat/tools/types';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -182,6 +182,8 @@ describe('createAiActivityCollector', () => {
     });
     const sharedStep = sharedCollector.getSteps()[0];
     expect(sharedStep?.kind === 'tool' ? sharedStep.detail : undefined).toBeUndefined();
+  });
+
   it('skips activity result enrichment for string error results', () => {
     const applyResult = vi.fn((step, result: unknown) => {
       const typed = result as CalculatorResponse;

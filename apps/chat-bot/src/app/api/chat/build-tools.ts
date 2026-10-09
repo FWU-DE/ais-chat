@@ -5,6 +5,7 @@ import { buildMathCalculateTool } from './tools/math-calculate-tool';
 import { buildMundoSearchTool } from './tools/mundo-search-tool';
 import { buildRetrieveEntireFileTool } from './tools/retrieve-entire-file-tool';
 import { buildRetrieveTextChunksTool } from './tools/retrieve-text-chunks-tool';
+import type { ToolRegistration, ToolRegistry } from './tools/types';
 import { buildWebScraperTool } from './tools/web-scraper-tool';
 import { buildWebSearchTool } from './tools/web-search-tool';
 
@@ -67,10 +68,9 @@ export async function buildTools({
     }),
   };
 
-  // Tools that are disabled or returned null must be omitted, not kept as undefined entries.
-  const toolRegistry = Object.fromEntries(
+  const toolRegistry: ToolRegistry = Object.fromEntries(
     Object.entries(rawRegistry).filter(
-      ([, registration]) => registration !== null && registration !== undefined,
+      (entry): entry is [string, ToolRegistration] => entry[1] !== null && entry[1] !== undefined,
     ),
   );
 

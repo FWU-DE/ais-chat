@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runAgentLoop } from './agent-loop';
-import type { JsonValue, Message, StreamEvent, TokenUsage } from './types';
+import type { Message, StreamEvent, TokenUsage } from './types';
 
 // Mock the generateAgenticStreamWithBilling import
 const mockGenerateAgenticStreamWithBilling = vi.fn();
@@ -175,7 +175,7 @@ describe('agent-loop', () => {
       toolRegistry: {
         cyclic_tool: {
           definition: { name: 'cyclic_tool', description: 'Test', parameters: {} },
-          handler: async () => cyclicResult as JsonValue,
+          handler: async () => cyclicResult,
         },
       },
       agentName: 'Test Agent',
