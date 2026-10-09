@@ -1,5 +1,6 @@
 import type { CalculatorResponse } from '@/app/api/chat/calculator';
 import type { AiActivityToolStep } from '@/types/ai-activity';
+import { TOOL_NAMES, type ToolName } from '@/types/tool-names';
 import { decodeChatStreamEvent } from '@/utils/streaming';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { describe, expect, it, vi } from 'vitest';
@@ -12,8 +13,18 @@ const toolCall: ToolCall = {
   arguments: '{}',
 };
 
-function createToolRegistry() {
-  const registration: ToolRegistration = {
+function createStubRegistration<TName extends ToolName>(name: TName) {
+  return {
+    definition: { name, description: '', parameters: {} },
+    handler: vi.fn(),
+    activity: {
+      createStep: (call: ToolCall) => ({ kind: 'tool' as const, id: call.id, tool: name }),
+    },
+  } as ToolRegistration<TName, unknown>;
+}
+
+function createFullToolRegistry() {
+  const registration: ToolRegistration<typeof TOOL_NAMES.mathCalculate, CalculatorResponse> = {
     definition: { name: 'math_calculate', description: '', parameters: {} },
     handler: vi.fn(async (): Promise<CalculatorResponse> => ({
       status: 'success',
@@ -34,7 +45,12 @@ function createToolRegistry() {
   };
 
   return {
-    math_calculate: registration,
+    [TOOL_NAMES.mathCalculate]: registration,
+    [TOOL_NAMES.webSearch]: createStubRegistration(TOOL_NAMES.webSearch),
+    [TOOL_NAMES.webScraper]: createStubRegistration(TOOL_NAMES.webScraper),
+    [TOOL_NAMES.mundoSearch]: createStubRegistration(TOOL_NAMES.mundoSearch),
+    [TOOL_NAMES.retrieveEntireFile]: createStubRegistration(TOOL_NAMES.retrieveEntireFile),
+    [TOOL_NAMES.retrieveTextChunks]: createStubRegistration(TOOL_NAMES.retrieveTextChunks),
   };
 }
 
@@ -45,7 +61,10 @@ function decodeUpdates(updates: string[]) {
 describe('createAiActivityStream', () => {
   it('defers reasoning updates until the stream is finished', () => {
     const updates: string[] = [];
-    const activity = createAiActivityStream((update) => updates.push(update), {});
+    const activity = createAiActivityStream(
+      (update) => updates.push(update),
+      createFullToolRegistry(),
+    );
 
     activity.onReasoningSummary('First part. ');
     activity.onReasoningSummary('Second part.');
@@ -67,7 +86,10 @@ describe('createAiActivityStream', () => {
 
   it('publishes tool calls and results while retaining the final summary', () => {
     const updates: string[] = [];
-    const activity = createAiActivityStream((update) => updates.push(update), createToolRegistry());
+    const activity = createAiActivityStream(
+      (update) => updates.push(update),
+      createFullToolRegistry(),
+    );
 
     activity.onToolCalls([toolCall]);
     activity.onToolResult({
@@ -95,7 +117,10 @@ describe('createAiActivityStream', () => {
 
   it('does not publish empty or unregistered activity', () => {
     const updates: string[] = [];
-    const activity = createAiActivityStream((update) => updates.push(update), {});
+    const activity = createAiActivityStream(
+      (update) => updates.push(update),
+      createFullToolRegistry(),
+    );
 
     activity.onReasoningSummary('');
     activity.onToolCalls([toolCall]);

@@ -175,7 +175,7 @@ describe('agent-loop', () => {
       toolRegistry: {
         cyclic_tool: {
           definition: { name: 'cyclic_tool', description: 'Test', parameters: {} },
-          handler: async () => cyclicResult as JsonValue,
+          handler: async () => cyclicResult,
         },
       },
       agentName: 'Test Agent',

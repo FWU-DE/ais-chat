@@ -1,4 +1,4 @@
-import type { ToolRegistration } from '@/app/api/chat/tools/types';
+import { ToolRegistry } from '@/app/api/chat/build-tools';
 import {
   type AiActivityLink,
   type AiActivityStep,
@@ -77,7 +77,7 @@ export type AiActivityOptions = {
 };
 
 export function createAiActivityCollector(
-  toolRegistry: Record<string, ToolRegistration>,
+  toolRegistry: ToolRegistry,
   { hideSensitiveDetails = false }: AiActivityOptions = {},
 ) {
   const steps: AiActivityStep[] = [];
@@ -132,7 +132,10 @@ export function createAiActivityCollector(
       const activity = toolRegistry[step.tool]?.activity;
       // errors/not valid tool calls can still be in string format
       const enrichedStep =
-        typeof result === 'string' ? step : (activity?.applyResult?.(step, result) ?? step);
+        typeof result === 'string'
+          ? step
+          : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (activity?.applyResult?.(step, result as any) ?? step);
 
       if (enrichedStep !== step) {
         steps[steps.indexOf(step)] = enrichedStep;

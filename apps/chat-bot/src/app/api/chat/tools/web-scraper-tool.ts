@@ -13,7 +13,7 @@ export const webScraperArgsSchema = z.object({
   urls: z.array(z.string()),
 });
 
-export type WebScraperToolResult = {
+export type WebScraperToolResponse = {
   title: string | null;
   url: string | null;
   content: string | null;
@@ -24,7 +24,7 @@ function formatWebScrapedContentForTool(result: WebSource) {
   const title = result.name?.trim() || null;
   const content = result.content?.trim() || null;
 
-  const response: WebScraperToolResult = {
+  const response: WebScraperToolResponse = {
     title,
     url: result.link ?? null,
     content: null,
@@ -77,7 +77,7 @@ type BuildWebScraperToolParams = Pick<
   'characterId' | 'learningScenarioId' | 'sourceUrls' | 'attachedLinks'
 >;
 
-export const webScraperActivity: ToolActivity = {
+export const webScraperActivity: ToolActivity<WebScraperToolResponse> = {
   createStep: (toolCall: ToolCall) => {
     const parsed = webScraperArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
     return {
@@ -96,10 +96,13 @@ export const webScraperActivity: ToolActivity = {
 export function buildWebScraperTool({
   sourceUrls,
   attachedLinks,
-}: BuildWebScraperToolParams): ToolRegistration | null {
+}: BuildWebScraperToolParams): ToolRegistration<
+  typeof TOOL_NAMES.webScraper,
+  WebScraperToolResponse
+> | null {
   const attachedSourceUrls = sourceUrls.length > 0 ? sourceUrls : attachedLinks;
 
-  const definition: ToolDefinition = {
+  const definition: ToolDefinition<typeof TOOL_NAMES.webScraper> = {
     name: TOOL_NAMES.webScraper,
     description:
       `Fetch and extract the main text from one or more URLs (max ${MAX_WEB_SCRAPER_URLS}). Use this tool when the user gives you webpage URLs or when you can derive concrete URLs yourself, for example to scrape documentation pages or other known targets. Use web_search instead when you need to discover relevant pages or compare multiple sources.` +

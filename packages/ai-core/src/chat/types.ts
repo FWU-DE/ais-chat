@@ -28,26 +28,25 @@ export function isChatImageAttachment(
 /**
  * A tool call requested by the assistant.
  */
-export type ToolCall = {
+export type ToolCall<T extends string = string> = {
   id: string;
-  name: string;
+  name: T;
   arguments: string;
 };
 
 /**
  * Defines a tool that can be invoked by the model.
  */
-export type ToolDefinition = {
-  name: string;
+export type ToolDefinition<T extends string = string> = {
+  name: T;
   description: string;
   parameters: Record<string, unknown>;
 };
 
-// CHECK if unkown is fine here
 export type ToolHandler = (args: Record<string, unknown>) => Promise<unknown>;
 
-export type ToolRegistryEntry = {
-  definition: ToolDefinition;
+export type ToolRegistryEntry<T extends string = string> = {
+  definition: ToolDefinition<T>;
   handler: ToolHandler;
 };
 

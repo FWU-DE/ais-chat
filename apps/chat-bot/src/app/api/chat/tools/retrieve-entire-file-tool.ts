@@ -20,7 +20,7 @@ export type RetrieveEntireFileToolResponse = {
   error: string | null;
 };
 
-export const retrieveEntireFileActivity: ToolActivity = {
+export const retrieveEntireFileActivity: ToolActivity<RetrieveEntireFileToolResponse> = {
   createStep: (toolCall: ToolCall) => {
     const parsed = retrieveEntireFileArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
     return {
@@ -64,7 +64,10 @@ type BuildRetrieveEntireFileToolParams = Pick<BuildToolsContext, 'relatedFileEnt
 
 export function buildRetrieveEntireFileTool({
   relatedFileEntities,
-}: BuildRetrieveEntireFileToolParams): ToolRegistration | null {
+}: BuildRetrieveEntireFileToolParams): ToolRegistration<
+  typeof TOOL_NAMES.retrieveEntireFile,
+  RetrieveEntireFileToolResponse
+> | null {
   if (relatedFileEntities.length === 0) {
     return null;
   }
@@ -73,7 +76,7 @@ export function buildRetrieveEntireFileTool({
     (file) => `${file.name} (${file.size} bytes)`,
   );
 
-  const definition: ToolDefinition = {
+  const definition: ToolDefinition<typeof TOOL_NAMES.retrieveEntireFile> = {
     name: TOOL_NAMES.retrieveEntireFile,
     description: `Retrieve the full content of one attached file by name. Available files right now: ${attachedFileDescriptions.join(', ') || 'none'}. Use this tool when you need the full text of a specific attached file instead of only relevant excerpts. The returned content is capped at ${RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT} characters.`,
     parameters: {

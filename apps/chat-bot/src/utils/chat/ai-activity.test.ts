@@ -1,5 +1,7 @@
 import type { CalculatorResponse } from '@/app/api/chat/calculator';
+import type { RetrieveEntireFileToolResponse } from '@/app/api/chat/tools/retrieve-entire-file-tool';
 import type { ToolRegistration } from '@/app/api/chat/tools/types';
+import { TOOL_NAMES } from '@/types/tool-names';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -17,8 +19,12 @@ const toolCall: ToolCall = {
   arguments: '{}',
 };
 
-function createToolRegistry(overrides: Partial<ToolRegistration['activity']> = {}) {
-  const registration = {
+function createToolRegistry(
+  overrides: Partial<
+    ToolRegistration<typeof TOOL_NAMES.mathCalculate, CalculatorResponse>['activity']
+  > = {},
+) {
+  const registration: ToolRegistration<typeof TOOL_NAMES.mathCalculate, CalculatorResponse> = {
     definition: { name: 'math_calculate', description: '', parameters: {} },
     handler: vi.fn(async (): Promise<CalculatorResponse> => ({
       status: 'success',
@@ -160,8 +166,11 @@ describe('createAiActivityCollector', () => {
             detail: 'private.pdf',
           }),
         },
-      },
-    } satisfies Record<string, ToolRegistration>;
+      } satisfies ToolRegistration<
+        typeof TOOL_NAMES.retrieveEntireFile,
+        RetrieveEntireFileToolResponse
+      >,
+    };
 
     const defaultCollector = createAiActivityCollector(toolRegistry);
     const sharedCollector = createAiActivityCollector(toolRegistry, { hideSensitiveDetails: true });

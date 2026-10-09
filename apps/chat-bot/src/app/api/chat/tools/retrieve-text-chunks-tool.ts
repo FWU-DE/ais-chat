@@ -12,7 +12,7 @@ export const retrieveTextChunksArgsSchema = z.object({
   search: z.string(),
 });
 
-export const retrieveTextChunksActivity: ToolActivity = {
+export const retrieveTextChunksActivity: ToolActivity<SemanticFileSearchToolResponse> = {
   createStep: (toolCall: ToolCall) => {
     return {
       kind: 'tool',
@@ -63,7 +63,10 @@ export function buildRetrieveTextChunksTool({
   relatedFileEntities,
   sourceUrls,
   attachedLinks,
-}: BuildRetrieveTextChunksToolParams): ToolRegistration | null {
+}: BuildRetrieveTextChunksToolParams): ToolRegistration<
+  typeof TOOL_NAMES.retrieveTextChunks,
+  SemanticFileSearchToolResponse
+> | null {
   const attachedSourceUrls = sourceUrls.length > 0 ? sourceUrls : attachedLinks;
 
   if (relatedFileEntities.length === 0 && attachedSourceUrls.length === 0) {
@@ -74,7 +77,7 @@ export function buildRetrieveTextChunksTool({
     (file) => `${file.name} (${file.size} bytes)`,
   );
 
-  const definition: ToolDefinition = {
+  const definition: ToolDefinition<typeof TOOL_NAMES.retrieveTextChunks> = {
     name: TOOL_NAMES.retrieveTextChunks,
     description:
       'Retrieve relevant text chunks from the attached sources. ' +

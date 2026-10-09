@@ -30,7 +30,7 @@ type BuildWebSearchToolParams = Pick<
   | 'webSearchSettings'
 >;
 
-export const webSearchActivity: ToolActivity = {
+export const webSearchActivity: ToolActivity<WebSearchToolResponse> = {
   createStep: (toolCall: ToolCall) => {
     const parsed = webSearchArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
     return {
@@ -53,7 +53,10 @@ export async function buildWebSearchTool({
   assistantId,
   conversationId,
   webSearchSettings,
-}: BuildWebSearchToolParams): Promise<ToolRegistration | null> {
+}: BuildWebSearchToolParams): Promise<ToolRegistration<
+  typeof TOOL_NAMES.webSearch,
+  WebSearchToolResponse
+> | null> {
   const config = resolveWebSearchConfig({
     user,
     assistantId,
@@ -74,7 +77,7 @@ export async function buildWebSearchTool({
       ? `${baseDescription} Results are restricted to the following domains: ${includedDomains.join(', ')}.`
       : baseDescription;
 
-  const definition: ToolDefinition = {
+  const definition: ToolDefinition<typeof TOOL_NAMES.webSearch> = {
     name: TOOL_NAMES.webSearch,
     description,
     parameters: {

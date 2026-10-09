@@ -6,7 +6,7 @@ import {
 } from '@/configuration-text-inputs/const';
 import { TOOL_NAMES } from '@/types/tool-names';
 import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { ToolCall, ToolDefinition } from '@ais-chat/ai-core/chat/types';
 import { z } from 'zod';
 import {
   mundoSearch,
@@ -14,7 +14,7 @@ import {
   sanitizeClassLevel,
   sanitizeSubject,
 } from '../mundo-search';
-import type { ToolActivity, ToolDefinition, ToolRegistration } from './types';
+import { ToolActivity, ToolRegistration } from './types';
 
 export const mundoSearchArgsSchema = z.object({
   query: z.string(),
@@ -28,7 +28,7 @@ export type MundoSearchToolResponse = {
   error: string | null;
 };
 
-export const mundoSearchActivity: ToolActivity = {
+export const mundoSearchActivity: ToolActivity<MundoSearchToolResponse> = {
   createStep: (toolCall: ToolCall) => {
     const parsed = mundoSearchArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
     return {
@@ -51,8 +51,11 @@ export const mundoSearchActivity: ToolActivity = {
   },
 };
 
-export function buildMundoSearchTool(): ToolRegistration {
-  const definition: ToolDefinition = {
+export function buildMundoSearchTool(): ToolRegistration<
+  typeof TOOL_NAMES.mundoSearch,
+  MundoSearchToolResponse
+> {
+  const definition: ToolDefinition<typeof TOOL_NAMES.mundoSearch> = {
     name: TOOL_NAMES.mundoSearch,
     description: `Search the public MUNDO educational media library (mundo.schule) for teaching materials, e.g. videos or worksheets. Use this tool when the user asks for lesson materials or media suggestions for a specific topic. Returns up to ${MUNDO_SEARCH_RESULTS_LIMIT} matching MUNDO media entries. If a search with filters returns nothing, filters are automatically dropped and the search is retried. When the response has "retriedWithoutFilters": true, do not retry with different filters — instead retry with a broader, simpler or alternative query, without any filters.`,
     parameters: {

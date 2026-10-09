@@ -1,13 +1,28 @@
 import type { UserAndContext } from '@/auth/types';
 import { TOOL_NAMES } from '@/types/tool-names';
-import type { FileModel, WebSearchModel } from '@shared/db/schema';
-import { buildMathCalculateTool } from './tools/math-calculate-tool';
-import { buildMundoSearchTool } from './tools/mundo-search-tool';
-import { buildRetrieveEntireFileTool } from './tools/retrieve-entire-file-tool';
-import { buildRetrieveTextChunksTool } from './tools/retrieve-text-chunks-tool';
-import type { ToolRegistration, ToolRegistry } from './tools/types';
-import { buildWebScraperTool } from './tools/web-scraper-tool';
-import { buildWebSearchTool } from './tools/web-search-tool';
+import { FileModel, WebSearchModel } from '@shared/db/schema';
+import { buildMathCalculateTool, mathCalculateActivity } from './tools/math-calculate-tool';
+import { buildMundoSearchTool, mundoSearchActivity } from './tools/mundo-search-tool';
+import {
+  buildRetrieveEntireFileTool,
+  retrieveEntireFileActivity,
+} from './tools/retrieve-entire-file-tool';
+import {
+  buildRetrieveTextChunksTool,
+  retrieveTextChunksActivity,
+} from './tools/retrieve-text-chunks-tool';
+import { buildWebScraperTool, webScraperActivity } from './tools/web-scraper-tool';
+import { buildWebSearchTool, webSearchActivity } from './tools/web-search-tool';
+
+// TODO make sure all tool names are in this toolActivities object
+export const toolActivities = {
+  [TOOL_NAMES.mathCalculate]: mathCalculateActivity,
+  [TOOL_NAMES.mundoSearch]: mundoSearchActivity,
+  [TOOL_NAMES.retrieveEntireFile]: retrieveEntireFileActivity,
+  [TOOL_NAMES.retrieveTextChunks]: retrieveTextChunksActivity,
+  [TOOL_NAMES.webScraper]: webScraperActivity,
+  [TOOL_NAMES.webSearch]: webSearchActivity,
+};
 
 type BuildToolsParams = {
   user: UserAndContext;
@@ -66,13 +81,17 @@ export async function buildTools({
       sourceUrls,
       attachedLinks,
     }),
-  };
+  } as const;
 
-  const toolRegistry: ToolRegistry = Object.fromEntries(
+  // Tools that are disabled or returned null must be omitted, not kept as undefined entries.
+  const toolRegistry = Object.fromEntries(
     Object.entries(rawRegistry).filter(
-      (entry): entry is [string, ToolRegistration] => entry[1] !== null && entry[1] !== undefined,
+      (entry): entry is [string, NonNullable<(typeof rawRegistry)[keyof typeof rawRegistry]>] =>
+        entry[1] !== null && entry[1] !== undefined,
     ),
   );
 
   return { toolRegistry };
 }
+
+export type ToolRegistry = Awaited<ReturnType<typeof buildTools>>['toolRegistry'];
