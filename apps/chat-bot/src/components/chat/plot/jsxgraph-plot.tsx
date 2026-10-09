@@ -49,6 +49,8 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
           releaseOverflow();
         }
       },
+      // The board activates/deactivates shortly before entering/after leaving the viewport, not exactly at its
+      // edges, since IntersectionObserver expands the root box symmetrically.
       { rootMargin: '300px' },
     );
     observer.observe(container);
