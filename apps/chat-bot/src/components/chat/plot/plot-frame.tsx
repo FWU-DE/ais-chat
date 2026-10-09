@@ -13,7 +13,23 @@ import {
 } from '@phosphor-icons/react';
 import { cn } from '@/utils/tailwind';
 import { downloadPng } from './png-export';
-import type { SliderDefinition } from '@/utils/plot/plot-spec';
+import type { SliderDefinition } from './slider-definitions';
+
+// Displays as many decimals as the step actually carries, so fine-grained sliders (e.g. step
+// `0.0001`) show distinct values, and non-power-of-ten steps (e.g. `0.25`) aren't rounded away.
+function decimalPlaces(step: number) {
+  let decimals = 0;
+  let factor = 1;
+  while (Math.round(step * factor) / factor !== step && decimals < 10) {
+    factor *= 10;
+    decimals++;
+  }
+  return decimals;
+}
+
+export function formatSliderValue(value: number, step: number) {
+  return value.toFixed(decimalPlaces(step));
+}
 
 export function PlotFrame({
   title,
@@ -29,7 +45,7 @@ export function PlotFrame({
 }: {
   title?: string;
   containerRef: RefObject<HTMLDivElement | null>;
-  sliders: (SliderDefinition | undefined)[];
+  sliders: SliderDefinition[];
   sliderValues: number[];
   onSliderChange: (index: number, value: number) => void;
   onReset: () => void;
@@ -54,9 +70,9 @@ export function PlotFrame({
         >
           {title ? <figcaption className="font-semibold">{title}</figcaption> : <span />}
           <div className="h-80 w-full" />
-          {sliders.map((slider, index) =>
-            slider === undefined ? null : <div key={index} className="h-6 w-full" />,
-          )}
+          {sliders.map((_, index) => (
+            <div key={index} className="h-6 w-full" />
+          ))}
           <div className="h-7 w-full" />
         </figure>
       )}
@@ -98,7 +114,6 @@ export function PlotFrame({
         </div>
         <div
           ref={containerRef}
-          role="img"
           aria-label={title ?? tCommon('plot.label')}
           data-testid="plot-view"
           className={cn(
@@ -106,24 +121,32 @@ export function PlotFrame({
             isFullscreen ? 'min-h-0 flex-1' : 'h-80',
           )}
         />
-        {sliders.map((slider, index) =>
-          slider === undefined ? null : (
-            <label key={index} className="flex items-center gap-2 text-sm">
-              <span className="min-w-24 shrink-0 font-mono tabular-nums">
-                {slider.name} = {sliderValues[index]?.toFixed(2)}
-              </span>
-              <input
-                type="range"
-                data-testid={`plot-slider-${index}`}
-                className="grow accent-primary"
-                min={slider.min}
-                max={slider.max}
-                step={slider.step}
-                value={sliderValues[index] ?? slider.start}
-                onChange={(event) => onSliderChange(index, Number(event.target.value))}
-              />
-            </label>
-          ),
+        {sliders.length > 0 && (
+          <div
+            className={cn(
+              'flex flex-col gap-2',
+              isFullscreen && 'max-h-64 shrink-0 overflow-y-auto',
+            )}
+          >
+            {sliders.map((slider, index) => (
+              <label key={index} className="flex items-center gap-2 text-sm">
+                <span className="min-w-24 shrink-0 font-mono tabular-nums">
+                  {slider.name} ={' '}
+                  {formatSliderValue(sliderValues[index] ?? slider.start, slider.step)}
+                </span>
+                <input
+                  type="range"
+                  data-testid={`plot-slider-${index}`}
+                  className="grow accent-primary"
+                  min={slider.min}
+                  max={slider.max}
+                  step={slider.step}
+                  value={sliderValues[index] ?? slider.start}
+                  onChange={(event) => onSliderChange(index, Number(event.target.value))}
+                />
+              </label>
+            ))}
+          </div>
         )}
         <div className="flex gap-1">
           <Button

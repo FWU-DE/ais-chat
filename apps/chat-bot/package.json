@@ -103,6 +103,7 @@
     "@playwright/test": "1.63.0",
     "@svgr/webpack": "8.1.0",
     "@tailwindcss/postcss": "4.3.3",
+    "@types/hast": "3.0.5",
     "@types/he": "1.2.3",
     "@types/jsdom": "30.0.0",
     "@types/k6": "2.3.0",

@@ -25,7 +25,7 @@ export function PlotBlock({ source, title }: { source: string; title?: string })
   useEffect(() => {
     if (parseError !== undefined && !isStreaming && !loggedSources.has(source)) {
       loggedSources.add(source);
-      logError('Plot spec could not be parsed', parseError, { title, source });
+      logError('Plot spec could not be parsed', parseError, { source });
     }
   }, [parseError, isStreaming, title, source]);
 
@@ -50,7 +50,7 @@ export function PlotBlock({ source, title }: { source: string; title?: string })
   );
 }
 
-// Rendered for the `<jsxgraph-plot>` element produced by the remark-jsxgraph-plot plugin.
+// Rendered for the `<jsxgraph-plot>` element produced by the rehype-jsxgraph-plot plugin.
 // `incomplete` is true while the fence's opening line is still streaming in, in which case
 // nothing is rendered yet to avoid flashing a partially parsed block.
 export function JsxGraphPlotElement({

@@ -1,7 +1,6 @@
 import JXG from 'jsxgraph';
 import { logWarning } from '@shared/logging/logging';
 import {
-  DEFAULT_BOUNDING_BOX,
   getSliderRange,
   type BoundingBox,
   type PlotElement,
@@ -9,18 +8,11 @@ import {
   type PlotSpec,
 } from '@/utils/plot/plot-spec';
 
+const DEFAULT_BOUNDING_BOX: BoundingBox = [-5, 5, 5, -5];
+
 // HTML texts are overlays outside the SVG and would be missing in the PNG export,
 // so all labels (axes, element names, texts) are drawn as SVG text.
-const textOptions = (
-  JXG.Options as unknown as {
-    text: {
-      display: string;
-      cssDefaultStyle: string;
-      highlightCssDefaultStyle: string;
-      parse: boolean;
-    };
-  }
-).text;
+const textOptions = JXG.Options.text;
 textOptions.display = 'internal';
 // Drop the built-in Arial so labels inherit the page font.
 textOptions.cssDefaultStyle = '';
@@ -29,15 +21,6 @@ textOptions.highlightCssDefaultStyle = '';
 // with `display: internal` those show up as literal text instead, including in labels
 // JSXGraph creates internally (e.g. legend lines), which bypass the per-element override below.
 textOptions.parse = false;
-
-type Creator = { create: (type: string, parents: unknown[], attributes: object) => unknown };
-type ValueElement = { Value: () => number; setValue: (value: number) => unknown };
-// The bundled typings do not cover all 3D attributes of the view.
-type View3D = Creator & {
-  az_slide?: ValueElement;
-  el_slide?: ValueElement;
-  bank_slide?: ValueElement;
-};
 
 // Zoom/pan (2D) and rotation (3D) that are restored when a board is rebuilt.
 export type ViewState = {
@@ -59,52 +42,6 @@ const SURFACE_DEFAULTS = {
   },
 };
 const SURFACE_TYPES = new Set(['functiongraph3d', 'parametricsurface3d']);
-// `display: html` writes via innerHTML and `parse` evaluates JessieCode, so both are forced off.
-const FORBIDDEN_ATTRIBUTES = new Set([
-  'display',
-  'parse',
-  'usemathjax',
-  'usekatex',
-  'url',
-  '__proto__',
-  'constructor',
-  'prototype',
-]);
-
-// Text is rendered with `display: 'internal'` (plain SVG text, see below), so JSXGraph never runs
-// an HTML parser over it and named entities like `&alpha;` would otherwise show up literally.
-function decodeEntities(value: string) {
-  return new DOMParser().parseFromString(value, 'text/html').documentElement.textContent ?? value;
-}
-
-function stripMarkup(value: string) {
-  // Decoding can turn an entity like `&lt;` back into `<`, so strip markup afterwards.
-  return decodeEntities(value).replace(/[<>]/g, '');
-}
-
-function sanitize(value: unknown): unknown {
-  if (typeof value === 'string') {
-    return stripMarkup(value);
-  }
-  if (Array.isArray(value)) {
-    return value.map(sanitize);
-  }
-  if (value !== null && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value)
-        .filter(([key]) => !FORBIDDEN_ATTRIBUTES.has(key.toLowerCase()))
-        .map(([key, entry]) => [key, sanitize(entry)]),
-    );
-  }
-  return value;
-}
-
-function normalizeParent(type: string, value: unknown): unknown {
-  if (typeof value === 'string') {
-    return type === 'text' || type === 'text3d' ? stripMarkup(value) : value;
-  }
-  return Array.isArray(value) ? value.map((entry) => normalizeParent(type, entry)) : value;
-}
 
 // The area between a curve and the x-axis would otherwise show draggable helper points and labels.
 const INTEGRAL_DEFAULTS = {
@@ -118,23 +55,18 @@ const INTEGRAL_DEFAULTS = {
 // Right angles are marked with a dotted sector instead of JSXGraph's default square by default.
 const ANGLE_DEFAULTS = { orthoType: 'sectordot' };
 
-// Riemann sums call their function directly, so a string must become a real function first.
-function toFunction(board: JXG.Board, value: unknown) {
-  const { jc } = board as unknown as {
-    jc: { snippet: (code: string, wrap: boolean, variable: string, geonext: boolean) => unknown };
-  };
-  return typeof value === 'string' ? jc.snippet(value, true, 'x', false) : value;
+// Riemann sums and `curve3d`/`parametricsurface3d` call their function(s) directly, so string
+// parents must become real functions first. The parameter name matches JSXGraph's own
+// convention for each type: `riemannsum` takes a function of `x`, `curve3d` of `u`, and
+// `parametricsurface3d` of `u, v`.
+function toFunction(board: JXG.Board, value: unknown, variables: string) {
+  return typeof value === 'string' ? board.jc.snippet(value, true, variables, false) : value;
 }
 
-// Unlike 2D `curve`, `curve3d` never parses string parents: fx/fy/fz need real functions and the
-// trailing [min, max] range needs real numbers, or the curve silently renders zero points.
+// Unlike 2D `curve`, `curve3d`/`parametricsurface3d` never parse string parents: fx/fy/fz need
+// real functions and bounds need real numbers, or the curve/surface silently renders nothing.
 function toNumber(board: JXG.Board, value: unknown) {
-  const { jc } = board as unknown as {
-    jc: {
-      snippet: (code: string, wrap: boolean, variable: string, geonext: boolean) => () => number;
-    };
-  };
-  return typeof value === 'string' ? jc.snippet(value, true, '', false)() : value;
+  return typeof value === 'string' ? board.jc.snippet(value, true, '', false)() : value;
 }
 
 // Surfaces are drawn as shaded faces by default. Steps are capped because every face is a DOM node.
@@ -163,14 +95,14 @@ function withSurfaceDefaults(type: string, attributes: Record<string, unknown>) 
 // a broken object behind that throws on every later update. Remove it again.
 function createSafely(
   board: JXG.Board,
-  creator: Creator,
+  create: (type: string, parents: unknown[], attributes: Record<string, unknown>) => unknown,
   type: string,
   parents: unknown[],
-  attributes: object,
+  attributes: Record<string, unknown>,
 ) {
   const knownIds = new Set(Object.keys(board.objects));
   try {
-    const element = creator.create(type, parents, attributes);
+    const element = create(type, parents, attributes);
     if (!type.endsWith('3d')) {
       board.update();
     }
@@ -207,17 +139,48 @@ function resolveMeasure(board: JXG.Board, expression: PlotParent): unknown {
   ];
 }
 
+// Parents are already validated and (for text payloads) entity-decoded by `parsePlotSpec`;
+// this only rewrites them into the shapes specific element types expect to create.
 function normalizeParents(board: JXG.Board, type: string, parents: PlotParent[]) {
-  const normalized = parents.map((parent) => normalizeParent(type, parent));
+  // JSXGraph mutates `parents` in place, replacing names with resolved elements. `spec` is
+  // memoized and reused across repeated board builds, so cloning keeps that from leaking
+  // one board's elements into the next.
+  const normalized = structuredClone(parents);
   if (type === 'riemannsum') {
-    return [toFunction(board, normalized[0]), ...normalized.slice(1)];
+    return [toFunction(board, normalized[0], 'x'), ...normalized.slice(1)];
   }
   if (type === 'curve3d' && normalized.length === 4 && Array.isArray(normalized[3])) {
     return [
-      toFunction(board, normalized[0]),
-      toFunction(board, normalized[1]),
-      toFunction(board, normalized[2]),
+      toFunction(board, normalized[0], 'u'),
+      toFunction(board, normalized[1], 'u'),
+      toFunction(board, normalized[2], 'u'),
       normalized[3].map((bound) => toNumber(board, bound)),
+    ];
+  }
+  if (
+    type === 'parametricsurface3d' &&
+    normalized.length === 5 &&
+    Array.isArray(normalized[3]) &&
+    Array.isArray(normalized[4])
+  ) {
+    return [
+      toFunction(board, normalized[0], 'u, v'),
+      toFunction(board, normalized[1], 'u, v'),
+      toFunction(board, normalized[2], 'u, v'),
+      normalized[3].map((bound) => toNumber(board, bound)),
+      normalized[4].map((bound) => toNumber(board, bound)),
+    ];
+  }
+  if (
+    type === 'functiongraph3d' &&
+    normalized.length === 3 &&
+    Array.isArray(normalized[1]) &&
+    Array.isArray(normalized[2])
+  ) {
+    return [
+      normalized[0],
+      normalized[1].map((bound) => toNumber(board, bound)),
+      normalized[2].map((bound) => toNumber(board, bound)),
     ];
   }
   if (type === 'measurement' && normalized[2] !== undefined) {
@@ -226,14 +189,14 @@ function normalizeParents(board: JXG.Board, type: string, parents: PlotParent[])
   return normalized;
 }
 
-function createElements(jsxBoard: JXG.Board, elements: PlotElement[]) {
-  const board = jsxBoard as unknown as Creator;
-  const sliders: (ValueElement | undefined)[] = [];
+function createElements(board: JXG.Board, elements: PlotElement[]) {
+  const sliders: (JXG.Slider | undefined)[] = [];
   const explicitView = elements.find(([type]) => type === 'view3d');
-  let view: View3D | undefined;
+  let view: JXG.View3D | undefined;
 
   if (explicitView !== undefined) {
-    view = board.create('view3d', explicitView[1], {
+    // See the comment on `normalizeParents`: clone to avoid JSXGraph mutating the shared spec.
+    view = board.create('view3d', structuredClone(explicitView[1]), {
       xPlaneRear: { visible: false },
       yPlaneRear: { visible: false },
       depthOrder: { enabled: true },
@@ -241,39 +204,35 @@ function createElements(jsxBoard: JXG.Board, elements: PlotElement[]) {
       xAxis: { withLabel: true },
       yAxis: { withLabel: true },
       zAxis: { withLabel: true },
-      ...(sanitize(explicitView[2] ?? {}) as object),
-    }) as View3D;
+      ...(explicitView[2] ?? {}),
+    });
   }
 
   for (const [type, parents, attributes] of elements) {
     if (type === 'view3d') {
       continue;
     }
-    const creator = type.endsWith('3d') ? view : board;
-    if (creator === undefined) {
+    const is3D = type.endsWith('3d');
+    if (is3D && view === undefined) {
       continue;
     }
     const isSlider = type === 'slider';
     const range = isSlider ? getSliderRange(parents) : undefined;
     const element = createSafely(
-      jsxBoard,
-      creator,
+      board,
+      is3D ? (t, p, a) => view!.create(t, p, a) : (t, p, a) => board.create(t, p, a),
       type,
       // Sliders are shown as HTML controls below the plot, JSXGraph only keeps their value.
-      range === undefined ? normalizeParents(jsxBoard, type, parents) : [[0, 0], [1, 0], range],
+      range === undefined ? normalizeParents(board, type, parents) : [[0, 0], [1, 0], range],
       {
         ...(type === 'integral' ? INTEGRAL_DEFAULTS : {}),
         ...(type === 'angle' ? ANGLE_DEFAULTS : {}),
-        ...withSurfaceDefaults(type, sanitize(attributes ?? {}) as Record<string, unknown>),
+        ...withSurfaceDefaults(type, attributes ?? {}),
         ...(isSlider ? { visible: false, withLabel: false } : {}),
-        display: 'internal',
-        parse: false,
-        useMathJax: false,
-        useKatex: false,
       },
     );
     if (isSlider) {
-      sliders.push(element as ValueElement | undefined);
+      sliders.push(element as JXG.Slider | undefined);
     }
   }
   return { view, sliders };
@@ -318,8 +277,16 @@ export function createBoard(
     ...getInteractionOptions(spec, isFullscreen),
     // Default axes are labelled "x"/"y" unless the spec overrides the name/label via defaultAxes.
     defaultAxes: {
-      x: { name: 'x', withLabel: true, ...(sanitize(spec.board.defaultAxes?.x ?? {}) as object) },
-      y: { name: 'y', withLabel: true, ...(sanitize(spec.board.defaultAxes?.y ?? {}) as object) },
+      x: {
+        name: 'x',
+        withLabel: true,
+        ...(spec.board.defaultAxes?.x ?? {}),
+      },
+      y: {
+        name: 'y',
+        withLabel: true,
+        ...(spec.board.defaultAxes?.y ?? {}),
+      },
     },
   });
 
@@ -353,7 +320,7 @@ export function createBoard(
       capture: (): ViewState => {
         const { az_slide: az, el_slide: el, bank_slide: bank } = view ?? {};
         return {
-          boundingBox: view === undefined ? (board.getBoundingBox() as BoundingBox) : undefined,
+          boundingBox: view === undefined ? board.getBoundingBox() : undefined,
           angles:
             az === undefined || el === undefined || bank === undefined
               ? undefined

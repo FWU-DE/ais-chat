@@ -16,7 +16,7 @@ export class PlotErrorBoundary extends Component<
   }
 
   componentDidCatch(error: unknown) {
-    logError('Plot could not be rendered', error, { title: this.props.title });
+    logError('Plot could not be rendered', error);
   }
 
   render() {

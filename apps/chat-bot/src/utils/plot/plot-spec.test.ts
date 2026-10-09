@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parsePlotSpec, getSliderRange, getSliderDefinitions, type PlotElement } from './plot-spec';
+import { parsePlotSpec, getSliderRange } from './plot-spec';
 
 function expectValid(source: string) {
   const result = parsePlotSpec(source);
@@ -71,13 +71,97 @@ describe('parsePlotSpec', () => {
       source: '{"board":{"boundingBox":[-5,-5,5,5]},"elements":[["point",[0,0]]]}',
     },
     { name: 'a slider without a valid range', source: '{"elements":[["slider",[0,1]]]}' },
+    {
+      name: 'a slider where min >= max',
+      source: '{"elements":[["slider",[3,1,0]]]}',
+    },
+    {
+      name: 'a curve3d range given as a string instead of an array',
+      source:
+        '{"elements":[["view3d",[[-4,-3],[8,8],[[-5,5],[-5,5],[-5,5]]]],' +
+        '["curve3d",["cos(x)","sin(x)","0","[0,2*PI]"]]]}',
+    },
+    {
+      name: 'a functiongraph3d bound given as a string instead of an array',
+      source:
+        '{"elements":[["view3d",[[-4,-3],[8,8],[[-5,5],[-5,5],[-5,5]]]],' +
+        '["functiongraph3d",["x^2+y^2","[-2,2]",[-2,2]]]]}',
+    },
   ] as const)('rejects $name', ({ source }) => {
     expectInvalid(source);
+  });
+
+  it.each(['button', 'image', 'eval', 'remove', '$board', 'foo'])(
+    'rejects a call to "%s" disguised as a math expression',
+    (name) => {
+      expectInvalid(`{"elements":[["functiongraph",["${name}(x)"]]]}`);
+    },
+  );
+
+  it.each(['/* comment */remove(A)', 'remove/**/(A)', '// comment\nremove(A)'])(
+    'rejects a blocked call hidden behind a JessieCode comment: %s',
+    (unsafe) => {
+      expectInvalid(`{"elements":[["functiongraph",[${JSON.stringify(unsafe)}]]]}`);
+    },
+  );
+
+  it.each(['(remove) (A)', '(remove)\n(A)', '($board) (objects)'])(
+    'rejects a blocked indirect call hidden behind whitespace: %s',
+    (unsafe) => {
+      expectInvalid(`{"elements":[["functiongraph",[${JSON.stringify(unsafe)}]]]}`);
+    },
+  );
+
+  it('allows calls to permitted math functions', () => {
+    const spec = expectValid('{"elements":[["functiongraph",["sin(x)+cos(x)"]]]}');
+    expect(spec.elements).toHaveLength(1);
   });
 
   it('allows unsafe characters in text content', () => {
     const spec = expectValid('{"elements":[["text",[0,0,"a \\"quoted\\" word"]]]}');
     expect(spec.elements[0]?.[1][2]).toBe('a "quoted" word');
+  });
+
+  it('decodes HTML entities in the text payload', () => {
+    const spec = expectValid('{"elements":[["text",[0,0,"caf&eacute;"]]]}');
+    expect(spec.elements[0]?.[1][2]).toBe('café');
+  });
+
+  it('decodes HTML entities in the text3d payload', () => {
+    const spec = expectValid(
+      '{"elements":[["view3d",[[-4,-3],[8,8],[[-5,5],[-5,5],[-5,5]]]],["text3d",[0,0,0,"caf&eacute;"]]]}',
+    );
+    expect(spec.elements[1]?.[1][3]).toBe('café');
+  });
+
+  it('decodes HTML entities in attribute values', () => {
+    const spec = expectValid(
+      '{"elements":[["point",[0,0],{"name":"caf&eacute;","label":{"strokeColor":"caf&eacute;"}}]]}',
+    );
+    expect(spec.elements[0]?.[2]).toEqual({ name: 'café', label: { strokeColor: 'café' } });
+  });
+
+  it.each(['display', 'parse', 'usemathjax', 'usekatex', 'url', 'constructor', 'Prototype', 'id'])(
+    'rejects the forbidden attribute "%s" at any nesting depth',
+    (key) => {
+      expectInvalid(`{"elements":[["point",[0,0],{"label":{"${key}":"html","name":"a"}}]]}`);
+    },
+  );
+
+  it('never lets "__proto__" become an own key or pollute the prototype', () => {
+    // Not in FORBIDDEN_ATTRIBUTES: zod's own object construction already drops `__proto__`
+    // rather than letting it become an own key or pollute the prototype, so there's nothing
+    // for an explicit check to catch here.
+    const spec = expectValid('{"elements":[["point",[0,0],{"__proto__":{"polluted":true}}]]}');
+    expect(spec.elements[0]?.[2]).toEqual({});
+    expect(Object.prototype).not.toHaveProperty('polluted');
+  });
+
+  it('does not decode HTML entities in non-text-payload parents', () => {
+    // No trailing `;`, so the unsafe-character check alone wouldn't catch this: decoding this
+    // coordinate expression would turn it into "remove(A)", invoking JessieCode's `remove`.
+    const spec = expectValid('{"elements":[["text",["remove&#40A&#41",0,"label"]]]}');
+    expect(spec.elements[0]?.[1][0]).toBe('remove&#40A&#41');
   });
 
   it('allows unsafe characters in text3d content', () => {
@@ -94,6 +178,13 @@ describe('parsePlotSpec', () => {
   it('accepts a slider with a valid range', () => {
     const spec = expectValid('{"elements":[["slider",[0,1,3]]]}');
     expect(spec.elements).toHaveLength(1);
+  });
+
+  it('accepts a curve3d with a proper two-element range', () => {
+    expectValid(
+      '{"elements":[["view3d",[[-4,-3],[8,8],[[-5,5],[-5,5],[-5,5]]]],' +
+        '["curve3d",["cos(x)","sin(x)","0",[0,"2*PI"]]]]}',
+    );
   });
 });
 
@@ -134,51 +225,5 @@ describe('getSliderRange', () => {
         [1, 0],
       ]),
     ).toBeUndefined();
-  });
-});
-
-describe('getSliderDefinitions', () => {
-  const slider = (parents: PlotElement[1], attributes?: PlotElement[2]): PlotElement => [
-    'slider',
-    parents,
-    attributes,
-  ];
-
-  it('ignores non-slider elements', () => {
-    expect(getSliderDefinitions([['point', [0, 0], undefined]])).toEqual([]);
-  });
-
-  it('builds a definition from a valid slider', () => {
-    const [definition] = getSliderDefinitions([slider([0, 1, 3], { name: 'a' })]);
-    expect(definition).toEqual({ name: 'a', min: 0, start: 1, max: 3, step: 0.03 });
-  });
-
-  it('falls back to an indexed name when none is given', () => {
-    const [first, second] = getSliderDefinitions([slider([0, 1, 3]), slider([0, 1, 3])]);
-    expect(first?.name).toBe('slider1');
-    expect(second?.name).toBe('slider2');
-  });
-
-  it('clamps the start value into [min, max]', () => {
-    const [tooLow] = getSliderDefinitions([slider([0, -5, 3])]);
-    expect(tooLow?.start).toBe(0);
-    const [tooHigh] = getSliderDefinitions([slider([0, 50, 3])]);
-    expect(tooHigh?.start).toBe(3);
-  });
-
-  it('uses snapWidth as the step when positive', () => {
-    const [definition] = getSliderDefinitions([slider([0, 1, 3], { snapWidth: 0.5 })]);
-    expect(definition?.step).toBe(0.5);
-  });
-
-  it('ignores a non-positive snapWidth', () => {
-    const [definition] = getSliderDefinitions([slider([0, 1, 3], { snapWidth: -1 })]);
-    expect(definition?.step).toBeCloseTo(0.03);
-  });
-
-  it('keeps index alignment by returning undefined for an invalid slider', () => {
-    const [invalid, valid] = getSliderDefinitions([slider([3, 1, 0]), slider([0, 1, 3])]);
-    expect(invalid).toBeUndefined();
-    expect(valid).toBeDefined();
   });
 });

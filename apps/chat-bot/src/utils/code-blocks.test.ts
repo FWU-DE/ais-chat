@@ -94,12 +94,17 @@ describe('replacePlotBlocks', () => {
     );
   });
 
-  it('replaces a plot block inside a list item', () => {
+  it('replaces a plot block inside a list item, preserving its indentation', () => {
     const markdown = `- Punkt\n\n  ${plot(' title="A"').replaceAll('\n', '\n  ')}\n\n- Ende`;
     const result = replacePlotBlocks(markdown, describePlot);
-    expect(result).toContain('Grafik: A');
+    expect(result).toContain('\n  Grafik: A');
     expect(result).not.toContain(PLOT_LANGUAGE);
     expect(result).toContain('- Ende');
+  });
+
+  it('replaces a plot block inside a blockquote, preserving its prefix', () => {
+    const markdown = `> ${plot(' title="A"').replaceAll('\n', '\n> ')}`;
+    expect(replacePlotBlocks(markdown, describePlot)).toBe('> Grafik: A');
   });
 
   it('takes the title from the info string, not from the JSON', () => {
