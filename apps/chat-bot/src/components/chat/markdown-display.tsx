@@ -1,15 +1,13 @@
-import React from 'react';
 import Markdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { nightOwl } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import remarkGfm from 'remark-gfm';
 import RehypeKatex from 'rehype-katex';
 import RemarkMathPlugin from 'remark-math';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { cn } from '@/utils/tailwind';
-import CopyToClipboardButton from '../common/clipboard-button';
-import { getCodeTitle } from '@/utils/code-blocks';
+import { MarkdownCode } from './markdown-code';
+import { rehypeJsxGraphPlot, JSXGRAPH_PLOT_HNAME } from './plot/rehype-jsxgraph-plot';
+import { JsxGraphPlotElement } from './plot/plot-block';
 
 type MarkdownDisplayProps = {
   children: string;
@@ -36,10 +34,10 @@ export default function MarkdownDisplay({ children: _children }: MarkdownDisplay
   const removeTopPaddingAfterHrClass = '[&>hr+*]:pt-0';
 
   return (
-    <div className={cn('wrap-break-word text-base', removeTopPaddingAfterHrClass)}>
+    <div className={cn('w-full min-w-0 wrap-break-word text-base', removeTopPaddingAfterHrClass)}>
       <Markdown
         remarkPlugins={[RemarkMathPlugin, remarkGfm]}
-        rehypePlugins={[[RehypeKatex, KATEX_RENDER_OPTIONS]]}
+        rehypePlugins={[[RehypeKatex, KATEX_RENDER_OPTIONS], rehypeJsxGraphPlot]}
         components={{
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           h1({ children, className, node, ...props }) {
@@ -214,47 +212,8 @@ export default function MarkdownDisplay({ children: _children }: MarkdownDisplay
               </p>
             );
           },
-          code({ className, children, node, ...props }) {
-            // react-markdown passes the fence info after the language (`title="…"`) as `data.meta`.
-            const title = getCodeTitle((node?.data as { meta?: string } | undefined)?.meta);
-            const sanitizedText = String(children).replace(/\n$/, '');
-            const match = /language-(\w+)/.exec(className || '');
-
-            const language = match?.[1];
-
-            if (language === undefined) {
-              return (
-                <code
-                  className={cn(className, 'wrap-break-word bg-main-200 px-0.5 text-wrap text-sm')}
-                >
-                  {children}
-                </code>
-              );
-            }
-
-            return (
-              <div className="flex flex-col py-2 text-sm max-w-full">
-                <div className="flex items-center justify-center bg-gray-300 py-2 px-2">
-                  <span>{title ? `${language} – ${title}` : language}</span>
-                  <div className="grow" />
-                  <CopyToClipboardButton text={sanitizedText} />
-                </div>
-                <SyntaxHighlighter
-                  // @ts-expect-error wrong typing
-                  style={nightOwl}
-                  language={language}
-                  PreTag="pre"
-                  {...props}
-                  customStyle={{
-                    overflowX: 'auto',
-                    margin: '0rem',
-                  }}
-                >
-                  {sanitizedText}
-                </SyntaxHighlighter>
-              </div>
-            );
-          },
+          code: MarkdownCode,
+          [JSXGRAPH_PLOT_HNAME]: JsxGraphPlotElement,
         }}
       >
         {children}

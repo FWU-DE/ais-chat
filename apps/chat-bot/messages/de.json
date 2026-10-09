@@ -39,6 +39,18 @@
     "message-download": "Nachricht als Word-Datei herunterladen",
     "message-download-error": "Der Download der Nachricht ist fehlgeschlagen.",
     "regenerate-message": "Antwort erneut generieren",
+    "plot": {
+      "label": "Grafik",
+      "download-png": "Grafik als PNG herunterladen",
+      "reset": "Änderungen an der Grafik zurücksetzen",
+      "zoom-in": "Grafik vergrößern",
+      "zoom-out": "Grafik verkleinern",
+      "fullscreen": "Grafik im Vollbild anzeigen",
+      "fullscreen-exit": "Vollbild beenden",
+      "description": "Grafik: {title}",
+      "description-untitled": "Grafik",
+      "error": "Die Grafik konnte nicht dargestellt werden."
+    },
     "read-aloud": "Nachricht vorlesen",
     "pause-message": "Vorlesen pausieren",
     "read-aloud-error": "Die Sprachausgabe ist fehlgeschlagen.",
