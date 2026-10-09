@@ -1,20 +1,24 @@
 import { RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT } from '@/configuration-text-inputs/const';
-import { z } from 'zod';
+import { TOOL_NAMES } from '@/types/tool-names';
+import { parseJsonRecord } from '@/utils/chat/ai-activity';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { dbGetExtractedFileContent } from '@shared/db/functions/files';
 import type { FileModel } from '@shared/db/schema';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { parseJsonRecord } from '@/utils/chat/ai-activity';
-import type {
-  BuildToolsContext,
-  RetrieveEntireFileToolResponse,
-  ToolDefinition,
-  ToolRegistration,
-} from './types';
-import { TOOL_NAMES } from '@/types/tool-names';
+import { z } from 'zod';
+import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
 
 export const retrieveEntireFileArgsSchema = z.object({
   fileName: z.string(),
 });
+
+export type RetrieveEntireFileToolResponse = {
+  fileName: string | null;
+  content: string | null;
+  truncated: boolean;
+  characterCount: number;
+  maxCharacters: number;
+  error: string | null;
+};
 
 function truncateToCharacterLimit(text: string, maxCharacters: number) {
   return text.slice(0, maxCharacters);
@@ -48,7 +52,7 @@ type BuildRetrieveEntireFileToolParams = Pick<BuildToolsContext, 'relatedFileEnt
 
 export function buildRetrieveEntireFileTool({
   relatedFileEntities,
-}: BuildRetrieveEntireFileToolParams): ToolRegistration<RetrieveEntireFileToolResponse> | null {
+}: BuildRetrieveEntireFileToolParams): ToolRegistration | null {
   if (relatedFileEntities.length === 0) {
     return null;
   }

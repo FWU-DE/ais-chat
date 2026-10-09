@@ -34,9 +34,6 @@ export type ToolCall = {
   arguments: string;
 };
 
-export type JsonValue =
-  string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
-
 /**
  * Defines a tool that can be invoked by the model.
  */
@@ -46,19 +43,15 @@ export type ToolDefinition = {
   parameters: Record<string, unknown>;
 };
 
-export type ToolHandler<TResult extends JsonValue = JsonValue> = (
-  args: Record<string, unknown>,
-) => Promise<TResult>;
+// CHECK if unkown is fine here
+export type ToolHandler = (args: Record<string, unknown>) => Promise<unknown>;
 
-export type ToolRegistryEntry<TResult extends JsonValue = JsonValue> = {
+export type ToolRegistryEntry = {
   definition: ToolDefinition;
-  handler: ToolHandler<TResult>;
+  handler: ToolHandler;
 };
 
-export type ToolRegistry<TResult extends JsonValue = JsonValue> = Record<
-  string,
-  ToolRegistryEntry<TResult>
->;
+export type ToolRegistry = Record<string, ToolRegistryEntry>;
 
 export type Message = {
   role: ConversationRole;

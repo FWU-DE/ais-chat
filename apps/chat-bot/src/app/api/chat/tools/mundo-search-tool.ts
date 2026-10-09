@@ -4,12 +4,17 @@ import {
   MUNDO_SEARCH_RESULTS_LIMIT,
   MUNDO_SUBJECTS,
 } from '@/configuration-text-inputs/const';
-import { mundoSearch, sanitizeClassLevel, sanitizeSubject } from '../mundo-search';
-import { z } from 'zod';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
-import type { MundoSearchToolResponse, ToolDefinition, ToolRegistration } from './types';
 import { TOOL_NAMES } from '@/types/tool-names';
+import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import { z } from 'zod';
+import {
+  mundoSearch,
+  MundoSearchResult,
+  sanitizeClassLevel,
+  sanitizeSubject,
+} from '../mundo-search';
+import type { ToolDefinition, ToolRegistration } from './types';
 
 export const mundoSearchArgsSchema = z.object({
   query: z.string(),
@@ -17,7 +22,13 @@ export const mundoSearchArgsSchema = z.object({
   subject: z.string().nullable().optional(),
 });
 
-export function buildMundoSearchTool(): ToolRegistration<MundoSearchToolResponse> {
+export type MundoSearchToolResponse = {
+  results: MundoSearchResult[];
+  retriedWithoutFilters: boolean;
+  error: string | null;
+};
+
+export function buildMundoSearchTool(): ToolRegistration {
   const definition: ToolDefinition = {
     name: TOOL_NAMES.mundoSearch,
     description: `Search the public MUNDO educational media library (mundo.schule) for teaching materials, e.g. videos or worksheets. Use this tool when the user asks for lesson materials or media suggestions for a specific topic. Returns up to ${MUNDO_SEARCH_RESULTS_LIMIT} matching MUNDO media entries. If a search with filters returns nothing, filters are automatically dropped and the search is retried. When the response has "retriedWithoutFilters": true, do not retry with different filters — instead retry with a broader, simpler or alternative query, without any filters.`,
@@ -96,8 +107,9 @@ export function buildMundoSearchTool(): ToolRegistration<MundoSearchToolResponse
         };
       },
       applyResult: (step, result) => {
+        const typed = result as MundoSearchToolResponse;
         const links = toLinks(
-          result.results.map((entry) => ({
+          typed.results.map((entry) => ({
             title: entry.title,
             url: entry.url,
           })),

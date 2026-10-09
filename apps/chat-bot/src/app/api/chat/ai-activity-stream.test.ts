@@ -4,7 +4,7 @@ import { decodeChatStreamEvent } from '@/utils/streaming';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { describe, expect, it, vi } from 'vitest';
 import { createAiActivityStream } from './ai-activity-stream';
-import { generalizeToolRegistration, type ToolRegistration } from './tools/types';
+import type { ToolRegistration } from './tools/types';
 
 const toolCall: ToolCall = {
   id: 'call-1',
@@ -13,7 +13,7 @@ const toolCall: ToolCall = {
 };
 
 function createToolRegistry() {
-  const registration = {
+  const registration: ToolRegistration = {
     definition: { name: 'math_calculate', description: '', parameters: {} },
     handler: vi.fn(async (): Promise<CalculatorResponse> => ({
       status: 'success',
@@ -26,15 +26,15 @@ function createToolRegistry() {
         id: call.id,
         tool: 'math_calculate' as const,
       }),
-      applyResult: (step: AiActivityToolStep, result: CalculatorResponse) => ({
-        ...step,
-        result: result.result ?? undefined,
-      }),
+      applyResult: (step: AiActivityToolStep, result: unknown) => {
+        const typed = result as CalculatorResponse;
+        return { ...step, result: typed.result ?? undefined };
+      },
     },
-  } satisfies ToolRegistration<CalculatorResponse>;
+  };
 
   return {
-    math_calculate: generalizeToolRegistration(registration),
+    math_calculate: registration,
   };
 }
 

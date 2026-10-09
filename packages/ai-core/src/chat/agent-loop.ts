@@ -5,7 +5,6 @@ import { EmptyResponseError } from '../errors';
 import { generateAgenticStreamWithBilling } from './agentic-stream';
 import type {
   Message as AiCoreMessage,
-  JsonValue,
   ModelSelection,
   TokenUsage,
   ToolCall,
@@ -26,22 +25,18 @@ function logError(message: string, error: unknown) {
   console.error(message, error);
 }
 
-type RunAgentLoopParams<TResult extends JsonValue> = {
+type RunAgentLoopParams = {
   modelSelection: ModelSelection;
   apiKeyId: string;
   messages: AiCoreMessage[];
-  toolRegistry?: ToolRegistry<TResult>;
+  toolRegistry?: ToolRegistry;
   agentName: string;
   /** Tears down the upstream provider stream when the client goes away or the generation times out. */
   abortSignal?: AbortSignal;
   onTextChunk: (delta: string) => void;
   onReasoningSummary?: (delta: string) => void;
   onToolCalls?: (calls: ToolCall[]) => void;
-  onToolResult?: (result: {
-    toolCallId: string;
-    name: string;
-    result: NoInfer<TResult> | string;
-  }) => void;
+  onToolResult?: (result: { toolCallId: string; name: string; result: unknown }) => void;
   onComplete: (result: {
     fullText: string;
     usage: TokenUsage;
@@ -64,7 +59,7 @@ type RunAgentLoopParams<TResult extends JsonValue> = {
   ) => void;
 };
 
-export function runAgentLoop<TResult extends JsonValue = JsonValue>({
+export function runAgentLoop({
   modelSelection,
   apiKeyId,
   messages,
@@ -77,7 +72,7 @@ export function runAgentLoop<TResult extends JsonValue = JsonValue>({
   onToolResult,
   onComplete,
   onError,
-}: RunAgentLoopParams<TResult>): void {
+}: RunAgentLoopParams): void {
   void (async () => {
     let fullText = '';
     let totalUsage: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
@@ -226,7 +221,7 @@ export function runAgentLoop<TResult extends JsonValue = JsonValue>({
                     const registryEntry = toolRegistry?.[toolCall.name];
                     const startedAt = performance.now();
                     let status = registryEntry ? 'success' : 'unknown_tool';
-                    let result: TResult | string;
+                    let result: unknown;
                     let serializedResult: string;
 
                     try {
@@ -255,8 +250,7 @@ export function runAgentLoop<TResult extends JsonValue = JsonValue>({
                         error instanceof Error ? error.message : 'Tool execution failed';
                       toolSpan.setStatus({ code: 2, message });
                       logError(`Error executing tool ${toolCall.name}:`, error);
-                      result = `Error: ${message}`;
-                      serializedResult = result;
+                      serializedResult = `Error: ${message}`;
                     } finally {
                       toolCallDuration.record(performance.now() - startedAt, {
                         'gen_ai.tool.name': registryEntry ? toolCall.name : 'unknown',

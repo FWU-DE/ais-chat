@@ -3,16 +3,22 @@ import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { z } from 'zod';
 import { resolveWebSearchConfig, searchWeb } from '../websearch';
-import type {
-  BuildToolsContext,
-  ToolDefinition,
-  ToolRegistration,
-  WebSearchToolResponse,
-} from './types';
+import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
 
 export const webSearchArgsSchema = z.object({
   query: z.string(),
 });
+
+export type WebSearchToolResult = {
+  title: string | null;
+  url: string | null;
+  content: string | null;
+};
+
+export type WebSearchToolResponse = {
+  results: WebSearchToolResult[];
+  error: string | null;
+};
 
 type BuildWebSearchToolParams = Pick<
   BuildToolsContext,
@@ -112,7 +118,8 @@ export async function buildWebSearchTool({
         };
       },
       applyResult: (step, result) => {
-        const links = toLinks(result.results);
+        const typed = result as WebSearchToolResponse;
+        const links = toLinks(typed.results);
         return links === undefined ? step : { ...step, links };
       },
     },

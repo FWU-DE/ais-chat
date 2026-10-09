@@ -1,19 +1,19 @@
+import { TOOL_NAMES } from '@/types/tool-names';
+import { parseJsonRecord, readString } from '@/utils/chat/ai-activity';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { z } from 'zod';
 import {
   calculate,
   CALCULATOR_MAX_EXPRESSION_LENGTH,
   type CalculatorResponse,
 } from '../calculator';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import type { ToolDefinition, ToolRegistration } from './types';
-import { TOOL_NAMES } from '@/types/tool-names';
-import { parseJsonRecord, readString } from '@/utils/chat/ai-activity';
 
 export const expressionSchema = z.object({
   expression: z.string().trim().min(1).max(CALCULATOR_MAX_EXPRESSION_LENGTH),
 });
 
-export function buildMathCalculateTool(): ToolRegistration<CalculatorResponse> {
+export function buildMathCalculateTool(): ToolRegistration {
   const definition: ToolDefinition = {
     name: TOOL_NAMES.mathCalculate,
     description:
@@ -59,7 +59,8 @@ export function buildMathCalculateTool(): ToolRegistration<CalculatorResponse> {
         };
       },
       applyResult: (step, result) => {
-        const value = result.result ?? undefined;
+        const typed = result as CalculatorResponse;
+        const value = typed.result ?? undefined;
         return value === undefined ? step : { ...step, result: value };
       },
     },

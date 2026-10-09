@@ -118,7 +118,7 @@ export function createAiActivityCollector(
 
       return true;
     },
-    addToolResult(toolCallId: string, result: ToolResult): boolean {
+    addToolResult(toolCallId: string, result: unknown): boolean {
       const step = stepsById.get(toolCallId);
 
       if (step === undefined) {

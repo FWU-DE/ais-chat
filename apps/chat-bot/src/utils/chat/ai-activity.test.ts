@@ -17,9 +17,7 @@ const toolCall: ToolCall = {
   arguments: '{}',
 };
 
-function createToolRegistry(
-  overrides: Partial<ToolRegistration<CalculatorResponse>['activity']> = {},
-) {
+function createToolRegistry(overrides: Partial<ToolRegistration['activity']> = {}) {
   const registration = {
     definition: { name: 'math_calculate', description: '', parameters: {} },
     handler: vi.fn(async (): Promise<CalculatorResponse> => ({
@@ -35,10 +33,10 @@ function createToolRegistry(
       }),
       ...overrides,
     },
-  } satisfies ToolRegistration<CalculatorResponse>;
+  };
 
   return {
-    math_calculate: generalizeToolRegistration(registration),
+    math_calculate: registration,
   };
 }
 
@@ -119,10 +117,10 @@ describe('createAiActivityCollector', () => {
   });
 
   it('starts, adds tool calls, applies results, and finishes', () => {
-    const applyResult = vi.fn((step, result: CalculatorResponse) => ({
-      ...step,
-      result: result.result ?? undefined,
-    }));
+    const applyResult = vi.fn((step, result: unknown) => {
+      const typed = result as CalculatorResponse;
+      return { ...step, result: typed.result ?? undefined };
+    });
     const collector = createAiActivityCollector(createToolRegistry({ applyResult }));
 
     expect(collector.addToolCalls([toolCall])).toBe(true);
@@ -185,10 +183,10 @@ describe('createAiActivityCollector', () => {
     const sharedStep = sharedCollector.getSteps()[0];
     expect(sharedStep?.kind === 'tool' ? sharedStep.detail : undefined).toBeUndefined();
   it('skips activity result enrichment for string error results', () => {
-    const applyResult = vi.fn((step, result: CalculatorResponse) => ({
-      ...step,
-      result: result.result ?? undefined,
-    }));
+    const applyResult = vi.fn((step, result: unknown) => {
+      const typed = result as CalculatorResponse;
+      return { ...step, result: typed.result ?? undefined };
+    });
     const collector = createAiActivityCollector(createToolRegistry({ applyResult }));
 
     collector.addToolCalls([toolCall]);

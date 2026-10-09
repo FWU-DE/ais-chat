@@ -1,22 +1,24 @@
+import { TOOL_NAMES } from '@/types/tool-names';
+import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { WebSource } from '@shared/db/types';
 import { isIP } from 'node:net';
 import { z } from 'zod';
-import type { WebSource } from '@shared/db/types';
 import { webScraper } from '../../web-scraper/web-scraper';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
-import type {
-  BuildToolsContext,
-  ToolDefinition,
-  ToolRegistration,
-  WebScraperToolResult,
-} from './types';
-import { TOOL_NAMES } from '@/types/tool-names';
+import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
 
 const MAX_WEB_SCRAPER_URLS = 5;
 
 export const webScraperArgsSchema = z.object({
   urls: z.array(z.string()),
 });
+
+export type WebScraperToolResult = {
+  title: string | null;
+  url: string | null;
+  content: string | null;
+  error: string | null;
+};
 
 function formatWebScrapedContentForTool(result: WebSource) {
   const title = result.name?.trim() || null;
@@ -78,7 +80,7 @@ type BuildWebScraperToolParams = Pick<
 export function buildWebScraperTool({
   sourceUrls,
   attachedLinks,
-}: BuildWebScraperToolParams): ToolRegistration<WebScraperToolResult[] | string> | null {
+}: BuildWebScraperToolParams): ToolRegistration | null {
   const attachedSourceUrls = sourceUrls.length > 0 ? sourceUrls : attachedLinks;
 
   const definition: ToolDefinition = {
@@ -165,7 +167,7 @@ export function buildWebScraperTool({
         };
       },
       applyResult: (step, result) => {
-        const links = toLinks(Array.isArray(result) ? result : undefined);
+        const links = toLinks(result);
         return links === undefined ? step : { ...step, links };
       },
     },
