@@ -2,7 +2,19 @@
   "common": {
     "delete": "Supprimer",
     "cancel": "Annuler",
-    "information-disclaimer": "AIS.chat peut faire des erreurs. Fais preuve d'esprit critique et vérifie toutes les informations."
+    "information-disclaimer": "AIS.chat peut faire des erreurs. Fais preuve d'esprit critique et vérifie toutes les informations.",
+    "plot": {
+      "label": "Graphique",
+      "download-png": "Télécharger le graphique",
+      "reset": "Réinitialiser les modifications",
+      "zoom-in": "Agrandir",
+      "zoom-out": "Réduire",
+      "fullscreen": "Afficher en plein écran",
+      "fullscreen-exit": "Quitter le plein écran",
+      "description": "Graphique : {title}",
+      "description-untitled": "Graphique",
+      "error": "Le graphique n'a pas pu être affiché."
+    }
   },
   "characters": {
     "shared": {
@@ -60,7 +72,8 @@
       "retrieve_text_chunks": "Fichier lu",
       "retrieve_entire_file": "Fichier entièrement lu",
       "mundo_search": "Recherche dans Mundo",
-      "math_calculate": "Calcul effectué"
+      "math_calculate": "Calcul effectué",
+      "create_plot": "Graphique créé"
     }
   }
 }

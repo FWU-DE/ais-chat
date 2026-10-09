@@ -6,6 +6,7 @@ import { buildRetrieveEntireFileTool } from './tools/retrieve-entire-file-tool';
 import { buildRetrieveTextChunksTool } from './tools/retrieve-text-chunks-tool';
 import { buildMundoSearchTool } from './tools/mundo-search-tool';
 import { buildMathCalculateTool } from './tools/math-calculate-tool';
+import { buildJsxgraphTool } from './tools/jsxgraph-tool';
 import type { ToolRegistration } from './tools/types';
 
 type BuildToolsParams = {
@@ -21,6 +22,8 @@ type BuildToolsParams = {
   allowWebTools: boolean;
   allowMundoSearch?: boolean;
   isCalculatorEnabled?: boolean;
+  modelId: string;
+  apiKeyId: string;
 };
 
 type BuildToolsResult = {
@@ -40,12 +43,19 @@ export async function buildTools({
   allowWebTools,
   allowMundoSearch,
   isCalculatorEnabled = false,
+  modelId,
+  apiKeyId,
 }: BuildToolsParams): Promise<BuildToolsResult> {
   const toolRegistry: Record<string, ToolRegistration> = {};
 
   if (isCalculatorEnabled) {
     const calculatorTool = buildMathCalculateTool();
     toolRegistry[calculatorTool.definition.name] = calculatorTool;
+  }
+
+  if (user.federalState.featureToggles.isJsxGraphEnabled) {
+    const jsxgraphTool = buildJsxgraphTool({ modelId, apiKeyId });
+    toolRegistry[jsxgraphTool.definition.name] = jsxgraphTool;
   }
 
   if (allowWebTools) {

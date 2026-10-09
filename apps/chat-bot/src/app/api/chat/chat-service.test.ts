@@ -436,7 +436,13 @@ describe('sendChatMessage', () => {
 
     expect(mocks.buildToolsMock).toHaveBeenCalledTimes(1);
     expect(mocks.buildToolsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ isCalculatorEnabled: true }),
+      expect.objectContaining({
+        user: expect.objectContaining({
+          federalState: expect.objectContaining({
+            featureToggles: expect.objectContaining({ isCalculatorEnabled: true }),
+          }),
+        }),
+      }),
     );
     expect(mocks.extractUrlsMock).toHaveBeenCalledTimes(1);
     expect(mocks.ingestWebContentMock).toHaveBeenCalledTimes(1);

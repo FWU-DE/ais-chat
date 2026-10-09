@@ -1,4 +1,5 @@
 import { SUPPORTED_DOCUMENTS_EXTENSIONS, SUPPORTED_IMAGE_EXTENSIONS } from '@/const';
+import { TOOL_NAMES } from '@/types/tool-names';
 import {
   MAX_AGENTIC_ITERATIONS,
   MAX_TOOL_CALLS_PER_ITERATION,
@@ -58,6 +59,12 @@ export function constructToolGuidelines(activeTools: ToolDefinition[]) {
   if (hasTool(activeTools, 'math_calculate')) {
     sections.push(
       '- Verwende `math_calculate` für jede numerische, algebraische, statistische, geometrische, Differential-, Integral-, Matrix-, Vektor- oder zahlentheoretische Berechnung. Berechne numerische Ergebnisse niemals mental oder direkt selbst, besonders nicht bei mehrteiligen Anfragen. Führe bei Bedarf einen oder mehrere Tool-Aufrufe aus. Wenn ein Aufruf fehlschlägt, berichte den Fehler kurz und bitte um eine Umformulierung oder die fehlenden Werte; erkläre keine qalc-Interna und erfinde keine Ergebnisse.',
+    );
+  }
+
+  if (hasTool(activeTools, TOOL_NAMES.createPlot)) {
+    sections.push(
+      '- Für Zeichnungen (Funktionsgraph, Diagramm, Geometrie, 3D-Fläche) rufe `create_plot` mit einer präzisen Beschreibung auf; erzeuge das JSON niemals selbst. Jeder Aufruf erzeugt genau ein Koordinatensystem, nie mehrere Panels/Subplots. Sind mehrere eigenständige Zeichnungen gewünscht, rufe `create_plot` für jede einzeln auf, nie mit einer Beschreibung für ein Mehrpanel-Layout. Füge jedes Ergebnis unverändert in einen eigenen Codeblock ein, der mit ```jsxgraph-json title="Kurzer Titel" beginnt und mit ``` endet, und erkläre danach kurz, was zu sehen ist. Erwähne die Technik dahinter niemals. Schlägt ein Aufruf fehl, sag kurz, dass die Zeichnung so nicht geht, und biete eine Alternative an.',
     );
   }
 

@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   buildRetrieveTextChunksToolMock: vi.fn(),
   buildMundoSearchToolMock: vi.fn(),
   buildMathCalculateToolMock: vi.fn(),
+  buildJsxgraphToolMock: vi.fn(),
 }));
 
 vi.mock('./tools/web-search-tool', () => ({
@@ -35,11 +36,16 @@ vi.mock('./tools/math-calculate-tool', () => ({
   buildMathCalculateTool: mocks.buildMathCalculateToolMock,
 }));
 
+vi.mock('./tools/jsxgraph-tool', () => ({
+  buildJsxgraphTool: mocks.buildJsxgraphToolMock,
+}));
+
 const user = {
   id: 'user-1',
   userRole: 'teacher',
   federalState: {
     id: 'federal-state-1',
+    featureToggles: {},
   },
 } as UserAndContext;
 
@@ -108,6 +114,15 @@ beforeEach(() => {
     },
     handler: vi.fn(),
   });
+
+  mocks.buildJsxgraphToolMock.mockReturnValue({
+    definition: {
+      name: 'create_plot',
+      description: 'Create a plot',
+      parameters: { type: 'object' },
+    },
+    handler: vi.fn(),
+  });
 });
 
 describe('buildTools', () => {
@@ -120,6 +135,8 @@ describe('buildTools', () => {
       relatedFileEntities,
       allowWebTools: true,
       isCalculatorEnabled: true,
+      modelId: 'model-1',
+      apiKeyId: 'api-key-1',
     });
 
     expect(Object.keys(toolRegistry)).toEqual([
@@ -133,7 +150,13 @@ describe('buildTools', () => {
 
   it('returns no calculator tool when disabled', async () => {
     const { buildTools } = await import('./build-tools');
-    const { toolRegistry } = await buildTools({ user, relatedFileEntities, allowWebTools: false });
+    const { toolRegistry } = await buildTools({
+      user,
+      relatedFileEntities,
+      allowWebTools: false,
+      modelId: 'model-1',
+      apiKeyId: 'api-key-1',
+    });
     expect(toolRegistry).not.toHaveProperty('math_calculate');
     expect(mocks.buildMathCalculateToolMock).not.toHaveBeenCalled();
   });
@@ -149,6 +172,8 @@ describe('buildTools', () => {
       conversationId: 'conv-1',
       relatedFileEntities,
       allowWebTools: true,
+      modelId: 'model-1',
+      apiKeyId: 'api-key-1',
     });
 
     expect(Object.keys(toolRegistry)).toEqual(['retrieve_entire_file', 'retrieve_text_chunks']);
@@ -162,6 +187,8 @@ describe('buildTools', () => {
       conversationId: 'conv-1',
       relatedFileEntities,
       allowWebTools: false,
+      modelId: 'model-1',
+      apiKeyId: 'api-key-1',
     });
 
     expect(Object.keys(toolRegistry)).toEqual(['retrieve_entire_file', 'retrieve_text_chunks']);
@@ -178,6 +205,8 @@ describe('buildTools', () => {
       relatedFileEntities,
       allowWebTools: true,
       allowMundoSearch: false,
+      modelId: 'model-1',
+      apiKeyId: 'api-key-1',
     });
 
     expect(Object.keys(toolRegistry)).not.toContain('mundo_search');
@@ -193,9 +222,47 @@ describe('buildTools', () => {
       relatedFileEntities,
       allowWebTools: true,
       allowMundoSearch: true,
+      modelId: 'model-1',
+      apiKeyId: 'api-key-1',
     });
 
     expect(Object.keys(toolRegistry)).toContain('mundo_search');
     expect(mocks.buildMundoSearchToolMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not add create_plot when isJsxGraphEnabled is not set', async () => {
+    const { buildTools } = await import('./build-tools');
+
+    const { toolRegistry } = await buildTools({
+      user,
+      relatedFileEntities,
+      allowWebTools: false,
+      modelId: 'model-1',
+      apiKeyId: 'api-key-1',
+    });
+
+    expect(toolRegistry).not.toHaveProperty('create_plot');
+    expect(mocks.buildJsxgraphToolMock).not.toHaveBeenCalled();
+  });
+
+  it('adds create_plot with the current model and API key when isJsxGraphEnabled is true', async () => {
+    const { buildTools } = await import('./build-tools');
+
+    const { toolRegistry } = await buildTools({
+      user: {
+        ...user,
+        federalState: { ...user.federalState, featureToggles: { isJsxGraphEnabled: true } },
+      } as UserAndContext,
+      relatedFileEntities,
+      allowWebTools: false,
+      modelId: 'model-1',
+      apiKeyId: 'api-key-1',
+    });
+
+    expect(toolRegistry).toHaveProperty('create_plot');
+    expect(mocks.buildJsxgraphToolMock).toHaveBeenCalledWith({
+      modelId: 'model-1',
+      apiKeyId: 'api-key-1',
+    });
   });
 });

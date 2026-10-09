@@ -60,6 +60,7 @@ function transformToFederalStateEditForm(federalState: FederalStateModel): Feder
       isWebSearchEnabled: federalState.featureToggles.isWebSearchEnabled ?? false,
       isCalculatorEnabled: federalState.featureToggles.isCalculatorEnabled ?? false,
       isSpeechModelEnabled: federalState.featureToggles.isSpeechModelEnabled ?? false,
+      isJsxGraphEnabled: federalState.featureToggles.isJsxGraphEnabled ?? false,
       isSharedPageLocaleDetectionEnabled:
         federalState.featureToggles.isSharedPageLocaleDetectionEnabled ?? true,
     },
@@ -282,6 +283,12 @@ export function FederalStateView(props: FederalStateViewProps) {
             name="featureToggles.isSpeechModelEnabled"
             label="Sprachausgabe aktivieren"
             description="Erlaubt die Nutzung der Sprachausgabe."
+            control={control}
+          />
+          <FormFieldCheckbox
+            name="featureToggles.isJsxGraphEnabled"
+            label="Graphen aktivieren"
+            description="Erlaubt die Darstellung von JSXGraph-Plots im Chat."
             control={control}
           />
           <FormFieldCheckbox

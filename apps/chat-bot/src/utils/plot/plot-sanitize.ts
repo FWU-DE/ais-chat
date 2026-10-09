@@ -9,7 +9,7 @@ import he from 'he';
 // guaranteeing a watertight sandbox.
 const UNSAFE_STRING_PATTERN = /[;{}"'`=]|\/\*|\/\/|[)\]]\s*\(/;
 const CALL_PATTERN = /([A-Za-z_$][\w$]*)\s*\(/g;
-const ALLOWED_CALLS = new Set([
+export const ALLOWED_CALLS = new Set([
   'abs',
   'acos',
   'acosh',

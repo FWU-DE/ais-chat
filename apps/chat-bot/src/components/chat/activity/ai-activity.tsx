@@ -7,6 +7,7 @@ import {
   BooksIcon,
   CalculatorIcon,
   CaretRightIcon,
+  ChartLineIcon,
   CheckCircleIcon,
   FileMagnifyingGlassIcon,
   FileTextIcon,
@@ -33,6 +34,7 @@ const TOOL_ICONS: Record<AiActivityToolName, Icon> = {
   retrieve_entire_file: FileTextIcon,
   mundo_search: BooksIcon,
   math_calculate: CalculatorIcon,
+  create_plot: ChartLineIcon,
 };
 
 type Translator = ReturnType<typeof useTranslations>;

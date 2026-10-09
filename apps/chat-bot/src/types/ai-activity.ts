@@ -12,6 +12,7 @@ export const AI_ACTIVITY_TOOL_NAMES = [
   TOOL_NAMES.retrieveEntireFile,
   TOOL_NAMES.mundoSearch,
   TOOL_NAMES.mathCalculate,
+  TOOL_NAMES.createPlot,
 ] as const;
 
 export type AiActivityToolName = (typeof AI_ACTIVITY_TOOL_NAMES)[number];

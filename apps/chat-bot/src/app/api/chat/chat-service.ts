@@ -424,6 +424,8 @@ export async function sendChatMessage({
     allowWebTools,
     allowMundoSearch: true,
     isCalculatorEnabled: user.federalState.featureToggles.isCalculatorEnabled,
+    modelId,
+    apiKeyId,
   });
   const aiActivity = createAiActivityStream(update, tools.toolRegistry);
 
