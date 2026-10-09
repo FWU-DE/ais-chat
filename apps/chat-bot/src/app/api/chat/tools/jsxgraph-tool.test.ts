@@ -9,11 +9,12 @@ beforeEach(() => mocks.generateTextWithBillingMock.mockReset());
 
 describe('buildJsxgraphTool', () => {
   const validSpec = '{"board":{"boundingBox":[-5,5,5,-5]},"elements":[["point",[0,0]]]}';
+  const modelSelection = { modelIds: ['model-1'] as [string, ...string[]], modelName: 'model-1' };
 
   it('returns the validated spec from the model on the first try', async () => {
     mocks.generateTextWithBillingMock.mockResolvedValue({ text: validSpec });
     const { buildJsxgraphTool } = await import('./jsxgraph-tool');
-    const tool = buildJsxgraphTool({ modelId: 'model-1', apiKeyId: 'api-key-1' });
+    const tool = buildJsxgraphTool({ modelSelection, apiKeyId: 'api-key-1' });
 
     const result = await tool.handler({ description: 'a point at the origin' });
 
@@ -23,7 +24,7 @@ describe('buildJsxgraphTool', () => {
     });
     expect(mocks.generateTextWithBillingMock).toHaveBeenCalledTimes(1);
     expect(mocks.generateTextWithBillingMock).toHaveBeenCalledWith(
-      'model-1',
+      modelSelection,
       expect.arrayContaining([{ role: 'user', content: 'a point at the origin' }]),
       'api-key-1',
     );
@@ -34,7 +35,7 @@ describe('buildJsxgraphTool', () => {
       .mockResolvedValueOnce({ text: 'not json' })
       .mockResolvedValueOnce({ text: validSpec });
     const { buildJsxgraphTool } = await import('./jsxgraph-tool');
-    const tool = buildJsxgraphTool({ modelId: 'model-1', apiKeyId: 'api-key-1' });
+    const tool = buildJsxgraphTool({ modelSelection, apiKeyId: 'api-key-1' });
 
     const result = await tool.handler({ description: 'a point' });
 
@@ -48,7 +49,7 @@ describe('buildJsxgraphTool', () => {
   it('returns an error string when the retry also fails validation', async () => {
     mocks.generateTextWithBillingMock.mockResolvedValue({ text: 'not json' });
     const { buildJsxgraphTool } = await import('./jsxgraph-tool');
-    const tool = buildJsxgraphTool({ modelId: 'model-1', apiKeyId: 'api-key-1' });
+    const tool = buildJsxgraphTool({ modelSelection, apiKeyId: 'api-key-1' });
 
     const result = await tool.handler({ description: 'a point' });
 
@@ -59,7 +60,7 @@ describe('buildJsxgraphTool', () => {
   it('includes the generated allowlists in the system prompt', async () => {
     mocks.generateTextWithBillingMock.mockResolvedValue({ text: validSpec });
     const { buildJsxgraphTool } = await import('./jsxgraph-tool');
-    const tool = buildJsxgraphTool({ modelId: 'model-1', apiKeyId: 'api-key-1' });
+    const tool = buildJsxgraphTool({ modelSelection, apiKeyId: 'api-key-1' });
 
     await tool.handler({ description: 'a point' });
 
@@ -70,7 +71,7 @@ describe('buildJsxgraphTool', () => {
 
   it('returns an error without calling the model for an invalid description', async () => {
     const { buildJsxgraphTool } = await import('./jsxgraph-tool');
-    const tool = buildJsxgraphTool({ modelId: 'model-1', apiKeyId: 'api-key-1' });
+    const tool = buildJsxgraphTool({ modelSelection, apiKeyId: 'api-key-1' });
 
     const result = await tool.handler({ description: '' });
 

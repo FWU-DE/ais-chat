@@ -180,8 +180,7 @@ export async function sendCharacterMessage({
     sourceUrls: processedUrls,
     allowWebTools,
     allowMundoSearch: false,
-    isCalculatorEnabled: teacherUserAndContext.federalState.featureToggles.isCalculatorEnabled,
-    modelId,
+    modelSelection,
     apiKeyId,
   });
 

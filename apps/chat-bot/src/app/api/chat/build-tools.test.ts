@@ -40,6 +40,8 @@ vi.mock('./tools/jsxgraph-tool', () => ({
   buildJsxgraphTool: mocks.buildJsxgraphToolMock,
 }));
 
+const modelSelection = { modelIds: ['model-1'] as [string, ...string[]], modelName: 'model-1' };
+
 const user = {
   id: 'user-1',
   userRole: 'teacher',
@@ -130,12 +132,14 @@ describe('buildTools', () => {
     const { buildTools } = await import('./build-tools');
 
     const { toolRegistry } = await buildTools({
-      user,
+      user: {
+        ...user,
+        federalState: { ...user.federalState, featureToggles: { isCalculatorEnabled: true } },
+      } as UserAndContext,
       conversationId: 'conv-1',
       relatedFileEntities,
       allowWebTools: true,
-      isCalculatorEnabled: true,
-      modelId: 'model-1',
+      modelSelection,
       apiKeyId: 'api-key-1',
     });
 
@@ -154,7 +158,7 @@ describe('buildTools', () => {
       user,
       relatedFileEntities,
       allowWebTools: false,
-      modelId: 'model-1',
+      modelSelection,
       apiKeyId: 'api-key-1',
     });
     expect(toolRegistry).not.toHaveProperty('math_calculate');
@@ -172,7 +176,7 @@ describe('buildTools', () => {
       conversationId: 'conv-1',
       relatedFileEntities,
       allowWebTools: true,
-      modelId: 'model-1',
+      modelSelection,
       apiKeyId: 'api-key-1',
     });
 
@@ -187,7 +191,7 @@ describe('buildTools', () => {
       conversationId: 'conv-1',
       relatedFileEntities,
       allowWebTools: false,
-      modelId: 'model-1',
+      modelSelection,
       apiKeyId: 'api-key-1',
     });
 
@@ -205,7 +209,7 @@ describe('buildTools', () => {
       relatedFileEntities,
       allowWebTools: true,
       allowMundoSearch: false,
-      modelId: 'model-1',
+      modelSelection,
       apiKeyId: 'api-key-1',
     });
 
@@ -222,7 +226,7 @@ describe('buildTools', () => {
       relatedFileEntities,
       allowWebTools: true,
       allowMundoSearch: true,
-      modelId: 'model-1',
+      modelSelection,
       apiKeyId: 'api-key-1',
     });
 
@@ -237,7 +241,7 @@ describe('buildTools', () => {
       user,
       relatedFileEntities,
       allowWebTools: false,
-      modelId: 'model-1',
+      modelSelection,
       apiKeyId: 'api-key-1',
     });
 
@@ -255,13 +259,13 @@ describe('buildTools', () => {
       } as UserAndContext,
       relatedFileEntities,
       allowWebTools: false,
-      modelId: 'model-1',
+      modelSelection,
       apiKeyId: 'api-key-1',
     });
 
     expect(toolRegistry).toHaveProperty('create_plot');
     expect(mocks.buildJsxgraphToolMock).toHaveBeenCalledWith({
-      modelId: 'model-1',
+      modelSelection,
       apiKeyId: 'api-key-1',
     });
   });
