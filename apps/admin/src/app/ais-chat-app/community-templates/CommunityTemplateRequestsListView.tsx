@@ -94,6 +94,7 @@ export default function CommunityTemplateRequestsListView() {
                 <FieldLabel>Nach Name filtern</FieldLabel>
                 <Input
                   className="m-0"
+                  data-testid="community-template-name-filter"
                   placeholder="Vorlagenname"
                   value={
                     (columnFilters.find((filter) => filter.id === 'entityName')?.value as string) ??
