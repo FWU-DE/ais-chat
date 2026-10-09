@@ -181,6 +181,8 @@ export async function sendCharacterMessage({
     allowWebTools,
     allowMundoSearch: false,
     isCalculatorEnabled: teacherUserAndContext.federalState.featureToggles.isCalculatorEnabled,
+    modelId,
+    apiKeyId,
   });
 
   const aiActivity = createAiActivityStream(update, tools.toolRegistry, {

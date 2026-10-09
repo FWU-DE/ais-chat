@@ -6,7 +6,9 @@ import { type PlotParent, attributesSchema, hasUnsafeString, parentSchema } from
 import { ELEMENT_VALIDATORS } from './plot-element-validators';
 
 export type { PlotParent } from './plot-sanitize';
+export { ALLOWED_CALLS } from './plot-sanitize';
 export { getSliderRange } from './plot-element-validators';
+export { ALLOWED_ELEMENT_TYPES } from './plot-element-types';
 
 type RawPlotElement = [string, PlotParent[], Record<string, unknown>?];
 
@@ -99,7 +101,8 @@ export function parsePlotSpec(source: string): { spec: PlotSpec } | { error: Plo
   try {
     json = JSON.parse(stripJsonComments(source, { trailingCommas: true }));
   } catch (error) {
-    return { error: new PlotSpecError('Plot source is not valid JSON', { cause: error }) };
+    const detail = error instanceof Error ? `: ${error.message}` : '';
+    return { error: new PlotSpecError(`Plot source is not valid JSON${detail}`, { cause: error }) };
   }
   try {
     const result = plotSpecSchema.safeParse(json, { reportInput: true });

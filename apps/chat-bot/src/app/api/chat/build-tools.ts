@@ -1,6 +1,7 @@
 import type { UserAndContext } from '@/auth/types';
 import { TOOL_NAMES } from '@/types/tool-names';
 import type { FileModel, WebSearchModel } from '@shared/db/schema';
+import { buildJsxgraphTool } from './tools/jsxgraph-tool';
 import { buildMathCalculateTool } from './tools/math-calculate-tool';
 import { buildMundoSearchTool } from './tools/mundo-search-tool';
 import { buildRetrieveEntireFileTool } from './tools/retrieve-entire-file-tool';
@@ -22,6 +23,8 @@ type BuildToolsParams = {
   allowWebTools: boolean;
   allowMundoSearch?: boolean;
   isCalculatorEnabled?: boolean;
+  modelId: string;
+  apiKeyId: string;
 };
 
 export async function buildTools({
@@ -37,9 +40,14 @@ export async function buildTools({
   allowWebTools,
   allowMundoSearch,
   isCalculatorEnabled = false,
+  modelId,
+  apiKeyId,
 }: BuildToolsParams) {
   const rawRegistry = {
     [TOOL_NAMES.mathCalculate]: isCalculatorEnabled ? buildMathCalculateTool() : undefined,
+    [TOOL_NAMES.createPlot]: user.federalState.featureToggles.isJsxGraphEnabled
+      ? buildJsxgraphTool({ modelId, apiKeyId })
+      : undefined,
     [TOOL_NAMES.webSearch]: allowWebTools
       ? await buildWebSearchTool({
           user,

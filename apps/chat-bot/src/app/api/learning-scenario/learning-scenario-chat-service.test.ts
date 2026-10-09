@@ -277,7 +277,11 @@ describe('sendLearningScenarioMessage', () => {
       federalStateId: teacherUserAndContext.federalState.id,
     });
     expect(mocks.buildToolsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ isCalculatorEnabled: true }),
+      expect.objectContaining({
+        user: expect.objectContaining({
+          federalState: expect.objectContaining({ featureToggles: { isCalculatorEnabled: true } }),
+        }),
+      }),
     );
   });
 

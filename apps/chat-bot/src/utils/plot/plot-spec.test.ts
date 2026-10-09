@@ -35,7 +35,7 @@ describe('parsePlotSpec', () => {
   it('rejects invalid JSON', () => {
     const error = expectInvalid('{not json');
     expect(error.name).toBe('PlotSpecError');
-    expect(error.message).toBe('Plot source is not valid JSON');
+    expect(error.message).toMatch(/^Plot source is not valid JSON: /);
   });
 
   it.each(['image', 'foreignobject', 'button', 'input', 'checkbox', 'htmlslider'])(
