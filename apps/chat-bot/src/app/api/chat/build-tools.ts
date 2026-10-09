@@ -36,7 +36,6 @@ export async function buildTools({
   allowWebTools,
   allowMundoSearch,
   isCalculatorEnabled = false,
-  onWebSearchResults,
 }: BuildToolsParams) {
   const rawRegistry = {
     [TOOL_NAMES.mathCalculate]: isCalculatorEnabled ? buildMathCalculateTool() : undefined,
@@ -48,7 +47,6 @@ export async function buildTools({
           assistantId,
           conversationId,
           webSearchSettings,
-          onWebSearchResults,
         })
       : undefined,
     [TOOL_NAMES.webScraper]: allowWebTools
