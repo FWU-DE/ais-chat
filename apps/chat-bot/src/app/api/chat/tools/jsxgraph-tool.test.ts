@@ -18,7 +18,7 @@ describe('buildJsxgraphTool', () => {
 
     const result = await tool.handler({ description: 'a point at the origin' });
 
-    expect(JSON.parse(result)).toEqual({
+    expect(JSON.parse(result as string)).toEqual({
       board: { boundingBox: [-5, 5, 5, -5] },
       elements: [['point', [0, 0]]],
     });
@@ -40,7 +40,7 @@ describe('buildJsxgraphTool', () => {
 
     const result = await tool.handler({ description: 'a point' });
 
-    expect(JSON.parse(result)).toEqual({
+    expect(JSON.parse(result as string)).toEqual({
       board: { boundingBox: [-5, 5, 5, -5] },
       elements: [['point', [0, 0]]],
     });
