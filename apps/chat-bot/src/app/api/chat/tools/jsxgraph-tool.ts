@@ -87,7 +87,10 @@ export function buildJsxgraphTool({
     },
   };
 
-  const handler = async (args: Record<string, unknown>): Promise<string> => {
+  const handler = async (
+    args: Record<string, unknown>,
+    abortSignal?: AbortSignal,
+  ): Promise<string> => {
     const parsedArgs = createPlotArgsSchema.safeParse(args);
     if (!parsedArgs.success) {
       return 'Error: Invalid description.';
@@ -103,6 +106,7 @@ export function buildJsxgraphTool({
           { role: 'user', content: description },
         ],
         apiKeyId,
+        { abortSignal },
       );
       const firstResult = parsePlotSpec(first.text);
       if ('spec' in firstResult) {
@@ -121,6 +125,7 @@ export function buildJsxgraphTool({
           },
         ],
         apiKeyId,
+        { abortSignal },
       );
       const retryResult = parsePlotSpec(retryText);
       if ('spec' in retryResult) {

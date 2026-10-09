@@ -27,6 +27,7 @@ describe('buildJsxgraphTool', () => {
       modelSelection,
       expect.arrayContaining([{ role: 'user', content: 'a point at the origin' }]),
       'api-key-1',
+      { abortSignal: undefined },
     );
   });
 
@@ -67,6 +68,22 @@ describe('buildJsxgraphTool', () => {
     const systemMessage = mocks.generateTextWithBillingMock.mock.calls[0]?.[1][0].content;
     expect(systemMessage).toContain('functiongraph3d');
     expect(systemMessage).toContain('nthroot');
+  });
+
+  it('forwards the abort signal to generateTextWithBilling', async () => {
+    mocks.generateTextWithBillingMock.mockResolvedValue({ text: validSpec });
+    const { buildJsxgraphTool } = await import('./jsxgraph-tool');
+    const tool = buildJsxgraphTool({ modelSelection, apiKeyId: 'api-key-1' });
+    const abortSignal = new AbortController().signal;
+
+    await tool.handler({ description: 'a point' }, abortSignal);
+
+    expect(mocks.generateTextWithBillingMock).toHaveBeenCalledWith(
+      modelSelection,
+      expect.anything(),
+      'api-key-1',
+      { abortSignal },
+    );
   });
 
   it('returns an error without calling the model for an invalid description', async () => {
