@@ -6,7 +6,7 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { cn } from '@/utils/tailwind';
 import { MarkdownCode } from './markdown-code';
-import { remarkJsxGraphPlot, JSXGRAPH_PLOT_HNAME } from './plot/remark-jsxgraph-plot';
+import { rehypeJsxGraphPlot, JSXGRAPH_PLOT_HNAME } from './plot/rehype-jsxgraph-plot';
 import { JsxGraphPlotElement } from './plot/plot-block';
 
 type MarkdownDisplayProps = {
@@ -36,8 +36,8 @@ export default function MarkdownDisplay({ children: _children }: MarkdownDisplay
   return (
     <div className={cn('w-full min-w-0 wrap-break-word text-base', removeTopPaddingAfterHrClass)}>
       <Markdown
-        remarkPlugins={[RemarkMathPlugin, remarkGfm, remarkJsxGraphPlot]}
-        rehypePlugins={[[RehypeKatex, KATEX_RENDER_OPTIONS]]}
+        remarkPlugins={[RemarkMathPlugin, remarkGfm]}
+        rehypePlugins={[[RehypeKatex, KATEX_RENDER_OPTIONS], rehypeJsxGraphPlot]}
         components={{
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           h1({ children, className, node, ...props }) {

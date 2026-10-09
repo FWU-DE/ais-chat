@@ -496,6 +496,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: 4.3.3
         version: 4.3.3
+      '@types/hast':
+        specifier: 3.0.5
+        version: 3.0.5
       '@types/he':
         specifier: 1.2.3
         version: 1.2.3
@@ -511,9 +514,6 @@ importers:
       '@types/markdown-it':
         specifier: 14.2.0
         version: 14.2.0
-      '@types/mdast':
-        specifier: 4.0.4
-        version: 4.0.4
       '@types/node':
         specifier: 24.19.0
         version: 24.19.0

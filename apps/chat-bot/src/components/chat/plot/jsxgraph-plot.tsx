@@ -5,7 +5,8 @@ import JXG from 'jsxgraph';
 import { logError, logWarning } from '@shared/logging/logging';
 import { applyInteractionOptions, createBoard, type ViewState } from './jsxgraph-board';
 import { PlotFrame } from './plot-frame';
-import { getSliderDefinitions, type PlotSpec } from '@/utils/plot/plot-spec';
+import { getSliderDefinitions } from './slider-definitions';
+import type { PlotSpec } from '@/utils/plot/plot-spec';
 
 export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -15,9 +16,7 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
   const frameRef = useRef<number | null>(null);
   const discardViewRef = useRef(false);
   const sliders = useMemo(() => getSliderDefinitions(spec.elements), [spec]);
-  const [sliderValues, setSliderValues] = useState(() =>
-    sliders.map((slider) => slider?.start ?? 0),
-  );
+  const [sliderValues, setSliderValues] = useState(() => sliders.map((slider) => slider.start));
   const sliderValuesRef = useRef(sliderValues);
   const [resetCount, setResetCount] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -108,7 +107,7 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
 
   // Rebuilds the board from the spec: view, slider values and dragged elements are reset.
   function handleReset() {
-    const defaults = sliders.map((slider) => slider?.start ?? 0);
+    const defaults = sliders.map((slider) => slider.start);
     sliderValuesRef.current = defaults;
     setSliderValues(defaults);
     viewStateRef.current = undefined;
@@ -128,7 +127,7 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
       try {
         sliderValuesRef.current.forEach((current, i) => setSliderRef.current?.(i, current));
       } catch (error) {
-        logError('Plot slider update failed', error, { title });
+        logError('Plot slider update failed', error);
       }
     });
   }
@@ -137,7 +136,7 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
     try {
       boardRef.current?.zoomIn();
     } catch (error) {
-      logError('Plot zoom in failed', error, { title });
+      logError('Plot zoom in failed', error);
     }
   }
 
@@ -145,7 +144,7 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
     try {
       boardRef.current?.zoomOut();
     } catch (error) {
-      logError('Plot zoom out failed', error, { title });
+      logError('Plot zoom out failed', error);
     }
   }
 

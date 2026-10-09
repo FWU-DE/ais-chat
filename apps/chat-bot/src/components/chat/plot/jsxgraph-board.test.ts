@@ -91,4 +91,74 @@ describe('createBoard', () => {
     expect(texts).toContain('y = e^x');
     expect(texts.some((text) => text.includes('<sup>'))).toBe(false);
   });
+
+  it('does not decode HTML entities in coordinate expressions, only in the text payload', () => {
+    stubMatchMedia();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    // No trailing `;`, so the earlier semicolon check alone wouldn't catch this: if the x
+    // coordinate were (incorrectly) entity-decoded, "remove&#40A&#41" would become "remove(A)"
+    // and delete the point named "A" via JessieCode's `remove` built-in. Instead the raw,
+    // undecoded string fails to parse as JessieCode, and the point survives.
+    const testSpec = spec(
+      JSON.stringify({
+        elements: [
+          ['point', [0, 0], { name: 'A' }],
+          ['text', ['remove&#40A&#41', 0, 'label']],
+        ],
+      }),
+    );
+    const { board } = createBoard(container, testSpec, undefined, [], false);
+
+    expect(board.select('A', true)).toBeDefined();
+  });
+
+  it('still decodes HTML entities in the text payload itself', () => {
+    stubMatchMedia();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    const testSpec = spec(JSON.stringify({ elements: [['text', [0, 0, 'caf&eacute;']]] }));
+    const { board } = createBoard(container, testSpec, undefined, [], false);
+
+    const texts = Object.values(board.objects).filter(
+      (object): object is { elType: string; plaintext: string } =>
+        (object as { elType: string }).elType === 'text',
+    );
+    expect(texts.map((text) => text.plaintext)).toContain('café');
+  });
+
+  it('parses functiongraph3d bounds given as expressions, not just plain numbers', () => {
+    stubMatchMedia();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    const testSpec = spec(
+      JSON.stringify({
+        elements: [
+          [
+            'view3d',
+            [
+              [-4, -3],
+              [8, 8],
+              [
+                [-5, 5],
+                [-5, 5],
+                [-5, 5],
+              ],
+            ],
+          ],
+          ['functiongraph3d', ['sin(x)*cos(y)', ['-PI', 'PI'], ['-PI', 'PI']]],
+        ],
+      }),
+    );
+    const { board } = createBoard(container, testSpec, undefined, [], false);
+
+    const surface = Object.values(board.objects).find(
+      (object): object is { elType: string; range_u: number[] } =>
+        (object as { elType: string }).elType === 'functiongraph3d',
+    );
+    expect(surface?.range_u).toEqual([-Math.PI, Math.PI]);
+  });
 });

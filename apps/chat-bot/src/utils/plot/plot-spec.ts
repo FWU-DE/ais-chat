@@ -1,51 +1,50 @@
 import { z } from 'zod';
+import he from 'he';
 import stripJsonComments from 'strip-json-comments';
+import { ALLOWED_ELEMENT_TYPES } from './plot-element-types';
+import { type PlotParent, attributesSchema, hasUnsafeString, parentSchema } from './plot-sanitize';
+import { ELEMENT_VALIDATORS } from './plot-element-validators';
 
-// JSXGraph elements that load external resources or inject HTML.
-const BLOCKED_ELEMENT_TYPES = new Set([
-  'image',
-  'foreignobject',
-  'fo', // alias for 'foreignobject'
-  'button',
-  'input',
-  'checkbox',
-  'htmlslider',
-]);
+export type { PlotParent } from './plot-sanitize';
+export { getSliderRange } from './plot-element-validators';
 
-// JSXGraph parses string parents with JessieCode, which also knows statements and blocks.
-const UNSAFE_STRING_PATTERN = /[;{}"'`]/;
-const TEXT_TYPES = new Set<string>(['text', 'text3d']);
-
-export type PlotParent = number | string | PlotParent[];
-
-const parentSchema: z.ZodType<PlotParent> = z.lazy(() =>
-  z.union([z.number(), z.string(), z.array(parentSchema)]),
-);
-
-function hasUnsafeString(parent: PlotParent): boolean {
-  if (typeof parent === 'string') {
-    return UNSAFE_STRING_PATTERN.test(parent);
-  }
-  return Array.isArray(parent) && parent.some(hasUnsafeString);
-}
-
-const isNumbers = (value: PlotParent | undefined): value is number[] =>
-  Array.isArray(value) && value.every((entry) => typeof entry === 'number');
-
-// `[min, start, max]` or the JSXGraph form `[[x1, y1], [x2, y2], [min, start, max]]`.
-export function getSliderRange(parents: PlotParent[]) {
-  const range = parents.length === 3 && isNumbers(parents) ? parents : parents[2];
-  return isNumbers(range) && range.length === 3 ? (range as [number, number, number]) : undefined;
-}
+type RawPlotElement = [string, PlotParent[], Record<string, unknown>?];
 
 const elementSchema = z
   .tuple([
-    z.string().refine((type) => !BLOCKED_ELEMENT_TYPES.has(type.toLowerCase())),
+    z.string().toLowerCase().pipe(z.enum(ALLOWED_ELEMENT_TYPES)),
     z.array(parentSchema),
-    z.record(z.string(), z.json()).optional(),
+    attributesSchema,
   ])
-  .refine(([type, parents]) => TEXT_TYPES.has(type) || !parents.some(hasUnsafeString))
-  .refine(([type, parents]) => type !== 'slider' || getSliderRange(parents) !== undefined);
+  .superRefine(([type, parents], ctx) => {
+    const message = ELEMENT_VALIDATORS[type]?.(parents);
+    if (message !== undefined) {
+      ctx.addIssue({ code: 'custom', message: `Invalid "${type}": ${message}` });
+    }
+  })
+  .transform(([type, parents, attributes], ctx): RawPlotElement => {
+    // `text` parents are [x, y, content] (content at index 2); `text3d` are [x, y, z, content]
+    // (index 3). Other types have no text payload, so nothing here matches and every parent is
+    // checked below instead of decoded.
+    const textPayloadIndex = type === 'text' ? 2 : type === 'text3d' ? 3 : undefined;
+    const decodedParents = parents.map((parent, index) => {
+      if (index === textPayloadIndex) {
+        // Text is rendered as plain SVG, not through an HTML parser, so entities like `&alpha;`
+        // must be decoded here or they'd show up literally instead of as the actual character.
+        return typeof parent === 'string' ? he.decode(parent) : parent;
+      }
+      if (hasUnsafeString(parent)) {
+        // Every other parent is still parsed as JessieCode by JSXGraph, so it must pass the
+        // same unsafe-character/call check as the rest of this element's parents.
+        ctx.addIssue({
+          code: 'custom',
+          message: `Unsafe expression in parent ${index} of "${type}"`,
+        });
+      }
+      return parent;
+    });
+    return attributes === undefined ? [type, decodedParents] : [type, decodedParents, attributes];
+  });
 
 // Zod schema for a JSXGraph bounding box `[xMin, yMax, xMax, yMin]`.
 const boundingBoxSchema = z
@@ -61,13 +60,13 @@ const plotSpecSchema = z.object({
       keepAspectRatio: z.boolean().optional(),
       defaultAxes: z
         .object({
-          x: z.record(z.string(), z.json()).optional(),
-          y: z.record(z.string(), z.json()).optional(),
+          x: attributesSchema,
+          y: attributesSchema,
         })
         .optional(),
     })
     .default({}),
-  elements: z.array(elementSchema).min(1),
+  elements: z.array(elementSchema).min(1).max(200),
 });
 
 export type PlotSpec = z.infer<typeof plotSpecSchema>;
@@ -78,6 +77,23 @@ export class PlotSpecError extends Error {
   name = 'PlotSpecError';
 }
 
+// Like `z.prettifyError`, but also includes the offending value per issue.
+function formatIssues(error: z.ZodError): string {
+  return [...error.issues]
+    .sort((a, b) => (a.path ?? []).length - (b.path ?? []).length)
+    .map((issue) => {
+      const lines = [`✖ ${issue.message}`];
+      if (issue.path?.length) {
+        lines.push(`  → at ${z.core.toDotPath(issue.path)}`);
+      }
+      if (issue.input !== undefined) {
+        lines.push(`  → value: ${JSON.stringify(issue.input)}`);
+      }
+      return lines.join('\n');
+    })
+    .join('\n');
+}
+
 export function parsePlotSpec(source: string): { spec: PlotSpec } | { error: PlotSpecError } {
   let json: unknown;
   try {
@@ -85,40 +101,12 @@ export function parsePlotSpec(source: string): { spec: PlotSpec } | { error: Plo
   } catch (error) {
     return { error: new PlotSpecError('Plot source is not valid JSON', { cause: error }) };
   }
-  const result = plotSpecSchema.safeParse(json);
-  return result.success
-    ? { spec: result.data }
-    : { error: new PlotSpecError(z.prettifyError(result.error), { cause: result.error }) };
+  try {
+    const result = plotSpecSchema.safeParse(json, { reportInput: true });
+    return result.success
+      ? { spec: result.data }
+      : { error: new PlotSpecError(formatIssues(result.error), { cause: result.error }) };
+  } catch (error) {
+    return { error: new PlotSpecError('Plot source could not be validated', { cause: error }) };
+  }
 }
-
-export type SliderDefinition = {
-  name: string;
-  min: number;
-  start: number;
-  max: number;
-  step: number;
-};
-
-// One entry per slider element, in order. Invalid sliders yield `undefined` to keep indexes aligned.
-export function getSliderDefinitions(elements: PlotElement[]): (SliderDefinition | undefined)[] {
-  return elements
-    .filter(([type]) => type === 'slider')
-    .map(([, parents, attributes], index) => {
-      const range = getSliderRange(parents);
-      if (range === undefined || range[0] >= range[2]) {
-        return undefined;
-      }
-      const [min, start, max] = range;
-      const name = attributes?.name;
-      const snapWidth = attributes?.snapWidth;
-      return {
-        name: typeof name === 'string' ? name : `slider${index + 1}`,
-        min,
-        start: Math.min(Math.max(start, min), max),
-        max,
-        step: typeof snapWidth === 'number' && snapWidth > 0 ? snapWidth : (max - min) / 100,
-      };
-    });
-}
-
-export const DEFAULT_BOUNDING_BOX: BoundingBox = [-5, 5, 5, -5];

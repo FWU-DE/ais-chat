@@ -8,8 +8,8 @@ const TITLE_PATTERN = /(?:^|\s)title=(?:"([^"]*)"|'([^']*)')/;
 
 // The fence info string (`js title="Titel"`) is split by the markdown libraries,
 // only the `title="…"` attribute (the common docs convention) is read from it.
-export function getCodeTitle(meta: string | undefined) {
-  const match = meta === undefined ? null : TITLE_PATTERN.exec(meta);
+export function getCodeTitle(meta: string | null | undefined) {
+  const match = meta ? TITLE_PATTERN.exec(meta) : null;
   const title = (match?.[1] ?? match?.[2])?.trim();
   return title || undefined;
 }
@@ -28,7 +28,15 @@ export function replacePlotBlocks(markdown: string, describe: (title?: string) =
   const lines = markdown.split('\n');
   for (const token of plotFences.reverse()) {
     if (token.map !== null) {
-      lines.splice(token.map[0], token.map[1] - token.map[0], describe(getCodeTitle(token.info)));
+      // The fence's first line may carry a list/blockquote prefix (e.g. `- ` or `> `) before
+      // its markup; keep it so the description stays inside the same container.
+      const firstLine = lines[token.map[0]] ?? '';
+      const prefix = firstLine.slice(0, firstLine.indexOf(token.markup));
+      lines.splice(
+        token.map[0],
+        token.map[1] - token.map[0],
+        prefix + describe(getCodeTitle(token.info)),
+      );
     }
   }
   return lines.join('\n');

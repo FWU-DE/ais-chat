@@ -13,7 +13,7 @@ export function MarkdownCode({
   ...props
 }: React.ComponentProps<'code'> & ExtraProps) {
   // react-markdown passes the fence info after the language (`title="…"`) as `data.meta`.
-  const title = getCodeTitle((node?.data as { meta?: string } | undefined)?.meta);
+  const title = getCodeTitle(node?.data?.meta);
   const sanitizedText = String(children).replace(/\n$/, '');
   const match = /language-([\w-]+)/.exec(className || '');
 
