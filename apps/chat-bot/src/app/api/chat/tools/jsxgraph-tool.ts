@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { generateTextWithBilling } from '@ais-chat/ai-core';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { ModelSelection, ToolCall } from '@ais-chat/ai-core/chat/types';
 import { ALLOWED_CALLS, ALLOWED_ELEMENT_TYPES, parsePlotSpec } from '@/utils/plot/plot-spec';
 import type { ToolDefinition, ToolRegistration } from './types';
 import { TOOL_NAMES } from '@/types/tool-names';
@@ -60,12 +60,12 @@ Examples:
 {"board": {"boundingBox": [-5, 5, 5, -5], "axis": false}, "elements": [["chart", [[50, 30, 20]], {"chartStyle": "pie", "radius": 3}], ["text", [2, 2, "A (50%)"]], ["text", [-3.5, 0.5, "B (30%)"]], ["text", [0.5, -3.5, "C (20%)"]]]}`;
 
 type BuildJsxgraphToolParams = {
-  modelId: string;
+  modelSelection: ModelSelection;
   apiKeyId: string;
 };
 
 export function buildJsxgraphTool({
-  modelId,
+  modelSelection,
   apiKeyId,
 }: BuildJsxgraphToolParams): ToolRegistration {
   const definition: ToolDefinition = {
@@ -97,7 +97,7 @@ export function buildJsxgraphTool({
 
     try {
       const first = await generateTextWithBilling(
-        modelId,
+        modelSelection,
         [
           { role: 'system', content: JSXGRAPH_SYSTEM_PROMPT },
           { role: 'user', content: description },
@@ -110,7 +110,7 @@ export function buildJsxgraphTool({
       }
 
       const { text: retryText } = await generateTextWithBilling(
-        modelId,
+        modelSelection,
         [
           { role: 'system', content: JSXGRAPH_SYSTEM_PROMPT },
           { role: 'user', content: description },

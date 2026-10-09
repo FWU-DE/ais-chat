@@ -35,9 +35,10 @@ export { isChatImageAttachment } from './types';
  * This function first verifies that the provided API key has access to the requested text model.
  * If access is granted, it generates the text and bills the usage to the API key.
  *
- * @param modelId - The ID of the text model to use for generation
+ * @param modelSelection - The ID of the text model to use, or a `ModelSelection` with fallback model IDs
  * @param messages - The conversation messages (system, user, assistant)
  * @param apiKeyId - The ID of the API key to verify access and bill usage
+ * @param options - Optional generation options (e.g. tools, temperature, abort signal)
  *
  * @returns A promise that resolves to an object containing the generated text response, usage, and the price in cents
  */
@@ -94,10 +95,11 @@ export async function generateTextWithBilling(
  * This function first verifies that the provided API key has access to the requested text model.
  * Note: Billing happens after the stream completes when usage data is available.
  *
- * @param modelId - The ID of the text model to use for generation
+ * @param modelSelection - The ID of the text model to use, or a `ModelSelection` with fallback model IDs
  * @param messages - The conversation messages (system, user, assistant)
  * @param apiKeyId - The ID of the API key to verify access and bill usage
  * @param onComplete - Optional callback to be invoked after stream completion with usage and price data
+ * @param options - Optional generation options (e.g. tools, temperature, abort signal)
  *
  * @returns An async generator that yields text chunks and returns usage data with price
  */
@@ -176,6 +178,7 @@ function getModelById<T extends { id: string }>(models: T[], modelId: string | u
  * @param modelName - The name of the text model to use for generation
  * @param messages - The conversation messages (system, user, assistant)
  * @param apiKeyId - The ID of the API key to verify access and bill usage
+ * @param options - Optional generation options (e.g. tools, temperature, abort signal)
  *
  * @returns A promise that resolves to an object containing the generated text response, usage, price, and model metadata
  */
@@ -197,6 +200,7 @@ export async function generateTextByNameWithBilling(
  * @param messages - The conversation messages (system, user, assistant)
  * @param apiKeyId - The ID of the API key to verify access and bill usage
  * @param onComplete - Optional callback to be invoked after stream completion with usage and price data
+ * @param options - Optional generation options (e.g. tools, temperature, abort signal)
  *
  * @returns An object with the model and an async generator that yields text chunks
  */
