@@ -34,6 +34,8 @@ export const sharedChatSpeechRequestSchema = z.object({
 });
 
 export const speechRequestSchema = z.object({
+  // Voice previews in the editors have no conversation, so they are generated without being billed.
+  conversationId: z.string().optional(),
   text: requiredNonEmptyString('text is required'),
   voice: z.string().optional(),
 });

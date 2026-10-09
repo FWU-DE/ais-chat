@@ -1,6 +1,6 @@
-import type { AiModel, SpeechGenerationFn } from '../types';
 import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { createGoogleClient, formatGoogleError } from '../../google-client';
+import type { AiModel, SpeechGenerationFn } from '../types';
 
 function pcmToWav(pcm: Buffer): Buffer {
   // Gemini TTS generates 24 kHz mono signed 16-bit little-endian PCM:
@@ -69,6 +69,12 @@ export function constructGoogleSpeechGenerationFn(model: AiModel): SpeechGenerat
     const pcm = Buffer.from(inline.data, 'base64');
     const wavBuffer = pcmToWav(pcm);
 
-    return { wavBuffer };
+    const usageMetadata = response.usageMetadata;
+    const usage = {
+      inputTextTokens: usageMetadata?.promptTokenCount ?? 0,
+      outputAudioTokens: usageMetadata?.candidatesTokenCount ?? 0,
+    };
+
+    return { wavBuffer, usage };
   };
 }
