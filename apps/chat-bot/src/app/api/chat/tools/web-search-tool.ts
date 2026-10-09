@@ -1,21 +1,21 @@
-import { z } from 'zod';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import { TOOL_NAMES } from '@/types/tool-names';
 import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import { z } from 'zod';
 import { resolveWebSearchConfig, searchWeb } from '../websearch';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
-import { TOOL_NAMES } from '@/types/tool-names';
 
 export const webSearchArgsSchema = z.object({
   query: z.string(),
 });
 
-type WebSearchToolResult = {
+export type WebSearchToolResult = {
   title: string | null;
   url: string | null;
   content: string | null;
 };
 
-type WebSearchToolResponse = {
+export type WebSearchToolResponse = {
   results: WebSearchToolResult[];
   error: string | null;
 };
@@ -98,10 +98,10 @@ export async function buildWebSearchTool({
 
     if (results.length === 0) {
       response.error = 'No results found.';
-      return JSON.stringify(response);
+      return response;
     }
 
-    return JSON.stringify(response);
+    return response;
   };
 
   return {
@@ -118,12 +118,8 @@ export async function buildWebSearchTool({
         };
       },
       applyResult: (step, result) => {
-        const parsed = parseJsonRecord(result);
-        const links = toLinks(
-          parsed !== null && typeof parsed === 'object'
-            ? (parsed as { results?: unknown }).results
-            : undefined,
-        );
+        const typed = result as WebSearchToolResponse;
+        const links = toLinks(typed.results);
         return links === undefined ? step : { ...step, links };
       },
     },

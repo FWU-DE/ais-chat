@@ -18,7 +18,7 @@ describe('buildMathCalculateTool', () => {
     expect(tool.definition.parameters).toMatchObject({
       properties: { expression: { minLength: 1 } },
     });
-    expect(JSON.parse(await tool.handler({ expression: ' 2 + 2 ' }))).toEqual({
+    expect(await tool.handler({ expression: ' 2 + 2 ' })).toEqual({
       status: 'success',
       result: '4',
       error: null,
@@ -36,7 +36,7 @@ describe('buildMathCalculateTool', () => {
     const tool = buildMathCalculateTool();
     if (!tool) throw new Error('expected enabled calculator tool');
 
-    expect(JSON.parse(await tool.handler({ expression: 'not valid' }))).toEqual({
+    expect(await tool.handler({ expression: 'not valid' })).toEqual({
       status: 'invalid_input',
       result: null,
       error: 'Calculator could not parse the expression.',
@@ -48,7 +48,7 @@ describe('buildMathCalculateTool', () => {
     const tool = buildMathCalculateTool();
     if (!tool) throw new Error('expected enabled calculator tool');
     const raw = await tool.handler({ expression: '' });
-    expect(JSON.parse(raw)).toMatchObject({ status: 'invalid_input' });
+    expect(raw).toMatchObject({ status: 'invalid_input' });
     expect(mocks.calculateMock).not.toHaveBeenCalled();
   });
 });

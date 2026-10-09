@@ -1,12 +1,13 @@
 import type { UserAndContext } from '@/auth/types';
+import { TOOL_NAMES } from '@/types/tool-names';
 import type { FileModel, WebSearchModel } from '@shared/db/schema';
-import { buildWebSearchTool } from './tools/web-search-tool';
-import { buildWebScraperTool } from './tools/web-scraper-tool';
+import { buildMathCalculateTool } from './tools/math-calculate-tool';
+import { buildMundoSearchTool } from './tools/mundo-search-tool';
 import { buildRetrieveEntireFileTool } from './tools/retrieve-entire-file-tool';
 import { buildRetrieveTextChunksTool } from './tools/retrieve-text-chunks-tool';
-import { buildMundoSearchTool } from './tools/mundo-search-tool';
-import { buildMathCalculateTool } from './tools/math-calculate-tool';
-import type { ToolRegistration } from './tools/types';
+import type { ToolRegistration, ToolRegistry } from './tools/types';
+import { buildWebScraperTool } from './tools/web-scraper-tool';
+import { buildWebSearchTool } from './tools/web-search-tool';
 
 type BuildToolsParams = {
   user: UserAndContext;
@@ -23,10 +24,6 @@ type BuildToolsParams = {
   isCalculatorEnabled?: boolean;
 };
 
-type BuildToolsResult = {
-  toolRegistry: Record<string, ToolRegistration>;
-};
-
 export async function buildTools({
   user,
   characterId,
@@ -40,63 +37,42 @@ export async function buildTools({
   allowWebTools,
   allowMundoSearch,
   isCalculatorEnabled = false,
-}: BuildToolsParams): Promise<BuildToolsResult> {
-  const toolRegistry: Record<string, ToolRegistration> = {};
-
-  if (isCalculatorEnabled) {
-    const calculatorTool = buildMathCalculateTool();
-    toolRegistry[calculatorTool.definition.name] = calculatorTool;
-  }
-
-  if (allowWebTools) {
-    const webSearchTool = await buildWebSearchTool({
+}: BuildToolsParams) {
+  const rawRegistry = {
+    [TOOL_NAMES.mathCalculate]: isCalculatorEnabled ? buildMathCalculateTool() : undefined,
+    [TOOL_NAMES.webSearch]: allowWebTools
+      ? await buildWebSearchTool({
+          user,
+          characterId,
+          learningScenarioId,
+          assistantId,
+          conversationId,
+          webSearchSettings,
+        })
+      : undefined,
+    [TOOL_NAMES.webScraper]: allowWebTools
+      ? buildWebScraperTool({
+          sourceUrls,
+          attachedLinks,
+        })
+      : undefined,
+    [TOOL_NAMES.mundoSearch]: allowMundoSearch ? buildMundoSearchTool() : undefined,
+    [TOOL_NAMES.retrieveEntireFile]: buildRetrieveEntireFileTool({
+      relatedFileEntities,
+    }),
+    [TOOL_NAMES.retrieveTextChunks]: buildRetrieveTextChunksTool({
       user,
-      characterId,
-      learningScenarioId,
-      assistantId,
-      conversationId,
-      webSearchSettings,
-    });
-
-    if (webSearchTool) {
-      toolRegistry[webSearchTool.definition.name] = webSearchTool;
-    }
-  }
-
-  if (allowWebTools) {
-    const webScraperTool = buildWebScraperTool({
+      relatedFileEntities,
       sourceUrls,
       attachedLinks,
-    });
+    }),
+  };
 
-    if (webScraperTool) {
-      toolRegistry[webScraperTool.definition.name] = webScraperTool;
-    }
-  }
-
-  if (allowMundoSearch) {
-    const mundoSearchTool = buildMundoSearchTool();
-    toolRegistry[mundoSearchTool.definition.name] = mundoSearchTool;
-  }
-
-  const retrieveEntireFileTool = buildRetrieveEntireFileTool({
-    relatedFileEntities,
-  });
-
-  if (retrieveEntireFileTool) {
-    toolRegistry[retrieveEntireFileTool.definition.name] = retrieveEntireFileTool;
-  }
-
-  const retrieveTextChunksTool = buildRetrieveTextChunksTool({
-    user,
-    relatedFileEntities,
-    sourceUrls,
-    attachedLinks,
-  });
-
-  if (retrieveTextChunksTool) {
-    toolRegistry[retrieveTextChunksTool.definition.name] = retrieveTextChunksTool;
-  }
+  const toolRegistry: ToolRegistry = Object.fromEntries(
+    Object.entries(rawRegistry).filter(
+      (entry): entry is [string, ToolRegistration] => entry[1] !== null && entry[1] !== undefined,
+    ),
+  );
 
   return { toolRegistry };
 }
