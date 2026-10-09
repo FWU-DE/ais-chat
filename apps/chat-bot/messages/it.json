@@ -2,7 +2,19 @@
   "common": {
     "delete": "Cancella",
     "cancel": "Annulla",
-    "information-disclaimer": "AIS.chat può commettere errori. Mantieni un atteggiamento critico e verifica tutte le informazioni."
+    "information-disclaimer": "AIS.chat può commettere errori. Mantieni un atteggiamento critico e verifica tutte le informazioni.",
+    "plot": {
+      "label": "Grafico",
+      "download-png": "Scarica il grafico",
+      "reset": "Ripristina le modifiche",
+      "zoom-in": "Ingrandisci",
+      "zoom-out": "Riduci",
+      "fullscreen": "Mostra a schermo intero",
+      "fullscreen-exit": "Esci dalla modalità a schermo intero",
+      "description": "Grafico: {title}",
+      "description-untitled": "Grafico",
+      "error": "Non è stato possibile visualizzare il grafico."
+    }
   },
   "characters": {
     "shared": {
@@ -60,7 +72,8 @@
       "retrieve_text_chunks": "File letto",
       "retrieve_entire_file": "File letto per intero",
       "mundo_search": "Ricerca in Mundo",
-      "math_calculate": "Calcolo eseguito"
+      "math_calculate": "Calcolo eseguito",
+      "create_plot": "Grafico creato"
     }
   }
 }

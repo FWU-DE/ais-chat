@@ -2,7 +2,19 @@
   "common": {
     "delete": "Delete",
     "cancel": "Cancel",
-    "information-disclaimer": "AIS.chat can make mistakes. Think critically and check all information."
+    "information-disclaimer": "AIS.chat can make mistakes. Think critically and check all information.",
+    "plot": {
+      "label": "Graphic",
+      "download-png": "Download graphic",
+      "reset": "Reset changes",
+      "zoom-in": "Zoom in",
+      "zoom-out": "Zoom out",
+      "fullscreen": "Show in fullscreen",
+      "fullscreen-exit": "Exit fullscreen",
+      "description": "Graphic: {title}",
+      "description-untitled": "Graphic",
+      "error": "The graphic could not be displayed."
+    }
   },
   "characters": {
     "shared": {
@@ -60,7 +72,8 @@
       "retrieve_text_chunks": "File read",
       "retrieve_entire_file": "File fully read",
       "mundo_search": "Searched Mundo",
-      "math_calculate": "Calculation performed"
+      "math_calculate": "Calculation performed",
+      "create_plot": "Graphic created"
     }
   }
 }

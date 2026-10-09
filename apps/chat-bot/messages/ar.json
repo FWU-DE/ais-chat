@@ -2,7 +2,19 @@
   "common": {
     "delete": "حذف",
     "cancel": "إلغاء",
-    "information-disclaimer": "قد يخطئ AIS.chat. فكّر بشكل نقدي وتحقّق من جميع المعلومات."
+    "information-disclaimer": "قد يخطئ AIS.chat. فكّر بشكل نقدي وتحقّق من جميع المعلومات.",
+    "plot": {
+      "label": "رسم بياني",
+      "download-png": "تنزيل الرسم البياني",
+      "reset": "إعادة تعيين التغييرات",
+      "zoom-in": "تكبير",
+      "zoom-out": "تصغير",
+      "fullscreen": "عرض بملء الشاشة",
+      "fullscreen-exit": "إنهاء وضع ملء الشاشة",
+      "description": "رسم بياني: {title}",
+      "description-untitled": "رسم بياني",
+      "error": "تعذّر عرض الرسم البياني."
+    }
   },
   "characters": {
     "shared": {
@@ -60,7 +72,8 @@
       "retrieve_text_chunks": "تمت قراءة الملف",
       "retrieve_entire_file": "تمت قراءة الملف بالكامل",
       "mundo_search": "البحث في Mundo",
-      "math_calculate": "تم إجراء الحساب"
+      "math_calculate": "تم إجراء الحساب",
+      "create_plot": "تم إنشاء الرسم البياني"
     }
   }
 }

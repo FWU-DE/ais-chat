@@ -681,6 +681,52 @@ describe('agent-loop', () => {
       );
     });
 
+    it('passes the signal to a tool handler as its second argument', async () => {
+      const messages: Message[] = [{ role: 'user', content: 'Test query' }];
+      const abortController = new AbortController();
+      const handler = vi.fn(async () => 'tool result');
+
+      let callCount = 0;
+      mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+        callCount++;
+        if (callCount === 1) {
+          yield {
+            type: 'tool_call',
+            call: { id: 'call_123', name: 'test_tool', arguments: '{}' },
+          } satisfies StreamEvent;
+          yield { type: 'finish', usage } satisfies StreamEvent;
+        } else {
+          yield { type: 'text', delta: 'Done.' } satisfies StreamEvent;
+          yield { type: 'finish', usage } satisfies StreamEvent;
+        }
+      });
+
+      const onComplete = vi.fn();
+
+      runAgentLoop({
+        modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+        apiKeyId: 'test-key',
+        messages,
+        toolRegistry: {
+          test_tool: {
+            definition: { name: 'test_tool', description: 'Test', parameters: {} },
+            handler,
+          },
+        },
+        agentName: 'Test Agent',
+        abortSignal: abortController.signal,
+        onTextChunk: vi.fn(),
+        onComplete,
+        onError: vi.fn(),
+      });
+
+      await vi.waitFor(() => {
+        expect(onComplete).toHaveBeenCalled();
+      });
+
+      expect(handler).toHaveBeenCalledWith({}, abortController.signal);
+    });
+
     it('stops before the next iteration once aborted and keeps the partial text', async () => {
       const messages: Message[] = [{ role: 'user', content: 'Test query' }];
       const onTextChunk = vi.fn();

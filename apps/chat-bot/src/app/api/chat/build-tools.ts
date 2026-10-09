@@ -1,4 +1,5 @@
 import type { UserAndContext } from '@/auth/types';
+import type { ModelSelection } from '@ais-chat/ai-core/chat/types';
 import type { FileModel, WebSearchModel } from '@shared/db/schema';
 import { buildWebSearchTool } from './tools/web-search-tool';
 import { buildWebScraperTool } from './tools/web-scraper-tool';
@@ -6,6 +7,7 @@ import { buildRetrieveEntireFileTool } from './tools/retrieve-entire-file-tool';
 import { buildRetrieveTextChunksTool } from './tools/retrieve-text-chunks-tool';
 import { buildMundoSearchTool } from './tools/mundo-search-tool';
 import { buildMathCalculateTool } from './tools/math-calculate-tool';
+import { buildJsxgraphTool } from './tools/jsxgraph-tool';
 import type { ToolRegistration } from './tools/types';
 
 type BuildToolsParams = {
@@ -20,7 +22,8 @@ type BuildToolsParams = {
   attachedLinks?: string[];
   allowWebTools: boolean;
   allowMundoSearch?: boolean;
-  isCalculatorEnabled?: boolean;
+  modelSelection: ModelSelection;
+  apiKeyId: string;
 };
 
 type BuildToolsResult = {
@@ -39,13 +42,19 @@ export async function buildTools({
   attachedLinks = [],
   allowWebTools,
   allowMundoSearch,
-  isCalculatorEnabled = false,
+  modelSelection,
+  apiKeyId,
 }: BuildToolsParams): Promise<BuildToolsResult> {
   const toolRegistry: Record<string, ToolRegistration> = {};
 
-  if (isCalculatorEnabled) {
+  if (user.federalState.featureToggles.isCalculatorEnabled) {
     const calculatorTool = buildMathCalculateTool();
     toolRegistry[calculatorTool.definition.name] = calculatorTool;
+  }
+
+  if (user.federalState.featureToggles.isJsxGraphEnabled) {
+    const jsxgraphTool = buildJsxgraphTool({ modelSelection, apiKeyId });
+    toolRegistry[jsxgraphTool.definition.name] = jsxgraphTool;
   }
 
   if (allowWebTools) {

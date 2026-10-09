@@ -41,11 +41,11 @@
     "regenerate-message": "Antwort erneut generieren",
     "plot": {
       "label": "Grafik",
-      "download-png": "Grafik als PNG herunterladen",
-      "reset": "Änderungen an der Grafik zurücksetzen",
-      "zoom-in": "Grafik vergrößern",
-      "zoom-out": "Grafik verkleinern",
-      "fullscreen": "Grafik im Vollbild anzeigen",
+      "download-png": "Grafik herunterladen",
+      "reset": "Änderungen zurücksetzen",
+      "zoom-in": "Vergrößern",
+      "zoom-out": "Verkleinern",
+      "fullscreen": "Im Vollbild anzeigen",
       "fullscreen-exit": "Vollbild beenden",
       "description": "Grafik: {title}",
       "description-untitled": "Grafik",
@@ -193,7 +193,8 @@
       "retrieve_text_chunks": "Relevante Dateiausschnitte gelesen: Suchbegriffe",
       "retrieve_entire_file": "Datei vollständig gelesen",
       "mundo_search": "Mundo durchsucht",
-      "math_calculate": "Berechnung durchgeführt"
+      "math_calculate": "Berechnung durchgeführt",
+      "create_plot": "Grafik erstellt"
     }
   },
   "file-interaction": {

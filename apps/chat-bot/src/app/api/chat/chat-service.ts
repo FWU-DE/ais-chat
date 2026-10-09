@@ -423,7 +423,8 @@ export async function sendChatMessage({
     sourceUrls: ingestResult.processedUrls,
     allowWebTools,
     allowMundoSearch: true,
-    isCalculatorEnabled: user.federalState.featureToggles.isCalculatorEnabled,
+    modelSelection,
+    apiKeyId,
   });
   const aiActivity = createAiActivityStream(update, tools.toolRegistry);
 
