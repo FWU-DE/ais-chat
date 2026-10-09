@@ -53,23 +53,47 @@ const boundingBoxSchema = z
   .tuple([z.number(), z.number(), z.number(), z.number()])
   .refine(([xMin, yMax, xMax, yMin]) => xMin < xMax && yMin < yMax);
 
-const plotSpecSchema = z.object({
-  board: z
-    .object({
-      boundingBox: boundingBoxSchema.optional(),
-      axis: z.boolean().optional(),
-      grid: z.boolean().optional(),
-      keepAspectRatio: z.boolean().optional(),
-      defaultAxes: z
-        .object({
-          x: attributesSchema,
-          y: attributesSchema,
-        })
-        .optional(),
-    })
-    .default({}),
-  elements: z.array(elementSchema).min(1).max(200),
-});
+const plotSpecSchema = z
+  .object({
+    board: z
+      .object({
+        boundingBox: boundingBoxSchema.optional(),
+        axis: z.boolean().optional(),
+        grid: z.boolean().optional(),
+        keepAspectRatio: z.boolean().optional(),
+        defaultAxes: z
+          .object({
+            x: attributesSchema,
+            y: attributesSchema,
+          })
+          .optional(),
+      })
+      .default({}),
+    elements: z.array(elementSchema).min(1).max(200),
+  })
+  .superRefine(({ board, elements }, ctx) => {
+    // The renderer skips every `*3d` element when no `view3d` exists and otherwise falls back
+    // to a generic bounding box, so a 3D spec missing either would silently render blank/wrong
+    // instead of failing here and triggering the tool's retry.
+    const has3dElement = elements.some(([type]) => type !== 'view3d' && type.endsWith('3d'));
+    if (!has3dElement) {
+      return;
+    }
+    if (!elements.some(([type]) => type === 'view3d')) {
+      ctx.addIssue({
+        code: 'custom',
+        message: '3D elements require a "view3d" element',
+        path: ['elements'],
+      });
+    }
+    if (board.boundingBox === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        message: '3D elements require "board.boundingBox"',
+        path: ['board', 'boundingBox'],
+      });
+    }
+  });
 
 export type PlotSpec = z.infer<typeof plotSpecSchema>;
 export type PlotElement = PlotSpec['elements'][number];

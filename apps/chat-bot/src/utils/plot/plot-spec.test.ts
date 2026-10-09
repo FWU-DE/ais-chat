@@ -129,7 +129,7 @@ describe('parsePlotSpec', () => {
 
   it('decodes HTML entities in the text3d payload', () => {
     const spec = expectValid(
-      '{"elements":[["view3d",[[-4,-3],[8,8],[[-5,5],[-5,5],[-5,5]]]],["text3d",[0,0,0,"caf&eacute;"]]]}',
+      '{"board":{"boundingBox":[-5,5,5,-5]},"elements":[["view3d",[[-4,-3],[8,8],[[-5,5],[-5,5],[-5,5]]]],["text3d",[0,0,0,"caf&eacute;"]]]}',
     );
     expect(spec.elements[1]?.[1][3]).toBe('café');
   });
@@ -166,7 +166,7 @@ describe('parsePlotSpec', () => {
 
   it('allows unsafe characters in text3d content', () => {
     expectValid(
-      '{"elements":[["view3d",[[-4,-3],[8,8],[[-5,5],[-5,5],[-5,5]]]],["text3d",[0,0,0,"a;b"]]]}',
+      '{"board":{"boundingBox":[-5,5,5,-5]},"elements":[["view3d",[[-4,-3],[8,8],[[-5,5],[-5,5],[-5,5]]]],["text3d",[0,0,0,"a;b"]]]}',
     );
   });
 
@@ -182,9 +182,35 @@ describe('parsePlotSpec', () => {
 
   it('accepts a curve3d with a proper two-element range', () => {
     expectValid(
-      '{"elements":[["view3d",[[-4,-3],[8,8],[[-5,5],[-5,5],[-5,5]]]],' +
+      '{"board":{"boundingBox":[-5,5,5,-5]},"elements":[["view3d",[[-4,-3],[8,8],[[-5,5],[-5,5],[-5,5]]]],' +
         '["curve3d",["cos(x)","sin(x)","0",[0,"2*PI"]]]]}',
     );
+  });
+
+  it('rejects a 3D element without a view3d element', () => {
+    const error = expectInvalid(
+      '{"board":{"boundingBox":[-5,5,5,-5]},"elements":[["point3d",[0,0,0]]]}',
+    );
+    expect(error.message).toMatch(/view3d/);
+  });
+
+  it('rejects a 3D element without board.boundingBox', () => {
+    const error = expectInvalid(
+      '{"elements":[["view3d",[[-4,-3],[8,8],[[-5,5],[-5,5],[-5,5]]]],["point3d",[0,0,0]]]}',
+    );
+    expect(error.message).toMatch(/boundingBox/);
+  });
+
+  it('accepts a 3D spec with view3d and a bounding box', () => {
+    const spec = expectValid(
+      '{"board":{"boundingBox":[-5,5,5,-5]},"elements":[["view3d",[[-4,-3],[8,8],[[-5,5],[-5,5],[-5,5]]]],["point3d",[0,0,0]]]}',
+    );
+    expect(spec.elements).toHaveLength(2);
+  });
+
+  it('does not require a view3d element or bounding box for a 2D spec', () => {
+    const spec = expectValid('{"elements":[["point",[0,0]]]}');
+    expect(spec.board.boundingBox).toBeUndefined();
   });
 });
 

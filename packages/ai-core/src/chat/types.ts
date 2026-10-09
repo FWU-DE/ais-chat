@@ -43,7 +43,10 @@ export type ToolDefinition = {
   parameters: Record<string, unknown>;
 };
 
-export type ToolHandler = (args: Record<string, unknown>) => Promise<string>;
+export type ToolHandler = (
+  args: Record<string, unknown>,
+  abortSignal?: AbortSignal,
+) => Promise<string>;
 
 export type ToolRegistryEntry = {
   definition: ToolDefinition;
