@@ -58,7 +58,7 @@
     "drizzle-kit": "0.31.11",
     "drizzle-orm": "0.45.3",
     "drizzle-zod": "0.8.3",
-    "he": "1.2.0",
+    "he": "2.0.0",
     "import-in-the-middle": "3.5.2",
     "isbinaryfile": "6.0.0",
     "jose": "6.2.12",
