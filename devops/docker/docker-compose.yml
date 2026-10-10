@@ -126,7 +126,7 @@ services:
 
   # RustFS - S3-compatible object storage
   rustfs:
-    image: rustfs/rustfs:1.0.0-rc.3
+    image: rustfs/rustfs:1.0.1
     restart: unless-stopped
     environment:
       RUSTFS_ADDRESS: 0.0.0.0:9000
