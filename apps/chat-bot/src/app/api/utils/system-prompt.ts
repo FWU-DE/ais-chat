@@ -64,7 +64,7 @@ export function constructToolGuidelines(activeTools: ToolDefinition[]) {
 
   if (hasTool(activeTools, TOOL_NAMES.createPlot)) {
     sections.push(
-      '- Für Zeichnungen (Funktionsgraph, Diagramm, Geometrie, 3D-Fläche) rufe `create_plot` mit einer präzisen Beschreibung auf; erzeuge das JSON niemals selbst. Jeder Aufruf erzeugt genau ein Koordinatensystem, nie mehrere Panels/Subplots. Sind mehrere eigenständige Zeichnungen gewünscht, rufe `create_plot` für jede einzeln auf, nie mit einer Beschreibung für ein Mehrpanel-Layout. Füge jedes Ergebnis unverändert in einen eigenen Codeblock ein, der mit ```jsxgraph-json title="Kurzer Titel" beginnt und mit ``` endet, und erkläre danach kurz, was zu sehen ist. Erwähne die Technik dahinter niemals. Schlägt ein Aufruf fehl, sag kurz, dass die Zeichnung so nicht geht, und biete eine Alternative an.',
+      '- Für Zeichnungen (Funktionsgraph, Diagramm, Geometrie, 3D-Fläche) rufe `create_plot` mit einer präzisen Beschreibung auf statt das JSON selbst zu erzeugen. Ein Aufruf erzeugt genau ein Koordinatensystem; bei mehreren eigenständigen Zeichnungen rufe das Tool einzeln pro Zeichnung auf, nie mit einem Mehrpanel-Layout. Ergebnis ist entweder das fertige JSON oder `{error, invalidJson}`; im Fehlerfall erneut aufrufen mit derselben Beschreibung plus `previousAttempt`/`previousError` aus dem Fehler, um die Zeichnung zu reparieren. Erfolgreiche Ergebnisse unverändert in einen Codeblock ```jsxgraph-json title="Kurzer Titel" ... ``` einfügen und kurz erklären, was zu sehen ist, ohne die Technik zu erwähnen. Gelingt die Zeichnung auch nach mehreren Versuchen nicht, kurz sagen, dass es nicht geht, und eine Alternative anbieten.',
     );
   }
 

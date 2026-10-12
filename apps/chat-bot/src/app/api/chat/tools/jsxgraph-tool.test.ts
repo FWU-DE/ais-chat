@@ -33,14 +33,27 @@ describe('buildJsxgraphTool', () => {
     );
   });
 
-  it('retries once with the validation error and returns the corrected spec', async () => {
-    mocks.generateTextWithBillingMock
-      .mockResolvedValueOnce({ text: 'not json' })
-      .mockResolvedValueOnce({ text: validSpec });
+  it('returns an error envelope with the invalid JSON on a validation failure', async () => {
+    mocks.generateTextWithBillingMock.mockResolvedValue({ text: 'not json' });
     const { buildJsxgraphTool } = await import('./jsxgraph-tool');
     const tool = buildJsxgraphTool({ modelSelection, apiKeyId: 'api-key-1' });
 
     const result = await tool.handler({ description: 'a point' });
+
+    expect(result).toEqual({ error: expect.any(String), invalidJson: 'not json' });
+    expect(mocks.generateTextWithBillingMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('includes the previous attempt and error in the retry call', async () => {
+    mocks.generateTextWithBillingMock.mockResolvedValue({ text: validSpec });
+    const { buildJsxgraphTool } = await import('./jsxgraph-tool');
+    const tool = buildJsxgraphTool({ modelSelection, apiKeyId: 'api-key-1' });
+
+    const result = await tool.handler({
+      description: 'a point',
+      previousAttempt: 'not json',
+      previousError: 'Plot source is not valid JSON',
+    });
 
     expect(result).toEqual({
       spec: {
@@ -48,18 +61,29 @@ describe('buildJsxgraphTool', () => {
         elements: [['point', [0, 0]]],
       },
     });
-    expect(mocks.generateTextWithBillingMock).toHaveBeenCalledTimes(2);
+    expect(mocks.generateTextWithBillingMock).toHaveBeenCalledTimes(1);
+    const messages = mocks.generateTextWithBillingMock.mock.calls[0]?.[1];
+    expect(messages).toEqual(
+      expect.arrayContaining([
+        { role: 'assistant', content: 'not json' },
+        {
+          role: 'user',
+          content:
+            'The JSON was invalid: Plot source is not valid JSON\nReturn the corrected version as pure JSON, without explanation.',
+        },
+      ]),
+    );
   });
 
-  it('returns an error string when the retry also fails validation', async () => {
-    mocks.generateTextWithBillingMock.mockResolvedValue({ text: 'not json' });
+  it('includes every property in "required" for strict function-calling schemas', async () => {
     const { buildJsxgraphTool } = await import('./jsxgraph-tool');
     const tool = buildJsxgraphTool({ modelSelection, apiKeyId: 'api-key-1' });
 
-    const result = await tool.handler({ description: 'a point' });
-
-    expect(result).toEqual({ error: expect.any(String) });
-    expect(mocks.generateTextWithBillingMock).toHaveBeenCalledTimes(2);
+    const { properties, required } = tool.definition.parameters as {
+      properties: Record<string, unknown>;
+      required: string[];
+    };
+    expect(required).toEqual(Object.keys(properties));
   });
 
   it('includes the generated allowlists in the system prompt', async () => {
@@ -88,6 +112,17 @@ describe('buildJsxgraphTool', () => {
       'api-key-1',
       { abortSignal },
     );
+  });
+
+  it('treats explicit nulls the same as omitted retry context', async () => {
+    mocks.generateTextWithBillingMock.mockResolvedValue({ text: validSpec });
+    const { buildJsxgraphTool } = await import('./jsxgraph-tool');
+    const tool = buildJsxgraphTool({ modelSelection, apiKeyId: 'api-key-1' });
+
+    await tool.handler({ description: 'a point', previousAttempt: null, previousError: null });
+
+    const messages = mocks.generateTextWithBillingMock.mock.calls[0]?.[1];
+    expect(messages).toHaveLength(2);
   });
 
   it('returns an error without calling the model for an invalid description', async () => {

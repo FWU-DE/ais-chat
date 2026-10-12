@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { generateTextWithBilling } from '@ais-chat/ai-core';
-import type { ModelSelection, ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { Message, ModelSelection, ToolCall } from '@ais-chat/ai-core/chat/types';
 import {
   ALLOWED_CALLS,
   ALLOWED_ELEMENT_TYPES,
@@ -12,9 +12,13 @@ import { TOOL_NAMES } from '@/types/tool-names';
 
 export const createPlotArgsSchema = z.object({
   description: z.string().trim().min(1),
+  // Set on a retry call: the invalid JSON and validation error from the previous result, so the
+  // model can repair it instead of starting over from the description alone.
+  previousAttempt: z.string().trim().min(1).nullable().optional(),
+  previousError: z.string().trim().min(1).nullable().optional(),
 });
 
-export type CreatePlotToolResponse = { spec: PlotSpec } | { error: string };
+export type CreatePlotToolResponse = { spec: PlotSpec } | { error: string; invalidJson?: string };
 
 const ALLOWED_ELEMENT_TYPES_LIST = [...ALLOWED_ELEMENT_TYPES].sort().join(', ');
 // Generated from the sanitizer's allowlist so the prompt cannot drift from what passes validation.
@@ -71,6 +75,10 @@ type BuildJsxgraphToolParams = {
   apiKeyId: string;
 };
 
+function isPresent(value: string | null | undefined): value is string {
+  return value !== undefined && value !== null;
+}
+
 export function buildJsxgraphTool({
   modelSelection,
   apiKeyId,
@@ -78,7 +86,7 @@ export function buildJsxgraphTool({
   const definition: ToolDefinition = {
     name: TOOL_NAMES.createPlot,
     description:
-      'Creates a graphical drawing (function graph, chart, geometry, 3D surface) from a text description. Each call produces exactly one drawing; call it once per drawing. Write the description in the language of the conversation, so that labels and captions in the drawing match it.',
+      'Creates a graphical drawing (function graph, chart, geometry, 3D surface) from a text description. Each call produces exactly one drawing; call it once per drawing. Write the description in the language of the conversation, so that labels and captions in the drawing match it. The result is either the final JSON (use it as-is) or a JSON object with "error" and "invalidJson". On an error, you may call this tool again with the same description plus "previousAttempt" set to that "invalidJson" and "previousError" set to that "error", so the drawing can be repaired instead of starting over.',
     parameters: {
       type: 'object',
       properties: {
@@ -88,8 +96,18 @@ export function buildJsxgraphTool({
             'Precise description of the desired drawing: which elements, values, and relationships it should contain.',
           minLength: 1,
         },
+        previousAttempt: {
+          type: ['string', 'null'],
+          description:
+            'The "invalidJson" from the previous error result for this same drawing, or null on the first call.',
+        },
+        previousError: {
+          type: ['string', 'null'],
+          description:
+            'The "error" from the previous error result for this same drawing, or null on the first call.',
+        },
       },
-      required: ['description'],
+      required: ['description', 'previousAttempt', 'previousError'],
       additionalProperties: false,
     },
   };
@@ -103,45 +121,32 @@ export function buildJsxgraphTool({
       return { error: 'Invalid description.' };
     }
 
-    const { description } = parsedArgs.data;
+    const { description, previousAttempt, previousError } = parsedArgs.data;
+
+    const messages: Message[] = [
+      { role: 'system', content: JSXGRAPH_SYSTEM_PROMPT },
+      { role: 'user', content: description },
+    ];
+    if (isPresent(previousAttempt) && isPresent(previousError)) {
+      messages.push(
+        { role: 'assistant', content: previousAttempt },
+        {
+          role: 'user',
+          content: `The JSON was invalid: ${previousError}\nReturn the corrected version as pure JSON, without explanation.`,
+        },
+      );
+    }
 
     try {
-      const first = await generateTextWithBilling(
-        modelSelection,
-        [
-          { role: 'system', content: JSXGRAPH_SYSTEM_PROMPT },
-          { role: 'user', content: description },
-        ],
-        apiKeyId,
-        { abortSignal },
-      );
-      const firstResult = parsePlotSpec(first.text);
-      if ('spec' in firstResult) {
-        return { spec: firstResult.spec };
+      const { text } = await generateTextWithBilling(modelSelection, messages, apiKeyId, {
+        abortSignal,
+      });
+      const result = parsePlotSpec(text);
+      if ('spec' in result) {
+        return { spec: result.spec };
       }
 
-      const { text: retryText } = await generateTextWithBilling(
-        modelSelection,
-        [
-          { role: 'system', content: JSXGRAPH_SYSTEM_PROMPT },
-          { role: 'user', content: description },
-          { role: 'assistant', content: first.text },
-          {
-            role: 'user',
-            content: `The JSON was invalid: ${firstResult.error.message}\nReturn the corrected version as pure JSON, without explanation.`,
-          },
-        ],
-        apiKeyId,
-        { abortSignal },
-      );
-      const retryResult = parsePlotSpec(retryText);
-      if ('spec' in retryResult) {
-        return { spec: retryResult.spec };
-      }
-
-      return {
-        error: `Could not create a valid plot (${retryResult.error.message}). Explain briefly to the user that the drawing could not be created and suggest an alternative.`,
-      };
+      return { error: result.error.message, invalidJson: text };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Plot generation failed';
       return { error: message };
