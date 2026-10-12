@@ -86,7 +86,7 @@ export function buildJsxgraphTool({
   const definition: ToolDefinition = {
     name: TOOL_NAMES.createPlot,
     description:
-      'Creates a graphical drawing (function graph, chart, geometry, 3D surface) from a text description. Each call produces exactly one drawing; call it once per drawing. Write the description in the language of the conversation, so that labels and captions in the drawing match it. The result is either the final JSON (use it as-is) or a JSON object with "error" and "invalidJson". On an error, you may call this tool again with the same description plus "previousAttempt" set to that "invalidJson" and "previousError" set to that "error", so the drawing can be repaired instead of starting over.',
+      'Creates a graphical drawing (function graph, chart, geometry, 3D surface) from a text description. Each call produces exactly one drawing; call it once per drawing. Write the description in the language of the conversation, so that labels and captions in the drawing match it. The result is either the final JSON (use it as-is) or a JSON object with "error" and, only when the error is repairable, "invalidJson". When "invalidJson" is present, you may call this tool again with the same description plus "previousAttempt" set to that "invalidJson" and "previousError" set to that "error", so the drawing can be repaired instead of starting over. When "invalidJson" is absent, retrying will not help; explain the error to the user instead.',
     parameters: {
       type: 'object',
       properties: {

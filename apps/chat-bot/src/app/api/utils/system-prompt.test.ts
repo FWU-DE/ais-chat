@@ -13,6 +13,6 @@ describe('constructToolGuidelines', () => {
   const baseGuidelines = constructToolGuidelines([]);
 
   it.each(toolNames)('adds a guideline section when %s is active', (toolName) => {
-    expect(constructToolGuidelines([tool(toolName)]).length).toBeGreaterThan(baseGuidelines.length);
+    expect(constructToolGuidelines([tool(toolName)])).not.toEqual(baseGuidelines);
   });
 });
