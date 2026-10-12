@@ -22,35 +22,32 @@ export async function POST(req: NextRequest) {
       voice: parsed.voice,
     });
 
-    // Voice previews in the editors have no conversation, so they are not billed.
-    if (parsed.conversationId !== undefined) {
-      await dbInsertConversationUsage({
-        conversationId: parsed.conversationId,
-        userId: user.id,
-        modelId,
-        completionTokens: 0,
-        promptTokens: 0,
-        costsInCent,
-      });
+    await dbInsertConversationUsage({
+      conversationId: parsed.conversationId,
+      userId: user.id,
+      modelId,
+      completionTokens: 0,
+      promptTokens: 0,
+      costsInCent,
+    });
 
-      const conversation = await dbGetOrCreateConversation({
-        conversationId: parsed.conversationId,
-        userId: user.id,
-      });
+    const conversation = await dbGetOrCreateConversation({
+      conversationId: parsed.conversationId,
+      userId: user.id,
+    });
 
-      if (conversation) {
-        await sendRabbitmqEvent(
-          constructNewMessageEvent({
-            user,
-            promptTokens: 0,
-            completionTokens: 0,
-            costsInCent,
-            provider,
-            anonymous: false,
-            conversation,
-          }),
-        );
-      }
+    if (conversation) {
+      await sendRabbitmqEvent(
+        constructNewMessageEvent({
+          user,
+          promptTokens: 0,
+          completionTokens: 0,
+          costsInCent,
+          provider,
+          anonymous: false,
+          conversation,
+        }),
+      );
     }
 
     return new NextResponse(new Uint8Array(buffer), {
