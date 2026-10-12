@@ -71,6 +71,7 @@ export function MessageActions({
           onClick={() => regenerateMessage()}
           aria-label={tCommon('regenerate-message-button-aria-label')}
           className="text-primary"
+          data-testid="regenerate-message-button"
         >
           <ReloadIcon className="size-5 text-primary" />
         </Button>

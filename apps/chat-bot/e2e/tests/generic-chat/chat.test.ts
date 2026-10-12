@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import path from 'path';
+import { SELECTORS } from '../../load_test/config';
 import { deleteChat, enterMessage, regenerateMessage, sendMessage } from '../../utils/chat';
 import { AUTH_FILES } from '../../utils/const';
 
@@ -50,7 +51,7 @@ test('after receiving the first message the typed prompt is not lost', async ({ 
 
   const prompt = 'Dieser Prompt soll nicht verschwinden';
   await enterMessage(page, prompt);
-  await page.getByLabel('Reload').waitFor();
+  await page.locator(SELECTORS.RELOAD_BUTTON).waitFor();
 
   await expect(page).toHaveURL(/\/d\//);
   await expect(page.getByTestId('chat-input')).toHaveValue(prompt);
