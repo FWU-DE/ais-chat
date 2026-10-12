@@ -114,8 +114,12 @@ services:
     restart: unless-stopped
     environment:
       XBERG_MAX_UPLOAD_SIZE_MB: '50'
+      XBERG_OCR_LANGUAGE: 'deu'
     ports:
       - '8000:8000'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev
     volumes:
       - xberg_cache:/app/.xberg
     healthcheck:
