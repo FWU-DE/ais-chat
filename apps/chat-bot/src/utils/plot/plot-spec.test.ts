@@ -117,8 +117,8 @@ describe('parsePlotSpec', () => {
     expect(spec.elements).toHaveLength(1);
   });
 
-  it('rejects a non-ASCII identifier in an expression, e.g. a Greek slider name', () => {
-    expectInvalid('{"elements":[["slider",[0,1,3],{"name":"ω"}],["functiongraph",["sin(ω*x)"]]]}');
+  it('rejects a non-ASCII identifier in an expression, e.g. a Greek variable name', () => {
+    expectInvalid('{"elements":[["slider",[0,1,3],{"name":"a"}],["functiongraph",["sin(ω*x)"]]]}');
   });
 
   it('rejects a non-ASCII slider name', () => {
