@@ -117,6 +117,14 @@ describe('parsePlotSpec', () => {
     expect(spec.elements).toHaveLength(1);
   });
 
+  it('rejects a non-ASCII identifier in an expression, e.g. a Greek slider name', () => {
+    expectInvalid('{"elements":[["slider",[0,1,3],{"name":"ω"}],["functiongraph",["sin(ω*x)"]]]}');
+  });
+
+  it('rejects a non-ASCII slider name', () => {
+    expectInvalid('{"elements":[["slider",[0,1,3],{"name":"ω"}]]}');
+  });
+
   it('allows unsafe characters in text content', () => {
     const spec = expectValid('{"elements":[["text",[0,0,"a \\"quoted\\" word"]]]}');
     expect(spec.elements[0]?.[1][2]).toBe('a "quoted" word');
