@@ -1,13 +1,20 @@
 import { z } from 'zod';
 import { generateTextWithBilling } from '@ais-chat/ai-core';
 import type { ModelSelection, ToolCall } from '@ais-chat/ai-core/chat/types';
-import { ALLOWED_CALLS, ALLOWED_ELEMENT_TYPES, parsePlotSpec } from '@/utils/plot/plot-spec';
+import {
+  ALLOWED_CALLS,
+  ALLOWED_ELEMENT_TYPES,
+  parsePlotSpec,
+  type PlotSpec,
+} from '@/utils/plot/plot-spec';
 import type { ToolDefinition, ToolRegistration } from './types';
 import { TOOL_NAMES } from '@/types/tool-names';
 
 export const createPlotArgsSchema = z.object({
   description: z.string().trim().min(1),
 });
+
+export type CreatePlotToolResponse = { spec: PlotSpec } | { error: string };
 
 const ALLOWED_ELEMENT_TYPES_LIST = [...ALLOWED_ELEMENT_TYPES].sort().join(', ');
 // Generated from the sanitizer's allowlist so the prompt cannot drift from what passes validation.
@@ -90,10 +97,10 @@ export function buildJsxgraphTool({
   const handler = async (
     args: Record<string, unknown>,
     abortSignal?: AbortSignal,
-  ): Promise<string> => {
+  ): Promise<CreatePlotToolResponse> => {
     const parsedArgs = createPlotArgsSchema.safeParse(args);
     if (!parsedArgs.success) {
-      return 'Error: Invalid description.';
+      return { error: 'Invalid description.' };
     }
 
     const { description } = parsedArgs.data;
@@ -110,7 +117,7 @@ export function buildJsxgraphTool({
       );
       const firstResult = parsePlotSpec(first.text);
       if ('spec' in firstResult) {
-        return JSON.stringify(firstResult.spec);
+        return { spec: firstResult.spec };
       }
 
       const { text: retryText } = await generateTextWithBilling(
@@ -129,13 +136,15 @@ export function buildJsxgraphTool({
       );
       const retryResult = parsePlotSpec(retryText);
       if ('spec' in retryResult) {
-        return JSON.stringify(retryResult.spec);
+        return { spec: retryResult.spec };
       }
 
-      return `Error: Could not create a valid plot (${retryResult.error.message}). Explain briefly to the user that the drawing could not be created and suggest an alternative.`;
+      return {
+        error: `Could not create a valid plot (${retryResult.error.message}). Explain briefly to the user that the drawing could not be created and suggest an alternative.`,
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Plot generation failed';
-      return `Error: ${message}`;
+      return { error: message };
     }
   };
 

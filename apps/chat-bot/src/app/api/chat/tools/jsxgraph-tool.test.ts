@@ -18,9 +18,11 @@ describe('buildJsxgraphTool', () => {
 
     const result = await tool.handler({ description: 'a point at the origin' });
 
-    expect(JSON.parse(result as string)).toEqual({
-      board: { boundingBox: [-5, 5, 5, -5] },
-      elements: [['point', [0, 0]]],
+    expect(result).toEqual({
+      spec: {
+        board: { boundingBox: [-5, 5, 5, -5] },
+        elements: [['point', [0, 0]]],
+      },
     });
     expect(mocks.generateTextWithBillingMock).toHaveBeenCalledTimes(1);
     expect(mocks.generateTextWithBillingMock).toHaveBeenCalledWith(
@@ -40,9 +42,11 @@ describe('buildJsxgraphTool', () => {
 
     const result = await tool.handler({ description: 'a point' });
 
-    expect(JSON.parse(result as string)).toEqual({
-      board: { boundingBox: [-5, 5, 5, -5] },
-      elements: [['point', [0, 0]]],
+    expect(result).toEqual({
+      spec: {
+        board: { boundingBox: [-5, 5, 5, -5] },
+        elements: [['point', [0, 0]]],
+      },
     });
     expect(mocks.generateTextWithBillingMock).toHaveBeenCalledTimes(2);
   });
@@ -54,7 +58,7 @@ describe('buildJsxgraphTool', () => {
 
     const result = await tool.handler({ description: 'a point' });
 
-    expect(result).toMatch(/^Error: /);
+    expect(result).toEqual({ error: expect.any(String) });
     expect(mocks.generateTextWithBillingMock).toHaveBeenCalledTimes(2);
   });
 
@@ -92,7 +96,7 @@ describe('buildJsxgraphTool', () => {
 
     const result = await tool.handler({ description: '' });
 
-    expect(result).toBe('Error: Invalid description.');
+    expect(result).toEqual({ error: 'Invalid description.' });
     expect(mocks.generateTextWithBillingMock).not.toHaveBeenCalled();
   });
 });
