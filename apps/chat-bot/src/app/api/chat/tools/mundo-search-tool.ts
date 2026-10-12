@@ -4,17 +4,17 @@ import {
   MUNDO_SEARCH_RESULTS_LIMIT,
   MUNDO_SUBJECTS,
 } from '@/configuration-text-inputs/const';
+import { TOOL_NAMES } from '@/types/tool-names';
+import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import { z } from 'zod';
 import {
   mundoSearch,
+  MundoSearchResult,
   sanitizeClassLevel,
   sanitizeSubject,
-  type MundoSearchResult,
 } from '../mundo-search';
-import { z } from 'zod';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { parseJsonRecord, readString, toLinks } from '@/utils/chat/ai-activity';
 import type { ToolDefinition, ToolRegistration } from './types';
-import { TOOL_NAMES } from '@/types/tool-names';
 
 export const mundoSearchArgsSchema = z.object({
   query: z.string(),
@@ -22,7 +22,7 @@ export const mundoSearchArgsSchema = z.object({
   subject: z.string().nullable().optional(),
 });
 
-type MundoSearchToolResponse = {
+export type MundoSearchToolResponse = {
   results: MundoSearchResult[];
   retriedWithoutFilters: boolean;
   error: string | null;
@@ -58,7 +58,7 @@ export function buildMundoSearchTool(): ToolRegistration {
     },
   };
 
-  const handler = async (args: Record<string, unknown>): Promise<string> => {
+  const handler = async (args: Record<string, unknown>): Promise<MundoSearchToolResponse> => {
     const parsed = mundoSearchArgsSchema.safeParse(args);
     const rawQuery = parsed.success ? parsed.data.query.trim() : '';
     const query = rawQuery.slice(0, MUNDO_SEARCH_QUERY_LENGTH_LIMIT);
@@ -69,7 +69,7 @@ export function buildMundoSearchTool(): ToolRegistration {
         retriedWithoutFilters: false,
         error: 'Error: Missing search query.',
       };
-      return JSON.stringify(response);
+      return response;
     }
 
     const classLevel = sanitizeClassLevel(parsed.success ? parsed.data.classLevel : undefined);
@@ -90,7 +90,7 @@ export function buildMundoSearchTool(): ToolRegistration {
       error: results.length === 0 ? 'No MUNDO results found.' : null,
     };
 
-    return JSON.stringify(response);
+    return response;
   };
 
   return {
@@ -107,18 +107,12 @@ export function buildMundoSearchTool(): ToolRegistration {
         };
       },
       applyResult: (step, result) => {
-        const parsed = parseJsonRecord(result);
-        const rawResults =
-          parsed !== null && typeof parsed === 'object'
-            ? (parsed as { results?: unknown }).results
-            : undefined;
+        const typed = result as MundoSearchToolResponse;
         const links = toLinks(
-          Array.isArray(rawResults)
-            ? rawResults.map((entry) => ({
-                title: readString(entry, 'title'),
-                url: readString(entry, 'url'),
-              }))
-            : undefined,
+          typed.results.map((entry) => ({
+            title: entry.title,
+            url: entry.url,
+          })),
         );
 
         return links === undefined ? step : { ...step, links };

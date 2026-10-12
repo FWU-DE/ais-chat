@@ -1,17 +1,17 @@
 import { RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT } from '@/configuration-text-inputs/const';
-import { z } from 'zod';
+import { TOOL_NAMES } from '@/types/tool-names';
+import { parseJsonRecord } from '@/utils/chat/ai-activity';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { dbGetExtractedFileContent } from '@shared/db/functions/files';
 import type { FileModel } from '@shared/db/schema';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { parseJsonRecord } from '@/utils/chat/ai-activity';
+import { z } from 'zod';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
-import { TOOL_NAMES } from '@/types/tool-names';
 
 export const retrieveEntireFileArgsSchema = z.object({
   fileName: z.string(),
 });
 
-type RetrieveEntireFileToolResponse = {
+export type RetrieveEntireFileToolResponse = {
   fileName: string | null;
   content: string | null;
   truncated: boolean;
@@ -45,7 +45,7 @@ async function formatEntireFileForTool(file: FileModel) {
     response.error = 'File content was truncated to fit the character limit.';
   }
 
-  return JSON.stringify(response);
+  return response;
 }
 
 type BuildRetrieveEntireFileToolParams = Pick<BuildToolsContext, 'relatedFileEntities'>;
@@ -91,7 +91,7 @@ export function buildRetrieveEntireFileTool({
         error: 'Missing file name.',
       };
 
-      return JSON.stringify(response);
+      return response;
     }
 
     const matchedFile = relatedFileEntities.find((file) => file.name === fileName);
@@ -106,7 +106,7 @@ export function buildRetrieveEntireFileTool({
         error: 'File not found.',
       };
 
-      return JSON.stringify(response);
+      return response;
     }
 
     return formatEntireFileForTool(matchedFile);

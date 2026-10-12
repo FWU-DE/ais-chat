@@ -49,7 +49,7 @@ describe('buildMundoSearchTool', () => {
       classLevel: undefined,
       subject: undefined,
     });
-    expect(JSON.parse(raw)).toEqual({
+    expect(raw).toEqual({
       results: [sampleResult],
       retriedWithoutFilters: false,
       error: null,
@@ -89,7 +89,7 @@ describe('buildMundoSearchTool', () => {
     });
 
     expect(mocks.mundoSearchMock).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(raw)).toEqual({
+    expect(raw).toEqual({
       results: [],
       retriedWithoutFilters: false,
       error: 'No MUNDO results found.',
@@ -114,7 +114,7 @@ describe('buildMundoSearchTool', () => {
       classLevel: undefined,
       subject: undefined,
     });
-    expect(JSON.parse(raw)).toEqual({
+    expect(raw).toEqual({
       results: [],
       retriedWithoutFilters: false,
       error: 'No MUNDO results found.',
@@ -140,7 +140,7 @@ describe('buildMundoSearchTool', () => {
       subject: 'Biologie',
     });
     expect(mocks.mundoSearchMock).toHaveBeenNthCalledWith(2, { query: 'Photosynthese' });
-    expect(JSON.parse(raw)).toEqual({
+    expect(raw).toEqual({
       results: [sampleResult],
       retriedWithoutFilters: true,
       error: null,
@@ -160,7 +160,7 @@ describe('buildMundoSearchTool', () => {
     });
 
     expect(mocks.mundoSearchMock).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(raw)).toEqual({
+    expect(raw).toEqual({
       results: [],
       retriedWithoutFilters: true,
       error: 'No MUNDO results found.',
@@ -174,7 +174,7 @@ describe('buildMundoSearchTool', () => {
     const raw = await tool.handler({ query: '   ' });
 
     expect(mocks.mundoSearchMock).not.toHaveBeenCalled();
-    expect(JSON.parse(raw)).toEqual({
+    expect(raw).toEqual({
       results: [],
       retriedWithoutFilters: false,
       error: 'Error: Missing search query.',

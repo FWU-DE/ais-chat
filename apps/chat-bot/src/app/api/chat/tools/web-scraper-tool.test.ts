@@ -50,7 +50,7 @@ describe('buildWebScraperTool', () => {
     });
 
     expect(mocks.webScraperMock).toHaveBeenCalledWith('https://example.com/article');
-    expect(JSON.parse(result)).toEqual([
+    expect(result).toEqual([
       {
         title: 'Beispielseite',
         url: 'https://example.com/article',
@@ -88,8 +88,14 @@ describe('buildWebScraperTool', () => {
       urls: ['http://localhost:3000/test'],
     });
 
-    const parsed = JSON.parse(result);
-    expect(parsed[0].error).toContain('Only domain hosts are allowed');
+    expect(result).toEqual([
+      {
+        title: null,
+        url: 'http://localhost:3000/test',
+        content: null,
+        error: 'Error: Only domain hosts are allowed.',
+      },
+    ]);
     expect(mocks.webScraperMock).not.toHaveBeenCalled();
   });
 
@@ -107,8 +113,14 @@ describe('buildWebScraperTool', () => {
       urls: ['http://192.168.1.1/test'],
     });
 
-    const parsed = JSON.parse(result);
-    expect(parsed[0].error).toContain('Only domain hosts are allowed');
+    expect(result).toEqual([
+      {
+        title: null,
+        url: 'http://192.168.1.1/test',
+        content: null,
+        error: 'Error: Only domain hosts are allowed.',
+      },
+    ]);
     expect(mocks.webScraperMock).not.toHaveBeenCalled();
   });
 
@@ -138,10 +150,20 @@ describe('buildWebScraperTool', () => {
       urls: ['https://example.com/page1', 'https://example.com/page2'],
     });
 
-    const parsed = JSON.parse(result);
-    expect(parsed).toHaveLength(2);
-    expect(parsed[0].title).toBe('Page 1');
-    expect(parsed[1].title).toBe('Page 2');
+    expect(result).toEqual([
+      {
+        title: 'Page 1',
+        url: 'https://example.com/page1',
+        content: 'Content 1',
+        error: null,
+      },
+      {
+        title: 'Page 2',
+        url: 'https://example.com/page2',
+        content: 'Content 2',
+        error: null,
+      },
+    ]);
     expect(mocks.webScraperMock).toHaveBeenCalledTimes(2);
   });
 
@@ -189,7 +211,7 @@ describe('buildWebScraperTool', () => {
       urls: ['https://example.com/page1', 'https://example.com/page2'],
     });
 
-    expect(JSON.parse(result)).toEqual([
+    expect(result).toEqual([
       {
         title: 'Erste Seite',
         url: 'https://example.com/page1',
@@ -230,7 +252,7 @@ describe('buildWebScraperTool', () => {
       urls: ['https://example.com/success', 'https://example.com/failure'],
     });
 
-    expect(JSON.parse(result)).toEqual([
+    expect(result).toEqual([
       {
         title: 'Erfolgreiche Seite',
         url: 'https://example.com/success',

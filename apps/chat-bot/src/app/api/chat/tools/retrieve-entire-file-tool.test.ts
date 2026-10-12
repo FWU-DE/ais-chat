@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { FileModel } from '@shared/db/schema';
 import { RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT } from '@/configuration-text-inputs/const';
+import type { FileModel } from '@shared/db/schema';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { RetrieveEntireFileToolResponse } from './retrieve-entire-file-tool';
 
 const mocks = vi.hoisted(() => ({
   dbGetExtractedFileContentMock: vi.fn(),
@@ -68,7 +69,7 @@ describe('buildRetrieveEntireFileTool', () => {
     });
 
     expect(mocks.dbGetExtractedFileContentMock).toHaveBeenCalledWith('file-1');
-    expect(JSON.parse(result)).toEqual({
+    expect(result).toEqual({
       fileName: 'Arbeitsblatt.pdf',
       content: 'Erster Abschnitt. Zweiter Abschnitt. Dritter Abschnitt.',
       truncated: false,
@@ -95,7 +96,7 @@ describe('buildRetrieveEntireFileTool', () => {
       fileName: 'Grossdatei.txt',
     });
 
-    const parsed = JSON.parse(result) as {
+    const parsed = result as {
       truncated: boolean;
       maxCharacters: number;
       error: string | null;
@@ -121,7 +122,7 @@ describe('buildRetrieveEntireFileTool', () => {
       fileName: '',
     });
 
-    const parsed = JSON.parse(result);
+    const parsed = result as RetrieveEntireFileToolResponse;
     expect(parsed.error).toBe('Missing file name.');
     expect(mocks.dbGetExtractedFileContentMock).not.toHaveBeenCalled();
   });
@@ -137,7 +138,7 @@ describe('buildRetrieveEntireFileTool', () => {
       fileName: 'NonExistent.txt',
     });
 
-    const parsed = JSON.parse(result);
+    const parsed = result as RetrieveEntireFileToolResponse;
     expect(parsed.error).toBe('File not found.');
     expect(parsed.fileName).toBe('NonExistent.txt');
     expect(mocks.dbGetExtractedFileContentMock).not.toHaveBeenCalled();

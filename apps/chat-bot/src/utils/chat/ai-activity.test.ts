@@ -1,3 +1,4 @@
+import type { CalculatorResponse } from '@/app/api/chat/calculator';
 import type { ToolRegistration } from '@/app/api/chat/tools/types';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { describe, expect, it, vi } from 'vitest';
@@ -17,20 +18,26 @@ const toolCall: ToolCall = {
 };
 
 function createToolRegistry(overrides: Partial<ToolRegistration['activity']> = {}) {
-  return {
-    math_calculate: {
-      definition: { name: 'math_calculate', description: '', parameters: {} },
-      handler: vi.fn(),
-      activity: {
-        createStep: () => ({
-          kind: 'tool' as const,
-          id: 'call-1',
-          tool: 'math_calculate' as const,
-        }),
-        ...overrides,
-      },
+  const registration = {
+    definition: { name: 'math_calculate', description: '', parameters: {} },
+    handler: vi.fn(async (): Promise<CalculatorResponse> => ({
+      status: 'success',
+      result: '42',
+      error: null,
+    })),
+    activity: {
+      createStep: () => ({
+        kind: 'tool' as const,
+        id: 'call-1',
+        tool: 'math_calculate' as const,
+      }),
+      ...overrides,
     },
-  } satisfies Record<string, ToolRegistration>;
+  };
+
+  return {
+    math_calculate: registration,
+  };
 }
 
 describe('activity helpers', () => {
@@ -110,16 +117,21 @@ describe('createAiActivityCollector', () => {
   });
 
   it('starts, adds tool calls, applies results, and finishes', () => {
-    const applyResult = vi.fn((step, result: string) => ({ ...step, result }));
+    const applyResult = vi.fn((step, result: unknown) => {
+      const typed = result as CalculatorResponse;
+      return { ...step, result: typed.result ?? undefined };
+    });
     const collector = createAiActivityCollector(createToolRegistry({ applyResult }));
 
     expect(collector.addToolCalls([toolCall])).toBe(true);
     expect(collector.getSteps()).toEqual([{ kind: 'tool', id: 'call-1', tool: 'math_calculate' }]);
     expect(collector.addToolResult('unknown', 'ignored')).toBe(false);
-    expect(collector.addToolResult('call-1', '42')).toBe(true);
+    expect(
+      collector.addToolResult('call-1', { status: 'success', result: '42', error: null }),
+    ).toBe(true);
     expect(applyResult).toHaveBeenCalledWith(
       { kind: 'tool', id: 'call-1', tool: 'math_calculate' },
-      '42',
+      { status: 'success', result: '42', error: null },
     );
     expect(collector.finish()).toBe(true);
     expect(collector.finish()).toBe(true);
@@ -170,6 +182,19 @@ describe('createAiActivityCollector', () => {
     });
     const sharedStep = sharedCollector.getSteps()[0];
     expect(sharedStep?.kind === 'tool' ? sharedStep.detail : undefined).toBeUndefined();
+  });
+
+  it('skips activity result enrichment for string error results', () => {
+    const applyResult = vi.fn((step, result: unknown) => {
+      const typed = result as CalculatorResponse;
+      return { ...step, result: typed.result ?? undefined };
+    });
+    const collector = createAiActivityCollector(createToolRegistry({ applyResult }));
+
+    collector.addToolCalls([toolCall]);
+    expect(collector.addToolResult('call-1', 'Error: Invalid tool arguments')).toBe(true);
+    expect(applyResult).not.toHaveBeenCalled();
+    expect(collector.getSteps()).toEqual([{ kind: 'tool', id: 'call-1', tool: 'math_calculate' }]);
   });
 
   it('ignores calls without registered activity and handles activity without result enrichment', () => {

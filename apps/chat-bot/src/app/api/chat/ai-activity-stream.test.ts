@@ -1,9 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { decodeChatStreamEvent } from '@/utils/streaming';
+import type { CalculatorResponse } from '@/app/api/chat/calculator';
 import type { AiActivityToolStep } from '@/types/ai-activity';
-import type { ToolRegistration } from './tools/types';
+import { decodeChatStreamEvent } from '@/utils/streaming';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import { describe, expect, it, vi } from 'vitest';
 import { createAiActivityStream } from './ai-activity-stream';
+import type { ToolRegistration } from './tools/types';
 
 const toolCall: ToolCall = {
   id: 'call-1',
@@ -12,20 +13,29 @@ const toolCall: ToolCall = {
 };
 
 function createToolRegistry() {
-  return {
-    math_calculate: {
-      definition: { name: 'math_calculate', description: '', parameters: {} },
-      handler: vi.fn(async () => ''),
-      activity: {
-        createStep: (call: ToolCall) => ({
-          kind: 'tool' as const,
-          id: call.id,
-          tool: 'math_calculate' as const,
-        }),
-        applyResult: (step: AiActivityToolStep, result: string) => ({ ...step, result }),
+  const registration: ToolRegistration = {
+    definition: { name: 'math_calculate', description: '', parameters: {} },
+    handler: vi.fn(async (): Promise<CalculatorResponse> => ({
+      status: 'success',
+      result: '42',
+      error: null,
+    })),
+    activity: {
+      createStep: (call: ToolCall) => ({
+        kind: 'tool' as const,
+        id: call.id,
+        tool: 'math_calculate' as const,
+      }),
+      applyResult: (step: AiActivityToolStep, result: unknown) => {
+        const typed = result as CalculatorResponse;
+        return { ...step, result: typed.result ?? undefined };
       },
     },
-  } satisfies Record<string, ToolRegistration>;
+  };
+
+  return {
+    math_calculate: registration,
+  };
 }
 
 function decodeUpdates(updates: string[]) {
@@ -60,7 +70,10 @@ describe('createAiActivityStream', () => {
     const activity = createAiActivityStream((update) => updates.push(update), createToolRegistry());
 
     activity.onToolCalls([toolCall]);
-    activity.onToolResult({ toolCallId: toolCall.id, result: '42' });
+    activity.onToolResult({
+      toolCallId: toolCall.id,
+      result: { status: 'success', result: '42', error: null },
+    });
     activity.onReasoningSummary('Done.');
     activity.finish();
 

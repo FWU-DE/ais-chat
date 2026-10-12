@@ -43,7 +43,8 @@ export type ToolDefinition = {
   parameters: Record<string, unknown>;
 };
 
-export type ToolHandler = (args: Record<string, unknown>) => Promise<string>;
+// CHECK if unkown is fine here
+export type ToolHandler = (args: Record<string, unknown>) => Promise<unknown>;
 
 export type ToolRegistryEntry = {
   definition: ToolDefinition;
