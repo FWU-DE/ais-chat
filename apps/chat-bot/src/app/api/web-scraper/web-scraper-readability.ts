@@ -2,7 +2,7 @@ import { Readability } from '@mozilla/readability';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import { WEB_SCRAPE_RESULT_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
 import { defaultErrorSource } from '@/components/chat/sources/const';
-import he from 'he';
+import { decode } from 'he';
 import { logDebug, logError, logInfo, logWarning } from '@shared/logging';
 import { isBinaryFile } from 'isbinaryfile';
 import { WebSource } from '@shared/db/types';
@@ -75,7 +75,7 @@ export async function webScraperReadability(url: string): Promise<WebSource> {
   // Use the first available title source
   const rawTitle = ogTitleMatch?.[1]?.trim() || metaTitleMatch?.[1]?.trim() || '';
   // decode html special characters like &amp; etc.
-  const title = he.decode(rawTitle);
+  const title = decode(rawTitle);
 
   let info = '';
   try {

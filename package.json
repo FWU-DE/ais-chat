@@ -31,6 +31,6 @@
     "@ais-chat/typescript-config": "workspace:*",
     "madge": "8.0.0",
     "prettier": "3.9.9",
-    "turbo": "2.11.4"
+    "turbo": "2.11.7"
   }
 }
