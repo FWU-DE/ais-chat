@@ -125,10 +125,14 @@ export default function CommunityTemplateRequestDetailView(
             <dt>Zuletzt geprüft von:</dt>
             <dd>{latestReviewedFrom}</dd>
             <dt>Status</dt>
-            <dd>{mapStateToLabel(data.state)}</dd>
+            <dd data-testid="community-template-state">{mapStateToLabel(data.state)}</dd>
             <dt></dt>
             <dd className="flex flex-row gap-4">
-              <Button disabled={!isApprovePossible} onClick={handleApprove}>
+              <Button
+                disabled={!isApprovePossible}
+                onClick={handleApprove}
+                data-testid="community-template-approve-button"
+              >
                 <CheckIcon />
                 Freigeben
               </Button>
@@ -186,6 +190,7 @@ export default function CommunityTemplateRequestDetailView(
                 </div>
                 {event.message && (
                   <div
+                    data-testid="community-template-event-message"
                     className={cn(
                       'px-4 py-3 rounded-xl rounded-br-none',
                       event.createdByRole === 'editor' ? 'bg-primary/10' : 'bg-secondary/30',

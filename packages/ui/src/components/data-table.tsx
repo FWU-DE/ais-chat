@@ -98,6 +98,7 @@ export function DataTable<TData extends RowData>({
             table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
+                data-testid="data-table-row"
                 data-state={row.getIsSelected() && 'selected'}
                 className="cursor-pointer"
                 onClick={() => rowClickHandler?.(row.original)}

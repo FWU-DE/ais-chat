@@ -2,7 +2,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium, FullConfig, Page } from '@playwright/test';
 import { login } from './utils/login';
-import { AUTH_FILES, LLM_MODELS_FILE } from './utils/const';
+import { adminLogin } from './utils/admin-login';
+import { ADMIN_BASE_URL, AUTH_FILES, EDITOR_AUTH_FILE, LLM_MODELS_FILE } from './utils/const';
 import { selectDifferentModel } from './utils/chat';
 import { LLM_MODELS } from './utils/llm-models';
 
@@ -71,6 +72,23 @@ async function saveAuthState(baseUrl: string) {
 }
 
 /**
+ * Logs into the admin app as an editor and persists the session so cross-app
+ * tests (e.g. community templates) can drive the admin UI without re-authenticating.
+ */
+async function saveAdminEditorAuthState() {
+  await using browser = await chromium.launch();
+  await using context = await browser.newContext({ baseURL: ADMIN_BASE_URL });
+  const page = await context.newPage();
+
+  await adminLogin(page, 'editor');
+
+  await fs.mkdir(path.dirname(EDITOR_AUTH_FILE), { recursive: true });
+  await context.storageState({ path: EDITOR_AUTH_FILE });
+
+  await page.close();
+}
+
+/**
  * Global Playwright setup — runs once before all test suites.
  *
  * - Reads available text models from the UI dropdown (menuitem data-testid) and
@@ -91,4 +109,5 @@ export default async function globalSetup(config: FullConfig) {
   }
 
   await saveAuthState(baseUrl);
+  await saveAdminEditorAuthState();
 }

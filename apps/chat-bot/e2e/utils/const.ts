@@ -21,6 +21,17 @@ export const AUTH_FILES = {
   teacher3: path.resolve(process.cwd(), '.playwright-auth/teacher3.json'),
 };
 
+/**
+ * Base URL of the admin app, used for cross-app tests (e.g. community templates).
+ */
+export const ADMIN_BASE_URL = 'http://localhost:3001';
+
+/**
+ * Persisted Playwright auth state for an editor session in the admin app.
+ * Written by `global-setup.ts`; git-ignored and recreated on every run.
+ */
+export const EDITOR_AUTH_FILE = path.resolve(process.cwd(), '.playwright-auth/editor.json');
+
 export const LLM_MODELS_FILE = path.resolve(process.cwd(), '.playwright-auth/llm-models.json');
 
 // Must match MOCK_LLM_COMMANDS in services/mock-llm/server.mjs

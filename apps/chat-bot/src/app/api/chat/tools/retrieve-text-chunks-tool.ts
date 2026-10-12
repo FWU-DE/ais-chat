@@ -1,12 +1,12 @@
 import { VECTOR_SEARCH_LIMIT } from '@/configuration-text-inputs/const';
+import { TOOL_NAMES } from '@/types/tool-names';
+import { parseJsonRecord, readString } from '@/utils/chat/ai-activity';
+import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import { dbGetAllChunks } from '@shared/db/functions/files';
 import { z } from 'zod';
 import { ingestWebContent } from '../../rag/ingestWebContent';
 import { retrieveChunksByQuery } from '../../rag/rag-service';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
-import { dbGetAllChunks } from '@shared/db/functions/files';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { TOOL_NAMES } from '@/types/tool-names';
-import { parseJsonRecord, readString } from '@/utils/chat/ai-activity';
 
 export const retrieveTextChunksArgsSchema = z.object({
   search: z.string(),
@@ -18,7 +18,7 @@ type SemanticFileSearchChunkResult = {
   content: string | null;
 };
 
-type SemanticFileSearchToolResponse = {
+export type SemanticFileSearchToolResponse = {
   chunks: SemanticFileSearchChunkResult[];
   error: string | null;
 };
@@ -39,7 +39,7 @@ function formatRetrievedChunksForTool(chunks: Awaited<ReturnType<typeof retrieve
     response.error = 'No matching chunks found.';
   }
 
-  return JSON.stringify(response);
+  return response;
 }
 
 type BuildRetrieveTextChunksToolParams = Pick<
@@ -119,7 +119,7 @@ export function buildRetrieveTextChunksTool({
         })),
         error: allChunks.length === 0 ? 'No matching chunks found.' : null,
       };
-      return JSON.stringify(response);
+      return response;
     }
 
     return formatRetrievedChunksForTool(

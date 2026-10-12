@@ -13,5 +13,12 @@ export function CommunityTemplateRequestEventMessage({
 }: CommunityTemplateRequestEventMessageProps) {
   const backgroundColor = createdByRole === 'user' ? 'bg-primary/10' : 'bg-secondary/30';
 
-  return <div className={`${backgroundColor} px-4 py-3 rounded-xl rounded-br-none`}>{message}</div>;
+  return (
+    <div
+      data-testid="community-template-request-event-message"
+      className={`${backgroundColor} px-4 py-3 rounded-xl rounded-br-none`}
+    >
+      {message}
+    </div>
+  );
 }

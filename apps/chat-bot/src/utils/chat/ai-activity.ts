@@ -5,7 +5,7 @@ import {
   type AiActivityToolStep,
 } from '@/types/ai-activity';
 import { TOOL_NAMES } from '@/types/tool-names';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import { ToolCall } from '@ais-chat/ai-core';
 
 const MAX_DETAIL_LENGTH = 300;
 const MAX_LINKS = 10;
@@ -122,7 +122,7 @@ export function createAiActivityCollector(
 
       return true;
     },
-    addToolResult(toolCallId: string, result: string): boolean {
+    addToolResult(toolCallId: string, result: unknown): boolean {
       const step = stepsById.get(toolCallId);
 
       if (step === undefined) {
@@ -130,7 +130,9 @@ export function createAiActivityCollector(
       }
 
       const activity = toolRegistry[step.tool]?.activity;
-      const enrichedStep = activity?.applyResult?.(step, result) ?? step;
+      // errors/not valid tool calls can still be in string format
+      const enrichedStep =
+        typeof result === 'string' ? step : (activity?.applyResult?.(step, result) ?? step);
 
       if (enrichedStep !== step) {
         steps[steps.indexOf(step)] = enrichedStep;

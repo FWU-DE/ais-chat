@@ -98,7 +98,7 @@ describe('buildWebSearchTool', () => {
         userId: 'user-1',
       }),
     );
-    expect(JSON.parse(result)).toEqual({
+    expect(result).toEqual({
       results: [
         {
           title: 'Beispielartikel',

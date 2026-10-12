@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UserAndContext } from '@/auth/types';
 import type { FileModel } from '@shared/db/schema';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   buildWebSearchToolMock: vi.fn(),
@@ -51,6 +51,8 @@ const relatedFileEntities = [
   },
 ] as FileModel[];
 
+const createActivity = () => ({ createStep: vi.fn() });
+
 beforeEach(() => {
   vi.clearAllMocks();
 
@@ -62,6 +64,7 @@ beforeEach(() => {
       parameters: { type: 'object', properties: {} },
     },
     handler: vi.fn(),
+    activity: createActivity(),
   });
 
   mocks.buildWebScraperToolMock.mockReturnValue({
@@ -71,6 +74,7 @@ beforeEach(() => {
       parameters: { type: 'object', properties: {} },
     },
     handler: vi.fn(),
+    activity: createActivity(),
   });
 
   mocks.buildRetrieveEntireFileToolMock.mockReturnValue({
@@ -80,6 +84,7 @@ beforeEach(() => {
       parameters: { type: 'object', properties: {} },
     },
     handler: vi.fn(),
+    activity: createActivity(),
   });
 
   mocks.buildRetrieveTextChunksToolMock.mockReturnValue({
@@ -89,6 +94,7 @@ beforeEach(() => {
       parameters: { type: 'object', properties: {} },
     },
     handler: vi.fn(),
+    activity: createActivity(),
   });
 
   mocks.buildMundoSearchToolMock.mockReturnValue({
@@ -98,6 +104,7 @@ beforeEach(() => {
       parameters: { type: 'object', properties: {} },
     },
     handler: vi.fn(),
+    activity: createActivity(),
   });
 
   mocks.buildMathCalculateToolMock.mockReturnValue({
@@ -107,6 +114,7 @@ beforeEach(() => {
       parameters: { type: 'object' },
     },
     handler: vi.fn(),
+    activity: createActivity(),
   });
 });
 

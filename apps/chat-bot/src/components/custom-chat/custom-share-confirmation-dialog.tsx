@@ -128,6 +128,7 @@ export function CustomShareConfirmationDialog({
                     <label key={item.key} htmlFor={checkboxId} className="flex items-start gap-3">
                       <Checkbox
                         id={checkboxId}
+                        data-testid={checkboxId}
                         className="mt-1"
                         checked={checklistState[item.key]}
                         onCheckedChange={(checked) => updateChecklist(item.key, checked === true)}
@@ -157,6 +158,7 @@ export function CustomShareConfirmationDialog({
 
         <AlertDialogFooter className="mt-4 sm:pt-0">
           <AlertDialogCancel
+            data-testid="community-confirmation-cancel"
             onClick={() => {
               onOpenChange(false);
               resetChecklist();
@@ -165,6 +167,7 @@ export function CustomShareConfirmationDialog({
             {t('community-confirmation.cancel')}
           </AlertDialogCancel>
           <AlertDialogAction
+            data-testid="community-confirmation-accept"
             disabled={!allChecklistItemsChecked}
             onClick={() => {
               onAccept();
