@@ -108,12 +108,7 @@ export function buildMundoSearchTool(): ToolRegistration {
       },
       applyResult: (step, result) => {
         const typed = result as MundoSearchToolResponse;
-        const links = toLinks(
-          typed.results.map((entry) => ({
-            title: entry.title,
-            url: entry.url,
-          })),
-        );
+        const links = toLinks(typed.results);
 
         return links === undefined ? step : { ...step, links };
       },
