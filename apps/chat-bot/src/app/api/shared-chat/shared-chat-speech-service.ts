@@ -11,8 +11,12 @@ import {
   sharedLearningScenarioChatHasReachedTokenPointsLimit,
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
+import { sendRabbitmqEvent } from '@/rabbitmq/send';
+import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
+import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
 import { verify } from '.';
 import { getSharedChatEntity } from './shared-chat-get-entity';
+import { SharedChatCharacter, SharedChatLearningScenario } from './shared-chat-types';
 
 export async function generateSharedChatSpeech({
   inviteCode,
@@ -24,7 +28,7 @@ export async function generateSharedChatSpeech({
   entityType: 'character' | 'learningScenario';
   entityId: string;
   text: string;
-}): Promise<Awaited<ReturnType<typeof generateSpeech>>> {
+}): Promise<{ buffer: Buffer; contentType: string }> {
   const entity = await getSharedChatEntity({ inviteCode, entityType, entityId });
 
   verify.sharedChatEntityIsAccessible(entity);
@@ -63,6 +67,16 @@ export async function generateSharedChatSpeech({
     userHasReachedTokenPointsLimit({ user: teacher }),
   ]);
 
+  if (userLimitReached) {
+    await sendRabbitmqEvent(
+      constructTokenBudgetExceededEvent(
+        entityType === 'character'
+          ? { anonymous: true, user: teacher, character: entity as SharedChatCharacter }
+          : { anonymous: true, user: teacher, sharedChat: entity as SharedChatLearningScenario },
+      ),
+    );
+  }
+
   if (sharedChatLimitReached || userLimitReached) {
     throw new ForbiddenError('Token points limit reached');
   }
@@ -78,6 +92,18 @@ export async function generateSharedChatSpeech({
       promptTokens: 0,
       costsInCent: speechResult.costsInCent,
     });
+
+    await sendRabbitmqEvent(
+      constructNewMessageEvent({
+        user: teacher,
+        anonymous: true,
+        character: entity as SharedChatCharacter,
+        provider: speechResult.provider,
+        promptTokens: 0,
+        completionTokens: 0,
+        costsInCent: speechResult.costsInCent,
+      }),
+    );
   } else {
     await dbUpdateTokenUsageBySharedLearningScenarioId({
       learningScenarioId: entityId,
@@ -87,7 +113,19 @@ export async function generateSharedChatSpeech({
       promptTokens: 0,
       costsInCent: speechResult.costsInCent,
     });
+
+    await sendRabbitmqEvent(
+      constructNewMessageEvent({
+        user: teacher,
+        anonymous: true,
+        sharedChat: entity as SharedChatLearningScenario,
+        provider: speechResult.provider,
+        promptTokens: 0,
+        completionTokens: 0,
+        costsInCent: speechResult.costsInCent,
+      }),
+    );
   }
 
-  return speechResult;
+  return { buffer: speechResult.buffer, contentType: speechResult.contentType };
 }
