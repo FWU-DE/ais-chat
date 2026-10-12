@@ -67,9 +67,9 @@ export function MessageActions({
           variant="ghost"
           size="icon-sm"
           type="button"
-          title={tCommon('regenerate-message')}
+          title={tCommon('regenerate-message-button')}
           onClick={() => regenerateMessage()}
-          aria-label="Reload"
+          aria-label={tCommon('regenerate-message-button-aria-label')}
           className="text-primary"
         >
           <ReloadIcon className="size-5 text-primary" />
