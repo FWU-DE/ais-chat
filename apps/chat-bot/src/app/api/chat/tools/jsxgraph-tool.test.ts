@@ -19,10 +19,8 @@ describe('buildJsxgraphTool', () => {
     const result = await tool.handler({ description: 'a point at the origin' });
 
     expect(result).toEqual({
-      spec: {
-        board: { boundingBox: [-5, 5, 5, -5] },
-        elements: [['point', [0, 0]]],
-      },
+      board: { boundingBox: [-5, 5, 5, -5] },
+      elements: [['point', [0, 0]]],
     });
     expect(mocks.generateTextWithBillingMock).toHaveBeenCalledTimes(1);
     expect(mocks.generateTextWithBillingMock).toHaveBeenCalledWith(
@@ -56,10 +54,8 @@ describe('buildJsxgraphTool', () => {
     });
 
     expect(result).toEqual({
-      spec: {
-        board: { boundingBox: [-5, 5, 5, -5] },
-        elements: [['point', [0, 0]]],
-      },
+      board: { boundingBox: [-5, 5, 5, -5] },
+      elements: [['point', [0, 0]]],
     });
     expect(mocks.generateTextWithBillingMock).toHaveBeenCalledTimes(1);
     const messages = mocks.generateTextWithBillingMock.mock.calls[0]?.[1];

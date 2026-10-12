@@ -18,7 +18,7 @@ export const createPlotArgsSchema = z.object({
   previousError: z.string().trim().min(1).nullable().optional(),
 });
 
-export type CreatePlotToolResponse = { spec: PlotSpec } | { error: string; invalidJson?: string };
+export type CreatePlotToolResponse = PlotSpec | { error: string; invalidJson?: string };
 
 const ALLOWED_ELEMENT_TYPES_LIST = [...ALLOWED_ELEMENT_TYPES].sort().join(', ');
 // Generated from the sanitizer's allowlist so the prompt cannot drift from what passes validation.
@@ -143,7 +143,7 @@ export function buildJsxgraphTool({
       });
       const result = parsePlotSpec(text);
       if ('spec' in result) {
-        return { spec: result.spec };
+        return result.spec;
       }
 
       return { error: result.error.message, invalidJson: text };
