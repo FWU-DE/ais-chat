@@ -125,6 +125,10 @@ describe('parsePlotSpec', () => {
     expectInvalid('{"elements":[["slider",[0,1,3],{"name":"ω"}]]}');
   });
 
+  it('rejects a non-string slider name', () => {
+    expectInvalid('{"elements":[["slider",[0,1,3],{"name":1}]]}');
+  });
+
   it('allows unsafe characters in text content', () => {
     const spec = expectValid('{"elements":[["text",[0,0,"a \\"quoted\\" word"]]]}');
     expect(spec.elements[0]?.[1][2]).toBe('a "quoted" word');

@@ -39,10 +39,14 @@ export const ELEMENT_VALIDATORS: Partial<Record<ElementType, ElementValidator>> 
       return '`min` must be less than `max`';
     }
     // Unlike other elements' `name` (a display label), a slider's `name` is used as a JessieCode
-    // identifier in later expressions, e.g. `sin(a*x)`.
-    const name = attributes?.name;
-    if (typeof name === 'string' && !isValidIdentifierName(name)) {
-      return `"name" must be a plain ASCII identifier, got "${name}"`;
+    // identifier in later expressions, e.g. `sin(a*x)`. A non-string `name` is just as unusable
+    // as an identifier, but `getSliderDefinitions` falls back to a generated display name for it
+    // instead of erroring, so it must be rejected here too.
+    if ('name' in (attributes ?? {})) {
+      const name = attributes?.name;
+      if (typeof name !== 'string' || !isValidIdentifierName(name)) {
+        return `"name" must be a plain ASCII identifier, got ${JSON.stringify(name)}`;
+      }
     }
     return undefined;
   },
