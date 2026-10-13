@@ -9,10 +9,6 @@ import { decode } from 'he';
 // guaranteeing a watertight sandbox.
 const UNSAFE_STRING_PATTERN = /[;{}"'`=]|\/\*|\/\/|[)\]]\s*\(/;
 const CALL_PATTERN = /([A-Za-z_$][\w$]*)\s*\(/g;
-// Expression parents (everything but text) are JessieCode, which only accepts ASCII identifiers;
-// non-ASCII characters anywhere in one (e.g. a Greek slider name used as `sin(ω*x)`) fail to
-// parse at render time instead of here.
-const NON_ASCII_EXPRESSION_PATTERN = /[^\x00-\x7F]/;
 export const ALLOWED_CALLS = new Set([
   'abs',
   'acos',
@@ -65,18 +61,12 @@ export const parentSchema: z.ZodType<PlotParent> = z.lazy(() =>
 
 export function hasUnsafeString(parent: PlotParent): boolean {
   if (typeof parent === 'string') {
-    return (
-      UNSAFE_STRING_PATTERN.test(parent) ||
-      NON_ASCII_EXPRESSION_PATTERN.test(parent) ||
-      hasUnsafeCall(parent)
-    );
+    return UNSAFE_STRING_PATTERN.test(parent) || hasUnsafeCall(parent);
   }
   return Array.isArray(parent) && parent.some(hasUnsafeString);
 }
 
-// Matches a whole standalone identifier, e.g. a slider's `name`, as opposed to
-// `NON_ASCII_EXPRESSION_PATTERN`'s blanket non-ASCII check on expression strings that also
-// contain numbers/operators/whitespace.
+// Matches a whole standalone identifier, e.g. a slider's `name`.
 const IDENTIFIER_PATTERN = /^[A-Za-z_$][\w$]*$/;
 
 export function isValidIdentifierName(value: string): boolean {
