@@ -10,7 +10,6 @@
       "zoom-in": "Zoom in",
       "zoom-out": "Zoom out",
       "fullscreen": "Show in fullscreen",
-      "fullscreen-exit": "Exit fullscreen",
       "description": "Graphic: {title}",
       "description-untitled": "Graphic",
       "error": "The graphic could not be displayed."

@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import JXG from 'jsxgraph';
 import { logError, logWarning } from '@shared/logging/logging';
-import { applyInteractionOptions, createBoard, type ViewState } from './jsxgraph-board';
+import { createBoard, type ViewState } from './jsxgraph-board';
 import { registerLivePlot, releaseOverflow, type LivePlot } from './live-plots';
 import { PlotFrame } from './plot-frame';
 import { getSliderDefinitions } from './slider-definitions';
@@ -12,7 +12,12 @@ import type { PlotSpec } from '@/utils/plot/plot-spec';
 const ACTIVATE_DELAY_MS = 150;
 
 export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  // Callback ref: fullscreen moves the container between the inline figure and the dialog,
+  // and the dialog's content mounts a render after it opens, so this reacts to the real node.
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
+  const containerRef = useCallback((node: HTMLDivElement | null) => {
+    setContainer(node);
+  }, []);
   const viewStateRef = useRef<ViewState | undefined>(undefined);
   const setSliderRef = useRef<((index: number, value: number) => void) | undefined>(undefined);
   const boardRef = useRef<JXG.Board | undefined>(undefined);
@@ -33,7 +38,6 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
   // Boards are expensive: build them shortly after the plot scrolls into view and drop
   // the least recently seen ones once more than a few are alive.
   useEffect(() => {
-    const container = containerRef.current;
     if (container === null) {
       return;
     }
@@ -58,7 +62,7 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
       clearTimeout(timer);
       observer.disconnect();
     };
-  }, [livePlot]);
+  }, [livePlot, container]);
 
   // A new spec invalidates the remembered view. Declared before the board effect so it runs first.
   useEffect(() => {
@@ -66,7 +70,6 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
   }, [spec]);
 
   useEffect(() => {
-    const container = containerRef.current;
     if (container === null || !isActive) {
       return;
     }
@@ -114,37 +117,8 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
       JXG.JSXGraph.freeBoard(board);
       container.replaceChildren();
     };
-    // isFullscreen is read for the initial pan/zoom options only; the sync effect below handles changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spec, isActive, livePlot, resetCount]);
-
-  // Keep pan/zoom interaction options in sync without rebuilding the board.
-  useEffect(() => {
-    const board = boardRef.current;
-    if (board === undefined) {
-      return;
-    }
-    applyInteractionOptions(board, spec, isFullscreen);
-  }, [spec, isFullscreen, resetCount]);
-
-  // Overlay fullscreen: the page behind must not scroll, and Escape closes it.
-  useEffect(() => {
-    if (!isFullscreen) {
-      return;
-    }
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setIsFullscreen(false);
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isFullscreen]);
+    // Toggling fullscreen moves the board to a new container; view state survives via viewStateRef.
+  }, [spec, isActive, livePlot, resetCount, container, isFullscreen]);
 
   // Rebuilds the board from the spec: view, slider values and dragged elements are reset.
   function handleReset() {
@@ -193,6 +167,7 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
     <PlotFrame
       title={title}
       containerRef={containerRef}
+      container={container}
       sliders={sliders}
       sliderValues={sliderValues}
       onSliderChange={handleSliderChange}
@@ -200,7 +175,7 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
       onZoomIn={handleZoomIn}
       onZoomOut={handleZoomOut}
       isFullscreen={isFullscreen}
-      onToggleFullscreen={() => setIsFullscreen((current) => !current)}
+      onFullscreenChange={setIsFullscreen}
     />
   );
 }

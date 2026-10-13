@@ -10,7 +10,6 @@
       "zoom-in": "Agrandir",
       "zoom-out": "Réduire",
       "fullscreen": "Afficher en plein écran",
-      "fullscreen-exit": "Quitter le plein écran",
       "description": "Graphique : {title}",
       "description-untitled": "Graphique",
       "error": "Le graphique n'a pas pu être affiché."
