@@ -26,4 +26,8 @@ describe('formatSliderValue', () => {
   it('caps precision for steps that never terminate exactly', () => {
     expect(formatSliderValue(1 / 3, 1 / 3)).toBe((1 / 3).toFixed(10));
   });
+
+  it('ignores floating-point noise from derived steps like (max - min) / 100', () => {
+    expect(formatSliderValue(0.68, 2.9 / 100)).toBe('0.680');
+  });
 });

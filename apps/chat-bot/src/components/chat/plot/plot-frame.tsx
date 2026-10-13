@@ -9,6 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@ui/components/dialog';
+import { Slider } from '@ui/components/slider';
 import type { Ref } from 'react';
 import {
   ArrowCounterClockwiseIcon,
@@ -23,9 +24,13 @@ import type { SliderDefinition } from './slider-definitions';
 // Displays as many decimals as the step actually carries, so fine-grained sliders (e.g. step
 // `0.0001`) show distinct values, and non-power-of-ten steps (e.g. `0.25`) aren't rounded away.
 function decimalPlaces(step: number) {
+  // Division (e.g. `(max - min) / 100`) can produce steps like `0.028999999999999998` that are
+  // really meant to be `0.029`. Round off that floating-point noise before measuring precision,
+  // otherwise the loop below never finds a match and falls back to the decimals cap.
+  const cleanStep = Number(step.toPrecision(12));
   let decimals = 0;
   let factor = 1;
-  while (Math.round(step * factor) / factor !== step && decimals < 10) {
+  while (Math.round(cleanStep * factor) / factor !== cleanStep && decimals < 10) {
     factor *= 10;
     decimals++;
   }
@@ -52,21 +57,22 @@ function PlotSliders({
   return (
     <div className="flex flex-col gap-2">
       {sliders.map((slider, index) => (
-        <label key={index} className="flex items-center gap-2 text-sm">
+        <div key={index} className="flex items-center gap-2 text-sm">
           <span className="min-w-24 shrink-0 font-mono tabular-nums">
             {slider.name} = {formatSliderValue(sliderValues[index] ?? slider.start, slider.step)}
           </span>
-          <input
-            type="range"
+          <Slider
             data-testid={`plot-slider-${index}`}
-            className="grow accent-primary"
+            className="grow"
             min={slider.min}
             max={slider.max}
             step={slider.step}
-            value={sliderValues[index] ?? slider.start}
-            onChange={(event) => onSliderChange(index, Number(event.target.value))}
+            value={[sliderValues[index] ?? slider.start]}
+            onValueChange={([value]) => {
+              if (value !== undefined) onSliderChange(index, value);
+            }}
           />
-        </label>
+        </div>
       ))}
     </div>
   );
@@ -195,9 +201,9 @@ export function PlotFrame({
               ref={isFullscreen ? containerRef : undefined}
               aria-label={plotLabel}
               data-testid={isFullscreen ? 'plot-view' : undefined}
-              className="min-h-0 w-full flex-1 overflow-hidden [&_svg]:font-[inherit]"
+              className="w-full min-h-[60%] flex-1 overflow-hidden [&_svg]:font-[inherit]"
             />
-            <div className="max-h-64 shrink-0 overflow-y-auto">
+            <div className="min-h-0 flex-1 shrink overflow-y-auto">
               <PlotSliders
                 sliders={sliders}
                 sliderValues={sliderValues}

@@ -51,12 +51,13 @@ test('can toggle fullscreen, change the slider, reset and download the plot', as
   await page.keyboard.press('Escape');
   await expect(fullscreenToggle).toHaveAttribute('aria-pressed', 'false');
 
-  const slider = assistantMessage.getByTestId('plot-slider-0');
-  await slider.fill('2');
-  await expect(slider).toHaveValue('2');
+  const sliderThumb = assistantMessage.getByTestId('plot-slider-0').getByRole('slider');
+  await sliderThumb.focus();
+  await page.keyboard.press('End');
+  await expect(sliderThumb).toHaveAttribute('aria-valuenow', '3');
 
   await assistantMessage.getByTestId('plot-reset').click();
-  await expect(slider).toHaveValue('1');
+  await expect(sliderThumb).toHaveAttribute('aria-valuenow', '1');
 
   const downloadPromise = page.waitForEvent('download');
   await assistantMessage.getByTestId('plot-download-png').click();
