@@ -132,7 +132,13 @@ export async function* streamOpenAICompatibleAgenticResponse({
     }
 
     // Partial tool calls are unusable, but the prompt was consumed upstream and still costs money.
-    yield { type: 'finish', usage: usage ?? estimateTokenUsage({ messages, text: content }) };
+    yield {
+      type: 'finish',
+      usage: usage ?? estimateTokenUsage({ messages, text: content }),
+      ...(usageInfo.modelId ? { modelId: usageInfo.modelId } : {}),
+      ...(usageInfo.provider ? { provider: usageInfo.provider } : {}),
+      ...(usageInfo.modelName ? { modelName: usageInfo.modelName } : {}),
+    };
     return;
   }
 
