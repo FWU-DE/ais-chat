@@ -40,78 +40,40 @@ test.describe('create, share, chat, delete', () => {
     data.name = 'Absolutismus unter Ludwig XIV – ' + nanoid(8);
   });
 
-  test(
-    'teacher can login, create and join learning scenario',
-    { tag: '@smoke' },
-    async ({ page }) => {
-      await createLearningScenario(page);
-
-      // configure form
-      await configureLearningScenario(page, data);
-
-      // check if created with the correct name (still on the editor page)
-      await expect(page.getByRole('heading', { name: data.name })).toBeVisible();
-
-      await stopSharingIfActive(page);
-      // test share page
-      await page.getByTestId('token-points-select').click();
-      await page.getByTestId('token-points-option-50').click();
-      await page.getByTestId('usage-time-select').click();
-      await page.getByTestId('usage-time-option-30').click();
-      await page.getByTestId('start-share-button').click();
-
-      await page.waitForURL('/learning-scenarios/**/share');
-      const code = await page.getByTestId('join-code').textContent();
-
-      const countDown = page.getByTestId('countdown-timer');
-      await expect(countDown).toBeVisible();
-
-      const qrCode = page.getByTestId('qr-code');
-      await expect(qrCode).toBeVisible();
-
-      // verify countdown is also shown on the overview list
-      await page.goto('/learning-scenarios');
-      await page.waitForURL('/learning-scenarios**');
-      const card = page.getByTestId('entity-card').filter({ hasText: data.name }).first();
-      await expect(card).toBeVisible();
-      await expect(card.getByRole('timer')).toBeVisible();
-
-      // join chat as teacher
-      await page.goto('/logout');
-      await page.waitForURL('/login');
-
-      await page.locator('#login-invite-code').fill(code ?? '');
-
-      const loginButton = page.getByRole('button', { name: 'Zum Dialog' });
-      await expect(loginButton).toBeVisible();
-      await loginButton.click();
-
-      await page.waitForURL('/ua/learning-scenarios/**/dialog?inviteCode=*');
-    },
-  );
-
-  test('teacher can login and create learning scenario, student can join and restart chat', async ({
-    page,
-  }) => {
+  test('teacher can login, create and join learning scenario', async ({ page }) => {
     await createLearningScenario(page);
 
     // configure form
     await configureLearningScenario(page, data);
 
-    // Still on the editor page after autosave
+    // check if created with the correct name (still on the editor page)
+    await expect(page.getByRole('heading', { name: data.name })).toBeVisible();
+
     await stopSharingIfActive(page);
     // test share page
     await page.getByTestId('token-points-select').click();
-    await page.getByTestId('token-points-option-25').click();
+    await page.getByTestId('token-points-option-50').click();
     await page.getByTestId('usage-time-select').click();
     await page.getByTestId('usage-time-option-30').click();
     await page.getByTestId('start-share-button').click();
 
-    // get code
     await page.waitForURL('/learning-scenarios/**/share');
     const code = await page.getByTestId('join-code').textContent();
 
-    // join chat as student
+    const countDown = page.getByTestId('countdown-timer');
+    await expect(countDown).toBeVisible();
+
+    const qrCode = page.getByTestId('qr-code');
+    await expect(qrCode).toBeVisible();
+
+    // verify countdown is also shown on the overview list
+    await page.goto('/learning-scenarios');
+    await page.waitForURL('/learning-scenarios**');
+    const card = page.getByTestId('entity-card').filter({ hasText: data.name }).first();
+    await expect(card).toBeVisible();
+    await expect(card.getByRole('timer')).toBeVisible();
+
+    // join chat as teacher
     await page.goto('/logout');
     await page.waitForURL('/login');
 
@@ -122,27 +84,66 @@ test.describe('create, share, chat, delete', () => {
     await loginButton.click();
 
     await page.waitForURL('/ua/learning-scenarios/**/dialog?inviteCode=*');
-
-    // send first message
-    const startButton = page.getByTestId('start-dialog-button');
-    await expect(startButton).toBeVisible();
-    await startButton.click();
-
-    await sendMessage(page, `${MOCK_LLM_COMMANDS.RETURN_SYSTEM_PROMPT} Über wen lernen wir hier?`);
-
-    // 'Ludwig XIV' is set in the learning scenario's additional instructions and description,
-    // which are included in the system prompt; the mock LLM echoes the system prompt back.
-    await expect(page.getByLabel('assistant message 1')).toContainText('Ludwig XIV');
-
-    // new chat
-    const newChatButton = page.getByTestId('custom-chat-delete-button').first();
-    await expect(newChatButton).toBeVisible();
-    await newChatButton.click();
-
-    const deleteConfirmButton = page.getByTestId('confirm-alert-dialog-confirm-button');
-    await expect(deleteConfirmButton).toBeVisible();
-    await deleteConfirmButton.click();
   });
+
+  test(
+    'teacher can login and create learning scenario, student can join and restart chat',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      await createLearningScenario(page);
+
+      // configure form
+      await configureLearningScenario(page, data);
+
+      // Still on the editor page after autosave
+      await stopSharingIfActive(page);
+      // test share page
+      await page.getByTestId('token-points-select').click();
+      await page.getByTestId('token-points-option-25').click();
+      await page.getByTestId('usage-time-select').click();
+      await page.getByTestId('usage-time-option-30').click();
+      await page.getByTestId('start-share-button').click();
+
+      // get code
+      await page.waitForURL('/learning-scenarios/**/share');
+      const code = await page.getByTestId('join-code').textContent();
+
+      // join chat as student
+      await page.goto('/logout');
+      await page.waitForURL('/login');
+
+      await page.locator('#login-invite-code').fill(code ?? '');
+
+      const loginButton = page.getByRole('button', { name: 'Zum Dialog' });
+      await expect(loginButton).toBeVisible();
+      await loginButton.click();
+
+      await page.waitForURL('/ua/learning-scenarios/**/dialog?inviteCode=*');
+
+      // send first message
+      const startButton = page.getByTestId('start-dialog-button');
+      await expect(startButton).toBeVisible();
+      await startButton.click();
+
+      await sendMessage(
+        page,
+        `${MOCK_LLM_COMMANDS.RETURN_SYSTEM_PROMPT} Über wen lernen wir hier?`,
+      );
+
+      // 'Ludwig XIV' is set in the learning scenario's additional instructions and description,
+      // which are included in the system prompt; the mock LLM echoes the system prompt back.
+      await expect(page.getByLabel('assistant message 1')).toContainText('Ludwig XIV');
+
+      // new chat
+      const newChatButton = page.getByTestId('custom-chat-delete-button').first();
+      await expect(newChatButton).toBeVisible();
+      await newChatButton.click();
+
+      const deleteConfirmButton = page.getByTestId('confirm-alert-dialog-confirm-button');
+      await expect(deleteConfirmButton).toBeVisible();
+      await deleteConfirmButton.click();
+    },
+  );
 
   test('teacher can delete learning scenario', async ({ page }) => {
     // create learning scenario
