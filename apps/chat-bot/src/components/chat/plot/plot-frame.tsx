@@ -210,7 +210,7 @@ export function PlotFrame({
               ref={isFullscreen ? containerRef : undefined}
               aria-label={plotLabel}
               data-testid={isFullscreen ? 'plot-view' : undefined}
-              className="w-full min-h-0 flex-1 overflow-hidden [&_svg]:font-[inherit]"
+              className="w-full min-h-0 flex-1 overflow-hidden bg-white [&_svg]:font-[inherit]"
             />
             {sliders.length > 0 && (
               <div className="min-h-0 max-h-[40%] shrink overflow-y-auto p-1">
@@ -234,7 +234,7 @@ export function PlotFrame({
         ref={isFullscreen ? undefined : containerRef}
         aria-label={plotLabel}
         data-testid={isFullscreen ? undefined : 'plot-view'}
-        className="h-80 w-full overflow-hidden [&_svg]:font-[inherit]"
+        className="h-80 w-full overflow-hidden bg-white [&_svg]:font-[inherit]"
       />
       <PlotSliders sliders={sliders} sliderValues={sliderValues} onSliderChange={onSliderChange} />
       <PlotActions
