@@ -18,7 +18,7 @@ export const SELECTORS = {
   MESSAGE_INPUT: '[data-testid="chat-input"]',
   SEND_BUTTON: 'button[aria-label="Nachricht abschicken"]',
   AI_MESSAGE: '[aria-label="assistant message 1"]',
-  RELOAD_BUTTON: '[aria-label="Reload"]',
+  RELOAD_BUTTON: '[data-testid="regenerate-message-button"]',
   PROFILE_BUTTON: '[aria-label="profileDropdown"]',
   DROPDOWN_WRAPPER: 'div[data-radix-popper-content-wrapper]',
 } as const;
