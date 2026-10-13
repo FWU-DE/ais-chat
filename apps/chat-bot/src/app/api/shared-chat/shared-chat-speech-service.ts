@@ -5,6 +5,7 @@ import { requireTeacherRole } from '@shared/auth/authorization-service';
 import { dbUpdateTokenUsageByCharacterChatId } from '@shared/db/functions/character';
 import { dbUpdateTokenUsageBySharedLearningScenarioId } from '@shared/db/functions/learning-scenario';
 import { ForbiddenError } from '@shared/error';
+import { TokenPointsExceededError } from '@ais-chat/ai-core';
 import {
   sharedCharacterChatHasReachedTokenPointsLimit,
   sharedChatHasExpired,
@@ -78,7 +79,7 @@ export async function generateSharedChatSpeech({
   }
 
   if (sharedChatLimitReached || userLimitReached) {
-    throw new ForbiddenError('Token points limit reached');
+    throw new TokenPointsExceededError();
   }
 
   const speechResult = await generateSpeech({ text, voice: entity.voice });

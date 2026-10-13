@@ -3,14 +3,11 @@ import { getTranslations } from 'next-intl/server';
 import { getUser } from '@/auth/utils';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
 import { generateSpeechPreview } from '@/app/api/chat/speech-service';
-import { speechPreviewRequestSchema } from '@/app/api/shared-chat/shared-chat-request-schemas';
+import { speechPreviewRequestSchema } from '@/app/api/chat/speech-request-schemas';
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getUser();
-    if (user === undefined) {
-      return new NextResponse(null, { status: 401 });
-    }
+    await getUser();
 
     const parsed = speechPreviewRequestSchema.parse(await req.json());
 

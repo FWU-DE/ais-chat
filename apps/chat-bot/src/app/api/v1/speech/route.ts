@@ -2,14 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/auth/utils';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
 import { generateChatSpeech } from '@/app/api/chat/speech-service';
-import { speechRequestSchema } from '@/app/api/shared-chat/shared-chat-request-schemas';
+import { speechRequestSchema } from '@/app/api/chat/speech-request-schemas';
 
 export async function POST(req: NextRequest) {
   try {
     const user = await getUser();
-    if (user === undefined) {
-      return new NextResponse(null, { status: 401 });
-    }
 
     const parsed = speechRequestSchema.parse(await req.json());
 

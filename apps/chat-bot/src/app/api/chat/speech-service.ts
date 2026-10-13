@@ -1,6 +1,6 @@
-import { generateSpeechById } from '@ais-chat/ai-core';
+import { generateSpeechById, TokenPointsExceededError } from '@ais-chat/ai-core';
 import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
-import { ForbiddenError, InvalidArgumentError } from '@shared/error';
+import { InvalidArgumentError } from '@shared/error';
 import { calculateSpeechCostsInCent } from '@/app/api/utils/utils';
 import {
   getCachedSpeechPreview,
@@ -71,7 +71,7 @@ export async function generateChatSpeech({
         conversation,
       }),
     );
-    throw new ForbiddenError('Token points limit reached');
+    throw new TokenPointsExceededError();
   }
 
   const speechResult = await generateSpeech({ text, voice });
