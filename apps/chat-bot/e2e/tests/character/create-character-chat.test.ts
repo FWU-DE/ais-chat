@@ -1,14 +1,14 @@
 import { expect, test } from '@playwright/test';
-import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
-import { regenerateMessage, sendMessage } from '../../utils/chat';
+import { nanoid } from 'nanoid';
 import {
   configureCharacter,
   createCharacter,
   deleteCharacter,
   deleteCharacterFromDetailPage,
 } from '../../utils/character';
+import { regenerateMessage, sendMessage } from '../../utils/chat';
+import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
 import { stopShare, waitForAutosave, waitForToast, waitForToastDisappear } from '../../utils/utils';
-import { nanoid } from 'nanoid';
 
 test.use({ storageState: AUTH_FILES.teacher });
 
@@ -81,15 +81,17 @@ test.describe('create, share, chat, delete', () => {
 
       // send first message
       await sendMessage(page, `${MOCK_LLM_COMMANDS.RETURN_SYSTEM_PROMPT} Wer bist du?`);
-      await page.getByTestId('copy-to-clipboard').click();
+      // The character's initial message precedes the response, so target the latest one.
+      const assistantResponse = page.getByLabel(/^assistant message /).last();
+      await assistantResponse.getByTestId('copy-to-clipboard').click();
 
       // 'John Cena' is the character name and is included in the system prompt;
       // the mock LLM echoes the system prompt back.
-      await expect(page.getByLabel('assistant message 1')).toContainText('John Cena');
+      await expect(assistantResponse).toContainText('John Cena');
 
       // regenerate last message
       await regenerateMessage(page);
-      await expect(page.getByLabel('assistant message 1')).toContainText('John Cena');
+      await expect(assistantResponse).toContainText('John Cena');
     },
   );
 

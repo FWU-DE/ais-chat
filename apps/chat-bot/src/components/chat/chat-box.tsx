@@ -26,6 +26,7 @@ export function ChatBox({
   isLastNonUser,
   isLoading,
   regenerateMessage,
+  canRegenerateMessage,
   conversationId,
   characterName,
   status,
@@ -42,6 +43,7 @@ export function ChatBox({
   isLastNonUser: boolean;
   isLoading: boolean;
   regenerateMessage: () => void;
+  canRegenerateMessage: boolean;
   conversationId?: string;
   characterName?: string;
   status: ChatStatus;
@@ -137,17 +139,19 @@ export function ChatBox({
     allFiles !== undefined || userWebSources.length > 0 || AiActivity !== null ? 'm-0 mt-4' : 'm-4';
 
   const maybeShowMessageIcons =
-    isLastNonUser && status !== 'streaming' ? (
+    message.role === 'assistant' && (!isLastNonUser || status !== 'streaming') ? (
       <MessageActions
         message={message}
         status={status}
         conversationId={conversationId}
         characterName={characterName}
         regenerateMessage={regenerateMessage}
+        canRegenerateMessage={canRegenerateMessage}
         generateSpeechFn={generateSpeechFn}
         isSpeechModelEnabled={isSpeechModelEnabled}
         showActivityDialog={showActivityDialog}
         activitySteps={activitySteps}
+        isLastMessage={isLastNonUser}
       />
     ) : null;
 
@@ -156,7 +160,8 @@ export function ChatBox({
   return (
     <>
       {AiActivity}
-      <div key={index} className={cn('w-full', userClassName, margin)}>
+      {/* Hover surface for the message actions revealed by MessageActions. */}
+      <div key={index} className={cn('w-full group/message', userClassName, margin)}>
         <div aria-label={`${message.role} message ${Math.floor(index / 2 + 1)}`}>
           <div className={cn('flex min-w-0', isAtLeast.sm ? 'flex-row' : 'flex-col')}>
             {message.role === 'assistant' && assistantIcon}

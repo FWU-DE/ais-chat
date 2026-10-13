@@ -42,6 +42,8 @@ export function Messages({
   generateSpeechFn,
   isSpeechModelEnabled,
 }: MessagesProps): React.JSX.Element {
+  const canRegenerateMessage = messages.some((message) => message.role === 'user');
+
   return (
     <div className={containerClassName}>
       {messages.map((message, index) => (
@@ -54,6 +56,7 @@ export function Messages({
           isLastNonUser={index === messages.length - 1 && message.role !== 'user'}
           isLoading={isLoading}
           regenerateMessage={reload}
+          canRegenerateMessage={canRegenerateMessage}
           conversationId={conversationId}
           assistantIcon={assistantIcon}
           webSources={message.role === 'user' ? webSourceMapping?.get(message.id) : undefined}

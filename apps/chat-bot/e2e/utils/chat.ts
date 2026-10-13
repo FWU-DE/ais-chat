@@ -1,11 +1,11 @@
-import path from 'node:path';
 import { expect, Page, test } from '@playwright/test';
+import path from 'node:path';
 import { waitForToast } from './utils';
 
 export async function regenerateMessage(page: Page) {
-  await page.getByLabel('Reload').click();
-  await page.getByLabel('Reload').waitFor({ state: 'hidden' });
-  await page.getByLabel('Reload').waitFor();
+  await page.getByTestId('regenerate-message-button').click();
+  await page.getByTestId('regenerate-message-button').waitFor({ state: 'hidden' });
+  await page.getByTestId('regenerate-message-button').waitFor();
 }
 
 export async function enterMessage(page: Page, message: string) {
@@ -44,7 +44,11 @@ export async function sendMessage(
 
     // Either the response finishes successfully and shows the Reload button,
     // or an error message appears and the test should fail.
-    await assistantMessage.getByLabel('Reload').or(errorBox).first().waitFor({ timeout: 80_000 });
+    await assistantMessage
+      .getByTestId('regenerate-message-button')
+      .or(errorBox)
+      .first()
+      .waitFor({ timeout: 80_000 });
     if (await errorBox.isVisible()) {
       throw new Error('Error message appeared after sending message');
     }
