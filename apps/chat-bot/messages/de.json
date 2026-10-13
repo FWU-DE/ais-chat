@@ -47,7 +47,6 @@
       "zoom-in": "Vergrößern",
       "zoom-out": "Verkleinern",
       "fullscreen": "Im Vollbild anzeigen",
-      "fullscreen-exit": "Vollbild beenden",
       "description": "Grafik: {title}",
       "description-untitled": "Grafik",
       "error": "Die Grafik konnte nicht dargestellt werden."
