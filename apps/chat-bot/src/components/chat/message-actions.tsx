@@ -41,7 +41,7 @@ export function MessageActions({
   const plainText = useMemo(
     () =>
       replacePlotBlocks(message.content, (title) =>
-        title ? tCommon('plot.description', { title }) : tCommon('plot.description-untitled'),
+        title ? tCommon('plot.description', { title }) : tCommon('plot.label'),
       ),
     [message.content, tCommon],
   );

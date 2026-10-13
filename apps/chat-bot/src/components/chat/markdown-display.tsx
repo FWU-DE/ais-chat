@@ -135,7 +135,7 @@ export default function MarkdownDisplay({ children: _children }: MarkdownDisplay
           th({ children, className, node, ...props }) {
             return (
               <th
-                className={cn('text-left p-2 border bg-slate-100 font-medium', className)}
+                className={cn('text-left p-2 border bg-muted font-medium', className)}
                 {...props}
               >
                 {children}

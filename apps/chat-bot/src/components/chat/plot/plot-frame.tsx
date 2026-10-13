@@ -184,7 +184,7 @@ export function PlotFrame({
   const plotLabel = title ?? tCommon('plot.label');
 
   return (
-    <figure className="my-2 flex w-full min-w-64 max-w-2xl flex-col gap-2 wrap-break-word rounded-lg border bg-white p-3">
+    <figure className="my-2 flex w-full min-w-64 max-w-2xl flex-col gap-2 wrap-break-word rounded-lg border bg-background p-3">
       <div className="flex items-start justify-between gap-2">
         <figcaption className="font-semibold">{plotLabel}</figcaption>
         <Dialog open={isFullscreen} onOpenChange={onFullscreenChange}>
@@ -210,15 +210,17 @@ export function PlotFrame({
               ref={isFullscreen ? containerRef : undefined}
               aria-label={plotLabel}
               data-testid={isFullscreen ? 'plot-view' : undefined}
-              className="w-full min-h-[60%] flex-1 overflow-hidden [&_svg]:font-[inherit]"
+              className="w-full min-h-0 flex-1 overflow-hidden [&_svg]:font-[inherit]"
             />
-            <div className="min-h-0 flex-1 shrink overflow-y-auto">
-              <PlotSliders
-                sliders={sliders}
-                sliderValues={sliderValues}
-                onSliderChange={onSliderChange}
-              />
-            </div>
+            {sliders.length > 0 && (
+              <div className="min-h-0 max-h-[40%] shrink overflow-y-auto p-1">
+                <PlotSliders
+                  sliders={sliders}
+                  sliderValues={sliderValues}
+                  onSliderChange={onSliderChange}
+                />
+              </div>
+            )}
             <PlotActions
               container={container}
               onReset={onReset}
