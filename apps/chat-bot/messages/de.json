@@ -16,6 +16,8 @@
     "cancel": "Abbrechen",
     "continue": "Weiter",
     "back": "Zurück",
+    "maximize": "Maximieren",
+    "minimize": "Minimieren",
     "accept": "Akzeptieren",
     "image": "Bild",
     "upload-image": "Bild hochladen",
@@ -538,6 +540,7 @@
       "crop-image": "Bild ausschneiden",
       "upload-image": "Bild hochladen",
       "profile-picture": "Profilbild",
+      "uploaded-profile-picture": "Vom Nutzenden hochgeladenes Profilbild",
       "toasts": {
         "image-toast-success": "Das Bild wurde erfolgreich hochgeladen.",
         "image-toast-error": "Das Bild konnte nicht hochgeladen werden."
