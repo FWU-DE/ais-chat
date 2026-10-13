@@ -57,7 +57,7 @@ describe('applyInteractionOptions', () => {
     });
   });
 
-  it('still requires shift to zoom a 3D plot outside fullscreen', () => {
+  it('requires shift to zoom a 3D plot outside fullscreen', () => {
     const { board, setAttribute } = fakeBoard();
     const threeDSpec = spec('{"elements":[["view3d",[[-4,-3],[8,8],[[-5,5],[-5,5],[-5,5]]]]]}');
     applyInteractionOptions(board, threeDSpec, false);
@@ -114,7 +114,7 @@ describe('createBoard', () => {
     expect(board.select('A', true)).toBeDefined();
   });
 
-  it('still decodes HTML entities in the text payload itself', () => {
+  it('decodes HTML entities in the text payload itself', () => {
     stubMatchMedia();
     const container = document.createElement('div');
     document.body.appendChild(container);
