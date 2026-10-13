@@ -11,6 +11,7 @@ import DisplayFileAttachment from './display-file-attachment';
 import MarkdownDisplay from './markdown-display';
 import { MessageActions } from './message-actions';
 import MessageImageAttachment, { type PendingFileModel } from './message-image-attachment';
+import { PlotStreamingContext } from './plot/plot-block';
 import Citation from './sources/citation';
 
 // Re-export for consumers
@@ -155,7 +156,11 @@ export function ChatBox({
       />
     ) : null;
 
-  const messageContent = <MarkdownDisplay>{message.content}</MarkdownDisplay>;
+  const messageContent = (
+    <PlotStreamingContext.Provider value={status === 'streaming' && isLastNonUser}>
+      <MarkdownDisplay>{message.content}</MarkdownDisplay>
+    </PlotStreamingContext.Provider>
+  );
 
   return (
     <>
