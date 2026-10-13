@@ -684,7 +684,9 @@
       "voice-label": "Stimme",
       "voice-placeholder": "Stimme auswählen",
       "voice-preview-label": "Stimme anhören",
-      "voice-preview-text": "Hallo, schön, dass du da bist. Wie kann ich dir heute helfen?"
+      "voice-preview-text": "Hallo, schön, dass du da bist. Wie kann ich dir heute helfen?",
+      "speech-only-label": "Nur Sprache, kein Text",
+      "speech-only-tooltip": "Falls aktiviert, werden Antworten standardmäßig nur als Sprache ausgegeben. Der Text kann zusätzlich eingeblendet werden."
     }
   },
   "assistants": {
