@@ -34,4 +34,9 @@ describe('formatSliderValue', () => {
   it('keeps genuine fractional precision even with a large integer part', () => {
     expect(formatSliderValue(100000000000.1, 100000000000.1)).toBe('100000000000.1');
   });
+
+  it('keeps distinct positions for tiny steps instead of collapsing to an integer', () => {
+    expect(formatSliderValue(1e-9, 1e-9)).toBe('0.000000001');
+    expect(formatSliderValue(2e-6, 1e-6)).toBe('0.000002');
+  });
 });

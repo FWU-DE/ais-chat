@@ -27,13 +27,21 @@ function decimalPlaces(step: number) {
   // Division (e.g. `(max - min) / 100`) can produce steps like `0.028999999999999998` that are
   // really meant to be `0.029`. A tolerance (rather than an exact match, or rounding the input to
   // a fixed number of significant digits) distinguishes that floating-point noise from genuine
-  // fractional precision regardless of the step's magnitude.
-  const EPSILON = 1e-9;
+  // fractional precision regardless of the step's magnitude. The tolerance is derived from
+  // `Number.EPSILON` and scaled to the current magnitude (rather than a fixed absolute value),
+  // so tiny steps (e.g. `1e-9`) aren't mistaken for noise.
+  const EPSILON_MULTIPLIER = 8;
   let decimals = 0;
   let factor = 1;
-  while (Math.abs(Math.round(step * factor) - step * factor) > EPSILON && decimals < 10) {
+  let scaled = step * factor;
+  while (
+    Math.abs(Math.round(scaled) - scaled) >
+      Math.abs(scaled) * Number.EPSILON * EPSILON_MULTIPLIER &&
+    decimals < 10
+  ) {
     factor *= 10;
     decimals++;
+    scaled = step * factor;
   }
   return decimals;
 }
