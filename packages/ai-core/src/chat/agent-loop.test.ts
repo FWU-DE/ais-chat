@@ -1155,6 +1155,8 @@ describe('agent-loop', () => {
 
       expect(onComplete).toHaveBeenCalledWith(
         expect.objectContaining({
+          usage: toolUsage,
+          priceInCents: 11,
           modelUsages: expect.arrayContaining([
             { modelId: 'sub-model', usage: toolUsage, priceInCents: 11 },
           ]),
