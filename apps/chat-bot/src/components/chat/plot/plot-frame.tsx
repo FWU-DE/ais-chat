@@ -2,7 +2,13 @@
 
 import { useTranslations } from 'next-intl';
 import { Button } from '@ui/components/button';
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@ui/components/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@ui/components/dialog';
 import type { Ref } from 'react';
 import {
   ArrowCounterClockwiseIcon,
@@ -181,8 +187,10 @@ export function PlotFrame({
               <CornersOutIcon className="size-5 text-primary" />
             </Button>
           </DialogTrigger>
-          <DialogContent variant="lg" showCloseButton>
-            <DialogTitle className="text-base font-semibold">{plotLabel}</DialogTitle>
+          <DialogContent variant="lg" showCloseButton aria-describedby={undefined}>
+            <DialogHeader>
+              <DialogTitle className="text-base font-semibold">{plotLabel}</DialogTitle>
+            </DialogHeader>
             <div
               ref={isFullscreen ? containerRef : undefined}
               aria-label={plotLabel}
