@@ -227,7 +227,19 @@ export function runAgentLoop({
                     try {
                       if (registryEntry) {
                         const args = JSON.parse(toolCall.arguments) as Record<string, unknown>;
-                        result = await registryEntry.handler(args, abortSignal);
+                        result = await registryEntry.handler(args, {
+                          abortSignal,
+                          reportUsage: (usedModelId, usage, priceInCents) => {
+                            modelUsages.push({ modelId: usedModelId, usage, priceInCents });
+                            totalUsage = {
+                              promptTokens: totalUsage.promptTokens + usage.promptTokens,
+                              completionTokens:
+                                totalUsage.completionTokens + usage.completionTokens,
+                              totalTokens: totalUsage.totalTokens + usage.totalTokens,
+                            };
+                            totalPriceInCents += priceInCents;
+                          },
+                        });
                       } else {
                         const message = `Unknown tool "${toolCall.name}"`;
                         toolSpan.setStatus({ code: 2, message });

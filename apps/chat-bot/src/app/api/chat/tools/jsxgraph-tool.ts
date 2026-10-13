@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { generateTextWithBilling } from '@ais-chat/ai-core';
-import type { Message, ModelSelection, ToolCall } from '@ais-chat/ai-core/chat/types';
+import type {
+  Message,
+  ModelSelection,
+  ToolCall,
+  ToolHandlerOptions,
+} from '@ais-chat/ai-core/chat/types';
 import {
   ALLOWED_CALLS,
   ALLOWED_ELEMENT_TYPES,
@@ -114,7 +119,7 @@ export function buildJsxgraphTool({
 
   const handler = async (
     args: Record<string, unknown>,
-    abortSignal?: AbortSignal,
+    options?: ToolHandlerOptions,
   ): Promise<CreatePlotToolResponse> => {
     const parsedArgs = createPlotArgsSchema.safeParse(args);
     if (!parsedArgs.success) {
@@ -138,9 +143,13 @@ export function buildJsxgraphTool({
     }
 
     try {
-      const { text } = await generateTextWithBilling(modelSelection, messages, apiKeyId, {
-        abortSignal,
-      });
+      const { text, modelId, usage, priceInCents } = await generateTextWithBilling(
+        modelSelection,
+        messages,
+        apiKeyId,
+        { abortSignal: options?.abortSignal },
+      );
+      options?.reportUsage?.(modelId, usage, priceInCents);
       const result = parsePlotSpec(text);
       if ('spec' in result) {
         return result.spec;

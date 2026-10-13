@@ -100,7 +100,7 @@ describe('buildJsxgraphTool', () => {
     const tool = buildJsxgraphTool({ modelSelection, apiKeyId: 'api-key-1' });
     const abortSignal = new AbortController().signal;
 
-    await tool.handler({ description: 'a point' }, abortSignal);
+    await tool.handler({ description: 'a point' }, { abortSignal });
 
     expect(mocks.generateTextWithBillingMock).toHaveBeenCalledWith(
       modelSelection,
@@ -129,5 +129,22 @@ describe('buildJsxgraphTool', () => {
 
     expect(result).toEqual({ error: 'Invalid description.' });
     expect(mocks.generateTextWithBillingMock).not.toHaveBeenCalled();
+  });
+
+  it('reports the sub-call usage so it gets billed to the user', async () => {
+    const usage = { promptTokens: 10, completionTokens: 5, totalTokens: 15 };
+    mocks.generateTextWithBillingMock.mockResolvedValue({
+      text: validSpec,
+      modelId: 'model-1',
+      usage,
+      priceInCents: 3,
+    });
+    const { buildJsxgraphTool } = await import('./jsxgraph-tool');
+    const tool = buildJsxgraphTool({ modelSelection, apiKeyId: 'api-key-1' });
+    const reportUsage = vi.fn();
+
+    await tool.handler({ description: 'a point' }, { reportUsage });
+
+    expect(reportUsage).toHaveBeenCalledWith('model-1', usage, 3);
   });
 });
