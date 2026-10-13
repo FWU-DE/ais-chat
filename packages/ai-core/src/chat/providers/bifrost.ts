@@ -61,9 +61,14 @@ async function resolveBifrostUsageInfo(
   const deployment = fields.resolved_model_used ?? fields.original_model_requested;
   const modelName = stripBifrostProviderPrefix(deployment, fields.provider);
 
-  const returnedNames = [fields.resolved_model_used, fields.original_model_requested].filter(
-    (value): value is string => typeof value === 'string',
-  );
+  // Only fall back to the requested name when Bifrost did not report a resolved model at all;
+  // otherwise a resolved name that fails to match here would incorrectly match the primary
+  // model via `original_model_requested`, even though a fallback deployment served the request.
+  const returnedNames = fields.resolved_model_used
+    ? [fields.resolved_model_used]
+    : typeof fields.original_model_requested === 'string'
+      ? [fields.original_model_requested]
+      : [];
   for (const returnedName of returnedNames) {
     const matchingModel = models.find((candidate) => {
       const candidateName = getBifrostModelName(candidate);
