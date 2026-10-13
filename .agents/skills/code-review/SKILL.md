@@ -21,3 +21,7 @@ Although the schema models multiple organizations, this app is deployed and
 operated for a single organization only. Concerns about behavior across
 different organizations (e.g. name/id collisions, data isolation between
 tenants) are not applicable and should not be raised in review or acted on.
+
+## E2E Test Tags
+
+All newly added e2e tests must include `{ tag: '@smoke' }` so they run in the PR e2e pipeline. Flag any new e2e test missing this tag in review.
