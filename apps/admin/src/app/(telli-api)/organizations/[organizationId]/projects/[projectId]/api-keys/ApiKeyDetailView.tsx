@@ -30,7 +30,12 @@ import { TrashSimpleIcon } from '@phosphor-icons/react';
 const apiKeyFormSchema = z.object({
   name: z.string().min(1, 'Name ist erforderlich'),
   state: z.enum(['active', 'inactive', 'deleted']).default('active'),
-  limitInCent: z.number().nonnegative().optional(),
+  // Required: an empty value used to be stored as 0, which blocks the key as soon as a paid
+  // model is used (billing treats 0 literally, not as "unlimited").
+  limitInCent: z
+    .number({ error: 'Bitte ein Limit in Cent angeben (0 = gesperrt)' })
+    .int('Bitte eine ganze Zahl angeben')
+    .nonnegative('Das Limit darf nicht negativ sein'),
   expiresAt: z.date().optional().nullable(),
 });
 
@@ -67,7 +72,7 @@ export function ApiKeyDetailView({
       ? {
           name: apiKey.name,
           state: apiKey.state,
-          limitInCent: apiKey.limitInCent || undefined,
+          limitInCent: apiKey.limitInCent,
           expiresAt: apiKey.expiresAt || null,
         }
       : {
@@ -273,10 +278,11 @@ export function ApiKeyDetailView({
 
           <FormField
             name="limitInCent"
-            label="Limit in Cent (optional)"
-            description="Ausgabenlimit für diesen API-Schlüssel"
+            label="Limit in Cent"
+            description="Monatliches Ausgabenlimit für diesen API-Schlüssel, z. B. 500 = 5 €. Bei 0 ist der Schlüssel gesperrt, sobald ein kostenpflichtiges Modell genutzt wird."
             control={control}
             type="number"
+            required
           />
 
           <div>
