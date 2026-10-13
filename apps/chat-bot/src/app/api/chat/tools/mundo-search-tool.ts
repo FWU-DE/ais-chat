@@ -40,17 +40,17 @@ export function buildMundoSearchTool(): ToolRegistration {
           description:
             'A concise search query in German describing the topic (max 2 words). Examples: "Photosynthese", "Bruchrechnung", "Weimarer Republik".',
         },
+        // anyOf instead of `type: ['string', 'null']` + enum: Anthropic rejects enums on a
+        // multi-type field, while anyOf is accepted by both OpenAI and Anthropic.
         classLevel: {
-          type: ['string', 'null'],
           description:
             'Optional class level range to filter results. Only set this when the teacher explicitly mentioned the class. Pick the single range that best matches. If the teacher did not specify a target class, pass null so no filter is applied.',
-          enum: [...MUNDO_CLASS_LEVELS, null],
+          anyOf: [{ type: 'string', enum: [...MUNDO_CLASS_LEVELS] }, { type: 'null' }],
         },
         subject: {
-          type: ['string', 'null'],
           description:
             'Optional school subject to filter results. Pick exactly one subject that best matches the topic of the query. If no subject clearly fits, pass null so no filter is applied.',
-          enum: [...MUNDO_SUBJECTS, null],
+          anyOf: [{ type: 'string', enum: [...MUNDO_SUBJECTS] }, { type: 'null' }],
         },
       },
       required: ['query', 'classLevel', 'subject'],
