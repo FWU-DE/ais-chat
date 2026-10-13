@@ -43,9 +43,17 @@ export type ToolDefinition = {
   parameters: Record<string, unknown>;
 };
 
+/** Reports the cost of an LLM call a tool makes internally, so it is billed to the user like any other model usage. */
+export type ReportToolUsage = (modelId: string, usage: TokenUsage, priceInCents: number) => void;
+
+export type ToolHandlerOptions = {
+  abortSignal?: AbortSignal;
+  reportUsage?: ReportToolUsage;
+};
+
 export type ToolHandler = (
   args: Record<string, unknown>,
-  abortSignal?: AbortSignal,
+  options?: ToolHandlerOptions,
 ) => Promise<unknown>;
 
 export type ToolRegistryEntry = {

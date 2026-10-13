@@ -792,7 +792,10 @@ describe('agent-loop', () => {
         expect(onComplete).toHaveBeenCalled();
       });
 
-      expect(handler).toHaveBeenCalledWith({}, abortController.signal);
+      expect(handler).toHaveBeenCalledWith(
+        {},
+        { abortSignal: abortController.signal, reportUsage: expect.any(Function) },
+      );
     });
 
     it('stops before the next iteration once aborted and keeps the partial text', async () => {
@@ -1094,6 +1097,69 @@ describe('agent-loop', () => {
         expect.objectContaining({
           priceInCents: 3,
           modelUsages: [{ modelId: 'test-model', usage, priceInCents: 3 }],
+        }),
+      );
+    });
+  });
+
+  describe('tool-reported usage', () => {
+    it('aggregates usage a tool handler reports into modelUsages and the totals', async () => {
+      const messages: Message[] = [{ role: 'user', content: 'Test query' }];
+      const toolUsage: TokenUsage = { promptTokens: 5, completionTokens: 2, totalTokens: 7 };
+      const onComplete = vi.fn();
+
+      let callCount = 0;
+      mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+        callCount++;
+        if (callCount === 1) {
+          yield {
+            type: 'tool_call',
+            call: { id: 'call_123', name: 'test_tool', arguments: '{}' },
+          } satisfies StreamEvent;
+          yield { type: 'finish', usage } satisfies StreamEvent;
+        } else {
+          yield { type: 'text', delta: 'Done.' } satisfies StreamEvent;
+          yield { type: 'finish', usage } satisfies StreamEvent;
+        }
+      });
+
+      const toolRegistry = {
+        test_tool: {
+          definition: { name: 'test_tool', description: 'Test', parameters: {} },
+          handler: async (
+            _args: Record<string, unknown>,
+            options?: {
+              reportUsage?: (modelId: string, usage: TokenUsage, priceInCents: number) => void;
+            },
+          ) => {
+            options?.reportUsage?.('sub-model', toolUsage, 11);
+            return 'tool result';
+          },
+        },
+      };
+
+      runAgentLoop({
+        modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+        apiKeyId: 'test-key',
+        messages,
+        toolRegistry,
+        agentName: 'Test Agent',
+        onTextChunk: vi.fn(),
+        onComplete,
+        onError: vi.fn(),
+      });
+
+      await vi.waitFor(() => {
+        expect(onComplete).toHaveBeenCalled();
+      });
+
+      expect(onComplete).toHaveBeenCalledWith(
+        expect.objectContaining({
+          usage: toolUsage,
+          priceInCents: 11,
+          modelUsages: expect.arrayContaining([
+            { modelId: 'sub-model', usage: toolUsage, priceInCents: 11 },
+          ]),
         }),
       );
     });

@@ -25,6 +25,23 @@ function logError(message: string, error: unknown) {
   console.error(message, error);
 }
 
+type ModelUsage = { modelId: string; usage: TokenUsage; priceInCents: number };
+
+/** Derives the running totals from the recorded per-model usages, so they can never drift apart. */
+function sumModelUsages(modelUsages: ModelUsage[]): { usage: TokenUsage; priceInCents: number } {
+  return modelUsages.reduce(
+    (acc, { usage, priceInCents }) => ({
+      usage: {
+        promptTokens: acc.usage.promptTokens + usage.promptTokens,
+        completionTokens: acc.usage.completionTokens + usage.completionTokens,
+        totalTokens: acc.usage.totalTokens + usage.totalTokens,
+      },
+      priceInCents: acc.priceInCents + priceInCents,
+    }),
+    { usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, priceInCents: 0 },
+  );
+}
+
 type RunAgentLoopParams = {
   modelSelection: ModelSelection;
   apiKeyId: string;
@@ -42,7 +59,7 @@ type RunAgentLoopParams = {
     usage: TokenUsage;
     priceInCents: number;
     modelId: string;
-    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+    modelUsages: ModelUsage[];
     agentLoopMessages: AiCoreMessage[];
   }) => void;
   /**
@@ -54,7 +71,7 @@ type RunAgentLoopParams = {
     billedUsage: {
       usage: TokenUsage;
       priceInCents: number;
-      modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+      modelUsages: ModelUsage[];
     },
   ) => void;
 };
@@ -75,18 +92,15 @@ export function runAgentLoop({
 }: RunAgentLoopParams): void {
   void (async () => {
     let fullText = '';
-    let totalUsage: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
-    let totalPriceInCents = 0;
     let lastModelId = modelSelection.modelIds[0];
-    const modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }> = [];
+    const modelUsages: ModelUsage[] = [];
     const loopMessages = [...messages];
     const tools = toolRegistry ? Object.values(toolRegistry).map((entry) => entry.definition) : [];
 
     const complete = () =>
       onComplete({
         fullText,
-        usage: totalUsage,
-        priceInCents: totalPriceInCents,
+        ...sumModelUsages(modelUsages),
         modelId: lastModelId,
         modelUsages,
         agentLoopMessages: loopMessages.slice(messages.length),
@@ -94,8 +108,7 @@ export function runAgentLoop({
 
     const fail = (error: Error) =>
       onError(error, {
-        usage: totalUsage,
-        priceInCents: totalPriceInCents,
+        ...sumModelUsages(modelUsages),
         modelUsages,
       });
 
@@ -136,12 +149,6 @@ export function runAgentLoop({
                 await modelSelection.onModelUsed?.(usedModelId);
                 lastModelId = usedModelId;
                 modelUsages.push({ modelId: usedModelId, usage, priceInCents });
-                totalUsage = {
-                  promptTokens: totalUsage.promptTokens + usage.promptTokens,
-                  completionTokens: totalUsage.completionTokens + usage.completionTokens,
-                  totalTokens: totalUsage.totalTokens + usage.totalTokens,
-                };
-                totalPriceInCents += priceInCents;
                 if (usage.estimated) {
                   agentSpan.setAttribute('gen_ai.usage.estimated', true);
                 }
@@ -227,7 +234,12 @@ export function runAgentLoop({
                     try {
                       if (registryEntry) {
                         const args = JSON.parse(toolCall.arguments) as Record<string, unknown>;
-                        result = await registryEntry.handler(args, abortSignal);
+                        result = await registryEntry.handler(args, {
+                          abortSignal,
+                          reportUsage: (usedModelId, usage, priceInCents) => {
+                            modelUsages.push({ modelId: usedModelId, usage, priceInCents });
+                          },
+                        });
                       } else {
                         const message = `Unknown tool "${toolCall.name}"`;
                         toolSpan.setStatus({ code: 2, message });
@@ -278,6 +290,7 @@ export function runAgentLoop({
             }
           }
 
+          const { usage: totalUsage } = sumModelUsages(modelUsages);
           agentSpan.setAttribute('gen_ai.usage.input_tokens', totalUsage.promptTokens);
           agentSpan.setAttribute('gen_ai.usage.output_tokens', totalUsage.completionTokens);
           agentSpan.setAttribute('gen_ai.usage.total_tokens', totalUsage.totalTokens);
