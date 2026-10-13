@@ -136,6 +136,7 @@ describe('createBoard', () => {
 
     const testSpec = spec(
       JSON.stringify({
+        board: { boundingBox: [-8, 8, 8, -8] },
         elements: [
           [
             'view3d',
