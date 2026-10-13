@@ -1,8 +1,8 @@
 'use client';
 
-import { useTheme } from 'next-themes';
 import { MoonIcon, SunIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
+import { useTheme } from 'next-themes';
 
 const isLocalDev = process.env.NODE_ENV === 'development';
 
@@ -20,7 +20,7 @@ export function ThemeToggleButton() {
       type="button"
       variant="ghost"
       size="icon-round"
-      className="hidden md:flex"
+      className="hidden sm:flex"
       aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
     >
