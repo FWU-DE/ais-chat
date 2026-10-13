@@ -25,12 +25,13 @@ import type { SliderDefinition } from './slider-definitions';
 // `0.0001`) show distinct values, and non-power-of-ten steps (e.g. `0.25`) aren't rounded away.
 function decimalPlaces(step: number) {
   // Division (e.g. `(max - min) / 100`) can produce steps like `0.028999999999999998` that are
-  // really meant to be `0.029`. Round off that floating-point noise before measuring precision,
-  // otherwise the loop below never finds a match and falls back to the decimals cap.
-  const cleanStep = Number(step.toPrecision(12));
+  // really meant to be `0.029`. A tolerance (rather than an exact match, or rounding the input to
+  // a fixed number of significant digits) distinguishes that floating-point noise from genuine
+  // fractional precision regardless of the step's magnitude.
+  const EPSILON = 1e-9;
   let decimals = 0;
   let factor = 1;
-  while (Math.round(cleanStep * factor) / factor !== cleanStep && decimals < 10) {
+  while (Math.abs(Math.round(step * factor) - step * factor) > EPSILON && decimals < 10) {
     factor *= 10;
     decimals++;
   }
