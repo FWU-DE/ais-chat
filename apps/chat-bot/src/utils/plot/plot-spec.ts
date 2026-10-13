@@ -18,8 +18,8 @@ const elementSchema = z
     z.array(parentSchema),
     attributesSchema,
   ])
-  .superRefine(([type, parents], ctx) => {
-    const message = ELEMENT_VALIDATORS[type]?.(parents);
+  .superRefine(([type, parents, attributes], ctx) => {
+    const message = ELEMENT_VALIDATORS[type]?.(parents, attributes);
     if (message !== undefined) {
       ctx.addIssue({ code: 'custom', message: `Invalid "${type}": ${message}` });
     }

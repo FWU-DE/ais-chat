@@ -1,5 +1,5 @@
 import type { ElementType } from './plot-element-types';
-import type { PlotParent } from './plot-sanitize';
+import { isValidIdentifierName, type PlotParent } from './plot-sanitize';
 
 const isNumbers = (value: PlotParent | undefined): value is number[] =>
   Array.isArray(value) && value.every((entry) => typeof entry === 'number');
@@ -12,7 +12,10 @@ export function getSliderRange(parents: PlotParent[]) {
 
 // Per-type checks beyond the generic parent schema, each returning an error message (or
 // `undefined` when valid). Add an entry here for any other type that needs its own validation.
-type ElementValidator = (parents: PlotParent[]) => string | undefined;
+type ElementValidator = (
+  parents: PlotParent[],
+  attributes?: Record<string, unknown>,
+) => string | undefined;
 
 const isBound = (value: PlotParent | undefined): value is PlotParent[] =>
   Array.isArray(value) && value.length === 2;
@@ -27,12 +30,24 @@ function validateBounds(...indexes: number[]): ElementValidator {
 }
 
 export const ELEMENT_VALIDATORS: Partial<Record<ElementType, ElementValidator>> = {
-  slider: (parents) => {
+  slider: (parents, attributes) => {
     const range = getSliderRange(parents);
     if (range === undefined) {
       return 'parents must include a `[min, start, max]` range';
     }
-    return range[0] >= range[2] ? '`min` must be less than `max`' : undefined;
+    if (range[0] >= range[2]) {
+      return '`min` must be less than `max`';
+    }
+    // Unlike other elements' `name` (a display label), a slider's `name` is a JessieCode
+    // identifier used in later expressions, e.g. `sin(a*x)`, so it must be a valid ASCII
+    // identifier string, not just any JSON value.
+    if ('name' in (attributes ?? {})) {
+      const name = attributes?.name;
+      if (typeof name !== 'string' || !isValidIdentifierName(name)) {
+        return `"name" must be a plain ASCII identifier, got ${JSON.stringify(name)}`;
+      }
+    }
+    return undefined;
   },
   curve3d: validateBounds(3),
   parametricsurface3d: validateBounds(3, 4),

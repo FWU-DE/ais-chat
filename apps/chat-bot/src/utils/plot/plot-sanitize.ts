@@ -66,6 +66,13 @@ export function hasUnsafeString(parent: PlotParent): boolean {
   return Array.isArray(parent) && parent.some(hasUnsafeString);
 }
 
+// Matches a whole standalone identifier, e.g. a slider's `name`.
+const IDENTIFIER_PATTERN = /^[A-Za-z_$][\w$]*$/;
+
+export function isValidIdentifierName(value: string): boolean {
+  return IDENTIFIER_PATTERN.test(value);
+}
+
 // `display: 'html'` writes via innerHTML and `parse` evaluates JessieCode, so both let an
 // attribute override execute arbitrary HTML/code instead of being a passive style value; the
 // rest have similar side effects (resource loading, prototype pollution). Checked at any nesting
