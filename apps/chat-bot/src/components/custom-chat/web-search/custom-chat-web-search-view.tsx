@@ -17,7 +17,7 @@ export function CustomChatWebSearchView(props: CustomChatWebSearchViewProps) {
       <CustomChatHeading2 text={t('heading')} tooltip={t('heading-tooltip')} />
       <Card>
         <CardContent>
-          <div className="flex items-center gap-2 pb-4">
+          <div className="flex items-center gap-2">
             {props.isWebSearchEnabled ? (
               <>
                 <CheckCircleIcon className="size-6.5 shrink-0 text-success" />
@@ -33,7 +33,7 @@ export function CustomChatWebSearchView(props: CustomChatWebSearchViewProps) {
 
           {props.isWebSearchEnabled && props.webSearchScope === 'included-domains' && (
             <>
-              <div>{t('scope-included-domains')}</div>
+              <div className="pt-4">{t('scope-included-domains')}</div>
               <ul className="flex flex-row flex-wrap gap-2 pt-4">
                 {props.webSearchIncludedDomains.toSorted().map((domain) => (
                   <li key={domain}>
