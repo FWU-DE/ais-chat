@@ -10,6 +10,7 @@ import {
   SharedChatExpiredError,
   TokenPointsExceededError,
   runAgentLoop,
+  type ModelUsage,
   type TokenUsage,
 } from '@ais-chat/ai-core';
 import {
@@ -200,7 +201,7 @@ export async function sendCharacterMessage({
   }: {
     usage: TokenUsage;
     priceInCents: number;
-    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+    modelUsages: ModelUsage[];
   }) => {
     if (modelUsages.length === 0) {
       return;
@@ -219,13 +220,22 @@ export async function sendCharacterMessage({
       });
     }
 
+    // Report the real provider/model that generated the final response, i.e. the one that
+    // served the last agentic iteration.
+    const lastModelUsage = modelUsages.at(-1);
+    if (!lastModelUsage) {
+      return;
+    }
+    const { provider, modelName } = lastModelUsage;
+
     await sendRabbitmqEvent(
       constructNewMessageEvent({
         user: teacherUserAndContext,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
         costsInCent: priceInCents,
-        provider: definedModel.provider,
+        provider,
+        modelName,
         anonymous: true,
         character,
       }),

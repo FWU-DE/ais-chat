@@ -1,5 +1,6 @@
 import {
   type Message as AiCoreMessage,
+  type ModelUsage,
   type TokenUsage,
   TokenPointsExceededError,
   ResponsibleAIError,
@@ -447,7 +448,7 @@ export async function sendChatMessage({
   }: {
     usage: TokenUsage;
     priceInCents: number;
-    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+    modelUsages: ModelUsage[];
   }) {
     if (modelUsages.length === 0) {
       return;
@@ -468,13 +469,22 @@ export async function sendChatMessage({
       ),
     );
 
+    // Report the real provider/model that generated the final response, i.e. the one that
+    // served the last agentic iteration.
+    const lastModelUsage = modelUsages.at(-1);
+    if (!lastModelUsage) {
+      return;
+    }
+    const { provider, modelName } = lastModelUsage;
+
     await sendRabbitmqEvent(
       constructNewMessageEvent({
         user,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
         costsInCent: priceInCents,
-        provider: definedModel.provider,
+        provider,
+        modelName,
         anonymous: false,
         conversation: activeConversation,
       }),
@@ -493,7 +503,7 @@ export async function sendChatMessage({
     usage: TokenUsage;
     priceInCents: number;
     agentLoopMessages: AiCoreMessage[];
-    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+    modelUsages: ModelUsage[];
     reasoningSummary?: string;
   }) {
     // Persist intermediate tool call/result messages and the final assistant message in one query

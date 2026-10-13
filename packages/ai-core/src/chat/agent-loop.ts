@@ -6,6 +6,7 @@ import { generateAgenticStreamWithBilling } from './agentic-stream';
 import type {
   Message as AiCoreMessage,
   ModelSelection,
+  ModelUsage,
   TokenUsage,
   ToolCall,
   ToolRegistry,
@@ -42,7 +43,7 @@ type RunAgentLoopParams = {
     usage: TokenUsage;
     priceInCents: number;
     modelId: string;
-    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+    modelUsages: ModelUsage[];
     agentLoopMessages: AiCoreMessage[];
   }) => void;
   /**
@@ -54,7 +55,7 @@ type RunAgentLoopParams = {
     billedUsage: {
       usage: TokenUsage;
       priceInCents: number;
-      modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+      modelUsages: ModelUsage[];
     },
   ) => void;
 };
@@ -78,7 +79,7 @@ export function runAgentLoop({
     let totalUsage: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
     let totalPriceInCents = 0;
     let lastModelId = modelSelection.modelIds[0];
-    const modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }> = [];
+    const modelUsages: ModelUsage[] = [];
     const loopMessages = [...messages];
     const tools = toolRegistry ? Object.values(toolRegistry).map((entry) => entry.definition) : [];
 
@@ -132,10 +133,16 @@ export function runAgentLoop({
               modelSelection,
               loopMessages,
               apiKeyId,
-              async ({ usage, priceInCents, modelId: usedModelId }) => {
+              async ({ usage, priceInCents, modelId: usedModelId, provider, modelName }) => {
                 await modelSelection.onModelUsed?.(usedModelId);
                 lastModelId = usedModelId;
-                modelUsages.push({ modelId: usedModelId, usage, priceInCents });
+                modelUsages.push({
+                  modelId: usedModelId,
+                  usage,
+                  priceInCents,
+                  provider,
+                  modelName,
+                });
                 totalUsage = {
                   promptTokens: totalUsage.promptTokens + usage.promptTokens,
                   completionTokens: totalUsage.completionTokens + usage.completionTokens,

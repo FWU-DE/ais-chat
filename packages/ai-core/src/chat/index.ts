@@ -24,6 +24,7 @@ export type {
   StreamEvent,
   AgenticStreamFn,
   ModelSelection,
+  ModelUsage,
 } from './types';
 
 // Re-export utility functions and guards
