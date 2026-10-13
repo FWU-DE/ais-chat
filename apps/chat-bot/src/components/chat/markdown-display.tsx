@@ -134,10 +134,7 @@ export default function MarkdownDisplay({ children: _children }: MarkdownDisplay
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           th({ children, className, node, ...props }) {
             return (
-              <th
-                className={cn('text-left p-2 border bg-muted font-medium', className)}
-                {...props}
-              >
+              <th className={cn('text-left p-2 border bg-muted font-medium', className)} {...props}>
                 {children}
               </th>
             );
