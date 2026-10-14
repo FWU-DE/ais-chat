@@ -218,7 +218,7 @@ beforeEach(() => {
   mocks.combineSharedRelatedFilesMock.mockResolvedValue([]);
   mocks.ingestWebContentMock.mockResolvedValue({ processedUrls: [], errorUrls: [] });
   mocks.isWebSearchEnabledForEntityMock.mockReturnValue(true);
-  mocks.buildToolsMock.mockResolvedValue({ toolRegistry: {} });
+  mocks.buildToolsMock.mockReturnValue({ toolRegistry: {} });
   mocks.constructLearningScenarioSystemPromptMock.mockReturnValue('system-prompt');
   mocks.limitChatHistoryMock.mockImplementation(
     (incomingMessages: ChatMessage[]) => incomingMessages,
@@ -320,7 +320,7 @@ describe('sendLearningScenarioMessage', () => {
       },
     });
     mocks.isWebSearchEnabledForEntityMock.mockReturnValue(false);
-    mocks.buildToolsMock.mockResolvedValue({ toolRegistry: {} });
+    mocks.buildToolsMock.mockReturnValue({ toolRegistry: {} });
 
     await sendLearningScenarioMessage({
       learningScenarioId: learningScenario.id,

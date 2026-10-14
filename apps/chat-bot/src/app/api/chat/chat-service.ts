@@ -411,7 +411,7 @@ export async function sendChatMessage({
 
   const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
 
-  const tools = await buildTools({
+  const tools = buildTools({
     user,
     characterId,
     learningScenarioId,

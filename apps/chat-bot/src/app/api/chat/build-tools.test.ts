@@ -65,7 +65,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 
   // Default mock implementations - return tool-like objects
-  mocks.buildWebSearchToolMock.mockResolvedValue({
+  mocks.buildWebSearchToolMock.mockReturnValue({
     definition: {
       name: 'web_search',
       description: 'Search the web',
@@ -139,7 +139,7 @@ describe('buildTools', () => {
   it('builds toolRegistry with all enabled tools', async () => {
     const { buildTools } = await import('./build-tools');
 
-    const { toolRegistry } = await buildTools({
+    const { toolRegistry } = buildTools({
       user: {
         ...user,
         federalState: { ...user.federalState, featureToggles: { isCalculatorEnabled: true } },
@@ -162,7 +162,7 @@ describe('buildTools', () => {
 
   it('returns no calculator tool when disabled', async () => {
     const { buildTools } = await import('./build-tools');
-    const { toolRegistry } = await buildTools({
+    const { toolRegistry } = buildTools({
       user,
       relatedFileEntities,
       allowWebTools: false,
@@ -174,12 +174,12 @@ describe('buildTools', () => {
   });
 
   it('skips tools that return null', async () => {
-    mocks.buildWebSearchToolMock.mockResolvedValue(null);
+    mocks.buildWebSearchToolMock.mockReturnValue(null);
     mocks.buildWebScraperToolMock.mockReturnValue(null);
 
     const { buildTools } = await import('./build-tools');
 
-    const { toolRegistry } = await buildTools({
+    const { toolRegistry } = buildTools({
       user,
       conversationId: 'conv-1',
       relatedFileEntities,
@@ -194,7 +194,7 @@ describe('buildTools', () => {
   it('does not build web tools when allowWebTools is false', async () => {
     const { buildTools } = await import('./build-tools');
 
-    const { toolRegistry } = await buildTools({
+    const { toolRegistry } = buildTools({
       user,
       conversationId: 'conv-1',
       relatedFileEntities,
@@ -211,7 +211,7 @@ describe('buildTools', () => {
   it('does not add mundo_search when allowMundoSearch is not set', async () => {
     const { buildTools } = await import('./build-tools');
 
-    const { toolRegistry } = await buildTools({
+    const { toolRegistry } = buildTools({
       user,
       conversationId: 'conv-1',
       relatedFileEntities,
@@ -228,7 +228,7 @@ describe('buildTools', () => {
   it('adds mundo_search when allowMundoSearch is true', async () => {
     const { buildTools } = await import('./build-tools');
 
-    const { toolRegistry } = await buildTools({
+    const { toolRegistry } = buildTools({
       user,
       conversationId: 'conv-1',
       relatedFileEntities,
@@ -245,7 +245,7 @@ describe('buildTools', () => {
   it('does not add create_plot when isJsxGraphEnabled is not set', async () => {
     const { buildTools } = await import('./build-tools');
 
-    const { toolRegistry } = await buildTools({
+    const { toolRegistry } = buildTools({
       user,
       relatedFileEntities,
       allowWebTools: false,
@@ -260,7 +260,7 @@ describe('buildTools', () => {
   it('adds create_plot with the current model and API key when isJsxGraphEnabled is true', async () => {
     const { buildTools } = await import('./build-tools');
 
-    const { toolRegistry } = await buildTools({
+    const { toolRegistry } = buildTools({
       user: {
         ...user,
         federalState: { ...user.federalState, featureToggles: { isJsxGraphEnabled: true } },
