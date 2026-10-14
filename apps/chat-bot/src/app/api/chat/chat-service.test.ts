@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { runAgentLoop } from '@ais-chat/ai-core';
-import type { ChatMessage } from '@/types/chat';
 import type { UserAndContext } from '@/auth/types';
+import type { ChatMessage } from '@/types/chat';
 import { decodeChatStreamEvent } from '@/utils/streaming';
+import type { runAgentLoop } from '@ais-chat/ai-core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const buildToolsOutput = {
   toolRegistry: {
@@ -44,6 +44,7 @@ const mocks = vi.hoisted(() => ({
   dbInsertConversationUsageMock: vi.fn(),
   dbUpdateLastUsedModelByUserIdMock: vi.fn(),
   dbGetAttachedFileByEntityIdMock: vi.fn(),
+  dbVerifyFileOwnerMock: vi.fn(),
   linkFilesToConversationMock: vi.fn(),
   sendRabbitmqEventMock: vi.fn(),
   constructNewMessageEventMock: vi.fn(),
@@ -127,6 +128,7 @@ vi.mock('@shared/db/functions/user', () => ({
 
 vi.mock('@shared/db/functions/files', () => ({
   dbGetAttachedFileByEntityId: mocks.dbGetAttachedFileByEntityIdMock,
+  dbVerifyFileOwner: mocks.dbVerifyFileOwnerMock,
   linkFilesToConversation: mocks.linkFilesToConversationMock,
 }));
 
@@ -317,6 +319,7 @@ beforeEach(() => {
   mocks.extractUrlsMock.mockResolvedValue([]);
   mocks.ingestWebContentMock.mockResolvedValue({ processedUrls: [], errorUrls: [] });
   mocks.dbGetAttachedFileByEntityIdMock.mockResolvedValue([]);
+  mocks.dbVerifyFileOwnerMock.mockResolvedValue(true);
   mocks.limitChatHistoryMock.mockImplementation(
     (incoming: ChatMessage[] | { messages: ChatMessage[] }) =>
       Array.isArray(incoming) ? incoming : incoming.messages,
