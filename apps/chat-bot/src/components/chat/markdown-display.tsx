@@ -157,13 +157,14 @@ export default function MarkdownDisplay({ children: _children }: MarkdownDisplay
           },
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           table({ children, className, node, ...props }) {
+            // The scroll container keeps wide tables from stretching the whole message, so only
+            // the table scrolls horizontally while the surrounding text stays within the viewport.
             return (
-              <table
-                className={cn('w-full border my-4 first:mt-0 last:mb-0 border-collapse', className)}
-                {...props}
-              >
-                {children}
-              </table>
+              <div className="my-4 first:mt-0 last:mb-0 max-w-full overflow-x-auto">
+                <table className={cn('w-full border border-collapse', className)} {...props}>
+                  {children}
+                </table>
+              </div>
             );
           },
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
