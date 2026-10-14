@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { runAgentLoop } from '@ais-chat/ai-core';
 import type { ChatMessage } from '@/types/chat';
+import type { runAgentLoop } from '@ais-chat/ai-core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   runAgentLoopMock: vi.fn(),
@@ -158,6 +158,7 @@ const safetyModel = {
 const character = {
   id: 'character-1',
   name: 'Character',
+  modelId: model.id,
   attachedLinks: ['https://character.example/context'],
   startedBy: 'teacher-1',
   suspended: false,
@@ -266,11 +267,14 @@ describe('sendCharacterMessage', () => {
       characterId: character.id,
       inviteCode: 'invite-code',
       messages,
-      modelId: model.id,
     });
 
     await collectStream(result.stream);
 
+    expect(mocks.getModelAndApiKeyWithResultMock).toHaveBeenCalledWith({
+      modelId: character.modelId,
+      federalStateId: teacherUserAndContext.federalState.id,
+    });
     expect(mocks.ingestWebContentMock).toHaveBeenCalledWith({
       urls: ['https://character.example/context'],
       federalStateId: teacherUserAndContext.federalState.id,
@@ -291,7 +295,6 @@ describe('sendCharacterMessage', () => {
       characterId: character.id,
       inviteCode: 'invite-code',
       messages,
-      modelId: model.id,
       fileIds: ['file-1', 'file-2'],
       sharedSessionId: 'session-1',
     });
@@ -325,7 +328,6 @@ describe('sendCharacterMessage', () => {
       characterId: character.id,
       inviteCode: 'invite-code',
       messages,
-      modelId: model.id,
     });
 
     expect(mocks.isWebSearchEnabledForEntityMock).toHaveBeenCalledWith({

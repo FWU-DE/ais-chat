@@ -1,14 +1,14 @@
 // UI
 export const TEXT_INPUT_FIELDS_LENGTH_LIMIT = 500;
 export const TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS = 50_000;
-export const CHAT_MESSAGE_LENGTH_LIMIT = 6000;
+export const CHAT_MESSAGE_LENGTH_LIMIT = 50_000;
 export const SMALL_TEXT_INPUT_FIELDS_LIMIT = 50;
 
 // Web scraper
 export const WEB_SCRAPE_RESULT_LENGTH_LIMIT = 6000; // Maximum total characters from a single web scrape result (~4 DIN A4 pages)
 
 // Chat history
-export const TOTAL_CHAT_LENGTH_LIMIT = 60_000; // Maximum total characters in chat history (~40 DIN A4 pages)
+export const TOTAL_CHAT_LENGTH_LIMIT = 300_000; // Maximum total characters in chat history (~200 DIN A4 pages)
 
 // RAG
 export const CHUNK_SIZE = 2500; // Number of characters per chunk when splitting text for RAG. Typical sweet spot to balance context richness with retrieval relevance
