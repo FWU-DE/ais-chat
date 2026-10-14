@@ -222,6 +222,10 @@ export function constructBifrostTextGenerationFn(model: AiModel): TextGeneration
     }
 
     const headerFields = extractBifrostFieldsFromHeaders(httpResponse.headers);
+    const usageInfo = await resolveBifrostUsageInfo(headerFields, [
+      model,
+      ...(fallbackModels ?? []),
+    ]);
 
     return {
       text,
@@ -230,8 +234,9 @@ export function constructBifrostTextGenerationFn(model: AiModel): TextGeneration
         promptTokens: usage.input_tokens,
         totalTokens: usage.total_tokens,
       },
-      modelId: (await resolveBifrostUsageInfo(headerFields, [model, ...(fallbackModels ?? [])]))
-        .modelId,
+      modelId: usageInfo.modelId,
+      provider: usageInfo.provider,
+      modelName: usageInfo.modelName,
     };
   };
 }

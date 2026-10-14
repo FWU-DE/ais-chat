@@ -1,6 +1,8 @@
 import type { UserAndContext } from '@/auth/types';
 import { TOOL_NAMES } from '@/types/tool-names';
+import type { ModelSelection } from '@ais-chat/ai-core/chat/types';
 import type { FileModel, WebSearchModel } from '@shared/db/schema';
+import { buildJsxgraphTool } from './tools/jsxgraph-tool';
 import { buildMathCalculateTool } from './tools/math-calculate-tool';
 import { buildMundoSearchTool } from './tools/mundo-search-tool';
 import { buildRetrieveEntireFileTool } from './tools/retrieve-entire-file-tool';
@@ -21,7 +23,8 @@ type BuildToolsParams = {
   attachedLinks?: string[];
   allowWebTools: boolean;
   allowMundoSearch?: boolean;
-  isCalculatorEnabled?: boolean;
+  modelSelection: ModelSelection;
+  apiKeyId: string;
 };
 
 export async function buildTools({
@@ -36,10 +39,16 @@ export async function buildTools({
   attachedLinks = [],
   allowWebTools,
   allowMundoSearch,
-  isCalculatorEnabled = false,
+  modelSelection,
+  apiKeyId,
 }: BuildToolsParams) {
   const rawRegistry = {
-    [TOOL_NAMES.mathCalculate]: isCalculatorEnabled ? buildMathCalculateTool() : undefined,
+    [TOOL_NAMES.mathCalculate]: user.federalState.featureToggles.isCalculatorEnabled
+      ? buildMathCalculateTool()
+      : undefined,
+    [TOOL_NAMES.createPlot]: user.federalState.featureToggles.isJsxGraphEnabled
+      ? buildJsxgraphTool({ modelSelection, apiKeyId })
+      : undefined,
     [TOOL_NAMES.webSearch]: allowWebTools
       ? await buildWebSearchTool({
           user,

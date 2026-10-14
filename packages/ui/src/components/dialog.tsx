@@ -1,12 +1,29 @@
 'use client';
 
 import * as React from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 
 import { cn } from '../lib/utils';
 import { Button } from './button';
 import { XIcon } from 'lucide-react';
 import { usePortalContainer } from './portal-container';
+
+const dialogContentVariants = cva(
+  'bg-background z-50 flex flex-col shadow-lg duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
+  {
+    variants: {
+      variant: {
+        default:
+          'fixed top-1/2 left-1/2 w-full max-w-xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 gap-8 rounded-2xl p-8 pt-6',
+        lg: 'fixed inset-4 gap-2 rounded-lg p-3 sm:inset-8',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+    },
+  },
+);
 
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
@@ -45,21 +62,19 @@ function DialogContent({
   className,
   children,
   showCloseButton = false,
+  variant = 'default',
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content> & {
-  showCloseButton?: boolean;
-}) {
+}: React.ComponentProps<typeof DialogPrimitive.Content> &
+  VariantProps<typeof dialogContentVariants> & {
+    showCloseButton?: boolean;
+  }) {
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
-        className={cn(
-          'bg-background flex flex-col gap-8 p-8 pt-6 rounded-2xl shadow-lg',
-          'fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl max-h-[85vh]',
-          'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 duration-200',
-          className,
-        )}
+        data-variant={variant}
+        className={cn(dialogContentVariants({ variant }), className)}
         {...props}
       >
         {children}

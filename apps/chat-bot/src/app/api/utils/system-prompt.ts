@@ -1,4 +1,5 @@
 import { SUPPORTED_DOCUMENTS_EXTENSIONS, SUPPORTED_IMAGE_EXTENSIONS } from '@/const';
+import { TOOL_NAMES } from '@/types/tool-names';
 import {
   MAX_AGENTIC_ITERATIONS,
   MAX_TOOL_CALLS_PER_ITERATION,
@@ -58,6 +59,12 @@ export function constructToolGuidelines(activeTools: ToolDefinition[]) {
   if (hasTool(activeTools, 'math_calculate')) {
     sections.push(
       '- Verwende `math_calculate` für jede numerische, algebraische, statistische, geometrische, Differential-, Integral-, Matrix-, Vektor- oder zahlentheoretische Berechnung. Berechne numerische Ergebnisse niemals mental oder direkt selbst, besonders nicht bei mehrteiligen Anfragen. Führe bei Bedarf einen oder mehrere Tool-Aufrufe aus. Wenn ein Aufruf fehlschlägt, berichte den Fehler kurz und bitte um eine Umformulierung oder die fehlenden Werte; erkläre keine qalc-Interna und erfinde keine Ergebnisse.',
+    );
+  }
+
+  if (hasTool(activeTools, TOOL_NAMES.createPlot)) {
+    sections.push(
+      '- Für Zeichnungen (Funktionsgraph, Diagramm, Geometrie, 3D-Fläche) rufe `create_plot` mit einer präzisen Beschreibung auf statt das JSON selbst zu erzeugen. Ein Aufruf erzeugt genau ein Koordinatensystem; bei mehreren eigenständigen Zeichnungen rufe das Tool einzeln pro Zeichnung auf, nie mit einem Mehrpanel-Layout. Ergebnis ist entweder das fertige JSON oder `{error}` bzw. bei reparierbaren Fehlern `{error, invalidJson}`; ist `invalidJson` vorhanden, erneut aufrufen mit derselben Beschreibung plus `previousAttempt`/`previousError` aus dem Fehler, um die Zeichnung zu reparieren. Erfolgreiche Ergebnisse unverändert in einen Codeblock ```jsxgraph-json title="Kurzer Titel" ... ``` einfügen und kurz erklären, was zu sehen ist. Erwähne die Technik dahinter niemals. Gelingt die Zeichnung auch nach mehreren Versuchen nicht, kurz sagen, dass es nicht geht, und eine Alternative anbieten.',
     );
   }
 

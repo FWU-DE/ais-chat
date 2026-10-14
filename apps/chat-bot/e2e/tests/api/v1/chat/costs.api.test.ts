@@ -29,7 +29,7 @@ import {
   sharedLearningScenarioChatHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
 
-test.describe('costs', { tag: '@smoke' }, () => {
+test.describe('costs', () => {
   test('should calculate total price from all three usage tracking tables', async () => {
     const user = mockUserAndContext();
 

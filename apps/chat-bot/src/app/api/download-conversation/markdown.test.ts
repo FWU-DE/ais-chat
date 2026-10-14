@@ -492,4 +492,15 @@ describe('markdownToDocx', () => {
     const expectedCodeBlockTableJSON = JSON.stringify(expectedCodeBlockTable);
     expect(resultCodeBlockTableJSON).toBe(expectedCodeBlockTableJSON);
   });
+
+  it('skips jsxgraph-json plot blocks', () => {
+    const markdown = `Before\n\n\`\`\`jsxgraph-json title="Sine wave"\n{"elements":[["point",[0,0]]]}\n\`\`\`\n\nAfter`;
+
+    const result = markdownToDocx(markdown);
+    const serialized = JSON.stringify(result);
+
+    expect(serialized).not.toContain('elements');
+    expect(serialized).toContain('Before');
+    expect(serialized).toContain('After');
+  });
 });
