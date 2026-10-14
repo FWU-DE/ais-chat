@@ -10,6 +10,7 @@ import type {
   ToolCall,
   ToolErrorResult,
   ToolRegistry,
+  ToolResult,
 } from './types';
 
 export const MAX_AGENTIC_ITERATIONS = env.maxAgenticIterations;
@@ -229,7 +230,7 @@ export function runAgentLoop({
                     const registryEntry = toolRegistry?.[toolCall.name];
                     const startedAt = performance.now();
                     let status = registryEntry ? 'success' : 'unknown_tool';
-                    let result: object | ToolErrorResult;
+                    let result: ToolResult | ToolErrorResult;
                     let serializedResult: string;
 
                     try {
@@ -247,7 +248,8 @@ export function runAgentLoop({
                         result = { error: message };
                       }
 
-                      // Tool handlers only resolve with objects, so JSON.stringify always succeeds here.
+                      // JSON.stringify can still throw here (e.g. a tool result with circular
+                      // references), hence the catch block below.
                       serializedResult = JSON.stringify(result);
                     } catch (error) {
                       status = 'error';

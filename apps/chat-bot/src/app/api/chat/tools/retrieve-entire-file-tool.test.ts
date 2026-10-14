@@ -138,4 +138,30 @@ describe('buildRetrieveEntireFileTool', () => {
     expect(parsed.fileName).toBe('NonExistent.txt');
     expect(mocks.dbGetExtractedFileContentMock).not.toHaveBeenCalled();
   });
+
+  it('returns a notice instead of an error when extraction yields no usable content', async () => {
+    const emptyFile = {
+      id: 'file-4',
+      name: 'Bild.png',
+    } as FileModel;
+    fileContentsById.set('file-4', '');
+
+    const { buildRetrieveEntireFileTool } = await import('./retrieve-entire-file-tool');
+
+    const tool = buildRetrieveEntireFileTool({
+      relatedFileEntities: [emptyFile],
+    });
+
+    const result = await tool!.handler({
+      fileName: 'Bild.png',
+    });
+
+    expect(result).toEqual({
+      fileName: 'Bild.png',
+      content: null,
+      characterCount: 0,
+      maxCharacters: RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT,
+      notice: 'No usable content found.',
+    });
+  });
 });

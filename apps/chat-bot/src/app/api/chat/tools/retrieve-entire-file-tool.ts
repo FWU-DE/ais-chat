@@ -29,12 +29,19 @@ async function formatEntireFileForTool(file: FileModel) {
   const truncatedContent = truncateToCharacterLimit(content, RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT);
   const truncated = truncatedContent.length !== content.length;
 
+  let notice: string | undefined;
+  if (content.length === 0) {
+    notice = 'No usable content found.';
+  } else if (truncated) {
+    notice = 'File content was truncated to fit the character limit.';
+  }
+
   const response: RetrieveEntireFileToolResponse = {
     fileName: file.name ?? null,
     content: content.length > 0 ? truncatedContent : null,
     characterCount,
     maxCharacters: RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT,
-    ...(truncated && { notice: 'File content was truncated to fit the character limit.' }),
+    ...(notice !== undefined && { notice }),
   };
 
   return response;

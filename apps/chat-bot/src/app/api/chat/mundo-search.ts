@@ -123,7 +123,14 @@ export async function mundoSearch({
     throw new MundoSearchError();
   }
 
-  const rawData: unknown = await response.json();
+  let rawData: unknown;
+  try {
+    rawData = await response.json();
+  } catch (error) {
+    logError('Failed to parse MUNDO search response as JSON', error);
+    throw new MundoSearchError();
+  }
+
   const parsed = mundoSearchApiResponseSchema.safeParse(rawData);
 
   if (!parsed.success) {

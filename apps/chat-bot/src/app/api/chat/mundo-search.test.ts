@@ -78,6 +78,25 @@ describe('mundoSearch', () => {
     await expect(mundoSearch({ query: 'test' })).rejects.toBeInstanceOf(MundoSearchError);
   });
 
+  it('logs and propagates an error when a 2xx response body is not valid JSON', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError('Unexpected token');
+      },
+    });
+
+    const { mundoSearch, MundoSearchError } = await import('./mundo-search');
+    const { logError } = await import('@shared/logging');
+
+    await expect(mundoSearch({ query: 'test' })).rejects.toBeInstanceOf(MundoSearchError);
+    expect(logError).toHaveBeenCalledWith(
+      'Failed to parse MUNDO search response as JSON',
+      expect.any(SyntaxError),
+    );
+  });
+
   it('returns an empty array when the API returns no tiles', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
