@@ -42,7 +42,7 @@ export function useSpeechPlayback(text: string, generateSpeechFn: (text: string)
     }
   }
 
-  async function toggle() {
+  async function handleClick() {
     if (status === 'loading') {
       return;
     }
@@ -90,5 +90,5 @@ export function useSpeechPlayback(text: string, generateSpeechFn: (text: string)
     }
   }
 
-  return { status, toggle };
+  return { status, handleClick };
 }

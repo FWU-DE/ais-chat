@@ -4,7 +4,7 @@ import Spinner from '@/components/icons/spinner';
 import { PauseIcon, SpeakerSimpleHighIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
-import { useSpeechPlayback } from './use-speech-playback';
+import { useSpeechPlayback } from '../hooks/use-speech-playback';
 
 /**
  * Audio button used in speech-only mode.
@@ -17,14 +17,14 @@ export default function SpeechAudioButton({
   generateSpeechFn: (text: string) => Promise<Blob>;
 }) {
   const tCommon = useTranslations('common');
-  const { status, toggle } = useSpeechPlayback(text, generateSpeechFn);
+  const { status, handleClick } = useSpeechPlayback(text, generateSpeechFn);
 
   const label = status === 'playing' ? tCommon('pause-audio') : tCommon('listen-to-answer');
 
   return (
     <Button
       type="button"
-      onClick={toggle}
+      onClick={handleClick}
       disabled={status === 'loading'}
       aria-label={label}
       title={label}

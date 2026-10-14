@@ -4,7 +4,7 @@ import Spinner from '@/components/icons/spinner';
 import { PauseIcon, SpeakerSimpleHighIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
-import { useSpeechPlayback } from './use-speech-playback';
+import { useSpeechPlayback } from '../hooks/use-speech-playback';
 
 export default function SpeechButton({
   text,
@@ -16,7 +16,7 @@ export default function SpeechButton({
   isSpeechModelEnabled: boolean;
 }) {
   const tCommon = useTranslations('common');
-  const { status, toggle } = useSpeechPlayback(text, generateSpeechFn);
+  const { status, handleClick } = useSpeechPlayback(text, generateSpeechFn);
 
   const label = status === 'playing' ? tCommon('pause-message') : tCommon('read-aloud');
 
@@ -28,7 +28,7 @@ export default function SpeechButton({
     <Button
       variant="ghost"
       size="icon-sm"
-      onClick={toggle}
+      onClick={handleClick}
       disabled={status === 'loading'}
       aria-label={label}
       title={label}
