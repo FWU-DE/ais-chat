@@ -470,13 +470,13 @@ export async function sendChatMessage({
       ),
     );
 
-    // Report the real provider/model that generated the final response, i.e. the one that
-    // served the last agentic iteration.
-    const lastModelUsage = modelUsages.at(-1);
-    if (!lastModelUsage) {
+    // Report the real provider/model that generated the first response, i.e. the one that
+    // served the first agentic iteration.
+    const firstModelUsage = modelUsages.at(0);
+    if (!firstModelUsage) {
       return;
     }
-    const { provider, modelName } = lastModelUsage;
+    const { provider, modelName } = firstModelUsage;
 
     await sendRabbitmqEvent(
       constructNewMessageEvent({
