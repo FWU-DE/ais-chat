@@ -49,14 +49,12 @@ export async function sendLearningScenarioMessage({
   learningScenarioId,
   inviteCode,
   messages,
-  modelId,
   fileIds,
   sharedSessionId,
 }: {
   learningScenarioId: string;
   inviteCode: string;
   messages: ChatMessage[];
-  modelId: string;
   fileIds?: string[];
   sharedSessionId?: string;
 }): Promise<SendMessageResult> {
@@ -85,7 +83,7 @@ export async function sendLearningScenarioMessage({
 
   // Get model and API key
   const [error, modelAndApiKey] = await getModelAndApiKeyWithResult({
-    modelId,
+    modelId: learningScenario.modelId,
     federalStateId: teacherUserAndContext.federalState.id,
   });
 
