@@ -52,7 +52,6 @@ describe('buildMundoSearchTool', () => {
     expect(raw).toEqual({
       results: [sampleResult],
       retriedWithoutFilters: false,
-      error: null,
     });
   });
 
@@ -92,7 +91,6 @@ describe('buildMundoSearchTool', () => {
     expect(raw).toEqual({
       results: [],
       retriedWithoutFilters: false,
-      error: 'No MUNDO results found.',
     });
   });
 
@@ -117,7 +115,6 @@ describe('buildMundoSearchTool', () => {
     expect(raw).toEqual({
       results: [],
       retriedWithoutFilters: false,
-      error: 'No MUNDO results found.',
     });
   });
 
@@ -143,7 +140,6 @@ describe('buildMundoSearchTool', () => {
     expect(raw).toEqual({
       results: [sampleResult],
       retriedWithoutFilters: true,
-      error: null,
     });
   });
 
@@ -163,7 +159,6 @@ describe('buildMundoSearchTool', () => {
     expect(raw).toEqual({
       results: [],
       retriedWithoutFilters: true,
-      error: 'No MUNDO results found.',
     });
   });
 
@@ -174,11 +169,7 @@ describe('buildMundoSearchTool', () => {
     const raw = await tool.handler({ query: '   ' });
 
     expect(mocks.mundoSearchMock).not.toHaveBeenCalled();
-    expect(raw).toEqual({
-      results: [],
-      retriedWithoutFilters: false,
-      error: 'Error: Missing search query.',
-    });
+    expect(raw).toEqual({ error: 'Missing search query.' });
   });
 
   it('truncates the query to MUNDO_SEARCH_QUERY_LENGTH_LIMIT before calling mundoSearch', async () => {
@@ -195,5 +186,16 @@ describe('buildMundoSearchTool', () => {
       classLevel: undefined,
       subject: undefined,
     });
+  });
+
+  it('returns a generic error without leaking internal details when mundoSearch throws', async () => {
+    mocks.mundoSearchMock.mockRejectedValueOnce(new Error('MUNDO is down'));
+
+    const { buildMundoSearchTool } = await import('./mundo-search-tool');
+    const tool = buildMundoSearchTool();
+
+    const raw = await tool.handler({ query: 'Photosynthese' });
+
+    expect(raw).toEqual({ error: 'MUNDO search failed.' });
   });
 });

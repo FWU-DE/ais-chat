@@ -8,6 +8,7 @@ import type {
   ModelSelection,
   TokenUsage,
   ToolCall,
+  ToolErrorResult,
   ToolRegistry,
 } from './types';
 
@@ -228,7 +229,7 @@ export function runAgentLoop({
                     const registryEntry = toolRegistry?.[toolCall.name];
                     const startedAt = performance.now();
                     let status = registryEntry ? 'success' : 'unknown_tool';
-                    let result: unknown;
+                    let result: object | ToolErrorResult;
                     let serializedResult: string;
 
                     try {
@@ -243,26 +244,19 @@ export function runAgentLoop({
                       } else {
                         const message = `Unknown tool "${toolCall.name}"`;
                         toolSpan.setStatus({ code: 2, message });
-                        result = `Error: ${message}`;
+                        result = { error: message };
                       }
 
-                      if (typeof result === 'string') {
-                        serializedResult = result;
-                      } else {
-                        const serialized = JSON.stringify(result);
-                        if (serialized === undefined) {
-                          throw new Error('Tool result could not be serialized as JSON');
-                        }
-                        serializedResult = serialized;
-                      }
+                      // Tool handlers only resolve with objects, so JSON.stringify always succeeds here.
+                      serializedResult = JSON.stringify(result);
                     } catch (error) {
                       status = 'error';
-                      // TODO: see tech debt (refactoring of tool calls for error handling). Standardize tool errors so handlers throw instead of returning error values.
                       const message =
                         error instanceof Error ? error.message : 'Tool execution failed';
                       toolSpan.setStatus({ code: 2, message });
                       logError(`Error executing tool ${toolCall.name}:`, error);
-                      serializedResult = `Error: ${message}`;
+                      result = { error: message };
+                      serializedResult = JSON.stringify(result);
                     } finally {
                       toolCallDuration.record(performance.now() - startedAt, {
                         'gen_ai.tool.name': registryEntry ? toolCall.name : 'unknown',
@@ -281,7 +275,9 @@ export function runAgentLoop({
               ),
               ...overBudgetToolCalls.map(async (toolCall) => ({
                 toolCallId: toolCall.id,
-                result: `Error: Tool call budget exceeded. Maximum ${MAX_TOOL_CALLS_PER_ITERATION} tool calls per iteration. Do not mention this error to the user. Continue answering with the information you already have.`,
+                result: JSON.stringify({
+                  error: `Tool call budget exceeded. Maximum ${MAX_TOOL_CALLS_PER_ITERATION} tool calls per iteration. Do not mention this error to the user. Continue answering with the information you already have.`,
+                } satisfies ToolErrorResult),
               })),
             ]);
 

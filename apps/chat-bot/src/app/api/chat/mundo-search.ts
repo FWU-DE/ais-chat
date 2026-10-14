@@ -82,6 +82,10 @@ export function sanitizeSubject(value: unknown): MundoSubject | undefined {
     : undefined;
 }
 
+export class MundoSearchError extends Error {
+  name = 'MundoSearchError';
+}
+
 export async function mundoSearch({
   query,
   classLevel,
@@ -91,8 +95,9 @@ export async function mundoSearch({
   classLevel?: MundoClassLevel;
   subject?: MundoSubject;
 }): Promise<MundoSearchResult[]> {
+  let response: Response;
   try {
-    const response = await fetch(MUNDO_SEARCH_ENDPOINT, {
+    response = await fetch(MUNDO_SEARCH_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -108,26 +113,24 @@ export async function mundoSearch({
       }),
       signal: AbortSignal.timeout(MUNDO_SEARCH_TIMEOUT_MS),
     });
-
-    if (!response.ok) {
-      logError(`MUNDO search failed with status ${response.status}: ${response.statusText}`);
-      return [];
-    }
-
-    const rawData: unknown = await response.json();
-    const parsed = mundoSearchApiResponseSchema.safeParse(rawData);
-
-    if (!parsed.success) {
-      logError('MUNDO search response failed schema validation', parsed.error);
-      return [];
-    }
-
-    const tiles = parsed.data.tiles ?? [];
-    return tiles
-      .map(formatElement)
-      .filter((result): result is MundoSearchResult => result !== null);
   } catch (error) {
     logError('Error during MUNDO search', error);
-    return [];
+    throw new MundoSearchError();
   }
+
+  if (!response.ok) {
+    logError(`MUNDO search failed with status ${response.status}: ${response.statusText}`);
+    throw new MundoSearchError();
+  }
+
+  const rawData: unknown = await response.json();
+  const parsed = mundoSearchApiResponseSchema.safeParse(rawData);
+
+  if (!parsed.success) {
+    logError('MUNDO search response failed schema validation', parsed.error);
+    throw new MundoSearchError();
+  }
+
+  const tiles = parsed.data.tiles ?? [];
+  return tiles.map(formatElement).filter((result): result is MundoSearchResult => result !== null);
 }

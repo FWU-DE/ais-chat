@@ -6,7 +6,7 @@ import {
 } from '@/configuration-text-inputs/const';
 import { TOOL_NAMES } from '@/types/tool-names';
 import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { ToolCall, ToolErrorResult } from '@ais-chat/ai-core/chat/types';
 import { z } from 'zod';
 import {
   mundoSearch,
@@ -17,7 +17,7 @@ import {
 import type { ToolDefinition, ToolRegistration } from './types';
 
 export const mundoSearchArgsSchema = z.object({
-  query: z.string(),
+  query: z.string().trim().min(1),
   classLevel: z.string().nullable().optional(),
   subject: z.string().nullable().optional(),
 });
@@ -25,10 +25,9 @@ export const mundoSearchArgsSchema = z.object({
 export type MundoSearchToolResponse = {
   results: MundoSearchResult[];
   retriedWithoutFilters: boolean;
-  error: string | null;
 };
 
-export function buildMundoSearchTool(): ToolRegistration {
+export function buildMundoSearchTool(): ToolRegistration<MundoSearchToolResponse> {
   const definition: ToolDefinition = {
     name: TOOL_NAMES.mundoSearch,
     description: `Search the public MUNDO educational media library (mundo.schule) for teaching materials, e.g. videos or worksheets. Use this tool when the user asks for lesson materials or media suggestions for a specific topic. Returns up to ${MUNDO_SEARCH_RESULTS_LIMIT} matching MUNDO media entries. If a search with filters returns nothing, filters are automatically dropped and the search is retried. When the response has "retriedWithoutFilters": true, do not retry with different filters — instead retry with a broader, simpler or alternative query, without any filters.`,
@@ -58,39 +57,37 @@ export function buildMundoSearchTool(): ToolRegistration {
     },
   };
 
-  const handler = async (args: Record<string, unknown>): Promise<MundoSearchToolResponse> => {
+  const handler = async (
+    args: Record<string, unknown>,
+  ): Promise<MundoSearchToolResponse | ToolErrorResult> => {
     const parsed = mundoSearchArgsSchema.safeParse(args);
-    const rawQuery = parsed.success ? parsed.data.query.trim() : '';
-    const query = rawQuery.slice(0, MUNDO_SEARCH_QUERY_LENGTH_LIMIT);
 
-    if (query.length === 0) {
-      const response: MundoSearchToolResponse = {
-        results: [],
-        retriedWithoutFilters: false,
-        error: 'Error: Missing search query.',
-      };
-      return response;
+    if (!parsed.success) {
+      return { error: 'Missing search query.' };
     }
 
-    const classLevel = sanitizeClassLevel(parsed.success ? parsed.data.classLevel : undefined);
-    const subject = sanitizeSubject(parsed.success ? parsed.data.subject : undefined);
+    const query = parsed.data.query.slice(0, MUNDO_SEARCH_QUERY_LENGTH_LIMIT);
+
+    const classLevel = sanitizeClassLevel(parsed.data.classLevel);
+    const subject = sanitizeSubject(parsed.data.subject);
     const hasFilters = classLevel !== undefined || subject !== undefined;
 
-    let results = await mundoSearch({ query, classLevel, subject });
-    let retriedWithoutFilters = false;
+    try {
+      let results = await mundoSearch({ query, classLevel, subject });
+      let retriedWithoutFilters = false;
 
-    if (results.length === 0 && hasFilters) {
-      results = await mundoSearch({ query });
-      retriedWithoutFilters = true;
+      if (results.length === 0 && hasFilters) {
+        results = await mundoSearch({ query });
+        retriedWithoutFilters = true;
+      }
+
+      return {
+        results,
+        retriedWithoutFilters,
+      };
+    } catch {
+      return { error: 'MUNDO search failed.' };
     }
-
-    const response: MundoSearchToolResponse = {
-      results,
-      retriedWithoutFilters,
-      error: results.length === 0 ? 'No MUNDO results found.' : null,
-    };
-
-    return response;
   };
 
   return {
@@ -103,7 +100,7 @@ export function buildMundoSearchTool(): ToolRegistration {
           kind: 'tool',
           id: toolCall.id,
           tool: TOOL_NAMES.mundoSearch,
-          detail: parsed.success ? parsed.data.query.trim() : undefined,
+          detail: parsed.success ? parsed.data.query : undefined,
         };
       },
       applyResult: (step, result) => {

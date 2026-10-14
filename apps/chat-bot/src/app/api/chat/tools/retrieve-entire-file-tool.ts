@@ -1,23 +1,22 @@
 import { RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT } from '@/configuration-text-inputs/const';
 import { TOOL_NAMES } from '@/types/tool-names';
 import { parseJsonRecord } from '@/utils/chat/ai-activity';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { ToolCall, ToolErrorResult } from '@ais-chat/ai-core/chat/types';
 import { dbGetExtractedFileContent } from '@shared/db/functions/files';
 import type { FileModel } from '@shared/db/schema';
 import { z } from 'zod';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
 
 export const retrieveEntireFileArgsSchema = z.object({
-  fileName: z.string(),
+  fileName: z.string().trim().min(1),
 });
 
 export type RetrieveEntireFileToolResponse = {
   fileName: string | null;
   content: string | null;
-  truncated: boolean;
   characterCount: number;
   maxCharacters: number;
-  error: string | null;
+  notice?: string;
 };
 
 function truncateToCharacterLimit(text: string, maxCharacters: number) {
@@ -33,17 +32,10 @@ async function formatEntireFileForTool(file: FileModel) {
   const response: RetrieveEntireFileToolResponse = {
     fileName: file.name ?? null,
     content: content.length > 0 ? truncatedContent : null,
-    truncated,
     characterCount,
     maxCharacters: RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT,
-    error: null,
+    ...(truncated && { notice: 'File content was truncated to fit the character limit.' }),
   };
-
-  if (!content) {
-    response.error = 'No usable content found.';
-  } else if (truncated) {
-    response.error = 'File content was truncated to fit the character limit.';
-  }
 
   return response;
 }
@@ -52,7 +44,7 @@ type BuildRetrieveEntireFileToolParams = Pick<BuildToolsContext, 'relatedFileEnt
 
 export function buildRetrieveEntireFileTool({
   relatedFileEntities,
-}: BuildRetrieveEntireFileToolParams): ToolRegistration | null {
+}: BuildRetrieveEntireFileToolParams): ToolRegistration<RetrieveEntireFileToolResponse> | null {
   if (relatedFileEntities.length === 0) {
     return null;
   }
@@ -77,36 +69,20 @@ export function buildRetrieveEntireFileTool({
     },
   };
 
-  const handler = async (args: Record<string, unknown>) => {
+  const handler = async (
+    args: Record<string, unknown>,
+  ): Promise<RetrieveEntireFileToolResponse | ToolErrorResult> => {
     const parsed = retrieveEntireFileArgsSchema.safeParse(args);
-    const fileName = parsed.success ? parsed.data.fileName.trim() : '';
 
-    if (fileName.length === 0) {
-      const response: RetrieveEntireFileToolResponse = {
-        fileName: null,
-        content: null,
-        truncated: false,
-        characterCount: 0,
-        maxCharacters: RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT,
-        error: 'Missing file name.',
-      };
-
-      return response;
+    if (!parsed.success) {
+      return { error: 'Missing file name.' };
     }
 
+    const fileName = parsed.data.fileName;
     const matchedFile = relatedFileEntities.find((file) => file.name === fileName);
 
     if (matchedFile === undefined) {
-      const response: RetrieveEntireFileToolResponse = {
-        fileName,
-        content: null,
-        truncated: false,
-        characterCount: 0,
-        maxCharacters: RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT,
-        error: 'File not found.',
-      };
-
-      return response;
+      return { error: 'File not found.', fileName };
     }
 
     return formatEntireFileForTool(matchedFile);
@@ -122,7 +98,7 @@ export function buildRetrieveEntireFileTool({
           kind: 'tool',
           id: toolCall.id,
           tool: TOOL_NAMES.retrieveEntireFile,
-          detail: parsed.success ? parsed.data.fileName.trim() : undefined,
+          detail: parsed.success ? parsed.data.fileName : undefined,
         };
       },
     },

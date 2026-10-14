@@ -1,18 +1,25 @@
 import type { UserAndContext } from '@/auth/types';
 import { AiActivityToolStep } from '@/types/ai-activity';
-import { ToolCall, ToolRegistryEntry, type ToolDefinition } from '@ais-chat/ai-core';
+import {
+  ToolCall,
+  ToolRegistryEntry,
+  type ToolDefinition,
+  type ToolResult,
+} from '@ais-chat/ai-core';
 import type { FileModel, WebSearchModel } from '@shared/db/schema';
+import type { buildTools } from '../build-tools';
 
 export type { ToolDefinition };
 
-export type ToolRegistration = ToolRegistryEntry & {
-  activity: {
-    createStep: (toolCall: ToolCall) => AiActivityToolStep;
-    applyResult?: (step: AiActivityToolStep, result: unknown) => AiActivityToolStep;
+export type ToolRegistration<TResult extends ToolResult = ToolResult> =
+  ToolRegistryEntry<TResult> & {
+    activity: {
+      createStep: (toolCall: ToolCall) => AiActivityToolStep;
+      applyResult?: (step: AiActivityToolStep, result: unknown) => AiActivityToolStep;
+    };
   };
-};
 
-export type ToolRegistry = Record<string, ToolRegistration>;
+export type ToolRegistry = Awaited<ReturnType<typeof buildTools>>['toolRegistry'];
 
 export type BuildToolsContext = {
   user: UserAndContext;

@@ -13,7 +13,9 @@ export const expressionSchema = z.object({
   expression: z.string().trim().min(1).max(CALCULATOR_MAX_EXPRESSION_LENGTH),
 });
 
-export function buildMathCalculateTool(): ToolRegistration {
+export type MathCalculateToolSuccessResponse = Extract<CalculatorResponse, { status: 'success' }>;
+
+export function buildMathCalculateTool(): ToolRegistration<MathCalculateToolSuccessResponse> {
   const definition: ToolDefinition = {
     name: TOOL_NAMES.mathCalculate,
     description:
@@ -36,13 +38,9 @@ export function buildMathCalculateTool(): ToolRegistration {
   const handler = async (args: Record<string, unknown>): Promise<CalculatorResponse> => {
     const parsed = expressionSchema.safeParse(args);
     if (!parsed.success) {
-      const response: CalculatorResponse = {
-        status: 'invalid_input',
-        result: null,
-        error: 'Invalid expression.',
-      };
-      return response;
+      return { status: 'invalid_input', error: 'Invalid expression.' };
     }
+
     return calculate(parsed.data.expression);
   };
 
@@ -59,7 +57,7 @@ export function buildMathCalculateTool(): ToolRegistration {
         };
       },
       applyResult: (step, result) => {
-        const typed = result as CalculatorResponse;
+        const typed = result as MathCalculateToolSuccessResponse;
         const value = typed.result ?? undefined;
         return value === undefined ? step : { ...step, result: value };
       },

@@ -140,7 +140,6 @@ describe('buildRetrieveTextChunksTool', () => {
           content: 'Erster relevanter Abschnitt.',
         },
       ],
-      error: null,
     });
   });
 
@@ -226,11 +225,10 @@ describe('buildRetrieveTextChunksTool', () => {
           content: 'Neu abgerufener Seitenabschnitt.',
         },
       ],
-      error: null,
     });
   });
 
-  it('returns error when no chunks found', async () => {
+  it('returns empty chunks with a notice when none found', async () => {
     mocks.retrieveChunksByQueryMock.mockResolvedValueOnce([]);
 
     const { buildRetrieveTextChunksTool } = await import('./retrieve-text-chunks-tool');
@@ -248,7 +246,7 @@ describe('buildRetrieveTextChunksTool', () => {
 
     const parsed = result as SemanticFileSearchToolResponse;
     expect(parsed.chunks).toEqual([]);
-    expect(parsed.error).toBe('No matching chunks found.');
+    expect(parsed.notice).toBe('No matching chunks found.');
   });
 
   describe('short-circuit when total chunk count ≤ VECTOR_SEARCH_LIMIT', () => {
@@ -343,7 +341,6 @@ describe('buildRetrieveTextChunksTool', () => {
 
       expect(mocks.retrieveChunksByQueryMock).not.toHaveBeenCalled();
       expect(parsed.chunks).toHaveLength(7);
-      expect(parsed.error).toBeNull();
     });
 
     it('short-circuits for URL-only sources when total fits within the limit', async () => {
@@ -382,7 +379,6 @@ describe('buildRetrieveTextChunksTool', () => {
 
       expect(mocks.retrieveChunksByQueryMock).not.toHaveBeenCalled();
       expect(parsed.chunks).toHaveLength(2);
-      expect(parsed.error).toBeNull();
     });
 
     it('still calls vector search when total chunk count exceeds the limit', async () => {
@@ -428,7 +424,7 @@ describe('buildRetrieveTextChunksTool', () => {
       expect(mocks.dbGetAllChunksMock).toHaveBeenCalled();
     });
 
-    it('returns error when all chunks retrieved directly but result is empty', async () => {
+    it('returns empty chunks with a notice when all chunks retrieved directly but result is empty', async () => {
       mocks.dbGetAllChunksMock.mockResolvedValue([]);
 
       const { buildRetrieveTextChunksTool } = await import('./retrieve-text-chunks-tool');
@@ -444,7 +440,7 @@ describe('buildRetrieveTextChunksTool', () => {
       const parsed = result as SemanticFileSearchToolResponse;
 
       expect(parsed.chunks).toEqual([]);
-      expect(parsed.error).toBe('No matching chunks found.');
+      expect(parsed.notice).toBe('No matching chunks found.');
     });
   });
 });

@@ -188,6 +188,19 @@ describe('searchWeb', () => {
     expect(mocks.searchMock).toHaveBeenCalledTimes(1);
     expect(mocks.searchMock.mock.calls[0]![0]).not.toHaveProperty('includeDomains');
   });
+
+  it('propagates errors from the Linkup client instead of swallowing them', async () => {
+    mocks.searchMock.mockRejectedValue(new Error('Linkup is down'));
+    const { searchWeb } = await import('./websearch');
+
+    await expect(
+      searchWeb({
+        query: 'current topic',
+        conversationId: 'conversation-1',
+        userId: 'user-1',
+      }),
+    ).rejects.toThrow('Linkup is down');
+  });
 });
 
 describe('resolveWebSearchConfig', () => {
