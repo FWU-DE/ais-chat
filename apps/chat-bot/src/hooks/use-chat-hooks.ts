@@ -1,5 +1,9 @@
 'use client';
 
+import { sendCharacterMessageAction } from '@/app/api/character/actions';
+import { sendChatMessageAction } from '@/app/api/chat/actions';
+import { sendLearningScenarioMessageAction } from '@/app/api/learning-scenario/actions';
+import { type ChatStatus, type UIMessage } from '@/types/chat';
 import { useCallback } from 'react';
 import {
   useAisChat,
@@ -7,13 +11,9 @@ import {
   type SendMessageFn,
   type UseChatReturn,
 } from './use-ais-chat';
-import { sendChatMessageAction } from '@/app/api/chat/actions';
-import { sendCharacterMessageAction } from '@/app/api/character/actions';
-import { sendLearningScenarioMessageAction } from '@/app/api/learning-scenario/actions';
-import { type UIMessage, type ChatStatus } from '@/types/chat';
 
 // Re-export types for convenience
-export type { ChatMessage, ChatStatus, UseChatReturn, UIMessage };
+export type { ChatMessage, ChatStatus, UIMessage, UseChatReturn };
 
 /**
  * Hook for main chat (with optional character/customGpt)
@@ -66,12 +66,11 @@ export function useCharacterChat(options: {
   const { characterId, inviteCode, ...rest } = options;
 
   const sendMessage: SendMessageFn = useCallback(
-    async ({ messages, modelId, fileIds, sharedSessionId }) => {
+    async ({ messages, fileIds, sharedSessionId }) => {
       return sendCharacterMessageAction({
         characterId,
         inviteCode,
         messages,
-        modelId,
         fileIds,
         sharedSessionId,
       });
@@ -99,12 +98,11 @@ export function useLearningScenarioChat(options: {
   const { learningScenarioId, inviteCode, ...rest } = options;
 
   const sendMessage: SendMessageFn = useCallback(
-    async ({ messages, modelId, fileIds, sharedSessionId }) => {
+    async ({ messages, fileIds, sharedSessionId }) => {
       return sendLearningScenarioMessageAction({
         learningScenarioId,
         inviteCode,
         messages,
-        modelId,
         fileIds,
         sharedSessionId,
       });

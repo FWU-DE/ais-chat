@@ -35,6 +35,7 @@ import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-autho
 import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-chat-filter-display-section';
 import { extractFilterValues } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import { CustomChatWebSearchView } from '@/components/custom-chat/web-search/custom-chat-web-search-view';
+import { CustomChatSpeechView } from '@/components/custom-chat/speech/custom-chat-speech-view';
 
 export function CharacterView({
   character,
@@ -45,6 +46,7 @@ export function CharacterView({
   maxBudget,
   budgetUsedBySharedChat,
   isWebSearchAvailable,
+  isSpeechAvailable,
 }: {
   character: CharacterOptionalShareDataModel;
   relatedFiles: FileModel[];
@@ -54,6 +56,7 @@ export function CharacterView({
   maxBudget: number;
   budgetUsedBySharedChat: number;
   isWebSearchAvailable: boolean;
+  isSpeechAvailable: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -193,6 +196,7 @@ export function CharacterView({
         />
       </div>
       {isWebSearchAvailable && <CustomChatWebSearchView {...character} />}
+      {isSpeechAvailable && <CustomChatSpeechView {...character} />}
 
       {(character.hasLinkAccess || character.isCommunityShared) && (
         <CustomChatCreateSuspensionRequestButton

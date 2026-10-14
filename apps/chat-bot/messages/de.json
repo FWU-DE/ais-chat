@@ -48,7 +48,6 @@
       "zoom-out": "Verkleinern",
       "fullscreen": "Im Vollbild anzeigen",
       "description": "Grafik: {title}",
-      "description-untitled": "Grafik",
       "error": "Die Grafik konnte nicht dargestellt werden."
     },
     "read-aloud": "Nachricht vorlesen",
@@ -685,6 +684,8 @@
     "speech": {
       "heading": "Sprachausgabe",
       "heading-tooltip": "Falls aktiviert, können Antworten als Sprache ausgegeben werden.",
+      "activated": "Aktiviert",
+      "deactivated": "Deaktiviert",
       "voice-label": "Stimme",
       "voice-placeholder": "Stimme auswählen",
       "voice-preview-label": "Stimme anhören",

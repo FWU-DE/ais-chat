@@ -36,6 +36,7 @@ import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-cha
 import { extractFilterValues } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import { FieldGroup } from '@ui/components/field';
 import { CustomChatWebSearchView } from '@/components/custom-chat/web-search/custom-chat-web-search-view';
+import { CustomChatSpeechView } from '@/components/custom-chat/speech/custom-chat-speech-view';
 
 export function LearningScenarioView({
   learningScenario,
@@ -46,6 +47,7 @@ export function LearningScenarioView({
   maxBudget,
   budgetUsedBySharedChat,
   isWebSearchAvailable,
+  isSpeechAvailable,
 }: {
   learningScenario: LearningScenarioOptionalShareDataModel;
   fileMappings: FileModel[];
@@ -55,6 +57,7 @@ export function LearningScenarioView({
   maxBudget: number;
   budgetUsedBySharedChat: number;
   isWebSearchAvailable: boolean;
+  isSpeechAvailable: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -216,6 +219,7 @@ export function LearningScenarioView({
         onDownloadFile={handleDownloadFile}
       />
       {isWebSearchAvailable && <CustomChatWebSearchView {...learningScenario} />}
+      {isSpeechAvailable && <CustomChatSpeechView {...learningScenario} />}
 
       {(learningScenario.hasLinkAccess || learningScenario.isCommunityShared) && (
         <CustomChatCreateSuspensionRequestButton
