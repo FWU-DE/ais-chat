@@ -49,14 +49,12 @@ export async function sendCharacterMessage({
   characterId,
   inviteCode,
   messages,
-  modelId,
   fileIds,
   sharedSessionId,
 }: {
   characterId: string;
   inviteCode: string;
   messages: ChatMessage[];
-  modelId: string;
   fileIds?: string[];
   sharedSessionId?: string;
 }): Promise<SendMessageResult> {
@@ -80,7 +78,7 @@ export async function sendCharacterMessage({
 
   // Get model and API key
   const [error, modelAndApiKey] = await getModelAndApiKeyWithResult({
-    modelId,
+    modelId: character.modelId,
     federalStateId: teacherUserAndContext.federalState.id,
   });
 

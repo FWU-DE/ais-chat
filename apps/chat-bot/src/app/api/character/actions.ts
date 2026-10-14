@@ -1,10 +1,10 @@
 'use server';
 import { requireValidInviteCode } from '@/auth/requireValidInviteCode';
-import { sendCharacterMessage } from './character-chat-service';
+import { SEND_CHARACTER_MESSAGE_ACTION_NAME } from '@/server-action-names';
 import { ChatMessage, createErrorResult, SendMessageResult } from '@/types/chat';
 import { SharedChatExpiredError } from '@ais-chat/ai-core/errors';
 import * as Sentry from '@sentry/nextjs';
-import { SEND_CHARACTER_MESSAGE_ACTION_NAME } from '@/server-action-names';
+import { sendCharacterMessage } from './character-chat-service';
 
 export type { ChatMessage, SendMessageResult } from '@/types/chat';
 
@@ -12,14 +12,12 @@ export async function sendCharacterMessageAction({
   characterId,
   inviteCode,
   messages,
-  modelId,
   fileIds,
   sharedSessionId,
 }: {
   characterId: string;
   inviteCode: string;
   messages: ChatMessage[];
-  modelId: string;
   fileIds?: string[];
   sharedSessionId?: string;
 }): Promise<SendMessageResult> {
@@ -34,7 +32,6 @@ export async function sendCharacterMessageAction({
       characterId,
       inviteCode,
       messages,
-      modelId,
       fileIds,
       sharedSessionId,
     }),
