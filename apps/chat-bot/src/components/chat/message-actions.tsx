@@ -1,10 +1,9 @@
 import { type AiActivityStep } from '@/types/ai-activity';
 import { type ChatStatus, type UIMessage } from '@/types/chat';
-import { replacePlotBlocks } from '@/utils/code-blocks';
 import { cn } from '@/utils/tailwind';
+import { TextTIcon, TextTSlashIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
-import { useMemo } from 'react';
 import CopyToClipboardButton from '../common/clipboard-button';
 import ReloadIcon from '../icons/reload';
 import { AiActivityDialog } from './activity/ai-activity';
@@ -13,6 +12,7 @@ import SpeechButton from './speech-button';
 
 export function MessageActions({
   message,
+  plainText,
   status,
   conversationId,
   characterName,
@@ -23,8 +23,12 @@ export function MessageActions({
   showActivityDialog,
   activitySteps,
   isLastMessage,
+  speechOnly,
+  isTextVisible,
+  onToggleText,
 }: {
   message: UIMessage;
+  plainText: string;
   status: ChatStatus;
   conversationId?: string;
   characterName?: string;
@@ -35,16 +39,11 @@ export function MessageActions({
   showActivityDialog?: boolean;
   activitySteps: AiActivityStep[];
   isLastMessage: boolean;
+  speechOnly: boolean;
+  isTextVisible: boolean;
+  onToggleText: () => void;
 }) {
   const tCommon = useTranslations('common');
-  // Copy and read-aloud get a short description instead of the plot JSON.
-  const plainText = useMemo(
-    () =>
-      replacePlotBlocks(message.content, (title) =>
-        title ? tCommon('plot.description', { title }) : tCommon('plot.description-untitled'),
-      ),
-    [message.content, tCommon],
-  );
 
   return (
     <div
@@ -86,11 +85,31 @@ export function MessageActions({
           <ReloadIcon className="size-5 text-primary" />
         </Button>
       )}
-      <SpeechButton
-        text={plainText}
-        generateSpeechFn={generateSpeechFn}
-        isSpeechModelEnabled={isSpeechModelEnabled}
-      />
+      {speechOnly ? (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          type="button"
+          onClick={onToggleText}
+          title={isTextVisible ? tCommon('hide-message-text') : tCommon('show-message-text')}
+          aria-label={isTextVisible ? tCommon('hide-message-text') : tCommon('show-message-text')}
+          aria-pressed={isTextVisible}
+          className="text-primary"
+          data-testid="toggle-message-text-button"
+        >
+          {isTextVisible ? (
+            <TextTSlashIcon className="size-4 text-primary" />
+          ) : (
+            <TextTIcon className="size-4 text-primary" />
+          )}
+        </Button>
+      ) : (
+        <SpeechButton
+          text={plainText}
+          generateSpeechFn={generateSpeechFn}
+          isSpeechModelEnabled={isSpeechModelEnabled}
+        />
+      )}
       {showActivityDialog && <AiActivityDialog steps={activitySteps} />}
     </div>
   );

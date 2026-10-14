@@ -24,6 +24,7 @@ interface MessagesProps {
   showActivityDialog?: boolean;
   generateSpeechFn: (text: string) => Promise<Blob>;
   isSpeechModelEnabled: boolean;
+  speechOnly: boolean;
 }
 
 export function Messages({
@@ -41,6 +42,7 @@ export function Messages({
   showActivityDialog = false,
   generateSpeechFn,
   isSpeechModelEnabled,
+  speechOnly,
 }: MessagesProps): React.JSX.Element {
   const canRegenerateMessage = messages.some((message) => message.role === 'user');
 
@@ -64,6 +66,7 @@ export function Messages({
           showActivityDialog={showActivityDialog}
           generateSpeechFn={generateSpeechFn}
           isSpeechModelEnabled={isSpeechModelEnabled}
+          speechOnly={speechOnly}
         />
       ))}
       {isLoading && <LoadingAnimation activitySteps={activitySteps} />}

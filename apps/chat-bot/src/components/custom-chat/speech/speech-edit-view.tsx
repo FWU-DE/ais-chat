@@ -1,6 +1,6 @@
 'use client';
 
-import { Switch } from '@ui/components/switch';
+import type { SpeechVoice } from '@shared/db/schema';
 import {
   Select,
   SelectContent,
@@ -9,12 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/select';
+import { Switch } from '@ui/components/switch';
 import { InfoTooltip } from '@ui/components/tooltip';
 import { useTranslations } from 'next-intl';
 import { Control, FieldPath, FieldValues, useController } from 'react-hook-form';
-import type { SpeechVoice } from '@shared/db/schema';
-import type { SpeechFields } from './speech.types';
 import { SpeechVoicePreviewButton } from './speech-voice-preview-button';
+import type { SpeechFields } from './speech.types';
 
 export type SpeechEditViewProps<TFieldValues extends FieldValues = FieldValues> = {
   onCheckedChange: (checked: boolean) => void;
@@ -44,7 +44,7 @@ export function SpeechEditView<TFieldValues extends FieldValues = FieldValues>(
   const isEnabled = field.value === true;
 
   return (
-    <div className="flex flex-wrap items-center gap-6">
+    <div className="flex flex-wrap items-center gap-10">
       <Switch
         checked={isEnabled}
         onCheckedChange={(checked) => {
@@ -58,7 +58,7 @@ export function SpeechEditView<TFieldValues extends FieldValues = FieldValues>(
       {isEnabled && props.voices.length > 0 && (
         <div className="flex flex-col gap-2">
           <span className="leading-none font-medium">{t('voice-label')}</span>
-          <div className="flex flex-wrap items-center gap-6">
+          <div className="flex flex-wrap items-center gap-10">
             <div className="flex items-center gap-2">
               <Select
                 value={voiceField.value || undefined}
