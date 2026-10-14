@@ -17,8 +17,6 @@
     "db:seed": "dotenvx run -f ../../apps/chat-bot/.env.local -f ../../apps/chat-bot/.env.development -- tsx src/db/seed/index.ts",
     "db:seed:from-stage": "dotenvx run -f ../../apps/chat-bot/.env.local -f ../../apps/chat-bot/.env.development -- tsx src/db/seed/seed-from-stage.ts",
     "db:seed:local": "ENVIRONMENT=development dotenvx run -f ../../apps/chat-bot/.env.local -f ../../apps/chat-bot/.env.development -- tsx src/db/seed/index.ts",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

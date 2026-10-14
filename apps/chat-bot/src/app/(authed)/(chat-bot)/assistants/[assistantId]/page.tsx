@@ -32,6 +32,7 @@ export default async function Page(props: PageProps<'/assistants/[assistantId]'>
         fileMappings={fileMappings}
         pictureUrl={pictureUrl}
         isWebSearchAvailable={isWebSearchAvailableForFederalState(federalState.featureToggles)}
+        isSpeechAvailable={federalState.featureToggles.isSpeechModelEnabled === true}
       />
     </DefaultPageLayout>
   );
