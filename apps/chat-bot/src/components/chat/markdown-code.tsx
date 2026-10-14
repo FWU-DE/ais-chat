@@ -38,7 +38,7 @@ export function MarkdownCode({
 
   return (
     <div className="flex flex-col py-2 text-sm max-w-full">
-      <div className="flex items-center justify-center bg-gray-300 py-2 px-2 gap-2">
+      <div className="flex items-center justify-center bg-muted py-2 px-2 gap-2">
         <span className="min-w-0 grow truncate">
           {[language, title].filter(Boolean).join(' – ')}
         </span>
