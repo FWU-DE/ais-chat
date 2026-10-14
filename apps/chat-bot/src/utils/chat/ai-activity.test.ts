@@ -23,7 +23,6 @@ function createToolRegistry(overrides: Partial<ToolRegistration['activity']> = {
     handler: vi.fn(async (): Promise<CalculatorResponse> => ({
       status: 'success',
       result: '42',
-      error: null,
     })),
     activity: {
       createStep: () => ({
@@ -126,12 +125,10 @@ describe('createAiActivityCollector', () => {
     expect(collector.addToolCalls([toolCall])).toBe(true);
     expect(collector.getSteps()).toEqual([{ kind: 'tool', id: 'call-1', tool: 'math_calculate' }]);
     expect(collector.addToolResult('unknown', 'ignored')).toBe(false);
-    expect(
-      collector.addToolResult('call-1', { status: 'success', result: '42', error: null }),
-    ).toBe(true);
+    expect(collector.addToolResult('call-1', { status: 'success', result: '42' })).toBe(true);
     expect(applyResult).toHaveBeenCalledWith(
       { kind: 'tool', id: 'call-1', tool: 'math_calculate' },
-      { status: 'success', result: '42', error: null },
+      { status: 'success', result: '42' },
     );
     expect(collector.finish()).toBe(true);
     expect(collector.finish()).toBe(true);

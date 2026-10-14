@@ -14,7 +14,6 @@ describe('calculator', () => {
     await expect(calculate('2 + 2')).resolves.toEqual({
       status: 'success',
       result: '4',
-      error: null,
     });
     expect(fetch).toHaveBeenCalledWith(
       'http://localhost:8081/v1/calculate',
@@ -67,11 +66,9 @@ describe('calculator', () => {
     const { calculate } = await import('./calculator');
     await expect(calculate('x')).resolves.toMatchObject({
       status: 'malformed_output',
-      result: null,
     });
     await expect(calculate('x')).resolves.toEqual({
       status: 'invalid_input',
-      result: null,
       error: 'bad',
     });
   });
@@ -105,7 +102,6 @@ describe('calculator', () => {
     await expect(calculate('x')).resolves.toMatchObject({ status: 'malformed_output' });
     await expect(calculate('x')).resolves.toEqual({
       status: 'upstream_failure',
-      result: null,
       error: 'Calculator request failed.',
     });
   });
@@ -161,7 +157,6 @@ describe('calculator', () => {
     await expect(calculate('x')).resolves.toEqual({
       status: 'success',
       result,
-      error: null,
     });
   });
 
@@ -172,7 +167,6 @@ describe('calculator', () => {
 
     await expect(calculate('😀'.repeat(CALCULATOR_MAX_EXPRESSION_LENGTH / 2))).resolves.toEqual({
       status: 'invalid_input',
-      result: null,
       error: 'Invalid expression.',
     });
     expect(fetchMock).not.toHaveBeenCalled();
