@@ -175,6 +175,15 @@ export async function sendChatMessage({
   fileIds?: string[];
   user: UserAndContext;
 }): Promise<SendMessageResult> {
+  if (fileIds && fileIds.length > 0) {
+    const ownsAllFiles = await Promise.all(
+      fileIds.map((fileId) => dbVerifyFileOwner({ fileId, userId: user.id })),
+    );
+    if (ownsAllFiles.some((isOwner) => !isOwner)) {
+      throw new ForbiddenError('Not authorized to attach this file');
+    }
+  }
+
   // Get model and API key
   const [error, modelAndApiKey] = await getModelAndApiKeyWithResult({
     modelId,
@@ -344,13 +353,6 @@ export async function sendChatMessage({
 
   // Link files to conversation
   if (fileIds && fileIds.length > 0) {
-    const ownsAllFiles = await Promise.all(
-      fileIds.map((fileId) => dbVerifyFileOwner({ fileId, userId: user.id })),
-    );
-    if (ownsAllFiles.some((isOwner) => !isOwner)) {
-      throw new ForbiddenError('Not authorized to attach this file');
-    }
-
     await linkFilesToConversation({
       fileIds,
       conversationMessageId: userMessage.id,

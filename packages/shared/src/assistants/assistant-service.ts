@@ -258,7 +258,7 @@ export async function createNewAssistant({
 
     const insertedAssistant = await copyAssistant(templateId, false, user, duplicateAssistantName);
 
-    await copyRelatedTemplateFiles('assistant', templateId, insertedAssistant.id);
+    await copyRelatedTemplateFiles('assistant', templateId, insertedAssistant.id, user.id);
     return insertedAssistant;
   }
 
@@ -511,16 +511,17 @@ export async function deleteAssistant({
   const assistant = await dbGetAssistantById({ assistantId });
   verifyWriteAccess({ item: assistant, user });
 
-  const relatedFiles = await dbGetRelatedAssistantFiles(assistantId);
-
   // delete assistant from db
-  const deletedAssistant = await dbDeleteAssistantByIdAndUser({ gptId: assistantId, user });
+  const { deletedAssistant, deletedFileIds } = await dbDeleteAssistantByIdAndUser({
+    gptId: assistantId,
+    user,
+  });
 
   // delete avatar picture from S3
   await deleteAvatarPicture(assistant.pictureId);
 
   // delete all related files from s3
-  await deleteMessageAttachments(relatedFiles.map((file) => file.id));
+  await deleteMessageAttachments(deletedFileIds);
 
   return deletedAssistant;
 }

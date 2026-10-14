@@ -556,6 +556,7 @@ describe('assistant-service', () => {
         'assistant',
         templateId,
         insertedAssistant.id,
+        user.id,
       );
       expect(result).toBe(insertedAssistant);
     });

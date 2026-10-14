@@ -837,6 +837,7 @@ describe('character-service', () => {
         'character',
         templateId,
         insertedCharacter.id,
+        user.id,
       );
       expect(result).toBe(insertedCharacter);
     });

@@ -25,9 +25,13 @@ const MESSAGE_ATTACHMENTS_FOLDER_NAME = 'message_attachments';
  * a clean copy with a new file ID.
  *
  * @param originalFileId - The ID of the original file to duplicate
+ * @param userId - The owner of the duplicated file
  * @returns Promise with the new file ID
  */
-export async function duplicateFileWithEmbeddings(originalFileId: string): Promise<string> {
+export async function duplicateFileWithEmbeddings(
+  originalFileId: string,
+  userId: string,
+): Promise<string> {
   const newFileId = `file_${cnanoid()}`;
 
   try {
@@ -58,6 +62,7 @@ export async function duplicateFileWithEmbeddings(originalFileId: string): Promi
       await tx.insert(fileTable).values({
         ...originalFile,
         id: newFileId,
+        userId,
       });
 
       // Copy all chunks with new file ID (remove id to let DB generate new ones)

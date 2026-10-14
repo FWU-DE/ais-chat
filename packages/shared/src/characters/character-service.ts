@@ -114,7 +114,7 @@ export const createNewCharacter = async ({
 
     const insertedCharacter = await copyCharacter(templateId, false, user, duplicateCharacterName);
 
-    await copyRelatedTemplateFiles('character', templateId, insertedCharacter.id);
+    await copyRelatedTemplateFiles('character', templateId, insertedCharacter.id, user.id);
     return insertedCharacter;
   }
 
@@ -385,16 +385,17 @@ export const deleteCharacter = async ({
   const { character } = await getCharacterInfo(characterId, user.id);
   verifyWriteAccess({ item: character, user });
 
-  const relatedFiles = await dbGetRelatedCharacterFiles(characterId);
-
   // delete character from db
-  const deletedCharacter = await dbDeleteCharacterByIdAndUser({ characterId, user });
+  const { deletedCharacter, deletedFileIds } = await dbDeleteCharacterByIdAndUser({
+    characterId,
+    user,
+  });
 
   // delete avatar picture from S3
   await deleteAvatarPicture(character.pictureId);
 
   // delete all related files linked to this character
-  await deleteMessageAttachments(relatedFiles.map((file) => file.id));
+  await deleteMessageAttachments(deletedFileIds);
 
   return deletedCharacter;
 };

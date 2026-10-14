@@ -2,6 +2,7 @@ import type { UserAndContext } from '@/auth/types';
 import type { ChatMessage } from '@/types/chat';
 import { decodeChatStreamEvent } from '@/utils/streaming';
 import type { runAgentLoop } from '@ais-chat/ai-core';
+import { ForbiddenError } from '@shared/error';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const buildToolsOutput = {
@@ -312,9 +313,11 @@ beforeEach(() => {
     }),
   );
   mocks.dbGetOrCreateConversationMock.mockResolvedValue(conversation as never);
-  // First call checks for a pre-existing conversation before it is created; these tests start a new chat.
-  mocks.dbGetConversationAndMessagesMock.mockResolvedValueOnce(undefined as never);
-  mocks.dbGetConversationAndMessagesMock.mockResolvedValue(conversationObject as never);
+  let conversationLookupCount = 0;
+  mocks.dbGetConversationAndMessagesMock.mockImplementation(async () => {
+    conversationLookupCount += 1;
+    return conversationLookupCount === 1 ? undefined : conversationObject;
+  });
   mocks.userHasReachedTokenPointsLimitMock.mockResolvedValue(false);
   mocks.extractUrlsMock.mockResolvedValue([]);
   mocks.ingestWebContentMock.mockResolvedValue({ processedUrls: [], errorUrls: [] });
@@ -423,6 +426,25 @@ describe('sendChatMessage', () => {
     expect(mocks.dbInsertChatContentMock).toHaveBeenCalledWith(
       expect.objectContaining({ content: 'Current question' }),
     );
+  });
+
+  it('rejects unauthorized files before mutating the conversation', async () => {
+    mocks.dbVerifyFileOwnerMock.mockResolvedValue(false);
+
+    const { sendChatMessage } = await import('./chat-service');
+
+    await expect(
+      sendChatMessage({
+        conversationId: conversation.id,
+        messages,
+        modelId: mainModel.id,
+        user: createUser(),
+        fileIds: ['unauthorized-file'],
+      }),
+    ).rejects.toThrow(ForbiddenError);
+
+    expect(mocks.dbInsertChatContentMock).not.toHaveBeenCalled();
+    expect(mocks.linkFilesToConversationMock).not.toHaveBeenCalled();
   });
 
   it('runs the agentic chat pipeline and persists the assistant message', async () => {

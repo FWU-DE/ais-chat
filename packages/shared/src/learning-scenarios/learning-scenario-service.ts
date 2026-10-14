@@ -805,10 +805,8 @@ export async function deleteLearningScenario({
   const { learningScenario } = await getLearningScenarioInfo(learningScenarioId, user);
   verifyWriteAccess({ item: learningScenario, user });
 
-  const relatedFiles = await dbGetFilesForLearningScenario(learningScenarioId);
-
   // delete learning scenario from db
-  const deletedLearningScenario = await dbDeleteLearningScenarioByIdAndUser({
+  const { deletedLearningScenario, deletedFileIds } = await dbDeleteLearningScenarioByIdAndUser({
     learningScenarioId,
     user,
   });
@@ -817,7 +815,7 @@ export async function deleteLearningScenario({
   await deleteAvatarPicture(learningScenario.pictureId);
 
   // delete all related files from s3
-  await deleteMessageAttachments(relatedFiles.map((file) => file.id));
+  await deleteMessageAttachments(deletedFileIds);
 
   return deletedLearningScenario;
 }
