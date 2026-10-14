@@ -241,14 +241,8 @@ export function runAgentLoop({
                         const args = JSON.parse(toolCall.arguments) as Record<string, unknown>;
                         result = await registryEntry.handler(args, {
                           abortSignal,
-                          reportUsage: (usedModelId, usage, priceInCents, provider, modelName) => {
-                            modelUsages.push({
-                              modelId: usedModelId,
-                              usage,
-                              priceInCents,
-                              provider,
-                              modelName,
-                            });
+                          reportUsage: (modelUsage) => {
+                            modelUsages.push(modelUsage);
                           },
                         });
                       } else {

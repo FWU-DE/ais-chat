@@ -147,7 +147,7 @@ export function buildJsxgraphTool({
         await generateTextWithBilling(modelSelection, messages, apiKeyId, {
           abortSignal: options?.abortSignal,
         });
-      options?.reportUsage?.(modelId, usage, priceInCents, provider, modelName);
+      options?.reportUsage?.({ modelId, usage, priceInCents, provider, modelName });
       const result = parsePlotSpec(text);
       if ('spec' in result) {
         return result.spec;

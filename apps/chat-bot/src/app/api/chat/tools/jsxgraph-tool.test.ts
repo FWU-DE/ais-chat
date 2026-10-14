@@ -147,6 +147,12 @@ describe('buildJsxgraphTool', () => {
 
     await tool.handler({ description: 'a point' }, { reportUsage });
 
-    expect(reportUsage).toHaveBeenCalledWith('model-1', usage, 3, 'bifrost-anthropic', 'claude-x');
+    expect(reportUsage).toHaveBeenCalledWith({
+      modelId: 'model-1',
+      usage,
+      priceInCents: 3,
+      provider: 'bifrost-anthropic',
+      modelName: 'claude-x',
+    });
   });
 });

@@ -43,20 +43,10 @@ export type ToolDefinition = {
   parameters: Record<string, unknown>;
 };
 
-/** Reports the cost of an LLM call a tool makes internally, so it is billed to the user like any other model usage. */
-export type ReportToolUsage = (
-  modelId: string,
-  usage: TokenUsage,
-  priceInCents: number,
-  /** The real upstream provider that served the request (e.g. as reported by Bifrost). */
-  provider: string,
-  /** The real upstream model name that served the request (e.g. as reported by Bifrost). */
-  modelName: string,
-) => void;
-
 export type ToolHandlerOptions = {
   abortSignal?: AbortSignal;
-  reportUsage?: ReportToolUsage;
+  /** Reports the cost of an LLM call a tool makes internally, so it is billed to the user like any other model usage. */
+  reportUsage?: (usage: ModelUsage) => void;
 };
 
 export type ToolHandler = (
