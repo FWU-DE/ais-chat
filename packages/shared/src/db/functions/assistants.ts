@@ -1,4 +1,5 @@
-import { db } from '..';
+import { UserModel } from '@shared/auth/user-model';
+import { NotFoundError } from '@shared/error';
 import {
   and,
   arrayOverlaps,
@@ -10,19 +11,18 @@ import {
   or,
   sql,
 } from 'drizzle-orm';
+import { db } from '..';
 import {
-  conversationTable,
   AssistantFileMapping,
   type AssistantInsertModel,
   type AssistantSelectModel,
   assistantTable,
   assistantTemplateMappingTable,
-  fileTable,
+  conversationTable,
   userTable,
 } from '../schema';
-import { NotFoundError } from '@shared/error';
-import { UserModel } from '@shared/auth/user-model';
 import { PgTransactionObject } from '../types';
+import { dbDeleteFileIfUnreferenced } from './files';
 
 type IncludeDeletedOption = {
   includeDeleted?: boolean;
@@ -316,12 +316,12 @@ export async function dbDeleteAssistantByIdAndUser({
       .where(eq(AssistantFileMapping.assistantId, assistant.id));
     await tx.delete(conversationTable).where(eq(conversationTable.assistantId, assistant.id));
     await tx.delete(AssistantFileMapping).where(eq(AssistantFileMapping.assistantId, assistant.id));
-    await tx.delete(fileTable).where(
-      inArray(
-        fileTable.id,
-        relatedFiles.map((f) => f.id),
-      ),
-    );
+    const deletedFileIds: string[] = [];
+    for (const { id } of relatedFiles) {
+      if (await dbDeleteFileIfUnreferenced(tx, id)) {
+        deletedFileIds.push(id);
+      }
+    }
     const deletedAssistant = (
       await tx
         .delete(assistantTable)
@@ -332,7 +332,7 @@ export async function dbDeleteAssistantByIdAndUser({
     if (deletedAssistant === undefined) {
       throw new Error('Could not delete assistant');
     }
-    return deletedAssistant;
+    return { deletedAssistant, deletedFileIds };
   });
 
   return deletedAssistant;

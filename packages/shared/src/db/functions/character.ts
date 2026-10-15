@@ -1,3 +1,7 @@
+import { UserModel } from '@shared/auth/user-model';
+import { NotFoundError } from '@shared/error';
+import { findStaticModelByRole } from '@shared/llm-models/llm-model-service';
+import { SHARE_EXTENSION_WINDOW_MS } from '@shared/sharing/const';
 import {
   and,
   arrayOverlaps,
@@ -11,8 +15,6 @@ import {
   sql,
 } from 'drizzle-orm';
 import { db } from '..';
-import { NotFoundError } from '@shared/error';
-import { SHARE_EXTENSION_WINDOW_MS } from '@shared/sharing/const';
 import {
   CharacterFileMapping,
   CharacterInsertModel,
@@ -22,16 +24,14 @@ import {
   characterTemplateMappingTable,
   CharacterWithShareDataModel,
   conversationTable,
-  fileTable,
   FilterGroup,
   SharedCharacterChatUsageTrackingInsertModel,
   sharedCharacterChatUsageTrackingTable,
   sharedCharacterConversation,
   userTable,
 } from '../schema';
-import { findStaticModelByRole } from '@shared/llm-models/llm-model-service';
-import { UserModel } from '@shared/auth/user-model';
 import { PgTransactionObject } from '../types';
+import { dbDeleteFileIfUnreferenced } from './files';
 
 type IncludeDeletedOption = {
   includeDeleted?: boolean;
@@ -503,12 +503,12 @@ export async function dbDeleteCharacterByIdAndUser({
       .where(eq(CharacterFileMapping.characterId, character.id));
     await tx.delete(conversationTable).where(eq(conversationTable.characterId, character.id));
     await tx.delete(CharacterFileMapping).where(eq(CharacterFileMapping.characterId, character.id));
-    await tx.delete(fileTable).where(
-      inArray(
-        fileTable.id,
-        relatedFiles.map((f) => f.id),
-      ),
-    );
+    const deletedFileIds: string[] = [];
+    for (const { id } of relatedFiles) {
+      if (await dbDeleteFileIfUnreferenced(tx, id)) {
+        deletedFileIds.push(id);
+      }
+    }
     const deletedCharacter = (
       await tx
         .delete(characterTable)
@@ -519,7 +519,7 @@ export async function dbDeleteCharacterByIdAndUser({
     if (deletedCharacter === undefined) {
       throw new Error('Could not delete character');
     }
-    return deletedCharacter;
+    return { deletedCharacter, deletedFileIds };
   });
 
   return deletedCharacter;
