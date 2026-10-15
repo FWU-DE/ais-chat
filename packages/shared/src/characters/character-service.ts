@@ -169,8 +169,10 @@ export const deleteFileMappingAndEntity = async ({
   const { character } = await getCharacterInfo(characterId, user.id);
   verifyWriteAccess({ item: character, user });
 
-  const file = await dbGetFileForCharacter({ characterId, fileId });
-  if (file === undefined || !(await dbVerifyFileOwner({ fileId, userId: user.id }))) {
+if (
+    (await dbGetFileForCharacter({ assistantId, fileId })) === undefined ||
+    !(await dbVerifyFileOwner({ fileId, userId: user.id }))
+  ) {
     throw new ForbiddenError('Not authorized to delete this file');
   }
 
