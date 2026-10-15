@@ -36,13 +36,9 @@ export function buildMathCalculateTool(): ToolRegistration {
   const handler = async (args: Record<string, unknown>): Promise<CalculatorResponse> => {
     const parsed = expressionSchema.safeParse(args);
     if (!parsed.success) {
-      const response: CalculatorResponse = {
-        status: 'invalid_input',
-        result: null,
-        error: 'Invalid expression.',
-      };
-      return response;
+      return { status: 'invalid_input', error: 'Invalid expression.' };
     }
+
     return calculate(parsed.data.expression);
   };
 

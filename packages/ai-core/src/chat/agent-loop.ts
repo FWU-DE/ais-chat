@@ -6,6 +6,7 @@ import { generateAgenticStreamWithBilling } from './agentic-stream';
 import type {
   Message as AiCoreMessage,
   ModelSelection,
+  ModelUsage,
   TokenUsage,
   ToolCall,
   ToolRegistry,
@@ -24,8 +25,6 @@ const toolCallDuration = metrics
 function logError(message: string, error: unknown) {
   console.error(message, error);
 }
-
-type ModelUsage = { modelId: string; usage: TokenUsage; priceInCents: number };
 
 /** Derives the running totals from the recorded per-model usages, so they can never drift apart. */
 function sumModelUsages(modelUsages: ModelUsage[]): { usage: TokenUsage; priceInCents: number } {
@@ -145,10 +144,16 @@ export function runAgentLoop({
               modelSelection,
               loopMessages,
               apiKeyId,
-              async ({ usage, priceInCents, modelId: usedModelId }) => {
+              async ({ usage, priceInCents, modelId: usedModelId, provider, modelName }) => {
                 await modelSelection.onModelUsed?.(usedModelId);
                 lastModelId = usedModelId;
-                modelUsages.push({ modelId: usedModelId, usage, priceInCents });
+                modelUsages.push({
+                  modelId: usedModelId,
+                  usage,
+                  priceInCents,
+                  provider,
+                  modelName,
+                });
                 if (usage.estimated) {
                   agentSpan.setAttribute('gen_ai.usage.estimated', true);
                 }
@@ -236,8 +241,8 @@ export function runAgentLoop({
                         const args = JSON.parse(toolCall.arguments) as Record<string, unknown>;
                         result = await registryEntry.handler(args, {
                           abortSignal,
-                          reportUsage: (usedModelId, usage, priceInCents) => {
-                            modelUsages.push({ modelId: usedModelId, usage, priceInCents });
+                          reportUsage: (modelUsage) => {
+                            modelUsages.push(modelUsage);
                           },
                         });
                       } else {

@@ -3,14 +3,22 @@ import type OpenAI from 'openai';
 import { streamOpenAICompatibleAgenticResponse } from './openai-compatible';
 import { AiGenerationError } from '../../errors';
 
+function mockResponseWithHeaders(data: unknown, headers: Record<string, string> = {}) {
+  return {
+    withResponse: async () => ({ data, response: { headers: new Headers(headers) } }),
+  };
+}
+
 function createClient(events: unknown[]): OpenAI {
   return {
     responses: {
-      create: vi.fn().mockResolvedValue({
-        [Symbol.asyncIterator]: async function* () {
-          yield* events;
-        },
-      }),
+      create: vi.fn().mockReturnValue(
+        mockResponseWithHeaders({
+          [Symbol.asyncIterator]: async function* () {
+            yield* events;
+          },
+        }),
+      ),
     },
   } as unknown as OpenAI;
 }
@@ -44,6 +52,50 @@ describe('streamOpenAICompatibleAgenticResponse', () => {
     },
   );
 
+  it('passes the raw HTTP response headers to getUsageInfo', async () => {
+    const client = {
+      responses: {
+        create: vi.fn().mockReturnValue(
+          mockResponseWithHeaders(
+            {
+              [Symbol.asyncIterator]: async function* () {
+                yield { type: 'response.output_text.delta', delta: 'Hello' };
+                yield {
+                  type: 'response.completed',
+                  response: {
+                    usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
+                    // Body extra_fields are deliberately ignored (see bifrost.ts); only the
+                    // headers below should be used to resolve usage info.
+                    extra_fields: { provider: 'from-body' },
+                  },
+                };
+              },
+            },
+            { 'x-bifrost-provider': 'from-header' },
+          ),
+        ),
+      },
+    } as unknown as OpenAI;
+
+    const getUsageInfo = vi.fn().mockReturnValue({ provider: 'resolved-provider' });
+    const events = [];
+    for await (const event of streamOpenAICompatibleAgenticResponse({
+      client,
+      messages: [{ role: 'user', content: 'Hi' }],
+      modelName: 'test-model',
+      providerName: 'Test',
+      getUsageInfo,
+    })) {
+      events.push(event);
+    }
+
+    expect(getUsageInfo).toHaveBeenCalledWith(expect.any(Headers));
+    expect(getUsageInfo.mock.calls[0]?.[0]?.get('x-bifrost-provider')).toBe('from-header');
+    expect(events).toContainEqual(
+      expect.objectContaining({ type: 'finish', provider: 'resolved-provider' }),
+    );
+  });
+
   it('still throws when no usage is ever returned', async () => {
     const client = createClient([{ type: 'response.output_text.delta', delta: 'Hello' }]);
 
@@ -68,13 +120,15 @@ describe('streamOpenAICompatibleAgenticResponse', () => {
     const abortController = new AbortController();
     const client = {
       responses: {
-        create: vi.fn().mockResolvedValue({
-          [Symbol.asyncIterator]: async function* () {
-            yield { type: 'response.output_text.delta', delta: 'Partial answer' };
-            abortController.abort();
-            throw Object.assign(new Error('Request was aborted.'), { name: 'AbortError' });
-          },
-        }),
+        create: vi.fn().mockReturnValue(
+          mockResponseWithHeaders({
+            [Symbol.asyncIterator]: async function* () {
+              yield { type: 'response.output_text.delta', delta: 'Partial answer' };
+              abortController.abort();
+              throw Object.assign(new Error('Request was aborted.'), { name: 'AbortError' });
+            },
+          }),
+        ),
       },
     } as unknown as OpenAI;
 
@@ -101,12 +155,14 @@ describe('streamOpenAICompatibleAgenticResponse', () => {
   it('rethrows stream errors when nothing was aborted', async () => {
     const client = {
       responses: {
-        create: vi.fn().mockResolvedValue({
-          [Symbol.asyncIterator]: async function* () {
-            yield { type: 'response.output_text.delta', delta: 'Partial' };
-            throw new Error('upstream exploded');
-          },
-        }),
+        create: vi.fn().mockReturnValue(
+          mockResponseWithHeaders({
+            [Symbol.asyncIterator]: async function* () {
+              yield { type: 'response.output_text.delta', delta: 'Partial' };
+              throw new Error('upstream exploded');
+            },
+          }),
+        ),
       },
     } as unknown as OpenAI;
 
@@ -132,13 +188,15 @@ describe('streamOpenAICompatibleAgenticResponse', () => {
     const abortController = new AbortController();
     const client = {
       responses: {
-        create: vi.fn().mockResolvedValue({
-          [Symbol.asyncIterator]: async function* () {
-            yield* [];
-            abortController.abort();
-            throw new Error('upstream exploded');
-          },
-        }),
+        create: vi.fn().mockReturnValue(
+          mockResponseWithHeaders({
+            [Symbol.asyncIterator]: async function* () {
+              yield* [];
+              abortController.abort();
+              throw new Error('upstream exploded');
+            },
+          }),
+        ),
       },
     } as unknown as OpenAI;
 

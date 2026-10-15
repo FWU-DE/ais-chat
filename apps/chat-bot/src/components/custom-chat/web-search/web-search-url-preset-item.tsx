@@ -1,11 +1,11 @@
+import { MAX_WEB_SEARCH_INCLUDED_DOMAINS } from '@/configuration-text-inputs/const';
+import { CaretDownIcon, CaretUpIcon, PlusIcon } from '@phosphor-icons/react';
 import { UrlPreset } from '@shared/web-search/url-presets/types';
+import { Button } from '@ui/components/button';
 import { Chip } from '@ui/components/chip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui/components/collapsible';
-import { CaretDownIcon, CaretUpIcon, PlusIcon } from '@phosphor-icons/react';
-import { Button } from '@ui/components/button';
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { MAX_WEB_SEARCH_INCLUDED_DOMAINS } from '@/configuration-text-inputs/const';
+import { useState } from 'react';
 
 type WebSearchUrlPresetItemProps = {
   selectedWebsites: string[];
@@ -26,21 +26,23 @@ export function WebSearchUrlPresetItem({
 
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <div className="flex gap-2 items-center">
-        <span className="text-sm grow">{preset.name}</span>
-        <span className="text-sm whitespace-nowrap">
-          {t('presets-domain-count', { count: preset.urls.length })}
-        </span>
+      <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:flex-wrap">
+        <div className="flex gap-2 items-center flex-wrap grow min-w-0">
+          <span className="text-sm grow">{preset.name}</span>
+          <span className="text-sm whitespace-nowrap">
+            {t('presets-domain-count', { count: preset.urls.length })}
+          </span>
 
-        <CollapsibleTrigger asChild>
-          <Button variant="ghost" size="icon-sm">
-            {isExpanded ? <CaretUpIcon /> : <CaretDownIcon />}
-          </Button>
-        </CollapsibleTrigger>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="icon-sm">
+              {isExpanded ? <CaretUpIcon /> : <CaretDownIcon />}
+            </Button>
+          </CollapsibleTrigger>
+        </div>
 
         <Button
           size="sm"
-          className="ml-2 py-0"
+          className="py-0 self-center sm:self-auto sm:ml-2"
           onClick={() => onAddPreset(preset)}
           disabled={isFullyAdded || isLimitReached}
         >

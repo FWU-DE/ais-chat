@@ -8,6 +8,7 @@ export const NewChatMessageEventSchema = z.object({
   output_tokens: z.coerce.number(),
   federal_state: z.string(),
   provider: z.string(),
+  model_name: z.string(),
   cost_in_cent: z.coerce.number(),
   school_id: z.string(),
   user_role: z.string(),
