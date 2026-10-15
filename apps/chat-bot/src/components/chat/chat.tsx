@@ -372,6 +372,12 @@ export default function Chat({
                   learningScenario?.isSpeechEnabled ??
                   false)
               }
+              speechOnly={
+                assistant?.speechOnly ??
+                character?.speechOnly ??
+                learningScenario?.speechOnly ??
+                false
+              }
             />
           )}
           {error && (

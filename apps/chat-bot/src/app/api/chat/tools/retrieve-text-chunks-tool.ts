@@ -9,7 +9,7 @@ import { retrieveChunksByQuery } from '../../rag/rag-service';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
 
 export const retrieveTextChunksArgsSchema = z.object({
-  search: z.string(),
+  search: z.string().trim().min(1),
 });
 
 type SemanticFileSearchChunkResult = {
@@ -20,7 +20,7 @@ type SemanticFileSearchChunkResult = {
 
 export type SemanticFileSearchToolResponse = {
   chunks: SemanticFileSearchChunkResult[];
-  error: string | null;
+  notice?: string;
 };
 
 function formatRetrievedChunksForTool(chunks: Awaited<ReturnType<typeof retrieveChunksByQuery>>) {
@@ -30,16 +30,12 @@ function formatRetrievedChunksForTool(chunks: Awaited<ReturnType<typeof retrieve
     content: chunk.content ?? null,
   }));
 
-  const response: SemanticFileSearchToolResponse = {
+  return {
     chunks: formattedChunks,
-    error: null,
+    ...(formattedChunks.length === 0 && {
+      notice: 'No matching chunks found.',
+    }),
   };
-
-  if (chunks.length === 0) {
-    response.error = 'No matching chunks found.';
-  }
-
-  return response;
 }
 
 type BuildRetrieveTextChunksToolParams = Pick<
@@ -86,8 +82,15 @@ export function buildRetrieveTextChunksTool({
     },
   };
 
-  const handler = async (args: Record<string, unknown>) => {
+  const handler = async (
+    args: Record<string, unknown>,
+  ): Promise<SemanticFileSearchToolResponse | { error: string }> => {
     const parsed = retrieveTextChunksArgsSchema.safeParse(args);
+
+    if (!parsed.success) {
+      return { error: 'Missing search query.' };
+    }
+
     let processedSourceUrls = attachedSourceUrls;
 
     if (attachedSourceUrls.length > 0) {
@@ -99,7 +102,7 @@ export function buildRetrieveTextChunksTool({
       processedSourceUrls = processedUrls;
     }
 
-    const search = parsed.success ? parsed.data.search : '';
+    const search = parsed.data.search;
 
     // Fetch at most VECTOR_SEARCH_LIMIT + 1 chunks to cheaply check whether
     // the total fits within the limit without pulling the full dataset.
@@ -111,15 +114,18 @@ export function buildRetrieveTextChunksTool({
     });
 
     if (allChunks.length <= VECTOR_SEARCH_LIMIT) {
-      const response: SemanticFileSearchToolResponse = {
-        chunks: allChunks.map((chunk) => ({
-          fileName: chunk.fileName,
-          orderIndex: chunk.orderIndex,
-          content: chunk.content,
-        })),
-        error: allChunks.length === 0 ? 'No matching chunks found.' : null,
+      const chunks = allChunks.map((chunk) => ({
+        fileName: chunk.fileName,
+        orderIndex: chunk.orderIndex,
+        content: chunk.content,
+      }));
+
+      return {
+        chunks,
+        ...(chunks.length === 0 && {
+          notice: 'No matching chunks found.',
+        }),
       };
-      return response;
     }
 
     return formatRetrievedChunksForTool(

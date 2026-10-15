@@ -43,12 +43,10 @@ export type ToolDefinition = {
   parameters: Record<string, unknown>;
 };
 
-/** Reports the cost of an LLM call a tool makes internally, so it is billed to the user like any other model usage. */
-export type ReportToolUsage = (modelId: string, usage: TokenUsage, priceInCents: number) => void;
-
 export type ToolHandlerOptions = {
   abortSignal?: AbortSignal;
-  reportUsage?: ReportToolUsage;
+  /** Reports the cost of an LLM call a tool makes internally, so it is billed to the user like any other model usage. */
+  reportUsage?: (usage: ModelUsage) => void;
 };
 
 export type ToolHandler = (
@@ -103,10 +101,23 @@ export type ModelSelection = {
   onModelUsed?: (modelId: string) => void | Promise<void>;
 };
 
+/** Usage billed to a single model during an agentic turn, including the real upstream provider/model that served it. */
+export type ModelUsage = {
+  modelId: string;
+  usage: TokenUsage;
+  priceInCents: number;
+  provider: string;
+  modelName: string;
+};
+
 export type TextResponse = {
   text: string;
   usage: TokenUsage;
   modelId?: string;
+  /** The real upstream provider that served the request (e.g. as reported by Bifrost). */
+  provider?: string;
+  /** The real upstream model name that served the request (e.g. as reported by Bifrost). */
+  modelName?: string;
 };
 
 /**
@@ -116,7 +127,15 @@ export type StreamEvent =
   | { type: 'text'; delta: string }
   | { type: 'reasoning_summary'; delta: string }
   | { type: 'tool_call'; call: ToolCall }
-  | { type: 'finish'; usage: TokenUsage; modelId?: string };
+  | {
+      type: 'finish';
+      usage: TokenUsage;
+      modelId?: string;
+      /** The real upstream provider that served the request (e.g. as reported by Bifrost). */
+      provider?: string;
+      /** The real upstream model name that served the request (e.g. as reported by Bifrost). */
+      modelName?: string;
+    };
 
 export type TextGenerationFn = (args: TextGenerationArgs) => Promise<TextResponse>;
 

@@ -361,7 +361,8 @@ export async function generateImage({
           promptTokens: 0, // Images don't use tokens
           completionTokens: 0, // Images don't use tokens
           costsInCent: costsInCent,
-          provider: model.provider,
+          provider: result.provider,
+          modelName: result.modelName,
           anonymous: false,
           conversation,
         }),

@@ -135,6 +135,7 @@ function createCharacterFormValuesSchema(t: CharacterTranslator) {
     webSearchIncludedDomains: z.array(z.string()),
     isSpeechEnabled: z.boolean(),
     voice: z.string(),
+    speechOnly: z.boolean(),
   });
 }
 
@@ -200,6 +201,7 @@ export function CharacterEdit({
     webSearchIncludedDomains: character.webSearchIncludedDomains,
     isSpeechEnabled: character.isSpeechEnabled,
     voice: resolveInitialVoice(character.voice, speechVoices),
+    speechOnly: character.speechOnly,
   };
 
   const {
@@ -241,6 +243,7 @@ export function CharacterEdit({
           webSearchIncludedDomains: data.webSearchIncludedDomains,
           isSpeechEnabled: data.isSpeechEnabled,
           voice: data.voice,
+          speechOnly: data.speechOnly,
         });
 
         return updateResult.success;
@@ -572,6 +575,9 @@ export function CharacterEdit({
                 void flushAutoSave();
               }}
               onVoiceChange={() => {
+                void flushAutoSave();
+              }}
+              onSpeechOnlyChange={() => {
                 void flushAutoSave();
               }}
             />

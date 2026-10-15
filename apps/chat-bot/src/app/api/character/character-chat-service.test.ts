@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { runAgentLoop } from '@ais-chat/ai-core';
 import type { ChatMessage } from '@/types/chat';
+import type { runAgentLoop } from '@ais-chat/ai-core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   runAgentLoopMock: vi.fn(),
@@ -158,6 +158,7 @@ const safetyModel = {
 const character = {
   id: 'character-1',
   name: 'Character',
+  modelId: model.id,
   attachedLinks: ['https://character.example/context'],
   startedBy: 'teacher-1',
   suspended: false,
@@ -216,7 +217,7 @@ beforeEach(() => {
   mocks.combineSharedRelatedFilesMock.mockResolvedValue([]);
   mocks.ingestWebContentMock.mockResolvedValue({ processedUrls: [], errorUrls: [] });
   mocks.isWebSearchEnabledForEntityMock.mockReturnValue(true);
-  mocks.buildToolsMock.mockResolvedValue({ toolRegistry: {} });
+  mocks.buildToolsMock.mockReturnValue({ toolRegistry: {} });
   mocks.constructCharacterSystemPromptMock.mockReturnValue('system-prompt');
   mocks.limitChatHistoryMock.mockImplementation(
     (incomingMessages: ChatMessage[]) => incomingMessages,
@@ -250,6 +251,8 @@ beforeEach(() => {
             modelId: model.id,
             usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
             priceInCents: 4,
+            provider: model.provider,
+            modelName: model.name,
           },
         ],
         agentLoopMessages: [],
@@ -266,11 +269,14 @@ describe('sendCharacterMessage', () => {
       characterId: character.id,
       inviteCode: 'invite-code',
       messages,
-      modelId: model.id,
     });
 
     await collectStream(result.stream);
 
+    expect(mocks.getModelAndApiKeyWithResultMock).toHaveBeenCalledWith({
+      modelId: character.modelId,
+      federalStateId: teacherUserAndContext.federalState.id,
+    });
     expect(mocks.ingestWebContentMock).toHaveBeenCalledWith({
       urls: ['https://character.example/context'],
       federalStateId: teacherUserAndContext.federalState.id,
@@ -291,7 +297,6 @@ describe('sendCharacterMessage', () => {
       characterId: character.id,
       inviteCode: 'invite-code',
       messages,
-      modelId: model.id,
       fileIds: ['file-1', 'file-2'],
       sharedSessionId: 'session-1',
     });
@@ -319,13 +324,12 @@ describe('sendCharacterMessage', () => {
       },
     });
     mocks.isWebSearchEnabledForEntityMock.mockReturnValue(false);
-    mocks.buildToolsMock.mockResolvedValue({ toolRegistry: {} });
+    mocks.buildToolsMock.mockReturnValue({ toolRegistry: {} });
 
     await sendCharacterMessage({
       characterId: character.id,
       inviteCode: 'invite-code',
       messages,
-      modelId: model.id,
     });
 
     expect(mocks.isWebSearchEnabledForEntityMock).toHaveBeenCalledWith({
