@@ -124,6 +124,7 @@ function createAssistantFormValuesSchema(t: AssistantTranslator) {
     webSearchIncludedDomains: z.array(z.string()),
     isSpeechEnabled: z.boolean(),
     voice: z.string(),
+    speechOnly: z.boolean(),
     promptSuggestions: z
       .array(
         z.object({
@@ -189,6 +190,7 @@ export function AssistantEdit({
     webSearchIncludedDomains: assistant.webSearchIncludedDomains,
     isSpeechEnabled: assistant.isSpeechEnabled,
     voice: resolveInitialVoice(assistant.voice, speechVoices),
+    speechOnly: assistant.speechOnly,
     promptSuggestions:
       assistant.promptSuggestions && assistant.promptSuggestions.length > 0
         ? assistant.promptSuggestions.map((s) => ({ value: s }))
@@ -231,6 +233,7 @@ export function AssistantEdit({
           webSearchIncludedDomains: data.webSearchIncludedDomains,
           isSpeechEnabled: data.isSpeechEnabled,
           voice: data.voice,
+          speechOnly: data.speechOnly,
           promptSuggestions: data.promptSuggestions
             .map((suggestion) => suggestion.value.trim())
             .filter((suggestion) => suggestion.length > 0),
@@ -491,6 +494,9 @@ export function AssistantEdit({
                 void flushAutoSave();
               }}
               onVoiceChange={() => {
+                void flushAutoSave();
+              }}
+              onSpeechOnlyChange={() => {
                 void flushAutoSave();
               }}
             />

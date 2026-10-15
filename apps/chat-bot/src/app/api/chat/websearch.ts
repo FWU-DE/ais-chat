@@ -1,4 +1,4 @@
-import { LinkupClient } from 'linkup-sdk';
+import { LinkupClient, type TextSearchResult } from 'linkup-sdk';
 import { env } from './env';
 import {
   WEBSEARCH_RESULT_LENGTH_LIMIT,
@@ -194,16 +194,14 @@ export async function searchWeb({
       userId,
     });
 
-    if (!Array.isArray(searchResults.results)) {
-      return [];
-    }
-
-    return (searchResults.results as WebSearchResult[]).map((result) => ({
-      ...result,
-      content: result.content.slice(0, WEBSEARCH_RESULT_LENGTH_LIMIT),
-    }));
+    return searchResults.results
+      .filter((result): result is TextSearchResult => result.type === 'text')
+      .map((result) => ({
+        ...result,
+        content: result.content.slice(0, WEBSEARCH_RESULT_LENGTH_LIMIT),
+      }));
   } catch (error) {
     logError('Error during web search', error);
-    return [];
+    throw error;
   }
 }

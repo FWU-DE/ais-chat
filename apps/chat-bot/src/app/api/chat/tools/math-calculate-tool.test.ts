@@ -9,8 +9,8 @@ vi.mock('../calculator', () => ({
 beforeEach(() => mocks.calculateMock.mockReset());
 
 describe('buildMathCalculateTool', () => {
-  it('defines calculator examples and serializes valid handler results', async () => {
-    mocks.calculateMock.mockResolvedValue({ status: 'success', result: '4', error: null });
+  it('defines calculator examples and returns the result on success', async () => {
+    mocks.calculateMock.mockResolvedValue({ status: 'success', result: '4' });
     const { buildMathCalculateTool } = await import('./math-calculate-tool');
     const tool = buildMathCalculateTool();
     if (!tool) throw new Error('expected enabled calculator tool');
@@ -21,15 +21,13 @@ describe('buildMathCalculateTool', () => {
     expect(await tool.handler({ expression: ' 2 + 2 ' })).toEqual({
       status: 'success',
       result: '4',
-      error: null,
     });
     expect(mocks.calculateMock).toHaveBeenCalledWith('2 + 2');
   });
 
-  it('serializes calculator errors without changing them', async () => {
+  it('surfaces calculator failures with full error details', async () => {
     mocks.calculateMock.mockResolvedValue({
       status: 'invalid_input',
-      result: null,
       error: 'Calculator could not parse the expression.',
     });
     const { buildMathCalculateTool } = await import('./math-calculate-tool');
@@ -38,17 +36,18 @@ describe('buildMathCalculateTool', () => {
 
     expect(await tool.handler({ expression: 'not valid' })).toEqual({
       status: 'invalid_input',
-      result: null,
       error: 'Calculator could not parse the expression.',
     });
   });
 
-  it('returns JSON for invalid expressions without calling the client', async () => {
+  it('returns an error for invalid expressions without calling the client', async () => {
     const { buildMathCalculateTool } = await import('./math-calculate-tool');
     const tool = buildMathCalculateTool();
     if (!tool) throw new Error('expected enabled calculator tool');
-    const raw = await tool.handler({ expression: '' });
-    expect(raw).toMatchObject({ status: 'invalid_input' });
+    expect(await tool.handler({ expression: '' })).toEqual({
+      status: 'invalid_input',
+      error: 'Invalid expression.',
+    });
     expect(mocks.calculateMock).not.toHaveBeenCalled();
   });
 });

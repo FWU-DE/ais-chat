@@ -17,7 +17,7 @@ import {
 import type { ToolDefinition, ToolRegistration } from './types';
 
 export const mundoSearchArgsSchema = z.object({
-  query: z.string(),
+  query: z.string().trim().min(1),
   classLevel: z.string().nullable().optional(),
   subject: z.string().nullable().optional(),
 });
@@ -25,7 +25,6 @@ export const mundoSearchArgsSchema = z.object({
 export type MundoSearchToolResponse = {
   results: MundoSearchResult[];
   retriedWithoutFilters: boolean;
-  error: string | null;
 };
 
 export function buildMundoSearchTool(): ToolRegistration {
@@ -58,39 +57,37 @@ export function buildMundoSearchTool(): ToolRegistration {
     },
   };
 
-  const handler = async (args: Record<string, unknown>): Promise<MundoSearchToolResponse> => {
+  const handler = async (
+    args: Record<string, unknown>,
+  ): Promise<MundoSearchToolResponse | { error: string }> => {
     const parsed = mundoSearchArgsSchema.safeParse(args);
-    const rawQuery = parsed.success ? parsed.data.query.trim() : '';
-    const query = rawQuery.slice(0, MUNDO_SEARCH_QUERY_LENGTH_LIMIT);
 
-    if (query.length === 0) {
-      const response: MundoSearchToolResponse = {
-        results: [],
-        retriedWithoutFilters: false,
-        error: 'Error: Missing search query.',
-      };
-      return response;
+    if (!parsed.success) {
+      return { error: 'Invalid search query or filters.' };
     }
 
-    const classLevel = sanitizeClassLevel(parsed.success ? parsed.data.classLevel : undefined);
-    const subject = sanitizeSubject(parsed.success ? parsed.data.subject : undefined);
+    const query = parsed.data.query.slice(0, MUNDO_SEARCH_QUERY_LENGTH_LIMIT);
+
+    const classLevel = sanitizeClassLevel(parsed.data.classLevel);
+    const subject = sanitizeSubject(parsed.data.subject);
     const hasFilters = classLevel !== undefined || subject !== undefined;
 
-    let results = await mundoSearch({ query, classLevel, subject });
-    let retriedWithoutFilters = false;
+    try {
+      let results = await mundoSearch({ query, classLevel, subject });
+      let retriedWithoutFilters = false;
 
-    if (results.length === 0 && hasFilters) {
-      results = await mundoSearch({ query });
-      retriedWithoutFilters = true;
+      if (results.length === 0 && hasFilters) {
+        results = await mundoSearch({ query });
+        retriedWithoutFilters = true;
+      }
+
+      return {
+        results,
+        retriedWithoutFilters,
+      };
+    } catch {
+      return { error: 'MUNDO search failed.' };
     }
-
-    const response: MundoSearchToolResponse = {
-      results,
-      retriedWithoutFilters,
-      error: results.length === 0 ? 'No MUNDO results found.' : null,
-    };
-
-    return response;
   };
 
   return {
@@ -103,7 +100,7 @@ export function buildMundoSearchTool(): ToolRegistration {
           kind: 'tool',
           id: toolCall.id,
           tool: TOOL_NAMES.mundoSearch,
-          detail: parsed.success ? parsed.data.query.trim() : undefined,
+          detail: parsed.success ? parsed.data.query : undefined,
         };
       },
       applyResult: (step, result) => {

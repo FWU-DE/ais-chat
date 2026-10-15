@@ -24,6 +24,7 @@ export type {
   StreamEvent,
   AgenticStreamFn,
   ModelSelection,
+  ModelUsage,
 } from './types';
 
 // Re-export utility functions and guards
@@ -83,6 +84,9 @@ export async function generateTextWithBilling(
       ...textResponse,
       modelId: usedModelId,
       priceInCents,
+      // Falls back to the billing model's own provider/name when the provider stream didn't report them.
+      provider: textResponse.provider ?? billingModel.provider,
+      modelName: textResponse.modelName ?? billingModel.name,
     };
   } catch (error) {
     throw normalizeAiGenerationError(error, 'Text generation failed');
