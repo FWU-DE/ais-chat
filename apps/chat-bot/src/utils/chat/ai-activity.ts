@@ -8,10 +8,31 @@ import {
 import { TOOL_NAMES } from '@/types/tool-names';
 import { ToolCall, type ToolResult } from '@ais-chat/ai-core';
 import { type ToolErrorResult } from '@ais-chat/ai-core/chat/types';
+import { logError } from '@shared/logging/logging';
 
 export type AiActivityOptions = {
   hideSensitiveDetails?: boolean;
 };
+
+// Persisted or live tool results can be malformed (e.g. an older/legacy shape). `applyResult`
+// isn't trusted to handle that defensively, so a throw here is treated like a failed result: the
+// step is left unenriched rather than aborting the whole collector.
+function applyResultSafely(
+  activity: ToolActivity | undefined,
+  step: AiActivityToolStep,
+  result: ToolResult,
+): AiActivityToolStep {
+  if (activity?.applyResult === undefined) {
+    return step;
+  }
+
+  try {
+    return activity.applyResult(step, result);
+  } catch (error) {
+    logError('Failed to apply tool result to AI activity step', error, { tool: step.tool });
+    return step;
+  }
+}
 
 export function createAiActivityCollector({
   hideSensitiveDetails = false,
@@ -71,8 +92,7 @@ export function createAiActivityCollector({
 
       // Widened to generic `ToolActivity`: `applyResult`'s `result` type can't narrow by `step.tool`.
       const activity: ToolActivity | undefined = toolActivityRegistry[step.tool];
-      const enrichedStep =
-        'error' in result ? step : (activity?.applyResult?.(step, result) ?? step);
+      const enrichedStep = 'error' in result ? step : applyResultSafely(activity, step, result);
 
       if (enrichedStep !== step) {
         steps[steps.indexOf(step)] = enrichedStep;

@@ -141,6 +141,18 @@ describe('createAiActivityCollector', () => {
     expect(collector.getSteps()).toEqual([{ kind: 'tool', id: 'call-1', tool: 'math_calculate' }]);
   });
 
+  it('leaves the step unenriched when applyResult throws on a malformed result', () => {
+    const applyResult = vi.fn(() => {
+      throw new Error('malformed persisted result');
+    });
+    registerMathCalculateActivity({ applyResult });
+    const collector = createAiActivityCollector();
+
+    collector.addToolCalls([toolCall]);
+    expect(collector.addToolResult('call-1', {})).toBe(true);
+    expect(collector.getSteps()).toEqual([{ kind: 'tool', id: 'call-1', tool: 'math_calculate' }]);
+  });
+
   it('ignores calls without registered activity and handles activity without result enrichment', () => {
     const collector = createAiActivityCollector();
     expect(collector.addToolCalls([toolCall])).toBe(false);

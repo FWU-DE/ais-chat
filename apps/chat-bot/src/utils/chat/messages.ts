@@ -5,13 +5,30 @@ import {
   type AiActivityToolName,
   isAiActivityToolName,
 } from '@/types/ai-activity';
-import type { ToolResult } from '@ais-chat/ai-core/chat/types';
+import type { ToolErrorResult, ToolResult } from '@ais-chat/ai-core/chat/types';
+import { logError } from '@shared/logging/logging';
 import { createAiActivityCollector } from './ai-activity';
 import { toolActivityRegistry } from '@/app/api/chat/build-tools';
+import type { ToolActivity } from '@/app/api/chat/tools/types';
 import {
   parseGenericPersistedToolResult,
   parsePersistedToolResultContent,
 } from '@/app/api/chat/tools/parse-persisted-tool-result';
+
+// A tool's own `parsePersistedResult` isn't trusted to handle malformed/legacy persisted data
+// defensively, so a throw here is treated like a parsed `ToolErrorResult`: the step still gets
+// added, just unenriched, instead of aborting the whole reload loop.
+function parsePersistedResultSafely(
+  activity: ToolActivity,
+  rawContent: unknown,
+): ToolResult | ToolErrorResult | undefined {
+  try {
+    return activity.parsePersistedResult(rawContent);
+  } catch (error) {
+    logError('Failed to parse persisted tool result', error);
+    return { error: 'Failed to parse persisted tool result' };
+  }
+}
 
 // Reconstructs AI activity steps from persisted messages by replaying them through the same
 // collector used for live streaming, so reload-from-DB can never drift from the streaming result.
@@ -41,7 +58,7 @@ function getActivitySteps(
         const toolName = toolNameByCallId.get(message.toolCallId);
         const activity = toolName ? toolActivityRegistry[toolName] : undefined;
         const parsedResult = activity
-          ? activity.parsePersistedResult(rawContent)
+          ? parsePersistedResultSafely(activity, rawContent)
           : parseGenericPersistedToolResult<ToolResult>(rawContent);
 
         if (parsedResult !== undefined) {
