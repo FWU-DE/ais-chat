@@ -1,5 +1,6 @@
 import { instrumentOpenAiClient } from '@sentry/server-utils';
 import OpenAI, { toFile } from 'openai';
+import { extractBifrostFieldsFromHeaders, stripBifrostProviderPrefix } from '../../bifrost-headers';
 import type { AiModel, ImageGenerationFn, ImageResponse } from '../types';
 import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { env } from '../../env';
@@ -28,7 +29,7 @@ function createBifrostClient(model: AiModel): {
   };
 }
 
-function mapBifrostResult(result: OpenAI.Images.ImagesResponse): ImageResponse {
+function mapBifrostResult(result: OpenAI.Images.ImagesResponse, headers: Headers): ImageResponse {
   if (!result.data || result.data.length === 0) {
     throw new AiGenerationError('No image data received from Bifrost');
   }
@@ -41,6 +42,9 @@ function mapBifrostResult(result: OpenAI.Images.ImagesResponse): ImageResponse {
     throw new AiGenerationError('No image data received from Bifrost');
   }
 
+  const fields = extractBifrostFieldsFromHeaders(headers);
+  const deployment = fields.resolved_model_used ?? fields.original_model_requested;
+
   return {
     data,
     output_format: result.output_format,
@@ -52,6 +56,8 @@ function mapBifrostResult(result: OpenAI.Images.ImagesResponse): ImageResponse {
           output_image_tokens: result.usage.output_tokens_details?.image_tokens ?? 0,
         }
       : undefined,
+    provider: fields.provider,
+    modelName: stripBifrostProviderPrefix(deployment, fields.provider),
   };
 }
 
@@ -66,24 +72,28 @@ export function constructBifrostImageGenerationFn(model: AiModel): ImageGenerati
       const uploadables = await Promise.all(
         inputImages.map((img) => toFile(img.data, img.filename, { type: img.mimeType })),
       );
-      const editResult = await client.images.edit({
+      const { data: editResult, response: httpResponse } = await client.images
+        .edit({
+          model: modelName,
+          prompt,
+          n: 1,
+          size,
+          quality: 'medium',
+          image: uploadables,
+        })
+        .withResponse();
+      return mapBifrostResult(editResult, httpResponse.headers);
+    }
+
+    const { data: result, response: httpResponse } = await client.images
+      .generate({
         model: modelName,
         prompt,
         n: 1,
         size,
         quality: 'medium',
-        image: uploadables,
-      });
-      return mapBifrostResult(editResult);
-    }
-
-    const result = await client.images.generate({
-      model: modelName,
-      prompt,
-      n: 1,
-      size,
-      quality: 'medium',
-    });
-    return mapBifrostResult(result);
+      })
+      .withResponse();
+    return mapBifrostResult(result, httpResponse.headers);
   };
 }

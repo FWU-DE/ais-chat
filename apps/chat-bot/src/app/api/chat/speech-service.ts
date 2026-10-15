@@ -44,6 +44,7 @@ export async function generateSpeech({ text, voice }: { text: string; voice?: st
     costsInCent,
     modelId: speechModel.id,
     provider: speechModel.provider,
+    modelName: speechModel.name,
   };
 }
 
@@ -92,6 +93,7 @@ export async function generateChatSpeech({
       completionTokens: 0,
       costsInCent: speechResult.costsInCent,
       provider: speechResult.provider,
+      modelName: speechResult.modelName,
       anonymous: false,
       conversation,
     }),

@@ -106,6 +106,7 @@ export default function CharacterSharedChat({
       uploadFileFn={uploadSharedCharacterFile}
       isSpeechModelEnabled={isSpeechModelEnabled}
       generateSpeechFn={generateSharedCharacterSpeech}
+      speechOnly={character.speechOnly}
     />
   );
 }

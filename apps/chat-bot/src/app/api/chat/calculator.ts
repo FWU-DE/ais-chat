@@ -49,38 +49,15 @@ const calculatorResponseSchema = z.discriminatedUnion('status', [
   }),
 ]);
 
-type CalculatorStatus =
-  | 'success'
-  | 'invalid_input'
-  | 'overload'
-  | 'timeout'
-  | 'crashed_worker'
-  | 'malformed_output'
-  | 'upstream_failure'
-  | 'internal_failure';
-type CalculatorSuccessResponse = { status: 'success'; result: string; error: null };
-type CalculatorFailureResponse = {
-  status: Exclude<CalculatorStatus, 'success'>;
-  result: null;
-  error: string;
-};
-export type CalculatorResponse = CalculatorSuccessResponse | CalculatorFailureResponse;
+export type CalculatorResponse = z.infer<typeof calculatorResponseSchema>;
 
 // A JSON string can expand each one-byte control character to a six-byte escape sequence.
 // Keep the body bound safely above the largest serialized result while retaining the result limit.
 const calculatorResponseEnvelopeBytes = Buffer.byteLength(
-  JSON.stringify({ status: 'success', result: '', error: null }),
+  JSON.stringify({ status: 'success', result: '' }),
 );
 const CALCULATOR_MAX_RESPONSE_BYTES =
   CALCULATOR_MAX_OUTPUT_LENGTH * 6 + calculatorResponseEnvelopeBytes;
-
-function stableResponse(input: z.infer<typeof calculatorResponseSchema>): CalculatorResponse {
-  if (input.status === 'success') {
-    return { status: input.status, result: input.result, error: null };
-  }
-
-  return { status: input.status, result: null, error: input.error };
-}
 
 async function readBoundedBody(response: Response): Promise<string> {
   if (!response.body) {
@@ -118,12 +95,12 @@ export async function calculate(expression: string): Promise<CalculatorResponse>
     .max(CALCULATOR_MAX_EXPRESSION_LENGTH)
     .safeParse(expression);
   if (!parsedExpression.success) {
-    return { status: 'invalid_input', result: null, error: 'Invalid expression.' };
+    return { status: 'invalid_input', error: 'Invalid expression.' };
   }
 
   const requestBody = JSON.stringify({ expression: parsedExpression.data });
   if (Buffer.byteLength(requestBody) > CALCULATOR_MAX_REQUEST_BODY_BYTES) {
-    return { status: 'invalid_input', result: null, error: 'Invalid expression.' };
+    return { status: 'invalid_input', error: 'Invalid expression.' };
   }
 
   try {
@@ -139,27 +116,26 @@ export async function calculate(expression: string): Promise<CalculatorResponse>
     try {
       rawBody = JSON.parse(body);
     } catch {
-      return { status: 'malformed_output', result: null, error: 'Malformed calculator response.' };
+      return { status: 'malformed_output', error: 'Malformed calculator response.' };
     }
     const parsed = calculatorResponseSchema.safeParse(rawBody);
     if (!parsed.success) {
       return response.ok
-        ? { status: 'malformed_output', result: null, error: 'Malformed calculator response.' }
-        : { status: 'upstream_failure', result: null, error: 'Calculator request failed.' };
+        ? { status: 'malformed_output', error: 'Malformed calculator response.' }
+        : { status: 'upstream_failure', error: 'Calculator request failed.' };
     }
-    const result = stableResponse(parsed.data);
+    const result = parsed.data;
     if (
-      result.result !== null &&
+      result.status === 'success' &&
       Buffer.byteLength(result.result, 'utf-8') > CALCULATOR_MAX_OUTPUT_LENGTH
     ) {
-      return { status: 'malformed_output', result: null, error: 'Calculator output too large.' };
+      return { status: 'malformed_output', error: 'Calculator output too large.' };
     }
     if (!response.ok) {
       if (result.status !== 'success') return result;
       return {
         status: 'upstream_failure',
-        result: null,
-        error: result.error ?? `Calculator request failed (${response.status}).`,
+        error: `Calculator request failed (${response.status}).`,
       };
     }
     return result;
@@ -173,7 +149,6 @@ export async function calculate(expression: string): Promise<CalculatorResponse>
             (error.name === 'TimeoutError' || error.name === 'AbortError')
           ? 'timeout'
           : 'upstream_failure',
-      result: null,
       error: outputTooLarge ? 'Calculator response too large.' : 'Calculator unavailable.',
     };
   }

@@ -91,6 +91,7 @@ export default function LearningScenarioSharedChat({
       uploadFileFn={uploadSharedLearningScenarioFile}
       isSpeechModelEnabled={isSpeechModelEnabled}
       generateSpeechFn={generateSharedLearningScenarioSpeech}
+      speechOnly={sharedSchoolChat.speechOnly}
     />
   );
 }

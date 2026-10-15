@@ -143,13 +143,11 @@ export function buildJsxgraphTool({
     }
 
     try {
-      const { text, modelId, usage, priceInCents } = await generateTextWithBilling(
-        modelSelection,
-        messages,
-        apiKeyId,
-        { abortSignal: options?.abortSignal },
-      );
-      options?.reportUsage?.(modelId, usage, priceInCents);
+      const { text, modelId, usage, priceInCents, provider, modelName } =
+        await generateTextWithBilling(modelSelection, messages, apiKeyId, {
+          abortSignal: options?.abortSignal,
+        });
+      options?.reportUsage?.({ modelId, usage, priceInCents, provider, modelName });
       const result = parsePlotSpec(text);
       if ('spec' in result) {
         return result.spec;
