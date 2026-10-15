@@ -1,12 +1,12 @@
 'use client';
 
-import React from 'react';
-import Spinner from '@/components/icons/spinner';
 import { useToast } from '@/components/common/toast';
-import { useTranslations } from 'next-intl';
-import { Button } from '@ui/components/button';
-import { DownloadSimpleIcon } from '@phosphor-icons/react';
+import Spinner from '@/components/icons/spinner';
 import { downloadFileFromBlob, extractFilenameFromResponse } from '@/utils/files/blob-download';
+import { DownloadSimpleIcon } from '@phosphor-icons/react';
+import { Button } from '@ui/components/button';
+import { useTranslations } from 'next-intl';
+import React from 'react';
 
 type DownloadConversationMessageButtonProps = {
   conversationId: string;
@@ -89,7 +89,7 @@ export default function DownloadConversationMessageButton({
       {isLoading ? (
         <Spinner className="p-1 size-5" />
       ) : (
-        <DownloadSimpleIcon className="size-5 text-primary" />
+        <DownloadSimpleIcon className="size-4 text-primary" />
       )}
     </Button>
   );
