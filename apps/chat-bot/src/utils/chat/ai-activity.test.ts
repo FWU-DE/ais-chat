@@ -1,4 +1,4 @@
-import type { CalculatorResponse } from '@/app/api/chat/calculator';
+import type { MathCalculateToolSuccessResponse } from '@/app/api/chat/tools/math-calculate-tool';
 import type { ToolRegistration } from '@/app/api/chat/tools/types';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { describe, expect, it, vi } from 'vitest';
@@ -20,7 +20,7 @@ const toolCall: ToolCall = {
 function createToolRegistry(overrides: Partial<ToolRegistration['activity']> = {}) {
   const registration = {
     definition: { name: 'math_calculate', description: '', parameters: {} },
-    handler: vi.fn(async (): Promise<CalculatorResponse> => ({
+    handler: vi.fn(async (): Promise<MathCalculateToolSuccessResponse> => ({
       status: 'success',
       result: '42',
     })),
@@ -117,7 +117,7 @@ describe('createAiActivityCollector', () => {
 
   it('starts, adds tool calls, applies results, and finishes', () => {
     const applyResult = vi.fn((step, result: unknown) => {
-      const typed = result as CalculatorResponse;
+      const typed = result as MathCalculateToolSuccessResponse;
       return { ...step, result: typed.result ?? undefined };
     });
     const collector = createAiActivityCollector(createToolRegistry({ applyResult }));
@@ -125,10 +125,10 @@ describe('createAiActivityCollector', () => {
     expect(collector.addToolCalls([toolCall])).toBe(true);
     expect(collector.getSteps()).toEqual([{ kind: 'tool', id: 'call-1', tool: 'math_calculate' }]);
     expect(collector.addToolResult('unknown', 'ignored')).toBe(false);
-    expect(collector.addToolResult('call-1', { status: 'success', result: '42' })).toBe(true);
+    expect(collector.addToolResult('call-1', { result: '42' })).toBe(true);
     expect(applyResult).toHaveBeenCalledWith(
       { kind: 'tool', id: 'call-1', tool: 'math_calculate' },
-      { status: 'success', result: '42' },
+      { result: '42' },
     );
     expect(collector.finish()).toBe(true);
     expect(collector.finish()).toBe(true);
@@ -183,7 +183,7 @@ describe('createAiActivityCollector', () => {
 
   it('skips activity result enrichment for string error results', () => {
     const applyResult = vi.fn((step, result: unknown) => {
-      const typed = result as CalculatorResponse;
+      const typed = result as MathCalculateToolSuccessResponse;
       return { ...step, result: typed.result ?? undefined };
     });
     const collector = createAiActivityCollector(createToolRegistry({ applyResult }));

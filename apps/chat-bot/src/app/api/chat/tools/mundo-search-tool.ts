@@ -6,7 +6,7 @@ import {
 } from '@/configuration-text-inputs/const';
 import { TOOL_NAMES } from '@/types/tool-names';
 import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { z } from 'zod';
 import {
   mundoSearch,
@@ -27,7 +27,7 @@ export type MundoSearchToolResponse = {
   retriedWithoutFilters: boolean;
 };
 
-export function buildMundoSearchTool(): ToolRegistration {
+export function buildMundoSearchTool(): ToolRegistration<MundoSearchToolResponse> {
   const definition: ToolDefinition = {
     name: TOOL_NAMES.mundoSearch,
     description: `Search the public MUNDO educational media library (mundo.schule) for teaching materials, e.g. videos or worksheets. Use this tool when the user asks for lesson materials or media suggestions for a specific topic. Returns up to ${MUNDO_SEARCH_RESULTS_LIMIT} matching MUNDO media entries. If a search with filters returns nothing, filters are automatically dropped and the search is retried. When the response has "retriedWithoutFilters": true, do not retry with different filters — instead retry with a broader, simpler or alternative query, without any filters.`,
@@ -57,9 +57,7 @@ export function buildMundoSearchTool(): ToolRegistration {
     },
   };
 
-  const handler = async (
-    args: Record<string, unknown>,
-  ): Promise<MundoSearchToolResponse | { error: string }> => {
+  const handler = async (args: Record<string, unknown>): ToolOutcome<MundoSearchToolResponse> => {
     const parsed = mundoSearchArgsSchema.safeParse(args);
 
     if (!parsed.success) {

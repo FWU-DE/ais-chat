@@ -13,7 +13,9 @@ export const expressionSchema = z.object({
   expression: z.string().trim().min(1).max(CALCULATOR_MAX_EXPRESSION_LENGTH),
 });
 
-export function buildMathCalculateTool(): ToolRegistration {
+export type MathCalculateToolSuccessResponse = Extract<CalculatorResponse, { status: 'success' }>;
+
+export function buildMathCalculateTool(): ToolRegistration<MathCalculateToolSuccessResponse> {
   const definition: ToolDefinition = {
     name: TOOL_NAMES.mathCalculate,
     description:
@@ -55,7 +57,7 @@ export function buildMathCalculateTool(): ToolRegistration {
         };
       },
       applyResult: (step, result) => {
-        const typed = result as CalculatorResponse;
+        const typed = result as MathCalculateToolSuccessResponse;
         const value = typed.result ?? undefined;
         return value === undefined ? step : { ...step, result: value };
       },

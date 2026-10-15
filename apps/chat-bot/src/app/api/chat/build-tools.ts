@@ -7,7 +7,6 @@ import { buildMathCalculateTool } from './tools/math-calculate-tool';
 import { buildMundoSearchTool } from './tools/mundo-search-tool';
 import { buildRetrieveEntireFileTool } from './tools/retrieve-entire-file-tool';
 import { buildRetrieveTextChunksTool } from './tools/retrieve-text-chunks-tool';
-import type { ToolRegistration, ToolRegistry } from './tools/types';
 import { buildWebScraperTool } from './tools/web-scraper-tool';
 import { buildWebSearchTool } from './tools/web-search-tool';
 
@@ -42,46 +41,46 @@ export function buildTools({
   modelSelection,
   apiKeyId,
 }: BuildToolsParams) {
-  const rawRegistry = {
-    [TOOL_NAMES.mathCalculate]: user.federalState.featureToggles.isCalculatorEnabled
-      ? buildMathCalculateTool()
-      : undefined,
-    [TOOL_NAMES.createPlot]: user.federalState.featureToggles.isJsxGraphEnabled
-      ? buildJsxgraphTool({ modelSelection, apiKeyId })
-      : undefined,
-    [TOOL_NAMES.webSearch]: allowWebTools
-      ? buildWebSearchTool({
-          user,
-          characterId,
-          learningScenarioId,
-          assistantId,
-          conversationId,
-          webSearchSettings,
-        })
-      : undefined,
-    [TOOL_NAMES.webScraper]: allowWebTools
-      ? buildWebScraperTool({
-          sourceUrls,
-          attachedLinks,
-        })
-      : undefined,
-    [TOOL_NAMES.mundoSearch]: allowMundoSearch ? buildMundoSearchTool() : undefined,
-    [TOOL_NAMES.retrieveEntireFile]: buildRetrieveEntireFileTool({
-      relatedFileEntities,
-    }),
-    [TOOL_NAMES.retrieveTextChunks]: buildRetrieveTextChunksTool({
-      user,
-      relatedFileEntities,
-      sourceUrls,
-      attachedLinks,
-    }),
-  };
+  const mathCalculateTool = user.federalState.featureToggles.isCalculatorEnabled
+    ? buildMathCalculateTool()
+    : undefined;
+  const jsxgraphTool = user.federalState.featureToggles.isJsxGraphEnabled
+    ? buildJsxgraphTool({ modelSelection, apiKeyId })
+    : undefined;
+  const webSearchTool = allowWebTools
+    ? buildWebSearchTool({
+        user,
+        characterId,
+        learningScenarioId,
+        assistantId,
+        conversationId,
+        webSearchSettings,
+      })
+    : undefined;
+  const webScraperTool = allowWebTools
+    ? buildWebScraperTool({ sourceUrls, attachedLinks })
+    : undefined;
+  const mundoSearchTool = allowMundoSearch ? buildMundoSearchTool() : undefined;
+  const retrieveEntireFileTool = buildRetrieveEntireFileTool({ relatedFileEntities });
+  const retrieveTextChunksTool = buildRetrieveTextChunksTool({
+    user,
+    relatedFileEntities,
+    sourceUrls,
+    attachedLinks,
+  });
 
-  const toolRegistry: ToolRegistry = Object.fromEntries(
-    Object.entries(rawRegistry).filter(
-      (entry): entry is [string, ToolRegistration] => entry[1] !== null && entry[1] !== undefined,
-    ),
-  );
+  // Each tool is built into its own named const and merged via conditional spread (instead of one
+  // object with possibly-undefined values filtered afterwards), so TypeScript can drop disabled
+  // tools and still infer each key's specific ToolRegistration<T> without a type assertion.
+  const toolRegistry = {
+    ...(mathCalculateTool && { [TOOL_NAMES.mathCalculate]: mathCalculateTool }),
+    ...(jsxgraphTool && { [TOOL_NAMES.createPlot]: jsxgraphTool }),
+    ...(webSearchTool && { [TOOL_NAMES.webSearch]: webSearchTool }),
+    ...(webScraperTool && { [TOOL_NAMES.webScraper]: webScraperTool }),
+    ...(mundoSearchTool && { [TOOL_NAMES.mundoSearch]: mundoSearchTool }),
+    ...(retrieveEntireFileTool && { [TOOL_NAMES.retrieveEntireFile]: retrieveEntireFileTool }),
+    ...(retrieveTextChunksTool && { [TOOL_NAMES.retrieveTextChunks]: retrieveTextChunksTool }),
+  };
 
   return { toolRegistry };
 }

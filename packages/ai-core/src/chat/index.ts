@@ -21,6 +21,7 @@ export type {
   ToolHandler,
   ToolRegistry,
   ToolRegistryEntry,
+  ToolResult,
   StreamEvent,
   AgenticStreamFn,
   ModelSelection,

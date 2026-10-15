@@ -1,6 +1,6 @@
 import { TOOL_NAMES } from '@/types/tool-names';
 import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { z } from 'zod';
 import { resolveWebSearchConfig, searchWeb } from '../websearch';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
@@ -36,7 +36,7 @@ export function buildWebSearchTool({
   assistantId,
   conversationId,
   webSearchSettings,
-}: BuildWebSearchToolParams): ToolRegistration | null {
+}: BuildWebSearchToolParams): ToolRegistration<WebSearchToolResponse> | null {
   const config = resolveWebSearchConfig({
     user,
     assistantId,
@@ -74,9 +74,7 @@ export function buildWebSearchTool({
     },
   };
 
-  const handler = async (
-    args: Record<string, unknown>,
-  ): Promise<WebSearchToolResponse | { error: string }> => {
+  const handler = async (args: Record<string, unknown>): ToolOutcome<WebSearchToolResponse> => {
     const parsed = webSearchArgsSchema.safeParse(args);
 
     if (!parsed.success) {
