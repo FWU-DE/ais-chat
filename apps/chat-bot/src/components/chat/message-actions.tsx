@@ -24,6 +24,7 @@ export function MessageActions({
   activitySteps,
   isLastMessage,
   speechOnly,
+  isInitialMessage,
   isTextVisible,
   onToggleText,
 }: {
@@ -40,6 +41,7 @@ export function MessageActions({
   activitySteps: AiActivityStep[];
   isLastMessage: boolean;
   speechOnly: boolean;
+  isInitialMessage: boolean;
   isTextVisible: boolean;
   onToggleText: () => void;
 }) {
@@ -63,7 +65,7 @@ export function MessageActions({
         aria-label={tCommon('message-copy')}
       />
       {conversationId !== undefined &&
-        message.id !== 'initial-message' &&
+        !isInitialMessage &&
         (!isLastMessage || status === 'ready') && (
           <DownloadConversationMessageButton
             conversationId={conversationId}
@@ -86,29 +88,33 @@ export function MessageActions({
         </Button>
       )}
       {speechOnly ? (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          type="button"
-          onClick={onToggleText}
-          title={isTextVisible ? tCommon('hide-message-text') : tCommon('show-message-text')}
-          aria-label={isTextVisible ? tCommon('hide-message-text') : tCommon('show-message-text')}
-          aria-pressed={isTextVisible}
-          className="text-primary"
-          data-testid="toggle-message-text-button"
-        >
-          {isTextVisible ? (
-            <TextTSlashIcon className="size-4 text-primary" />
-          ) : (
-            <TextTIcon className="size-4 text-primary" />
-          )}
-        </Button>
+        isInitialMessage ? null : (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            type="button"
+            onClick={onToggleText}
+            title={isTextVisible ? tCommon('hide-message-text') : tCommon('show-message-text')}
+            aria-label={isTextVisible ? tCommon('hide-message-text') : tCommon('show-message-text')}
+            aria-pressed={isTextVisible}
+            className="text-primary"
+            data-testid="toggle-message-text-button"
+          >
+            {isTextVisible ? (
+              <TextTSlashIcon className="size-4 text-primary" />
+            ) : (
+              <TextTIcon className="size-4 text-primary" />
+            )}
+          </Button>
+        )
       ) : (
-        <SpeechButton
-          text={plainText}
-          generateSpeechFn={generateSpeechFn}
-          isSpeechModelEnabled={isSpeechModelEnabled}
-        />
+        !isInitialMessage && (
+          <SpeechButton
+            text={plainText}
+            generateSpeechFn={generateSpeechFn}
+            isSpeechModelEnabled={isSpeechModelEnabled}
+          />
+        )
       )}
       {showActivityDialog && <AiActivityDialog steps={activitySteps} />}
     </div>

@@ -156,6 +156,7 @@ export function ChatBox({
   );
 
   const isAssistantSpeechOnly = message.role === 'assistant' && speechOnly && isSpeechModelEnabled;
+  const isInitialMessage = message.id === 'initial-message';
   const actionsVisible = message.role === 'assistant' && (!isLastNonUser || status !== 'streaming');
   const isSpeechOnlyStreaming = isAssistantSpeechOnly && isLastNonUser && status === 'streaming';
 
@@ -174,13 +175,14 @@ export function ChatBox({
       activitySteps={activitySteps}
       isLastMessage={isLastNonUser}
       speechOnly={isAssistantSpeechOnly}
+      isInitialMessage={isInitialMessage}
       isTextVisible={isTextVisible}
       onToggleText={() => setIsTextVisible((visible) => !visible)}
     />
   ) : null;
 
   const maybeAudioButton =
-    isAssistantSpeechOnly && (actionsVisible || isSpeechOnlyStreaming) ? (
+    isAssistantSpeechOnly && !isInitialMessage && (actionsVisible || isSpeechOnlyStreaming) ? (
       <SpeechAudioButton
         text={plainText}
         generateSpeechFn={generateSpeechFn}
@@ -188,7 +190,7 @@ export function ChatBox({
       />
     ) : null;
 
-  const showMessageText = !isAssistantSpeechOnly || isTextVisible;
+  const showMessageText = !isAssistantSpeechOnly || isTextVisible || isInitialMessage;
 
   const messageContent = (
     <PlotStreamingContext.Provider value={status === 'streaming' && isLastNonUser}>
