@@ -30,14 +30,14 @@ type BuildWebSearchToolParams = Pick<
   | 'webSearchSettings'
 >;
 
-export async function buildWebSearchTool({
+export function buildWebSearchTool({
   user,
   characterId,
   learningScenarioId,
   assistantId,
   conversationId,
   webSearchSettings,
-}: BuildWebSearchToolParams): Promise<ToolRegistration | null> {
+}: BuildWebSearchToolParams): ToolRegistration | null {
   const config = resolveWebSearchConfig({
     user,
     assistantId,

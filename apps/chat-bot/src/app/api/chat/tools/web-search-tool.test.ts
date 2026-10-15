@@ -54,7 +54,7 @@ describe('buildWebSearchTool', () => {
     mocks.resolveWebSearchConfigMock.mockReturnValue(disabledConfig);
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const result = await buildWebSearchTool({
+    const result = buildWebSearchTool({
       user,
       conversationId: 'conversation-1',
     });
@@ -74,7 +74,7 @@ describe('buildWebSearchTool', () => {
 
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const tool = await buildWebSearchTool({
+    const tool = buildWebSearchTool({
       user,
       conversationId: 'conversation-1',
     });
@@ -119,7 +119,7 @@ describe('buildWebSearchTool', () => {
 
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const tool = await buildWebSearchTool({
+    const tool = buildWebSearchTool({
       user,
       characterId: 'character-uuid',
       conversationId: 'conversation-1',
@@ -143,7 +143,7 @@ describe('buildWebSearchTool', () => {
 
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const tool = await buildWebSearchTool({
+    const tool = buildWebSearchTool({
       user,
       learningScenarioId: 'learning-scenario-uuid',
       conversationId: 'conversation-1',
@@ -167,7 +167,7 @@ describe('buildWebSearchTool', () => {
 
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const tool = await buildWebSearchTool({
+    const tool = buildWebSearchTool({
       user,
       assistantId: 'assistant-uuid',
       conversationId: 'conversation-1',
@@ -187,7 +187,7 @@ describe('buildWebSearchTool', () => {
 
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const tool = await buildWebSearchTool({
+    const tool = buildWebSearchTool({
       user,
       conversationId: 'conversation-1',
     });

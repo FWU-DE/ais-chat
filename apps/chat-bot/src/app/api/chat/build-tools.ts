@@ -27,7 +27,7 @@ type BuildToolsParams = {
   apiKeyId: string;
 };
 
-export async function buildTools({
+export function buildTools({
   user,
   characterId,
   learningScenarioId,
@@ -50,7 +50,7 @@ export async function buildTools({
       ? buildJsxgraphTool({ modelSelection, apiKeyId })
       : undefined,
     [TOOL_NAMES.webSearch]: allowWebTools
-      ? await buildWebSearchTool({
+      ? buildWebSearchTool({
           user,
           characterId,
           learningScenarioId,

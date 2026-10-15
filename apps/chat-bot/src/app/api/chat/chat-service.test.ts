@@ -343,7 +343,7 @@ beforeEach(() => {
   mocks.getChatTitleMock.mockResolvedValue('Generated title');
   mocks.logErrorMock.mockImplementation(() => undefined);
   mocks.isWebSearchEnabledForEntityMock.mockReturnValue(true);
-  mocks.buildToolsMock.mockResolvedValue(buildToolsOutput as never);
+  mocks.buildToolsMock.mockReturnValue(buildToolsOutput as never);
   mocks.checkTextInputSafetyMock.mockResolvedValue(undefined);
   mocks.runAgentLoopMock.mockImplementation(
     ({ onTextChunk, onComplete, toolRegistry }: Parameters<typeof runAgentLoop>[0]) => {

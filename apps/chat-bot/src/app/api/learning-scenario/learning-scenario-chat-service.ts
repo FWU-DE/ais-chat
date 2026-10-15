@@ -175,7 +175,7 @@ export async function sendLearningScenarioMessage({
   const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
   const assistantMessageId = crypto.randomUUID();
 
-  const tools = await buildTools({
+  const tools = buildTools({
     user: teacherUserAndContext,
     learningScenarioId: learningScenario.id,
     webSearchSettings: learningScenario,
