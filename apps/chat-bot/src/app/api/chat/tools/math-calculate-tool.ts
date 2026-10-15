@@ -1,19 +1,46 @@
 import { TOOL_NAMES } from '@/types/tool-names';
-import { parseJsonRecord, readString } from '@/utils/chat/ai-activity';
+import { parseJsonRecord } from '@/utils/chat/tool-result-parsing';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { z } from 'zod';
+import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
 import {
   calculate,
   CALCULATOR_MAX_EXPRESSION_LENGTH,
   type CalculatorResponse,
 } from '../calculator';
-import type { ToolDefinition, ToolRegistration } from './types';
+import type { ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 export const expressionSchema = z.object({
   expression: z.string().trim().min(1).max(CALCULATOR_MAX_EXPRESSION_LENGTH),
 });
 
 export type MathCalculateToolSuccessResponse = Extract<CalculatorResponse, { status: 'success' }>;
+
+// Drop the stale `error: null` alongside `status: 'success'`.
+const legacyNullErrorSchema = z.object({ error: z.null() }).loose();
+
+export const mathCalculateActivity: ToolActivity<MathCalculateToolSuccessResponse> = {
+  createStep: (toolCall: ToolCall) => {
+    const parsed = expressionSchema.safeParse(parseJsonRecord(toolCall.arguments));
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.mathCalculate,
+      detail: parsed.success ? parsed.data.expression : undefined,
+    };
+  },
+  applyResult: (step, result) => ({ ...step, result: result.result }),
+  parsePersistedResult: (raw) => {
+    const legacySuccess = legacyNullErrorSchema.safeParse(raw);
+    if (legacySuccess.success) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { error, ...rest } = legacySuccess.data;
+      return rest as MathCalculateToolSuccessResponse;
+    }
+
+    return parseGenericPersistedToolResult<MathCalculateToolSuccessResponse>(raw);
+  },
+};
 
 export function buildMathCalculateTool(): ToolRegistration<MathCalculateToolSuccessResponse> {
   const definition: ToolDefinition = {
@@ -47,20 +74,6 @@ export function buildMathCalculateTool(): ToolRegistration<MathCalculateToolSucc
   return {
     definition,
     handler,
-    activity: {
-      createStep: (toolCall: ToolCall) => {
-        return {
-          kind: 'tool',
-          id: toolCall.id,
-          tool: TOOL_NAMES.mathCalculate,
-          detail: readString(parseJsonRecord(toolCall.arguments), 'expression'),
-        };
-      },
-      applyResult: (step, result) => {
-        const typed = result as MathCalculateToolSuccessResponse;
-        const value = typed.result ?? undefined;
-        return value === undefined ? step : { ...step, result: value };
-      },
-    },
+    activity: mathCalculateActivity,
   };
 }

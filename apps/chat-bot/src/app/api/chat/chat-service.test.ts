@@ -84,6 +84,7 @@ vi.mock('@ais-chat/ai-core', () => ({
 
 vi.mock('./build-tools', () => ({
   buildTools: mocks.buildToolsMock,
+  toolActivityRegistry: {},
 }));
 
 vi.mock('./websearch', () => ({
