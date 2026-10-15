@@ -78,21 +78,31 @@ function createBifrostModel(settingProvider: 'azure' | 'openai' | 'ionos' | 'goo
   } satisfies AiModel;
 }
 
+// Mirrors the real OpenAI SDK's `APIPromise`: `create()` returns a value with a synchronous
+// `withResponse()` method that resolves to the parsed body plus the raw HTTP response.
+function mockResponseWithHeaders(data: unknown, headers: Record<string, string> = {}) {
+  return {
+    withResponse: async () => ({ data, response: { headers: new Headers(headers) } }),
+  };
+}
+
 describe('Bifrost chat provider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('uses the Responses API with a bare logical model name', async () => {
-    responsesCreateMock.mockResolvedValue({
-      output: [
-        {
-          type: 'message',
-          content: [{ type: 'output_text', text: 'Hello from Bifrost' }],
-        },
-      ],
-      usage: { input_tokens: 10, output_tokens: 20, total_tokens: 30 },
-    });
+    responsesCreateMock.mockReturnValue(
+      mockResponseWithHeaders({
+        output: [
+          {
+            type: 'message',
+            content: [{ type: 'output_text', text: 'Hello from Bifrost' }],
+          },
+        ],
+        usage: { input_tokens: 10, output_tokens: 20, total_tokens: 30 },
+      }),
+    );
 
     const model = createBifrostModel('azure');
     const generateText = constructBifrostTextGenerationFn(model);
@@ -126,10 +136,12 @@ describe('Bifrost chat provider', () => {
   });
 
   it('uses the same logical name regardless of provider settings', async () => {
-    responsesCreateMock.mockResolvedValue({
-      output: [{ type: 'message', content: [{ type: 'output_text', text: 'Vertex' }] }],
-      usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
-    });
+    responsesCreateMock.mockReturnValue(
+      mockResponseWithHeaders({
+        output: [{ type: 'message', content: [{ type: 'output_text', text: 'Vertex' }] }],
+        usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
+      }),
+    );
 
     const model = createBifrostModel('google');
     const generateText = constructBifrostTextGenerationFn(model);
@@ -143,10 +155,12 @@ describe('Bifrost chat provider', () => {
   });
 
   it('strips the anthropic prefix from logical model names', async () => {
-    responsesCreateMock.mockResolvedValue({
-      output: [{ type: 'message', content: [{ type: 'output_text', text: 'Claude' }] }],
-      usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
-    });
+    responsesCreateMock.mockReturnValue(
+      mockResponseWithHeaders({
+        output: [{ type: 'message', content: [{ type: 'output_text', text: 'Claude' }] }],
+        usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
+      }),
+    );
 
     const model = {
       ...createBifrostModel('google'),
@@ -165,16 +179,18 @@ describe('Bifrost chat provider', () => {
   it.each(['response.completed', 'response.incomplete', 'response.failed'] as const)(
     'streams text and captures usage from a %s event',
     async (eventType) => {
-      responsesCreateMock.mockResolvedValue({
-        [Symbol.asyncIterator]: async function* () {
-          yield { type: 'response.output_text.delta', delta: 'Hello' };
-          yield { type: 'response.output_text.delta', delta: ' world' };
-          yield {
-            type: eventType,
-            response: { usage: { input_tokens: 4, output_tokens: 5, total_tokens: 9 } },
-          };
-        },
-      });
+      responsesCreateMock.mockReturnValue(
+        mockResponseWithHeaders({
+          [Symbol.asyncIterator]: async function* () {
+            yield { type: 'response.output_text.delta', delta: 'Hello' };
+            yield { type: 'response.output_text.delta', delta: ' world' };
+            yield {
+              type: eventType,
+              response: { usage: { input_tokens: 4, output_tokens: 5, total_tokens: 9 } },
+            };
+          },
+        }),
+      );
 
       const model = createBifrostModel('ionos');
       const streamText = constructBifrostTextStreamFn(model);
@@ -201,15 +217,66 @@ describe('Bifrost chat provider', () => {
     },
   );
 
+  it('resolves provider/model from response headers, ignoring body extra_fields entirely', async () => {
+    // Regression test: Bifrost only reliably reports the routed provider/model in response
+    // headers for streaming requests; the body's `extra_fields` can carry a stale, empty
+    // snapshot from an earlier chunk (see the comment on `BifrostExtraFields`), so it's not
+    // read at all for this purpose.
+    responsesCreateMock.mockReturnValue(
+      mockResponseWithHeaders(
+        {
+          [Symbol.asyncIterator]: async function* () {
+            yield { type: 'response.output_text.delta', delta: 'Hi' };
+            yield {
+              type: 'response.completed',
+              response: {
+                usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
+                // Stale/empty placeholder, as actually observed from Bifrost on streaming calls.
+                extra_fields: { request_type: '', routing_info: {}, chunk_index: 0 },
+              },
+            };
+          },
+        },
+        {
+          'x-bifrost-routing-info-provider': 'azure',
+          'x-bifrost-routing-info-requested-model': 'gpt-5',
+          'x-bifrost-routing-info-model': 'gpt-5',
+        },
+      ),
+    );
+
+    const model = createBifrostModel('azure');
+    const streamText = constructBifrostTextStreamFn(model);
+    const onComplete = vi.fn();
+
+    const chunks: string[] = [];
+    for await (const chunk of streamText(
+      { messages: [{ role: 'user', content: 'Hi' }], model: model.name },
+      onComplete,
+    )) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks).toEqual(['Hi']);
+    expect(onComplete).toHaveBeenCalledWith(
+      { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
+      model.id,
+    );
+  });
+
   it('uses the actual deployment when identifying a fallback response', async () => {
-    responsesCreateMock.mockResolvedValue({
-      output: [{ type: 'message', content: [{ type: 'output_text', text: 'Fallback' }] }],
-      usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
-      extra_fields: {
-        model_requested: 'azure/primary',
-        model_deployment: 'openai/fallback',
-      },
-    });
+    responsesCreateMock.mockReturnValue(
+      mockResponseWithHeaders(
+        {
+          output: [{ type: 'message', content: [{ type: 'output_text', text: 'Fallback' }] }],
+          usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
+        },
+        {
+          'x-bifrost-routing-info-requested-model': 'azure/primary',
+          'x-bifrost-routing-info-model': 'openai/fallback',
+        },
+      ),
+    );
 
     const primary = createBifrostModel('azure');
     const fallback = {

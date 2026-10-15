@@ -360,6 +360,8 @@ beforeEach(() => {
             modelId: mainModel.id,
             usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
             priceInCents: 4,
+            provider: mainModel.provider,
+            modelName: mainModel.name,
           },
         ],
         agentLoopMessages: [],
@@ -474,6 +476,8 @@ describe('sendChatMessage', () => {
               modelId: mainModel.id,
               usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
               priceInCents: 4,
+              provider: mainModel.provider,
+              modelName: mainModel.name,
             },
           ],
         });

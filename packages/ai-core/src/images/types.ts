@@ -12,6 +12,10 @@ export type ImageResponse = {
   data: Array<string>;
   output_format?: 'png' | 'webp' | 'jpeg';
   usage?: Usage;
+  /** The real upstream provider that served the request, when the provider reports it. */
+  provider?: string;
+  /** The real upstream model name that served the request, when the provider reports it. */
+  modelName?: string;
 };
 
 /** Reference image passed to an image editing endpoint */

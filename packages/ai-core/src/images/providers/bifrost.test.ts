@@ -52,28 +52,44 @@ vi.mock('../../env', () => ({
   },
 }));
 
+// Mirrors the real OpenAI SDK's `APIPromise`: `generate()`/`edit()` return a value with a
+// synchronous `withResponse()` method that resolves to the parsed body plus the raw HTTP response.
+function mockResponseWithHeaders(data: unknown, headers: Record<string, string> = {}) {
+  return {
+    withResponse: async () => ({ data, response: { headers: new Headers(headers) } }),
+  };
+}
+
 describe('constructBifrostImageGenerationFn', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('generates images through the Bifrost responses-compatible surface', async () => {
-    generateMock.mockResolvedValue({
-      data: [{ b64_json: 'base64-bifrost-image' }],
-      output_format: 'png',
-      usage: {
-        input_tokens: 13,
-        input_tokens_details: {
-          text_tokens: 4,
-          image_tokens: 9,
+    generateMock.mockReturnValue(
+      mockResponseWithHeaders(
+        {
+          data: [{ b64_json: 'base64-bifrost-image' }],
+          output_format: 'png',
+          usage: {
+            input_tokens: 13,
+            input_tokens_details: {
+              text_tokens: 4,
+              image_tokens: 9,
+            },
+            output_tokens: 5,
+            output_tokens_details: {
+              text_tokens: 2,
+              image_tokens: 3,
+            },
+          },
         },
-        output_tokens: 5,
-        output_tokens_details: {
-          text_tokens: 2,
-          image_tokens: 3,
+        {
+          'x-bifrost-routing-info-provider': 'azure',
+          'x-bifrost-routing-info-model': 'image-model',
         },
-      },
-    });
+      ),
+    );
 
     const model = {
       id: 'model-bifrost-image',
@@ -106,25 +122,29 @@ describe('constructBifrostImageGenerationFn', () => {
         output_text_tokens: 2,
         output_image_tokens: 3,
       },
+      provider: 'azure',
+      modelName: 'image-model',
     });
   });
 
   it('should default input_image_tokens to 0 when the response omits image_tokens for a text-only prompt', async () => {
-    generateMock.mockResolvedValue({
-      data: [{ b64_json: 'base64-bifrost-image' }],
-      output_format: 'png',
-      usage: {
-        input_tokens: 26,
-        input_tokens_details: {
-          text_tokens: 26,
+    generateMock.mockReturnValue(
+      mockResponseWithHeaders({
+        data: [{ b64_json: 'base64-bifrost-image' }],
+        output_format: 'png',
+        usage: {
+          input_tokens: 26,
+          input_tokens_details: {
+            text_tokens: 26,
+          },
+          output_tokens: 1504,
+          output_tokens_details: {
+            image_tokens: 1056,
+            text_tokens: 448,
+          },
         },
-        output_tokens: 1504,
-        output_tokens_details: {
-          image_tokens: 1056,
-          text_tokens: 448,
-        },
-      },
-    });
+      }),
+    );
 
     const model = {
       id: 'model-bifrost-image',
@@ -145,16 +165,18 @@ describe('constructBifrostImageGenerationFn', () => {
   });
 
   it('uses provided size from options', async () => {
-    generateMock.mockResolvedValue({
-      data: [{ b64_json: 'base64-bifrost-image' }],
-      output_format: 'png',
-      usage: {
-        input_tokens: 4,
-        input_tokens_details: { text_tokens: 4, image_tokens: 0 },
-        output_tokens: 5,
-        output_tokens_details: { text_tokens: 2, image_tokens: 3 },
-      },
-    });
+    generateMock.mockReturnValue(
+      mockResponseWithHeaders({
+        data: [{ b64_json: 'base64-bifrost-image' }],
+        output_format: 'png',
+        usage: {
+          input_tokens: 4,
+          input_tokens_details: { text_tokens: 4, image_tokens: 0 },
+          output_tokens: 5,
+          output_tokens_details: { text_tokens: 2, image_tokens: 3 },
+        },
+      }),
+    );
 
     const model = {
       id: 'model-bifrost-image',
@@ -170,19 +192,21 @@ describe('constructBifrostImageGenerationFn', () => {
   });
 
   it('preserves logical image model names containing a slash', async () => {
-    generateMock.mockResolvedValue({
-      data: [{ b64_json: 'base64-bifrost-image' }],
-      output_format: 'png',
-      usage: {
-        input_tokens: 4,
-        input_tokens_details: { text_tokens: 4, image_tokens: 0 },
-        output_tokens: 5,
-        output_tokens_details: {
-          text_tokens: 2,
-          image_tokens: 3,
+    generateMock.mockReturnValue(
+      mockResponseWithHeaders({
+        data: [{ b64_json: 'base64-bifrost-image' }],
+        output_format: 'png',
+        usage: {
+          input_tokens: 4,
+          input_tokens_details: { text_tokens: 4, image_tokens: 0 },
+          output_tokens: 5,
+          output_tokens_details: {
+            text_tokens: 2,
+            image_tokens: 3,
+          },
         },
-      },
-    });
+      }),
+    );
 
     const model = {
       id: 'model-bifrost-image',
@@ -200,19 +224,21 @@ describe('constructBifrostImageGenerationFn', () => {
   });
 
   it('throws when Bifrost returns no image data after mapping', async () => {
-    generateMock.mockResolvedValue({
-      data: [{ b64_json: undefined }],
-      output_format: 'png',
-      usage: {
-        input_tokens: 4,
-        input_tokens_details: { text_tokens: 4, image_tokens: 0 },
-        output_tokens: 5,
-        output_tokens_details: {
-          text_tokens: 2,
-          image_tokens: 3,
+    generateMock.mockReturnValue(
+      mockResponseWithHeaders({
+        data: [{ b64_json: undefined }],
+        output_format: 'png',
+        usage: {
+          input_tokens: 4,
+          input_tokens_details: { text_tokens: 4, image_tokens: 0 },
+          output_tokens: 5,
+          output_tokens_details: {
+            text_tokens: 2,
+            image_tokens: 3,
+          },
         },
-      },
-    });
+      }),
+    );
 
     const model = {
       id: 'model-bifrost-image',
@@ -251,7 +277,7 @@ describe('constructBifrostImageGenerationFn', () => {
     };
 
     it('calls the images.edit endpoint instead of images.generate when input images are supplied', async () => {
-      editMock.mockResolvedValue(successfulEditResponse);
+      editMock.mockReturnValue(mockResponseWithHeaders(successfulEditResponse));
 
       const generateImage = constructBifrostImageGenerationFn(model);
       const result = await generateImage({
@@ -288,7 +314,7 @@ describe('constructBifrostImageGenerationFn', () => {
     });
 
     it('converts every input image through toFile with matching mime type and filename', async () => {
-      editMock.mockResolvedValue(successfulEditResponse);
+      editMock.mockReturnValue(mockResponseWithHeaders(successfulEditResponse));
 
       const generateImage = constructBifrostImageGenerationFn(model);
       await generateImage({
@@ -316,16 +342,18 @@ describe('constructBifrostImageGenerationFn', () => {
     });
 
     it('falls back to images.generate when the inputImages array is empty', async () => {
-      generateMock.mockResolvedValue({
-        data: [{ b64_json: 'base64-generated' }],
-        output_format: 'png',
-        usage: {
-          input_tokens: 1,
-          input_tokens_details: { text_tokens: 1, image_tokens: 0 },
-          output_tokens: 1,
-          output_tokens_details: { text_tokens: 0, image_tokens: 1 },
-        },
-      });
+      generateMock.mockReturnValue(
+        mockResponseWithHeaders({
+          data: [{ b64_json: 'base64-generated' }],
+          output_format: 'png',
+          usage: {
+            input_tokens: 1,
+            input_tokens_details: { text_tokens: 1, image_tokens: 0 },
+            output_tokens: 1,
+            output_tokens_details: { text_tokens: 0, image_tokens: 1 },
+          },
+        }),
+      );
 
       const generateImage = constructBifrostImageGenerationFn(model);
       await generateImage({

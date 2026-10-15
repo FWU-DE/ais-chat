@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runAgentLoop } from './agent-loop';
-import type { Message, StreamEvent, TokenUsage } from './types';
+import type { Message, ModelUsage, StreamEvent, TokenUsage } from './types';
 
 // Mock the generateAgenticStreamWithBilling import
 const mockGenerateAgenticStreamWithBilling = vi.fn();
@@ -1129,10 +1129,16 @@ describe('agent-loop', () => {
           handler: async (
             _args: Record<string, unknown>,
             options?: {
-              reportUsage?: (modelId: string, usage: TokenUsage, priceInCents: number) => void;
+              reportUsage?: (usage: ModelUsage) => void;
             },
           ) => {
-            options?.reportUsage?.('sub-model', toolUsage, 11);
+            options?.reportUsage?.({
+              modelId: 'sub-model',
+              usage: toolUsage,
+              priceInCents: 11,
+              provider: 'bifrost-anthropic',
+              modelName: 'claude-x',
+            });
             return 'tool result';
           },
         },
@@ -1158,7 +1164,13 @@ describe('agent-loop', () => {
           usage: toolUsage,
           priceInCents: 11,
           modelUsages: expect.arrayContaining([
-            { modelId: 'sub-model', usage: toolUsage, priceInCents: 11 },
+            {
+              modelId: 'sub-model',
+              usage: toolUsage,
+              priceInCents: 11,
+              provider: 'bifrost-anthropic',
+              modelName: 'claude-x',
+            },
           ]),
         }),
       );

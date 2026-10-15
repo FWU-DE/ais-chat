@@ -78,6 +78,10 @@ export async function generateImageWithBilling(
 
     return {
       ...imageResponse,
+      // Non-Bifrost providers (and Bifrost responses that, for some reason, omit the routed
+      // identity) fall back to the configured model's own provider/name.
+      provider: imageResponse.provider ?? model.provider,
+      modelName: imageResponse.modelName ?? model.name,
       priceInCents,
     };
   } catch (error) {

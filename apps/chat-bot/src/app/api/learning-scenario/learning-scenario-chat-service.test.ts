@@ -252,6 +252,8 @@ beforeEach(() => {
             modelId: model.id,
             usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
             priceInCents: 4,
+            provider: model.provider,
+            modelName: model.name,
           },
         ],
         agentLoopMessages: [],
