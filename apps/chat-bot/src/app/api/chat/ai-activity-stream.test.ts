@@ -18,7 +18,6 @@ function createToolRegistry() {
     handler: vi.fn(async (): Promise<CalculatorResponse> => ({
       status: 'success',
       result: '42',
-      error: null,
     })),
     activity: {
       createStep: (call: ToolCall) => ({
@@ -72,7 +71,7 @@ describe('createAiActivityStream', () => {
     activity.onToolCalls([toolCall]);
     activity.onToolResult({
       toolCallId: toolCall.id,
-      result: { status: 'success', result: '42', error: null },
+      result: { status: 'success', result: '42' },
     });
     activity.onReasoningSummary('Done.');
     activity.finish();

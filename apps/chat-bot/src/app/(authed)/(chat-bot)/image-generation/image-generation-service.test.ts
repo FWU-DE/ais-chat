@@ -118,6 +118,8 @@ function prepareExistingConversation() {
   mocks.generateImageWithBilling.mockResolvedValue({
     data: [Buffer.from('image').toString('base64')],
     priceInCents: 1,
+    provider: 'azure',
+    modelName: 'real-image-model',
   });
   mocks.getSafetyModel.mockResolvedValue(undefined);
   mocks.dbInsertChatContent
@@ -156,6 +158,11 @@ describe('handleImageGeneration', () => {
       'api-key-id',
       { inputImages: [], size: '1024x1024' },
       'safety-model',
+    );
+    // The event should carry the real upstream provider/model reported by generateImageWithBilling,
+    // not the configured (always 'bifrost') model's own provider/name.
+    expect(mocks.constructNewMessageEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'azure', modelName: 'real-image-model' }),
     );
     expect(mocks.dbInsertChatContent).toHaveBeenNthCalledWith(
       1,

@@ -137,6 +137,7 @@ function createLearningScenarioFormValuesSchema(t: LearningScenarioTranslator) {
     webSearchIncludedDomains: z.array(z.string()),
     isSpeechEnabled: z.boolean(),
     voice: z.string(),
+    speechOnly: z.boolean(),
   });
 }
 
@@ -209,6 +210,7 @@ export function LearningScenarioEdit({
     webSearchIncludedDomains: learningScenario.webSearchIncludedDomains,
     isSpeechEnabled: learningScenario.isSpeechEnabled,
     voice: resolveInitialVoice(learningScenario.voice, speechVoices),
+    speechOnly: learningScenario.speechOnly,
   };
 
   const {
@@ -597,6 +599,9 @@ export function LearningScenarioEdit({
                   void flushAutoSave();
                 }}
                 onVoiceChange={() => {
+                  void flushAutoSave();
+                }}
+                onSpeechOnlyChange={() => {
                   void flushAutoSave();
                 }}
               />
