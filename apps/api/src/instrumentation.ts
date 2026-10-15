@@ -17,8 +17,21 @@ Sentry.init({
       error: { levels: ['fatal', 'error'] },
     }),
   ],
-  tracesSampler: ({ inheritOrSampleWith, attributes }) => {
-    const pathname = attributes?.['http.target'] ?? attributes?.['http.route'] ?? '';
+  initialScope: {
+    tags: {
+      'service.name': SERVICE_NAME,
+      'service.version': env.appVersion,
+    },
+  },
+  tracesSampler: ({ inheritOrSampleWith, normalizedRequest, attributes }) => {
+    const requestUrl = normalizedRequest?.url;
+    const url =
+      typeof requestUrl === 'string'
+        ? requestUrl
+        : typeof attributes?.['url.path'] === 'string'
+          ? attributes['url.path']
+          : '';
+    const pathname = url.startsWith('http') ? new URL(url).pathname : url.split('?')[0];
 
     const isExcludedUrl = pathname === '/health';
     if (isExcludedUrl) {

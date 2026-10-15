@@ -31,5 +31,5 @@ export function initMetrics({
 
   metrics.setGlobalMeterProvider(meterProvider);
 
-  return async () => meterProvider.shutdown();
+  return () => meterProvider.shutdown();
 }

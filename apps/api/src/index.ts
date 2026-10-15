@@ -2,11 +2,11 @@
 import { flushSentry, shutdownMetrics } from '@/instrumentation';
 import cors from '@fastify/cors';
 
+import { db, migrateWithLock, shutdownDatabase } from '@ais-chat/api-database';
 import * as Sentry from '@sentry/node';
+import path from 'node:path';
 import buildApp from './app';
 import { env } from './env';
-import path from 'node:path';
-import { db, migrateWithLock, shutdownDatabase } from '@ais-chat/api-database';
 import { logger } from './logger';
 
 async function runDatabaseMigration() {

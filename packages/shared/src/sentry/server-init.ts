@@ -5,7 +5,7 @@ import { registerCleanupHandler } from '../shutdown/cleanup';
 import { env } from './env';
 
 /**
- * Initializes Sentry and OpenTelemetry for server-side application.
+ * Initializes Sentry tracing and OpenTelemetry metrics for a server-side application.
  */
 export function initSentry({
   scrubSensitiveData = true,
@@ -30,6 +30,12 @@ export function initSentry({
     debug: false,
     dsn: env.sentryDsn,
     environment: env.sentryEnvironment,
+    initialScope: {
+      tags: {
+        'service.name': serviceName,
+        'service.version': env.appVersion,
+      },
+    },
     integrations: [
       Sentry.captureConsoleIntegration({ levels: ['fatal', 'error', 'warn', 'info'] }),
     ],
@@ -74,7 +80,11 @@ export function initSentry({
 
   registerCleanupHandler(async () => {
     console.log('[shutdown] Shutting down OpenTelemetry metrics...');
-    await shutdownMetrics();
-    console.log('[shutdown] OpenTelemetry metrics shutdown completed');
+    try {
+      await shutdownMetrics();
+      console.log('[shutdown] OpenTelemetry metrics shutdown completed');
+    } finally {
+      await Sentry.flush(10_000);
+    }
   });
 }
