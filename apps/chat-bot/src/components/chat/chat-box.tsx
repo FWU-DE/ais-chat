@@ -157,6 +157,7 @@ export function ChatBox({
 
   const isAssistantSpeechOnly = message.role === 'assistant' && speechOnly && isSpeechModelEnabled;
   const actionsVisible = message.role === 'assistant' && (!isLastNonUser || status !== 'streaming');
+  const isSpeechOnlyStreaming = isAssistantSpeechOnly && isLastNonUser && status === 'streaming';
 
   const maybeShowMessageIcons = actionsVisible ? (
     <MessageActions
@@ -179,8 +180,12 @@ export function ChatBox({
   ) : null;
 
   const maybeAudioButton =
-    isAssistantSpeechOnly && actionsVisible ? (
-      <SpeechAudioButton text={plainText} generateSpeechFn={generateSpeechFn} />
+    isAssistantSpeechOnly && (actionsVisible || isSpeechOnlyStreaming) ? (
+      <SpeechAudioButton
+        text={plainText}
+        generateSpeechFn={generateSpeechFn}
+        isStreaming={isSpeechOnlyStreaming}
+      />
     ) : null;
 
   const showMessageText = !isAssistantSpeechOnly || isTextVisible;
