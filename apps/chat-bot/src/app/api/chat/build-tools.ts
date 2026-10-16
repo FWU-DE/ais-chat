@@ -1,14 +1,37 @@
 import type { UserAndContext } from '@/auth/types';
+import type { AiActivityToolName } from '@/types/ai-activity';
 import { TOOL_NAMES } from '@/types/tool-names';
 import type { ModelSelection } from '@ais-chat/ai-core/chat/types';
 import type { FileModel, WebSearchModel } from '@shared/db/schema';
-import { buildJsxgraphTool } from './tools/jsxgraph-tool';
-import { buildMathCalculateTool } from './tools/math-calculate-tool';
-import { buildMundoSearchTool } from './tools/mundo-search-tool';
-import { buildRetrieveEntireFileTool } from './tools/retrieve-entire-file-tool';
-import { buildRetrieveTextChunksTool } from './tools/retrieve-text-chunks-tool';
-import { buildWebScraperTool } from './tools/web-scraper-tool';
-import { buildWebSearchTool } from './tools/web-search-tool';
+import { buildJsxgraphTool, createPlotActivity } from './tools/jsxgraph-tool';
+import { buildMathCalculateTool, mathCalculateActivity } from './tools/math-calculate-tool';
+import { buildMundoSearchTool, mundoSearchActivity } from './tools/mundo-search-tool';
+import {
+  buildRetrieveEntireFileTool,
+  retrieveEntireFileActivity,
+} from './tools/retrieve-entire-file-tool';
+import {
+  buildRetrieveTextChunksTool,
+  retrieveTextChunksActivity,
+} from './tools/retrieve-text-chunks-tool';
+import type { ToolActivity } from './tools/types';
+import { buildWebScraperTool, webScraperActivity } from './tools/web-scraper-tool';
+import { buildWebSearchTool, webSearchActivity } from './tools/web-search-tool';
+
+/**
+ * Static counterpart to the real `toolRegistry` below, reused to reconstruct activity (live
+ * streaming or DB reload) without building the full tool set. `satisfies` ensures every tool is
+ * present while keeping each entry's specific `ToolActivity<T>`.
+ */
+export const toolActivityRegistry = {
+  [TOOL_NAMES.mathCalculate]: mathCalculateActivity,
+  [TOOL_NAMES.createPlot]: createPlotActivity,
+  [TOOL_NAMES.webSearch]: webSearchActivity,
+  [TOOL_NAMES.webScraper]: webScraperActivity,
+  [TOOL_NAMES.mundoSearch]: mundoSearchActivity,
+  [TOOL_NAMES.retrieveEntireFile]: retrieveEntireFileActivity,
+  [TOOL_NAMES.retrieveTextChunks]: retrieveTextChunksActivity,
+} satisfies Record<AiActivityToolName, ToolActivity>;
 
 type BuildToolsParams = {
   user: UserAndContext;

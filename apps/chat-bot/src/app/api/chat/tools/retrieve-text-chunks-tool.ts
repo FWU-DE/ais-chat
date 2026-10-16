@@ -1,12 +1,13 @@
 import { VECTOR_SEARCH_LIMIT } from '@/configuration-text-inputs/const';
 import { TOOL_NAMES } from '@/types/tool-names';
-import { parseJsonRecord, readString } from '@/utils/chat/ai-activity';
-import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
+import { parseJsonRecord } from '@/utils/chat/tool-result-parsing';
+import type { ToolCall, ToolErrorResult, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { dbGetAllChunks } from '@shared/db/functions/files';
 import { z } from 'zod';
 import { ingestWebContent } from '../../rag/ingestWebContent';
 import { retrieveChunksByQuery } from '../../rag/rag-service';
-import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
+import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
+import type { BuildToolsContext, ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 export const retrieveTextChunksArgsSchema = z.object({
   search: z.string().trim().min(1),
@@ -21,6 +22,32 @@ type SemanticFileSearchChunkResult = {
 export type SemanticFileSearchToolResponse = {
   chunks: SemanticFileSearchChunkResult[];
   notice?: string;
+};
+
+export const retrieveTextChunksActivity: ToolActivity<SemanticFileSearchToolResponse> = {
+  createStep: (toolCall: ToolCall) => {
+    const parsed = retrieveTextChunksArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.retrieveTextChunks,
+      detail: parsed.success ? parsed.data.search : undefined,
+    };
+  },
+  parsePersistedResult: (raw) => {
+    const generic = parseGenericPersistedToolResult<SemanticFileSearchToolResponse>(raw);
+    if (generic === undefined) {
+      return generic;
+    }
+
+    // Rename `error` to `notice` when it explained an empty `chunks`, rather than a failure.
+    const { error, ...rest } = generic as SemanticFileSearchToolResponse & ToolErrorResult;
+    if (Array.isArray(rest.chunks) && rest.chunks.length === 0) {
+      return { ...rest, notice: error } as SemanticFileSearchToolResponse;
+    }
+
+    return generic;
+  },
 };
 
 function formatRetrievedChunksForTool(chunks: Awaited<ReturnType<typeof retrieveChunksByQuery>>) {
@@ -142,15 +169,6 @@ export function buildRetrieveTextChunksTool({
   return {
     definition,
     handler,
-    activity: {
-      createStep: (toolCall: ToolCall) => {
-        return {
-          kind: 'tool',
-          id: toolCall.id,
-          tool: TOOL_NAMES.retrieveTextChunks,
-          detail: readString(parseJsonRecord(toolCall.arguments), 'search'),
-        };
-      },
-    },
+    activity: retrieveTextChunksActivity,
   };
 }
