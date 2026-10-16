@@ -1,12 +1,12 @@
-import React from 'react';
-import { FileModel } from '@shared/db/schema';
-import { LocalFileState } from '../../chat/send-message-form';
-import { FileDrop } from './file-drop-area';
 import { NUMBER_OF_FILES_LIMIT_FOR_SHARED_CHAT } from '@/configuration-text-inputs/const';
-import FilesTable from './file-upload-table';
 import { ServerActionResult } from '@shared/actions/server-action-result';
-import { useToast } from '../../common/toast';
+import { FileModel } from '@shared/db/schema';
 import { useTranslations } from 'next-intl';
+import React from 'react';
+import { useToast } from '../../common/toast';
+import { LocalFileState } from '../../file-upload/upload-file';
+import { FileDrop } from './file-drop-area';
+import FilesTable from './file-upload-table';
 
 export type CustomChatFilesProps = {
   initialFiles: FileModel[];

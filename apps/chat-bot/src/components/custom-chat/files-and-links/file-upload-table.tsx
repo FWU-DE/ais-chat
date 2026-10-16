@@ -1,20 +1,18 @@
 import DestructiveActionButton from '@/components/common/destructive-action-button';
 import DownloadFileButton from '@/components/common/download-file-button';
 import { FileModel } from '@shared/db/schema';
-import React from 'react';
 
-import { isNotNull } from '@shared/utils/guard';
-import Spinner from '../../icons/spinner';
-import CrossIcon from '../../icons/cross';
-import { LocalFileState } from '../../chat/send-message-form';
-import { getFileIconByFileExtension } from '../../icons/file-upload-icons/file-icons-dict';
 import { formatBytes, getFileNameAndFileExtension } from '@/utils/files/generic';
-import { FileStatus } from '../../chat/upload-file-button';
-import { useToast } from '../../common/toast';
-import { useTranslations } from 'next-intl';
 import { cn } from '@/utils/tailwind';
-import { ServerActionResult } from '@shared/actions/server-action-result';
 import { TrashSimpleIcon } from '@phosphor-icons/react';
+import { ServerActionResult } from '@shared/actions/server-action-result';
+import { isNotNull } from '@shared/utils/guard';
+import { useTranslations } from 'next-intl';
+import { useToast } from '../../common/toast';
+import { FileStatus, LocalFileState } from '../../file-upload/upload-file';
+import CrossIcon from '../../icons/cross';
+import { getFileIconByFileExtension } from '../../icons/file-upload-icons/file-icons-dict';
+import Spinner from '../../icons/spinner';
 
 type FilesTableProps = {
   files: FileModel[];

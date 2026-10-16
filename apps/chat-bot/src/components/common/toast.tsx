@@ -1,15 +1,17 @@
 'use client';
-import React from 'react';
-import * as Toast from '@radix-ui/react-toast';
 import { cn } from '@/utils/tailwind';
-import './toast.css';
+import * as Toast from '@radix-ui/react-toast';
+import React from 'react';
 import CheckIcon from '../icons/check';
 import DangerIcon from '../icons/danger';
+import './toast.css';
 
 export type ToastContextType = {
   success: (message: string) => void;
   error: (message: string) => void;
 };
+
+export const TOAST_DURATION_MS = 8000;
 
 const ToastContext = React.createContext<ToastContextType | undefined>(undefined);
 
@@ -36,7 +38,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     );
     setOpen(true);
     window.clearTimeout(timerRef.current);
-    timerRef.current = window.setTimeout(() => setOpen(false), 3000);
+    timerRef.current = window.setTimeout(() => setOpen(false), TOAST_DURATION_MS);
   };
 
   const toast = {
@@ -46,7 +48,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ToastContext value={toast}>
-      <Toast.Provider swipeDirection="right">
+      <Toast.Provider swipeDirection="right" duration={TOAST_DURATION_MS}>
         {children}
         <Toast.Root
           open={open}
