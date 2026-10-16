@@ -1,3 +1,4 @@
+import { NUMBER_OF_IMAGES_LIMIT } from '@/configuration-text-inputs/const';
 import { MAX_FILE_SIZE } from '@/const';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -41,6 +42,26 @@ describe('getAllowedFileExtensions', () => {
 
   it('excludes image files when the selected model does not accept image input', () => {
     expect(getAllowedFileExtensions([], [])).not.toContain('png');
+  });
+
+  it('excludes image files after the image attachment limit is reached', () => {
+    const files: LocalFileState[] = Array.from({ length: NUMBER_OF_IMAGES_LIMIT }, (_, index) => ({
+      file: createFile(`image-${index}.png`),
+      status: 'processed',
+      fileId: `file-${index}`,
+    }));
+
+    expect(getAllowedFileExtensions(files, ['png'])).not.toContain('png');
+  });
+
+  it('counts images that are still uploading toward the image limit', () => {
+    const files: LocalFileState[] = Array.from({ length: NUMBER_OF_IMAGES_LIMIT }, (_, index) => ({
+      file: createFile(`image-${index}.png`),
+      status: 'uploading',
+      fileId: undefined,
+    }));
+
+    expect(getAllowedFileExtensions(files, ['png'])).not.toContain('png');
   });
 });
 

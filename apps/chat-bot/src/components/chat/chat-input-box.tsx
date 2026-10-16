@@ -16,7 +16,6 @@ import {
   startTransition,
   SyntheticEvent,
   useEffect,
-  useState,
 } from 'react';
 import AutoResizeTextarea from '../common/auto-resize-textarea';
 import { useToast } from '../common/toast';
@@ -62,7 +61,6 @@ export function ChatInputBox({
   const tFileInteraction = useTranslations('file-interaction');
   const toast = useToast();
   const { selectedModel } = useLlmModels();
-  const [fileUploading, setFileUploading] = useState(false);
 
   useEffect(() => {
     if (files && setFiles && files.size > NUMBER_OF_FILES_LIMIT) {
@@ -75,7 +73,6 @@ export function ChatInputBox({
       const trimmedFiles = new Map(Array.from(files.entries()).slice(0, NUMBER_OF_FILES_LIMIT));
       startTransition(() => {
         setFiles(trimmedFiles);
-        setFileUploading(false);
       });
     }
     const imageEntries = Array.from(files?.entries() ?? []).filter(([, file]) =>
@@ -98,7 +95,6 @@ export function ChatInputBox({
       });
       startTransition(() => {
         setFiles(newFiles);
-        setFileUploading(false);
       });
     }
 
@@ -127,13 +123,34 @@ export function ChatInputBox({
     }
 
     e.preventDefault();
-    setFileUploading(true);
+    const availableSlots = NUMBER_OF_FILES_LIMIT - files.size;
+    if (availableSlots <= 0) {
+      toast.error(
+        tFileInteraction('upload.file-limit-reached', {
+          max_files: NUMBER_OF_FILES_LIMIT,
+          files_exceeded: clipboardFiles.length,
+        }),
+      );
+      return;
+    }
+
+    const filesToUpload = clipboardFiles.slice(0, availableSlots);
+    const filesExceeded = clipboardFiles.length - filesToUpload.length;
+    if (filesExceeded > 0) {
+      toast.error(
+        tFileInteraction('upload.file-limit-reached', {
+          max_files: NUMBER_OF_FILES_LIMIT,
+          files_exceeded: filesExceeded,
+        }),
+      );
+    }
+
     const allowedFileExtensions = getAllowedFileExtensions(
       files.values(),
       selectedModel?.supportedImageFormats,
     );
     await Promise.all(
-      clipboardFiles.map((file) =>
+      filesToUpload.map((file) =>
         handleSingleFile({
           file,
           setFiles,
@@ -144,8 +161,11 @@ export function ChatInputBox({
         }),
       ),
     );
-    setFileUploading(false);
   }
+
+  const hasUploadingFiles = Array.from(files?.values() ?? []).some(
+    (file) => file.status === 'uploading',
+  );
 
   /** Either Send or StopGeneration */
   const userActionButton = isLoading ? (
@@ -165,7 +185,7 @@ export function ChatInputBox({
     <button
       type="submit"
       title="Nachricht abschicken"
-      disabled={input.trim().length === 0 || fileUploading}
+      disabled={input.trim().length === 0 || hasUploadingFiles}
       className={cn(
         iconClassName,
         'my-2 mx-2 flex items-center self-end justify-center group disabled:cursor-not-allowed text-dark-gray',
@@ -215,7 +235,6 @@ export function ChatInputBox({
                 className={iconClassName}
                 setFiles={setFiles}
                 files={files}
-                setFileUploading={setFileUploading}
                 fileUploadFn={fileUploadFn}
               />
             </div>

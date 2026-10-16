@@ -31,9 +31,7 @@ export function getAllowedFileExtensions(
   files: Iterable<LocalFileState>,
   supportedImageFormats: string[] | null | undefined,
 ): readonly string[] {
-  const numberOfImages = Array.from(files).filter(
-    (file) => file.status === 'processed' && isImageFile(file.file.name),
-  ).length;
+  const numberOfImages = Array.from(files).filter((file) => isImageFile(file.file.name)).length;
   const allowedImageFormats =
     numberOfImages < NUMBER_OF_IMAGES_LIMIT && supportedImageFormats?.length !== 0
       ? SUPPORTED_IMAGE_EXTENSIONS
