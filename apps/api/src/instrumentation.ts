@@ -48,7 +48,6 @@ Sentry.init({
   environment: env.sentryEnvironment,
   // Ensure that only traces from your own organization are continued
   strictTraceContinuation: true,
-  enableOpenTelemetrySetup: true,
   enableRuntimeChannelInjection: false,
 });
 
