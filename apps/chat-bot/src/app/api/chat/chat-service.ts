@@ -1,67 +1,71 @@
+import { UserAndContext } from '@/auth/types';
+import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
+import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
+import { sendRabbitmqEvent } from '@/rabbitmq/send';
+import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
+import { convertMessageModelToMessage } from '@/utils/chat/messages';
+import { deepEqual } from '@/utils/object';
+import { createTextStream } from '@/utils/streaming';
 import {
   type Message as AiCoreMessage,
   type ModelUsage,
   type TokenUsage,
-  TokenPointsExceededError,
   ResponsibleAIError,
+  TokenPointsExceededError,
   runAgentLoop,
 } from '@ais-chat/ai-core';
-import { createTextStream } from '@/utils/streaming';
-import { getModelAndApiKeyWithResult, getAuxiliaryModel, getSafetyModel } from '../utils/utils';
-import { createAiActivityStream } from './ai-activity-stream';
-import { getChatModelSelection } from '../utils/model-circuit-breaker';
 import {
+  getAssistantForExistingConversation,
+  getAssistantForNewChat,
+} from '@shared/assistants/assistant-service';
+import {
+  getCharacterForChatSession,
+  getCharacterForExistingConversation,
+} from '@shared/characters/character-service';
+import {
+  dbDeleteRegeneratedConversationMessage,
   dbGetConversationAndMessages,
   dbGetOrCreateConversation,
-  dbUpdateConversationTitle,
-  dbDeleteRegeneratedConversationMessage,
   dbInsertChatContent,
   dbInsertChatContentBatch,
+  dbUpdateConversationTitle,
 } from '@shared/db/functions/chat';
+import {
+  dbGetAttachedFileByEntityId,
+  dbVerifyFileOwner,
+  linkFilesToConversation,
+} from '@shared/db/functions/files';
 import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
 import { dbUpdateLastUsedModelByUserId } from '@shared/db/functions/user';
-import { dbGetAttachedFileByEntityId, linkFilesToConversation } from '@shared/db/functions/files';
-import { sendRabbitmqEvent } from '@/rabbitmq/send';
-import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
-import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
-import { constructChatSystemPrompt } from './system-prompt';
-import {
-  convertToAiCoreMessages,
-  annotateMessageAttachmentNames,
-  getChatTitle,
-  limitChatHistory,
-} from './utils';
-import { prepareAgentMessages } from './prepare-agent-messages';
-import { convertMessageModelToMessage } from '@/utils/chat/messages';
-import { logError } from '@shared/logging';
-import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
-import { extractUrls } from '../utils/extract-urls';
-import { UserAndContext } from '@/auth/types';
-import { ingestWebContent } from '../rag/ingestWebContent';
-import { buildTools } from './build-tools';
-import { isWebSearchEnabledForEntity } from './websearch';
 import type {
   AssistantSelectModel,
   CharacterSelectModel,
   LearningScenarioSelectModel,
 } from '@shared/db/schema';
 import type { ConversationMessageModel } from '@shared/db/types';
-import { NotFoundError } from '@shared/error';
-import {
-  getCharacterForChatSession,
-  getCharacterForExistingConversation,
-} from '@shared/characters/character-service';
+import { ForbiddenError, NotFoundError } from '@shared/error';
 import {
   getLearningScenarioForChatSession,
   getLearningScenarioForExistingConversation,
 } from '@shared/learning-scenarios/learning-scenario-service';
-import {
-  getAssistantForNewChat,
-  getAssistantForExistingConversation,
-} from '@shared/assistants/assistant-service';
-import { deepEqual } from '@/utils/object';
-import { resolveAgentNameForTracing } from '../utils/agent-name';
+import { logError } from '@shared/logging';
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
+import { ingestWebContent } from '../rag/ingestWebContent';
+import { resolveAgentNameForTracing } from '../utils/agent-name';
+import { extractUrls } from '../utils/extract-urls';
+import { getChatModelSelection } from '../utils/model-circuit-breaker';
+import { getAuxiliaryModel, getModelAndApiKeyWithResult, getSafetyModel } from '../utils/utils';
+import { createAiActivityStream } from './ai-activity-stream';
+import { buildTools } from './build-tools';
+import { prepareAgentMessages } from './prepare-agent-messages';
+import { constructChatSystemPrompt } from './system-prompt';
+import {
+  annotateMessageAttachmentNames,
+  convertToAiCoreMessages,
+  getChatTitle,
+  limitChatHistory,
+} from './utils';
+import { isWebSearchEnabledForEntity } from './websearch';
 
 // Exports for testing
 export { handleRegenerationProcessing, prepareMessageForProcessing };
@@ -172,6 +176,15 @@ export async function sendChatMessage({
   fileIds?: string[];
   user: UserAndContext;
 }): Promise<SendMessageResult> {
+  if (fileIds && fileIds.length > 0) {
+    const ownsAllFiles = await Promise.all(
+      fileIds.map((fileId) => dbVerifyFileOwner({ fileId, userId: user.id })),
+    );
+    if (ownsAllFiles.some((isOwner) => !isOwner)) {
+      throw new ForbiddenError('Not authorized to attach this file');
+    }
+  }
+
   // Get model and API key
   const [error, modelAndApiKey] = await getModelAndApiKeyWithResult({
     modelId,

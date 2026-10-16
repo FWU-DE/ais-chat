@@ -1,28 +1,41 @@
+import { computeBlobHash } from '@ais-chat/shared-core/crypto/blob-hash';
+import {
+  filterCommunitySharedByAssociatedSchool,
+  filterReadableCustomChats,
+  verifyReadAccess,
+  verifySuspensionState,
+  verifyWriteAccess,
+} from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
+import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import {
   getConversation,
   getConversationMessages,
 } from '@shared/conversation/conversation-service';
 import { db } from '@shared/db';
 import {
-  dbGetAssistantsByUserId,
   dbDeleteAssistantByIdAndUser,
   dbGetAssistantById,
   dbGetAssistantByIdForConversation,
+  dbGetAssistantsByUserId,
   dbGetCommunityGpts,
   dbGetGlobalGpts,
   dbGetGptsByAssociatedSchools,
   dbGetGptsByUser,
   dbInsertAssistantFileMapping,
 } from '@shared/db/functions/assistants';
-import { dbGetFileForAssistant, dbGetRelatedAssistantFiles } from '@shared/db/functions/files';
+import {
+  dbDeleteFileIfUnreferenced,
+  dbGetFileForAssistant,
+  dbGetRelatedAssistantFiles,
+  dbVerifyFileOwner,
+} from '@shared/db/functions/files';
 import {
   AssistantFileMapping,
   AssistantSelectModel,
   assistantTable,
   assistantUpdateSchema,
   FileModel,
-  fileTable,
 } from '@shared/db/schema';
 import { checkParameterUUID, ForbiddenError, NotFoundError } from '@shared/error';
 import {
@@ -30,28 +43,19 @@ import {
   deleteMessageAttachments,
   getAvatarPictureUrl,
 } from '@shared/files/fileService';
-import { buildAssistantPictureKey } from '@shared/utils/picture-key';
-import { uniqueById } from '@shared/utils/arrays';
+import { OverviewFilter } from '@shared/overview-filter';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
 import { copyAssistant, copyRelatedTemplateFiles } from '@shared/templates/template-service';
-import { OverviewFilter } from '@shared/overview-filter';
-import { generateUUID } from '@shared/utils/uuid';
+import { uniqueById } from '@shared/utils/arrays';
+import { buildAssistantPictureKey } from '@shared/utils/picture-key';
 import {
   getChangedKeys,
   getPreservedUpdatedAtForExemptedKeys,
 } from '@shared/utils/preserve-updated-at';
+import { generateUUID } from '@shared/utils/uuid';
 import { and, eq } from 'drizzle-orm';
 import z from 'zod';
-import { computeBlobHash } from '@ais-chat/shared-core/crypto/blob-hash';
-import {
-  verifySuspensionState,
-  verifyReadAccess,
-  verifyWriteAccess,
-  filterCommunitySharedByAssociatedSchool,
-  filterReadableCustomChats,
-} from '@shared/auth/authorization-service';
-import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 
 function buildAvatarFilename(hash: string) {
   return `avatar_${hash}`;
@@ -254,7 +258,7 @@ export async function createNewAssistant({
 
     const insertedAssistant = await copyAssistant(templateId, false, user, duplicateAssistantName);
 
-    await copyRelatedTemplateFiles('assistant', templateId, insertedAssistant.id);
+    await copyRelatedTemplateFiles('assistant', templateId, insertedAssistant.id, user.id);
     return insertedAssistant;
   }
 
@@ -297,6 +301,10 @@ export async function linkFileToAssistant({
   const assistant = await dbGetAssistantById({ assistantId });
   verifyWriteAccess({ item: assistant, user });
 
+  if (!(await dbVerifyFileOwner({ fileId, userId: user.id }))) {
+    throw new ForbiddenError('Not authorized to link this file');
+  }
+
   const insertedFileMapping = await dbInsertAssistantFileMapping({
     assistantId,
     fileId: fileId,
@@ -325,14 +333,29 @@ export async function deleteFileMappingAndEntity({
   const assistant = await dbGetAssistantById({ assistantId });
   verifyWriteAccess({ item: assistant, user });
 
-  // delete mapping and file entry in db
-  await db.transaction(async (tx) => {
-    await tx.delete(AssistantFileMapping).where(eq(AssistantFileMapping.fileId, fileId));
-    await tx.delete(fileTable).where(eq(fileTable.id, fileId));
+  if (
+    (await dbGetFileForAssistant({ assistantId, fileId })) === undefined ||
+    !(await dbVerifyFileOwner({ fileId, userId: user.id }))
+  ) {
+    throw new ForbiddenError('Not authorized to delete this file');
+  }
+
+  // Delete the mapping and remove the file only when it has no other references.
+  const fileWasDeleted = await db.transaction(async (tx) => {
+    await tx
+      .delete(AssistantFileMapping)
+      .where(
+        and(
+          eq(AssistantFileMapping.assistantId, assistantId),
+          eq(AssistantFileMapping.fileId, fileId),
+        ),
+      );
+    return dbDeleteFileIfUnreferenced(tx, fileId);
   });
 
-  // Delete the file from S3
-  await deleteMessageAttachments([fileId]);
+  if (fileWasDeleted) {
+    await deleteMessageAttachments([fileId]);
+  }
 }
 
 /**
@@ -488,16 +511,17 @@ export async function deleteAssistant({
   const assistant = await dbGetAssistantById({ assistantId });
   verifyWriteAccess({ item: assistant, user });
 
-  const relatedFiles = await dbGetRelatedAssistantFiles(assistantId);
-
   // delete assistant from db
-  const deletedAssistant = await dbDeleteAssistantByIdAndUser({ gptId: assistantId, user });
+  const { deletedAssistant, deletedFileIds } = await dbDeleteAssistantByIdAndUser({
+    gptId: assistantId,
+    user,
+  });
 
   // delete avatar picture from S3
   await deleteAvatarPicture(assistant.pictureId);
 
   // delete all related files from s3
-  await deleteMessageAttachments(relatedFiles.map((file) => file.id));
+  await deleteMessageAttachments(deletedFileIds);
 
   return deletedAssistant;
 }

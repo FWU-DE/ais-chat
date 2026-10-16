@@ -1,4 +1,14 @@
+import { computeBlobHash } from '@ais-chat/shared-core/crypto/blob-hash';
+import {
+  filterCommunitySharedByAssociatedSchool,
+  filterReadableCustomChats,
+  requireTeacherRole,
+  verifyReadAccess,
+  verifySuspensionState,
+  verifyWriteAccess,
+} from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
+import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import { db } from '@shared/db';
 import {
   dbCreateCharacterShare,
@@ -10,21 +20,22 @@ import {
   dbGetCharacterByIdForConversation,
   dbGetCharacterByIdOptionalShareData,
   dbGetCharacterByIdWithShareData,
-  dbGetCommunityCharacters,
   dbGetCharacters,
   dbGetCharactersByAssociatedSchools,
+  dbGetCommunityCharacters,
   dbGetGlobalCharacters,
   dbGetLatestManageableCharacterShare,
   dbStopCharacterShare,
   dbUpdateCharacterShareTokenPointsLimit,
 } from '@shared/db/functions/character';
-import { dbGetFileForCharacter, dbGetRelatedCharacterFiles } from '@shared/db/functions/files';
-import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
-import { FederalStateModel } from '@shared/federal-states/types';
 import {
-  getUsedBudgetInCentByUser,
-  getMaxBudgetInCentByUser,
-} from '@shared/users/user-budget-service';
+  dbDeleteFileIfUnreferenced,
+  dbGetFileForCharacter,
+  dbGetRelatedCharacterFiles,
+  dbVerifyFileOwner,
+} from '@shared/db/functions/files';
+import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
+import { dbGetSharedCharacterChatUsageInCentByCharacterId } from '@shared/db/functions/token-points';
 import {
   CharacterFileMapping,
   CharacterOptionalShareDataModel,
@@ -33,47 +44,40 @@ import {
   characterUpdateSchema,
   CharacterWithShareDataModel,
   FileModel,
-  fileTable,
 } from '@shared/db/schema';
-import { checkParameterUUID, InvalidArgumentError } from '@shared/error';
+import { checkParameterUUID, ForbiddenError, InvalidArgumentError } from '@shared/error';
 import { NotFoundError } from '@shared/error/not-found-error';
+import { FederalStateModel } from '@shared/federal-states/types';
 import {
   deleteAvatarPicture,
   deleteMessageAttachments,
   getAvatarPictureUrl,
 } from '@shared/files/fileService';
-import { buildCharacterPictureKey } from '@shared/utils/picture-key';
-import { uniqueById } from '@shared/utils/arrays';
+import { OverviewFilter } from '@shared/overview-filter';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
-import { generateInviteCode } from '@shared/sharing/generate-invite-code';
 import {
   MAX_SHARE_USAGE_TIME_LIMIT_IN_MINUTES,
   SHARE_EXTENSION_WINDOW_MS,
 } from '@shared/sharing/const';
+import { generateInviteCode } from '@shared/sharing/generate-invite-code';
+import { isShareWithinGraceWindow } from '@shared/sharing/is-share-within-grace-window';
 import { copyCharacter, copyRelatedTemplateFiles } from '@shared/templates/template-service';
-import { OverviewFilter } from '@shared/overview-filter';
-import { removeNullishValues } from '@shared/utils/remove-nullish-values';
+import { sharedCharacterChatHasReachedTokenPointsLimit } from '@shared/users/usage';
+import {
+  getMaxBudgetInCentByUser,
+  getUsedBudgetInCentByUser,
+} from '@shared/users/user-budget-service';
+import { uniqueById } from '@shared/utils/arrays';
+import { buildCharacterPictureKey } from '@shared/utils/picture-key';
 import {
   getChangedKeys,
   getPreservedUpdatedAtForExemptedKeys,
 } from '@shared/utils/preserve-updated-at';
+import { removeNullishValues } from '@shared/utils/remove-nullish-values';
 import { generateUUID } from '@shared/utils/uuid';
 import { and, eq } from 'drizzle-orm';
 import z from 'zod';
-import { computeBlobHash } from '@ais-chat/shared-core/crypto/blob-hash';
-import {
-  requireTeacherRole,
-  verifySuspensionState,
-  verifyReadAccess,
-  verifyWriteAccess,
-  filterCommunitySharedByAssociatedSchool,
-  filterReadableCustomChats,
-} from '@shared/auth/authorization-service';
-import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
-import { dbGetSharedCharacterChatUsageInCentByCharacterId } from '@shared/db/functions/token-points';
-import { sharedCharacterChatHasReachedTokenPointsLimit } from '@shared/users/usage';
-import { isShareWithinGraceWindow } from '@shared/sharing/is-share-within-grace-window';
 
 function buildAvatarFilename(hash: string) {
   return `avatar_${hash}`;
@@ -110,7 +114,7 @@ export const createNewCharacter = async ({
 
     const insertedCharacter = await copyCharacter(templateId, false, user, duplicateCharacterName);
 
-    await copyRelatedTemplateFiles('character', templateId, insertedCharacter.id);
+    await copyRelatedTemplateFiles('character', templateId, insertedCharacter.id, user.id);
     return insertedCharacter;
   }
 
@@ -165,14 +169,29 @@ export const deleteFileMappingAndEntity = async ({
   const { character } = await getCharacterInfo(characterId, user.id);
   verifyWriteAccess({ item: character, user });
 
-  // Delete the mapping and the file entry
-  await db.transaction(async (tx) => {
-    await tx.delete(CharacterFileMapping).where(eq(CharacterFileMapping.fileId, fileId));
-    await tx.delete(fileTable).where(eq(fileTable.id, fileId));
+  if (
+    (await dbGetFileForCharacter({ characterId, fileId })) === undefined ||
+    !(await dbVerifyFileOwner({ fileId, userId: user.id }))
+  ) {
+    throw new ForbiddenError('Not authorized to delete this file');
+  }
+
+  // Delete the mapping and remove the file only when it has no other references.
+  const fileWasDeleted = await db.transaction(async (tx) => {
+    await tx
+      .delete(CharacterFileMapping)
+      .where(
+        and(
+          eq(CharacterFileMapping.characterId, characterId),
+          eq(CharacterFileMapping.fileId, fileId),
+        ),
+      );
+    return dbDeleteFileIfUnreferenced(tx, fileId);
   });
 
-  // Delete the file from S3
-  await deleteMessageAttachments([fileId]);
+  if (fileWasDeleted) {
+    await deleteMessageAttachments([fileId]);
+  }
 };
 
 /**
@@ -219,6 +238,10 @@ export const linkFileToCharacter = async ({
   // Authorization check
   const { character } = await getCharacterInfo(characterId, user.id);
   verifyWriteAccess({ item: character, user });
+
+  if (!(await dbVerifyFileOwner({ fileId, userId: user.id }))) {
+    throw new ForbiddenError('Not authorized to link this file');
+  }
 
   // create a new file mapping
   const [insertedFileMapping] = await db
@@ -364,16 +387,17 @@ export const deleteCharacter = async ({
   const { character } = await getCharacterInfo(characterId, user.id);
   verifyWriteAccess({ item: character, user });
 
-  const relatedFiles = await dbGetRelatedCharacterFiles(characterId);
-
   // delete character from db
-  const deletedCharacter = await dbDeleteCharacterByIdAndUser({ characterId, user });
+  const { deletedCharacter, deletedFileIds } = await dbDeleteCharacterByIdAndUser({
+    characterId,
+    user,
+  });
 
   // delete avatar picture from S3
   await deleteAvatarPicture(character.pictureId);
 
   // delete all related files linked to this character
-  await deleteMessageAttachments(relatedFiles.map((file) => file.id));
+  await deleteMessageAttachments(deletedFileIds);
 
   return deletedCharacter;
 };
