@@ -5,11 +5,13 @@ import { MeterProvider, PeriodicExportingMetricReader } from '@opentelemetry/sdk
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 
 export function initMetrics({
+  exportEndpoint,
   exportIntervalMillis,
   exportTimeoutMillis,
   serviceName,
   serviceVersion,
 }: {
+  exportEndpoint?: string;
   exportIntervalMillis: number;
   exportTimeoutMillis: number;
   serviceName: string;
@@ -18,7 +20,7 @@ export function initMetrics({
   const meterProvider = new MeterProvider({
     readers: [
       new PeriodicExportingMetricReader({
-        exporter: new OTLPMetricExporter(),
+        exporter: new OTLPMetricExporter(exportEndpoint ? { url: exportEndpoint } : undefined),
         exportIntervalMillis,
         exportTimeoutMillis,
       }),

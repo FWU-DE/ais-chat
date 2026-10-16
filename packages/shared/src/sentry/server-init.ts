@@ -72,6 +72,7 @@ export function initSentry({
   });
 
   const shutdownMetrics = initMetrics({
+    exportEndpoint: env.otelMetricExportEndpoint,
     exportIntervalMillis: env.otelMetricExportInterval,
     exportTimeoutMillis: env.otelMetricExportTimeout,
     serviceName,

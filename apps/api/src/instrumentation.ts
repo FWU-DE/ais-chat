@@ -53,6 +53,7 @@ Sentry.init({
 });
 
 const shutdownOpenTelemetryMetrics = initMetrics({
+  exportEndpoint: env.otelMetricExportEndpoint,
   exportIntervalMillis: env.otelMetricExportInterval,
   exportTimeoutMillis: env.otelMetricExportTimeout,
   serviceName: SERVICE_NAME,
