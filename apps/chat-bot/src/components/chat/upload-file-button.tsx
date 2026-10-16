@@ -1,11 +1,10 @@
-import { NUMBER_OF_FILES_LIMIT, NUMBER_OF_IMAGES_LIMIT } from '@/configuration-text-inputs/const';
-import { SUPPORTED_DOCUMENTS_EXTENSIONS, SUPPORTED_IMAGE_EXTENSIONS } from '@/const';
-import { isImageFile } from '@/utils/files/generic';
+import { NUMBER_OF_FILES_LIMIT } from '@/configuration-text-inputs/const';
 import { cn } from '@/utils/tailwind';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { useToast } from '../common/toast';
 import {
+  getAllowedFileExtensions,
   handleSingleFile,
   type FileUploadProps,
   type LocalFileState,
@@ -21,7 +20,6 @@ export type UploadFileButtonProps = FileUploadProps & {
   className?: string;
   directoryId?: string;
   countOfFiles?: number;
-  setFileUploading?: React.Dispatch<React.SetStateAction<boolean>>;
   files?: Map<string, LocalFileState>;
   disabled?: boolean;
 };
@@ -29,7 +27,6 @@ export type UploadFileButtonProps = FileUploadProps & {
 export default function UploadFileButton({
   setFiles,
   className,
-  setFileUploading,
   files,
   fileUploadFn,
 }: UploadFileButtonProps) {
@@ -38,15 +35,11 @@ export default function UploadFileButton({
   const t = useTranslations('file-interaction');
   const { selectedModel } = useLlmModels();
 
-  const numberOfImages = Array.from(files?.values() ?? []).filter(
-    (file) => file.status === 'processed' && isImageFile(file.file.name),
-  ).length;
   const totalNumberOfFiles = Array.from(files?.values() ?? []).length;
-  const allowedImageFormats =
-    numberOfImages < NUMBER_OF_IMAGES_LIMIT && selectedModel?.supportedImageFormats?.length !== 0
-      ? SUPPORTED_IMAGE_EXTENSIONS
-      : [];
-  const currentSupportedFileFormats = [...SUPPORTED_DOCUMENTS_EXTENSIONS, ...allowedImageFormats];
+  const currentSupportedFileFormats = getAllowedFileExtensions(
+    files?.values() ?? [],
+    selectedModel?.supportedImageFormats,
+  );
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const selectedFiles = event.target.files;
@@ -54,7 +47,6 @@ export default function UploadFileButton({
     if (selectedFiles === null) return;
 
     const files = Array.from(selectedFiles);
-    setFileUploading?.(true);
     await Promise.all(
       files.map((f) =>
         handleSingleFile({
@@ -67,7 +59,6 @@ export default function UploadFileButton({
         }),
       ),
     );
-    setFileUploading?.(false);
     if (fileInputRef.current !== null) {
       fileInputRef.current.value = '';
     }

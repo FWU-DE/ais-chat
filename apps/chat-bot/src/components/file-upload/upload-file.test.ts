@@ -1,6 +1,13 @@
+import { NUMBER_OF_IMAGES_LIMIT } from '@/configuration-text-inputs/const';
 import { MAX_FILE_SIZE } from '@/const';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { defaultUploadFile, handleSingleFile, type LocalFileState } from './upload-file';
+import {
+  defaultUploadFile,
+  getAllowedFileExtensions,
+  getFilesFromClipboard,
+  handleSingleFile,
+  type LocalFileState,
+} from './upload-file';
 
 const mocks = vi.hoisted(() => ({
   logError: vi.fn(),
@@ -27,6 +34,57 @@ function createFileState() {
     setFiles,
   };
 }
+
+describe('getAllowedFileExtensions', () => {
+  it('allows supported image files when the selected model accepts image input', () => {
+    expect(getAllowedFileExtensions([], ['png'])).toContain('png');
+  });
+
+  it('excludes image files when the selected model does not accept image input', () => {
+    expect(getAllowedFileExtensions([], [])).not.toContain('png');
+  });
+
+  it('excludes image files after the image attachment limit is reached', () => {
+    const files: LocalFileState[] = Array.from({ length: NUMBER_OF_IMAGES_LIMIT }, (_, index) => ({
+      file: createFile(`image-${index}.png`),
+      status: 'processed',
+      fileId: `file-${index}`,
+    }));
+
+    expect(getAllowedFileExtensions(files, ['png'])).not.toContain('png');
+  });
+
+  it('counts images that are still uploading toward the image limit', () => {
+    const files: LocalFileState[] = Array.from({ length: NUMBER_OF_IMAGES_LIMIT }, (_, index) => ({
+      file: createFile(`image-${index}.png`),
+      status: 'uploading',
+      fileId: undefined,
+    }));
+
+    expect(getAllowedFileExtensions(files, ['png'])).not.toContain('png');
+  });
+});
+
+describe('getFilesFromClipboard', () => {
+  it('returns clipboard files when no text is present', () => {
+    const file = createFile('document.pdf');
+    const clipboardData = {
+      files: [file],
+      getData: () => '',
+    } as unknown as Pick<DataTransfer, 'files' | 'getData'>;
+
+    expect(getFilesFromClipboard(clipboardData)).toEqual([file]);
+  });
+
+  it('returns no files when clipboard text is present', () => {
+    const clipboardData = {
+      files: [createFile('document.pdf')],
+      getData: () => 'Copied text',
+    } as unknown as Pick<DataTransfer, 'files' | 'getData'>;
+
+    expect(getFilesFromClipboard(clipboardData)).toEqual([]);
+  });
+});
 
 describe('handleSingleFile', () => {
   const toast = {

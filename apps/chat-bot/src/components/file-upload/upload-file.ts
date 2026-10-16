@@ -1,5 +1,6 @@
+import { NUMBER_OF_IMAGES_LIMIT } from '@/configuration-text-inputs/const';
 import { MAX_FILE_SIZE, SUPPORTED_DOCUMENTS_EXTENSIONS, SUPPORTED_IMAGE_EXTENSIONS } from '@/const';
-import { validateFileExtension } from '@/utils/files/generic';
+import { isImageFile, validateFileExtension } from '@/utils/files/generic';
 import { logError } from '@shared/logging';
 import { nanoid } from 'nanoid';
 import { useTranslations } from 'next-intl';
@@ -25,6 +26,29 @@ export type FileUploadProps = {
   fileUploadFn?: (file: File) => Promise<FileUploadResponse>;
   showUploadConfirmation?: boolean;
 };
+
+export function getAllowedFileExtensions(
+  files: Iterable<LocalFileState>,
+  supportedImageFormats: string[] | null | undefined,
+): readonly string[] {
+  const numberOfImages = Array.from(files).filter((file) => isImageFile(file.file.name)).length;
+  const allowedImageFormats =
+    numberOfImages < NUMBER_OF_IMAGES_LIMIT && supportedImageFormats?.length !== 0
+      ? SUPPORTED_IMAGE_EXTENSIONS
+      : [];
+
+  return [...SUPPORTED_DOCUMENTS_EXTENSIONS, ...allowedImageFormats];
+}
+
+export function getFilesFromClipboard(
+  clipboardData: Pick<DataTransfer, 'files' | 'getData'>,
+): File[] {
+  if (clipboardData.getData('text/plain').length > 0) {
+    return [];
+  }
+
+  return Array.from(clipboardData.files);
+}
 
 export async function handleSingleFile({
   file,
