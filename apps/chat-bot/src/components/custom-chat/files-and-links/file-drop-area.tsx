@@ -1,13 +1,12 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { FileUploadIcon } from '../../icons/file-upload-icons/file-upload-tray-icon';
-import { useTranslations } from 'next-intl';
-import { handleSingleFile, UploadFileButtonProps } from '../../chat/upload-file-button';
-import { useToast } from '../../common/toast';
-import { RichText } from '../../common/rich-text';
-import { SUPPORTED_DOCUMENTS_EXTENSIONS } from '@/const';
-import { validateFileExtension } from '@/utils/files/generic';
 import { NUMBER_OF_FILES_LIMIT_FOR_SHARED_CHAT } from '@/configuration-text-inputs/const';
+import { SUPPORTED_DOCUMENTS_EXTENSIONS } from '@/const';
 import { Button } from '@ui/components/button';
+import { useTranslations } from 'next-intl';
+import React, { useCallback, useRef, useState } from 'react';
+import { RichText } from '../../common/rich-text';
+import { useToast } from '../../common/toast';
+import { handleSingleFile, type FileUploadProps } from '../../file-upload/upload-file';
+import { FileUploadIcon } from '../../icons/file-upload-icons/file-upload-tray-icon';
 
 export function FileDrop({
   onFileUploaded,
@@ -16,7 +15,7 @@ export function FileDrop({
   showUploadConfirmation = false,
   countOfFiles,
   ...restProps
-}: UploadFileButtonProps) {
+}: FileUploadProps & { countOfFiles?: number; disabled?: boolean }) {
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
@@ -25,12 +24,6 @@ export function FileDrop({
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     await handleFiles(event.target.files);
-  }
-
-  function validateFileExtensions(selectedFiles: FileList | undefined | null) {
-    if (selectedFiles === null || selectedFiles === undefined) return;
-    const files = Array.from(selectedFiles);
-    return files.some((f) => validateFileExtension(f.name));
   }
 
   async function handleFiles(selectedFiles: FileList | undefined | null) {
@@ -57,6 +50,7 @@ export function FileDrop({
           onFileUploaded,
           translations: t,
           showUploadConfirmation,
+          allowedFileExtensions: SUPPORTED_DOCUMENTS_EXTENSIONS,
         }),
       ),
     );
@@ -95,14 +89,6 @@ export function FileDrop({
     setIsDragging(false);
 
     const { files } = e.dataTransfer;
-    if (!validateFileExtensions(files)) {
-      toast.error(
-        t('toasts.invalid-file-format', {
-          supported_formats: SUPPORTED_DOCUMENTS_EXTENSIONS.join(', '),
-        }),
-      );
-      return;
-    }
     void handleFiles(files);
   }
 

@@ -1,30 +1,29 @@
-import { useTranslations } from 'next-intl';
-import AutoResizeTextarea from '../common/auto-resize-textarea';
-import ChatInputAttachmentPreview from './chat-input-attachment-preview';
-import { LocalFileState } from './send-message-form';
 import {
   CHAT_MESSAGE_LENGTH_LIMIT,
   NUMBER_OF_FILES_LIMIT,
   NUMBER_OF_IMAGES_LIMIT,
 } from '@/configuration-text-inputs/const';
-import StopIcon from '../icons/stop';
-import ArrowRightIcon from '../icons/arrow-right';
-import UploadFileButton from './upload-file-button';
-import type { FileUploadResponse } from './upload-file-button';
-import { useToast } from '../common/toast';
+import { isImageFile } from '@/utils/files/generic';
+import { cn } from '@/utils/tailwind';
+import { iconClassName } from '@/utils/tailwind/icon';
+import { useTranslations } from 'next-intl';
 import {
   ChangeEvent,
   Dispatch,
   KeyboardEvent,
   SetStateAction,
   startTransition,
+  SyntheticEvent,
   useEffect,
   useState,
-  SyntheticEvent,
 } from 'react';
-import { iconClassName } from '@/utils/tailwind/icon';
-import { cn } from '@/utils/tailwind';
-import { isImageFile } from '@/utils/files/generic';
+import AutoResizeTextarea from '../common/auto-resize-textarea';
+import { useToast } from '../common/toast';
+import type { FileUploadResponse, LocalFileState } from '../file-upload/upload-file';
+import ArrowRightIcon from '../icons/arrow-right';
+import StopIcon from '../icons/stop';
+import ChatInputAttachmentPreview from './chat-input-attachment-preview';
+import UploadFileButton from './upload-file-button';
 
 export function ChatInputBox({
   files,
