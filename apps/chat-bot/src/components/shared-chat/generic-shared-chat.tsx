@@ -28,8 +28,8 @@ import { ReactNode, RefObject, SyntheticEvent, useEffect, useRef, useState } fro
 import { ErrorChatPlaceholder } from '../chat/error-chat-placeholder';
 import { FloatingText } from '../chat/floating-text';
 import { Messages, PendingFileModel } from '../chat/messages';
-import { LocalFileState } from '../chat/send-message-form';
 import StreamingFinishedMarker from '../chat/streaming-finished-marker';
+import { LocalFileState } from '../file-upload/upload-file';
 
 type ShareSessionInput = Parameters<typeof calculateShareSessionState>[0];
 type Translator = ReturnType<typeof useTranslations>;
