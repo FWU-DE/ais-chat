@@ -1,6 +1,6 @@
 import { TOOL_NAMES } from '@/types/tool-names';
 import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import type { WebSource } from '@shared/db/types';
 import { isIP } from 'node:net';
 import { z } from 'zod';
@@ -71,7 +71,7 @@ type BuildWebScraperToolParams = Pick<
 export function buildWebScraperTool({
   sourceUrls,
   attachedLinks,
-}: BuildWebScraperToolParams): ToolRegistration | null {
+}: BuildWebScraperToolParams): ToolRegistration<WebScraperToolResult[]> | null {
   const attachedSourceUrls = sourceUrls.length > 0 ? sourceUrls : attachedLinks;
 
   const definition: ToolDefinition = {
@@ -100,9 +100,7 @@ export function buildWebScraperTool({
     },
   };
 
-  const handler = async (
-    args: Record<string, unknown>,
-  ): Promise<WebScraperToolResult[] | { error: string }> => {
+  const handler = async (args: Record<string, unknown>): ToolOutcome<WebScraperToolResult[]> => {
     const parsed = webScraperArgsSchema.safeParse(args);
     const urls = parsed.success ? parsed.data.urls : [];
 

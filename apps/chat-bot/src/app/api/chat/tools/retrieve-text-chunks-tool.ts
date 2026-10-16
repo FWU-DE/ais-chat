@@ -1,7 +1,7 @@
 import { VECTOR_SEARCH_LIMIT } from '@/configuration-text-inputs/const';
 import { TOOL_NAMES } from '@/types/tool-names';
 import { parseJsonRecord, readString } from '@/utils/chat/ai-activity';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { dbGetAllChunks } from '@shared/db/functions/files';
 import { z } from 'zod';
 import { ingestWebContent } from '../../rag/ingestWebContent';
@@ -48,7 +48,7 @@ export function buildRetrieveTextChunksTool({
   relatedFileEntities,
   sourceUrls,
   attachedLinks,
-}: BuildRetrieveTextChunksToolParams): ToolRegistration | null {
+}: BuildRetrieveTextChunksToolParams): ToolRegistration<SemanticFileSearchToolResponse> | null {
   const attachedSourceUrls = sourceUrls.length > 0 ? sourceUrls : attachedLinks;
 
   if (relatedFileEntities.length === 0 && attachedSourceUrls.length === 0) {
@@ -84,7 +84,7 @@ export function buildRetrieveTextChunksTool({
 
   const handler = async (
     args: Record<string, unknown>,
-  ): Promise<SemanticFileSearchToolResponse | { error: string }> => {
+  ): ToolOutcome<SemanticFileSearchToolResponse> => {
     const parsed = retrieveTextChunksArgsSchema.safeParse(args);
 
     if (!parsed.success) {
