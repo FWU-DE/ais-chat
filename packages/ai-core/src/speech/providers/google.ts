@@ -1,6 +1,7 @@
+import type { GenerateContentResponse } from '@google/genai';
 import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { createGoogleClient, formatGoogleError } from '../../google-client';
-import type { AiModel, SpeechGenerationFn } from '../types';
+import type { AiModel, SpeechGenerationFn, SpeechStreamGenerationFn, SpeechUsage } from '../types';
 
 function pcmToWav(pcm: Buffer): Buffer {
   // Gemini TTS generates 24 kHz mono signed 16-bit little-endian PCM:
@@ -76,5 +77,82 @@ export function constructGoogleSpeechGenerationFn(model: AiModel): SpeechGenerat
     };
 
     return { wavBuffer, usage };
+  };
+}
+
+/**
+ * Streaming counterpart of `constructGoogleSpeechGenerationFn`. Uses `client.models
+ * .generateContentStream(...)` — the same `generateContent` surface as the non-streaming function
+ * above, just the streaming variant — rather than the newer `client.interactions` surface, which
+ * isn't supported by every Gemini TTS model (confirmed unsupported for `gemini-3.1-flash-tts-preview`).
+ * Each yielded chunk can carry a piece of inline audio data (base64 raw PCM, 16-bit LE, 24 kHz,
+ * mono) and/or updated usage metadata; the last usage metadata seen is treated as final.
+ */
+export function constructGoogleStreamingSpeechGenerationFn(
+  model: AiModel,
+): SpeechStreamGenerationFn {
+  if (model.setting.provider !== 'google') {
+    throw new ProviderConfigurationError('Invalid model configuration for Google');
+  }
+
+  const { client } = createGoogleClient(model);
+  const modelName = model.name;
+
+  return async function getGoogleSpeechStream({ text, voice, abortSignal }) {
+    let stream: AsyncGenerator<GenerateContentResponse>;
+    try {
+      stream = await client.models.generateContentStream({
+        model: modelName,
+        contents: [{ role: 'user', parts: [{ text }] }],
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } },
+          },
+          abortSignal,
+        },
+      });
+    } catch (error) {
+      throw new AiGenerationError(formatGoogleError('Google Vertex AI Speech (stream)', error));
+    }
+
+    let resolveUsage: (usage: SpeechUsage) => void;
+    const usage = new Promise<SpeechUsage>((resolve) => {
+      resolveUsage = resolve;
+    });
+
+    async function* readChunks() {
+      let finalUsage: SpeechUsage = { inputTextTokens: 0, outputAudioTokens: 0 };
+      let receivedAudio = false;
+
+      try {
+        for await (const chunk of stream) {
+          const parts = chunk.candidates?.[0]?.content?.parts ?? [];
+          const inline = parts.find((p) => p.inlineData?.data)?.inlineData;
+          if (inline?.data) {
+            receivedAudio = true;
+            yield Buffer.from(inline.data, 'base64');
+          }
+
+          const usageMetadata = chunk.usageMetadata;
+          if (usageMetadata) {
+            finalUsage = {
+              inputTextTokens: usageMetadata.promptTokenCount ?? 0,
+              outputAudioTokens: usageMetadata.candidatesTokenCount ?? 0,
+            };
+          }
+        }
+      } catch (error) {
+        throw new AiGenerationError(formatGoogleError('Google Vertex AI Speech (stream)', error));
+      } finally {
+        resolveUsage(finalUsage);
+      }
+
+      if (!receivedAudio) {
+        throw new AiGenerationError('No audio data received from Vertex TTS stream');
+      }
+    }
+
+    return { chunks: readChunks(), usage };
   };
 }
