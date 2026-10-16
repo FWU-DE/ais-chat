@@ -9,6 +9,7 @@ import { iconClassName } from '@/utils/tailwind/icon';
 import { useTranslations } from 'next-intl';
 import {
   ChangeEvent,
+  ClipboardEvent,
   Dispatch,
   KeyboardEvent,
   SetStateAction,
@@ -19,9 +20,16 @@ import {
 } from 'react';
 import AutoResizeTextarea from '../common/auto-resize-textarea';
 import { useToast } from '../common/toast';
-import type { FileUploadResponse, LocalFileState } from '../file-upload/upload-file';
+import {
+  getAllowedFileExtensions,
+  getFilesFromClipboard,
+  handleSingleFile,
+  type FileUploadResponse,
+  type LocalFileState,
+} from '../file-upload/upload-file';
 import ArrowRightIcon from '../icons/arrow-right';
 import StopIcon from '../icons/stop';
+import { useLlmModels } from '../providers/llm-model-provider';
 import ChatInputAttachmentPreview from './chat-input-attachment-preview';
 import UploadFileButton from './upload-file-button';
 
@@ -53,6 +61,7 @@ export function ChatInputBox({
   const tCommon = useTranslations('common');
   const tFileInteraction = useTranslations('file-interaction');
   const toast = useToast();
+  const { selectedModel } = useLlmModels();
   const [fileUploading, setFileUploading] = useState(false);
 
   useEffect(() => {
@@ -103,6 +112,39 @@ export function ChatInputBox({
         await customHandleSubmit(e);
       }
     }
+  }
+
+  async function handlePaste(e: ClipboardEvent<HTMLTextAreaElement>) {
+    const clipboardFiles = getFilesFromClipboard(e.clipboardData);
+
+    if (
+      !enableFileUpload ||
+      files === undefined ||
+      setFiles === undefined ||
+      clipboardFiles.length === 0
+    ) {
+      return;
+    }
+
+    e.preventDefault();
+    setFileUploading(true);
+    const allowedFileExtensions = getAllowedFileExtensions(
+      files.values(),
+      selectedModel?.supportedImageFormats,
+    );
+    await Promise.all(
+      clipboardFiles.map((file) =>
+        handleSingleFile({
+          file,
+          setFiles,
+          fileUploadFn,
+          toast,
+          translations: tFileInteraction,
+          allowedFileExtensions,
+        }),
+      ),
+    );
+    setFileUploading(false);
   }
 
   /** Either Send or StopGeneration */
@@ -163,6 +205,7 @@ export function ChatInputBox({
             onChange={handleInputChange}
             value={input}
             onKeyDown={handleSubmitOnEnter}
+            onPaste={handlePaste}
             maxLength={CHAT_MESSAGE_LENGTH_LIMIT}
             data-testid="chat-input"
           />
