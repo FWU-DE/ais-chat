@@ -17,6 +17,27 @@ export const createVoucherSchema = z.object({
   numberOfCodes: z.number().min(1).default(1),
 });
 
+/**
+ * Budget transfer between teachers of the same school: a transfer voucher is created from the
+ * donor's unused monthly budget and marked via `createdBy` (no extra column needed).
+ */
+export const BUDGET_TRANSFER_CREATED_BY_PREFIX = 'transfer:';
+
+export function getBudgetTransferCreatedByTag(userId: string): string {
+  return `${BUDGET_TRANSFER_CREATED_BY_PREFIX}${userId}`;
+}
+
+/** Returns the donor's user id if the voucher is a budget transfer, otherwise undefined. */
+export function getBudgetTransferDonorId(createdBy: string): string | undefined {
+  return createdBy.startsWith(BUDGET_TRANSFER_CREATED_BY_PREFIX)
+    ? createdBy.slice(BUDGET_TRANSFER_CREATED_BY_PREFIX.length)
+    : undefined;
+}
+
+export const createBudgetTransferSchema = z.object({
+  amountInCent: z.number().int().min(1).max(20_000),
+});
+
 // Business layer types
 export type Voucher = z.infer<typeof voucherSelectSchema>;
 
