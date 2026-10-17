@@ -2,6 +2,7 @@
 
 import {
   ChatTextIcon,
+  HandCoinsIcon,
   ImageSquareIcon,
   LegoSmileyIcon,
   MountainsIcon,
@@ -106,7 +107,30 @@ export function AppSidebar({ federalState, user, usedBudget, maxBudget }: AppSid
           </SidebarGroup>
 
           <SidebarGroup className="mt-2">
-            <MyTokenPoints text={t('token-points')} usedBudget={usedBudget} maxBudget={maxBudget} />
+            <MyTokenPoints
+              text={t('token-points')}
+              usedBudget={usedBudget}
+              maxBudget={maxBudget}
+              monthlyBudget={
+                user.userRole === 'student'
+                  ? federalState.studentPriceLimit
+                  : federalState.teacherPriceLimit
+              }
+            />
+            {user.userRole === 'teacher' && (
+              <SidebarMenu>
+                <AppMenuItem
+                  href="/top-up"
+                  icon={<HandCoinsIcon />}
+                  text={
+                    federalState.featureToggles?.isBudgetTransferEnabled
+                      ? t('token-points-manage')
+                      : t('token-points-redeem')
+                  }
+                />
+              </SidebarMenu>
+            )}
+            <SidebarSeparator className="my-6" />
           </SidebarGroup>
 
           <SidebarGroup className="mt-4">
