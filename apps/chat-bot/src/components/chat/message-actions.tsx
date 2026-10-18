@@ -88,33 +88,29 @@ export function MessageActions({
         </Button>
       )}
       {speechOnly ? (
-        isInitialMessage ? null : (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            type="button"
-            onClick={onToggleText}
-            title={isTextVisible ? tCommon('hide-message-text') : tCommon('show-message-text')}
-            aria-label={isTextVisible ? tCommon('hide-message-text') : tCommon('show-message-text')}
-            aria-pressed={isTextVisible}
-            className="text-primary"
-            data-testid="toggle-message-text-button"
-          >
-            {isTextVisible ? (
-              <TextTSlashIcon className="size-4 text-primary" />
-            ) : (
-              <TextTIcon className="size-4 text-primary" />
-            )}
-          </Button>
-        )
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          type="button"
+          onClick={onToggleText}
+          title={isTextVisible ? tCommon('hide-message-text') : tCommon('show-message-text')}
+          aria-label={isTextVisible ? tCommon('hide-message-text') : tCommon('show-message-text')}
+          aria-pressed={isTextVisible}
+          className="text-primary"
+          data-testid="toggle-message-text-button"
+        >
+          {isTextVisible ? (
+            <TextTSlashIcon className="size-4 text-primary" />
+          ) : (
+            <TextTIcon className="size-4 text-primary" />
+          )}
+        </Button>
       ) : (
-        !isInitialMessage && (
-          <SpeechButton
-            text={plainText}
-            generateSpeechFn={generateSpeechFn}
-            isSpeechModelEnabled={isSpeechModelEnabled}
-          />
-        )
+        <SpeechButton
+          text={plainText}
+          generateSpeechFn={generateSpeechFn}
+          isSpeechModelEnabled={isSpeechModelEnabled}
+        />
       )}
       {showActivityDialog && <AiActivityDialog steps={activitySteps} />}
     </div>
