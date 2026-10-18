@@ -51,3 +51,25 @@ describe('buildMathCalculateTool', () => {
     expect(mocks.calculateMock).not.toHaveBeenCalled();
   });
 });
+
+describe('mathCalculateActivity.parsePersistedResult', () => {
+  it('passes a legacy success result with a stale `error: null` through unchanged', async () => {
+    const { mathCalculateActivity } = await import('./math-calculate-tool');
+
+    expect(
+      mathCalculateActivity.parsePersistedResult({
+        status: 'success',
+        result: '4',
+        error: null,
+      }),
+    ).toEqual({ status: 'success', result: '4', error: null });
+  });
+
+  it('passes a current error result through unchanged', async () => {
+    const { mathCalculateActivity } = await import('./math-calculate-tool');
+
+    expect(mathCalculateActivity.parsePersistedResult({ error: 'Invalid expression.' })).toEqual({
+      error: 'Invalid expression.',
+    });
+  });
+});

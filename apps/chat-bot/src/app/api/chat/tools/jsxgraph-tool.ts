@@ -12,9 +12,10 @@ import {
   parsePlotSpec,
   type PlotSpec,
 } from '@/utils/plot/plot-spec';
-import type { ToolDefinition, ToolRegistration } from './types';
+import type { ToolActivity, ToolDefinition, ToolRegistration } from './types';
 import { TOOL_NAMES } from '@/types/tool-names';
 import type { ToolOutcome } from '@ais-chat/ai-core/chat/types';
+import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
 
 export const createPlotArgsSchema = z.object({
   description: z.string().trim().min(1),
@@ -82,6 +83,15 @@ type BuildJsxgraphToolParams = {
 function isPresent(value: string | null | undefined): value is string {
   return value !== undefined && value !== null;
 }
+
+export const createPlotActivity: ToolActivity<PlotSpec> = {
+  createStep: (toolCall: ToolCall) => ({
+    kind: 'tool',
+    id: toolCall.id,
+    tool: TOOL_NAMES.createPlot,
+  }),
+  parsePersistedResult: (raw) => parseGenericPersistedToolResult<PlotSpec>(raw),
+};
 
 export function buildJsxgraphTool({
   modelSelection,
@@ -162,12 +172,6 @@ export function buildJsxgraphTool({
   return {
     definition,
     handler,
-    activity: {
-      createStep: (toolCall: ToolCall) => ({
-        kind: 'tool',
-        id: toolCall.id,
-        tool: TOOL_NAMES.createPlot,
-      }),
-    },
+    activity: createPlotActivity,
   };
 }

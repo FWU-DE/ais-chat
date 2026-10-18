@@ -486,3 +486,34 @@ describe('buildRetrieveTextChunksTool', () => {
     });
   });
 });
+
+describe('retrieveTextChunksActivity.parsePersistedResult', () => {
+  it('treats an empty `chunks` result with an explanatory `error` as success, not a failure', async () => {
+    const { retrieveTextChunksActivity } = await import('./retrieve-text-chunks-tool');
+
+    expect(
+      retrieveTextChunksActivity.parsePersistedResult({
+        chunks: [],
+        error: 'No matching chunks found.',
+      }),
+    ).toEqual({ chunks: [] });
+  });
+
+  it('keeps `error` when `chunks` is non-empty', async () => {
+    const { retrieveTextChunksActivity } = await import('./retrieve-text-chunks-tool');
+
+    const generic = {
+      chunks: [{ fileName: 'a.txt', orderIndex: 0, content: 'x' }],
+      error: 'unrelated',
+    };
+    expect(retrieveTextChunksActivity.parsePersistedResult(generic)).toEqual(generic);
+  });
+
+  it('passes a current error result through unchanged', async () => {
+    const { retrieveTextChunksActivity } = await import('./retrieve-text-chunks-tool');
+
+    expect(
+      retrieveTextChunksActivity.parsePersistedResult({ error: 'Missing search query.' }),
+    ).toEqual({ error: 'Missing search query.' });
+  });
+});
