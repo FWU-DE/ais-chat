@@ -1,120 +1,83 @@
 import { ConversationMessageModel } from '@shared/db/types';
 import { type ChatMessage } from '@/types/chat';
 import {
-  isAiActivityToolName,
   type AiActivityStep,
-  type AiActivityToolStep,
+  type AiActivityToolName,
+  isAiActivityToolName,
 } from '@/types/ai-activity';
-import { parseJsonRecord, readString, readValue, toLinks } from './ai-activity';
-import { TOOL_NAMES } from '@/types/tool-names';
-import { webSearchArgsSchema } from '@/app/api/chat/tools/web-search-tool';
-import { webScraperArgsSchema } from '@/app/api/chat/tools/web-scraper-tool';
-import { retrieveEntireFileArgsSchema } from '@/app/api/chat/tools/retrieve-entire-file-tool';
-import { mundoSearchArgsSchema } from '@/app/api/chat/tools/mundo-search-tool';
+import type { ToolErrorResult, ToolResult } from '@ais-chat/ai-core/chat/types';
+import { logError } from '@shared/logging/logging';
+import { createAiActivityCollector } from './ai-activity';
+import { toolActivityRegistry } from '@/app/api/chat/build-tools';
+import type { ToolActivity } from '@/app/api/chat/tools/types';
+import {
+  parseGenericPersistedToolResult,
+  parsePersistedToolResultContent,
+} from '@/app/api/chat/tools/parse-persisted-tool-result';
 
-function createActivityStep(
-  toolCall: NonNullable<ConversationMessageModel['toolCalls']>[number],
-): AiActivityToolStep | undefined {
-  if (!isAiActivityToolName(toolCall.name)) {
-    return undefined;
+// A tool's own `parsePersistedResult` isn't trusted to handle malformed/legacy persisted data
+// defensively, so a throw here is treated like a parsed `ToolErrorResult`: the step still gets
+// added, just unenriched, instead of aborting the whole reload loop.
+function parsePersistedResultSafely(
+  activity: ToolActivity,
+  rawContent: unknown,
+): ToolResult | ToolErrorResult | undefined {
+  try {
+    return activity.parsePersistedResult(rawContent);
+  } catch (error) {
+    logError('Failed to parse persisted tool result', error);
+    return { error: 'Failed to parse persisted tool result' };
   }
-
-  const args = parseJsonRecord(toolCall.arguments);
-  let detail: string | undefined;
-  let links: ReturnType<typeof toLinks>;
-
-  switch (toolCall.name) {
-    case TOOL_NAMES.webSearch: {
-      const parsed = webSearchArgsSchema.safeParse(args);
-      detail = parsed.success ? parsed.data.query : undefined;
-      break;
-    }
-    case TOOL_NAMES.mundoSearch: {
-      const parsed = mundoSearchArgsSchema.safeParse(args);
-      detail = parsed.success ? parsed.data.query : undefined;
-      break;
-    }
-    case TOOL_NAMES.retrieveEntireFile: {
-      const parsed = retrieveEntireFileArgsSchema.safeParse(args);
-      detail = parsed.success ? parsed.data.fileName : undefined;
-      break;
-    }
-    case TOOL_NAMES.webScraper: {
-      const parsed = webScraperArgsSchema.safeParse(args);
-      links = parsed.success ? toLinks(parsed.data.urls.map((url) => ({ url }))) : undefined;
-      break;
-    }
-  }
-
-  return {
-    kind: 'tool',
-    id: toolCall.id,
-    tool: toolCall.name,
-    ...(detail === undefined ? {} : { detail }),
-    ...(links === undefined ? {} : { links }),
-  };
 }
 
-function applyActivityResult(step: AiActivityToolStep, content: string): AiActivityToolStep {
-  const parsed = parseJsonRecord(content);
-
-  if (step.tool === TOOL_NAMES.mathCalculate) {
-    const value = readString(parsed, 'result');
-    return value === undefined ? step : { ...step, result: value };
-  }
-
-  const links =
-    step.tool === TOOL_NAMES.webScraper
-      ? toLinks(Array.isArray(parsed) ? parsed : [])
-      : step.tool === TOOL_NAMES.webSearch || step.tool === TOOL_NAMES.mundoSearch
-        ? toLinks(readValue(parsed, 'results'))
-        : undefined;
-
-  return links === undefined ? step : { ...step, links };
-}
-
+// Reconstructs AI activity steps from persisted messages by replaying them through the same
+// collector used for live streaming, so reload-from-DB can never drift from the streaming result.
 function getActivitySteps(
   messages: Array<ConversationMessageModel>,
 ): Map<string, AiActivityStep[]> {
   const activityByMessageId = new Map<string, AiActivityStep[]>();
-  const steps: AiActivityStep[] = [];
-  const stepsByToolCallId = new Map<string, AiActivityToolStep>();
+  // Tracked separately from the collector: knowing which tool a persisted result belongs to is
+  // needed to parse it with that tool's own `parsePersistedResult`, before the step even exists.
+  const toolNameByCallId = new Map<string, AiActivityToolName>();
+  let collector = createAiActivityCollector();
 
   for (const message of messages) {
     if (message.role === 'assistant' && message.toolCalls?.length) {
+      collector.addToolCalls(message.toolCalls);
       for (const toolCall of message.toolCalls) {
-        const step = createActivityStep(toolCall);
-        if (step === undefined) {
-          continue;
+        if (isAiActivityToolName(toolCall.name)) {
+          toolNameByCallId.set(toolCall.id, toolCall.name);
         }
-
-        steps.push(step);
-        stepsByToolCallId.set(step.id, step);
-      }
-
-      if (message.toolCalls?.length) {
-        continue;
-      }
-    }
-
-    if (message.role === 'tool' && message.toolCallId !== null) {
-      const step = stepsByToolCallId.get(message.toolCallId);
-      if (step !== undefined) {
-        const updatedStep = applyActivityResult(step, message.content);
-        steps[steps.indexOf(step)] = updatedStep;
-        stepsByToolCallId.set(message.toolCallId, updatedStep);
       }
       continue;
     }
 
-    if (message.role === 'assistant' && (steps.length > 0 || message.reasoningSummary)) {
-      if (message.reasoningSummary) {
-        steps.push({ kind: 'analysis-summary', content: message.reasoningSummary });
+    if (message.role === 'tool' && message.toolCallId !== null) {
+      const rawContent = parsePersistedToolResultContent(message.content);
+      if (rawContent !== undefined) {
+        const toolName = toolNameByCallId.get(message.toolCallId);
+        const activity = toolName ? toolActivityRegistry[toolName] : undefined;
+        const parsedResult = activity
+          ? parsePersistedResultSafely(activity, rawContent)
+          : parseGenericPersistedToolResult<ToolResult>(rawContent);
+
+        if (parsedResult !== undefined) {
+          collector.addToolResult(message.toolCallId, parsedResult);
+        }
       }
-      steps.push({ kind: 'done' });
-      activityByMessageId.set(message.id, [...steps]);
-      steps.length = 0;
-      stepsByToolCallId.clear();
+      continue;
+    }
+
+    if (message.role === 'assistant') {
+      if (message.reasoningSummary) {
+        collector.addReasoningSummary(message.reasoningSummary);
+      }
+
+      if (collector.finish()) {
+        activityByMessageId.set(message.id, collector.getSteps());
+      }
+
+      collector = createAiActivityCollector();
     }
   }
 

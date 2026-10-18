@@ -119,6 +119,7 @@ vi.mock('@shared/logging', () => ({
 
 vi.mock('../chat/build-tools', () => ({
   buildTools: mocks.buildToolsMock,
+  toolActivityRegistry: {},
 }));
 
 vi.mock('../file-operations/preprocess-image', () => ({
