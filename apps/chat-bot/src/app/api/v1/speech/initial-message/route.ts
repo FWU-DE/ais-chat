@@ -3,7 +3,7 @@ import { generateStaticMessageSpeech } from '@/app/api/chat/speech-service';
 import { getUser } from '@/auth/utils';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
 import { getCharacterForChatSession } from '@shared/characters/character-service';
-import { NotFoundError } from '@shared/error';
+import { ForbiddenError, NotFoundError } from '@shared/error';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
@@ -16,6 +16,13 @@ export async function POST(req: NextRequest) {
       characterId: parsed.characterId,
       user,
     });
+
+    if (
+      user.federalState.featureToggles.isSpeechModelEnabled !== true ||
+      !character.isSpeechEnabled
+    ) {
+      throw new ForbiddenError('Speech is not enabled for this character');
+    }
 
     if (!character.initialMessage) {
       throw new NotFoundError('Character has no initial message');
