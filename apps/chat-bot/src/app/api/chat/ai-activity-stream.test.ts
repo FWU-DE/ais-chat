@@ -1,4 +1,4 @@
-import type { CalculatorResponse } from '@/app/api/chat/calculator';
+import type { MathCalculateToolSuccessResponse } from '@/app/api/chat/tools/math-calculate-tool';
 import type { AiActivityToolStep } from '@/types/ai-activity';
 import { decodeChatStreamEvent } from '@/utils/streaming';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
@@ -13,9 +13,9 @@ const toolCall: ToolCall = {
 };
 
 function createToolRegistry() {
-  const registration: ToolRegistration = {
+  const registration: ToolRegistration<MathCalculateToolSuccessResponse> = {
     definition: { name: 'math_calculate', description: '', parameters: {} },
-    handler: vi.fn(async (): Promise<CalculatorResponse> => ({
+    handler: vi.fn(async (): Promise<MathCalculateToolSuccessResponse> => ({
       status: 'success',
       result: '42',
     })),
@@ -26,7 +26,7 @@ function createToolRegistry() {
         tool: 'math_calculate' as const,
       }),
       applyResult: (step: AiActivityToolStep, result: unknown) => {
-        const typed = result as CalculatorResponse;
+        const typed = result as MathCalculateToolSuccessResponse;
         return { ...step, result: typed.result ?? undefined };
       },
     },
@@ -71,7 +71,7 @@ describe('createAiActivityStream', () => {
     activity.onToolCalls([toolCall]);
     activity.onToolResult({
       toolCallId: toolCall.id,
-      result: { status: 'success', result: '42' },
+      result: { result: '42' },
     });
     activity.onReasoningSummary('Done.');
     activity.finish();

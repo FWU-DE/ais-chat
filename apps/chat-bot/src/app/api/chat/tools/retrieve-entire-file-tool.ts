@@ -1,7 +1,7 @@
 import { RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT } from '@/configuration-text-inputs/const';
 import { TOOL_NAMES } from '@/types/tool-names';
 import { parseJsonRecord } from '@/utils/chat/ai-activity';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { dbGetExtractedFileContent } from '@shared/db/functions/files';
 import type { FileModel } from '@shared/db/schema';
 import { z } from 'zod';
@@ -50,7 +50,7 @@ type BuildRetrieveEntireFileToolParams = Pick<BuildToolsContext, 'relatedFileEnt
 
 export function buildRetrieveEntireFileTool({
   relatedFileEntities,
-}: BuildRetrieveEntireFileToolParams): ToolRegistration | null {
+}: BuildRetrieveEntireFileToolParams): ToolRegistration<RetrieveEntireFileToolResponse> | null {
   if (relatedFileEntities.length === 0) {
     return null;
   }
@@ -77,7 +77,7 @@ export function buildRetrieveEntireFileTool({
 
   const handler = async (
     args: Record<string, unknown>,
-  ): Promise<RetrieveEntireFileToolResponse | { error: string; fileName?: string }> => {
+  ): ToolOutcome<RetrieveEntireFileToolResponse, { fileName?: string }> => {
     const parsed = retrieveEntireFileArgsSchema.safeParse(args);
 
     if (!parsed.success) {
