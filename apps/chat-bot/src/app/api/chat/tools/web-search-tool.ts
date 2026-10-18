@@ -1,12 +1,12 @@
 import { TOOL_NAMES } from '@/types/tool-names';
 import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { z } from 'zod';
 import { resolveWebSearchConfig, searchWeb } from '../websearch';
 import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
 
 export const webSearchArgsSchema = z.object({
-  query: z.string(),
+  query: z.string().trim().min(1),
 });
 
 export type WebSearchToolResult = {
@@ -17,7 +17,6 @@ export type WebSearchToolResult = {
 
 export type WebSearchToolResponse = {
   results: WebSearchToolResult[];
-  error: string | null;
 };
 
 type BuildWebSearchToolParams = Pick<
@@ -37,7 +36,7 @@ export function buildWebSearchTool({
   assistantId,
   conversationId,
   webSearchSettings,
-}: BuildWebSearchToolParams): ToolRegistration | null {
+}: BuildWebSearchToolParams): ToolRegistration<WebSearchToolResponse> | null {
   const config = resolveWebSearchConfig({
     user,
     assistantId,
@@ -75,33 +74,33 @@ export function buildWebSearchTool({
     },
   };
 
-  const handler = async (args: Record<string, unknown>) => {
+  const handler = async (args: Record<string, unknown>): ToolOutcome<WebSearchToolResponse> => {
     const parsed = webSearchArgsSchema.safeParse(args);
-    const query = parsed.success ? parsed.data.query : '';
-    const results = await searchWeb({
-      query,
-      conversationId,
-      characterId,
-      learningScenarioId,
-      userId: user.id,
-      includedDomains,
-    });
 
-    const response: WebSearchToolResponse = {
-      results: results.map((result) => ({
-        title: result.name?.trim() ?? null,
-        url: result.url ?? null,
-        content: result.content?.trim() ?? null,
-      })),
-      error: null,
-    };
-
-    if (results.length === 0) {
-      response.error = 'No results found.';
-      return response;
+    if (!parsed.success) {
+      return { error: 'Missing search query.' };
     }
 
-    return response;
+    try {
+      const results = await searchWeb({
+        query: parsed.data.query,
+        conversationId,
+        characterId,
+        learningScenarioId,
+        userId: user.id,
+        includedDomains,
+      });
+
+      return {
+        results: results.map((result) => ({
+          title: result.name?.trim() ?? null,
+          url: result.url ?? null,
+          content: result.content?.trim() ?? null,
+        })),
+      };
+    } catch {
+      return { error: 'Web search failed.' };
+    }
   };
 
   return {
@@ -114,7 +113,7 @@ export function buildWebSearchTool({
           kind: 'tool',
           id: toolCall.id,
           tool: TOOL_NAMES.webSearch,
-          detail: parsed.success ? parsed.data.query.trim() : undefined,
+          detail: parsed.success ? parsed.data.query : undefined,
         };
       },
       applyResult: (step, result) => {

@@ -1,6 +1,6 @@
 import { TOOL_NAMES } from '@/types/tool-names';
 import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import type { WebSource } from '@shared/db/types';
 import { isIP } from 'node:net';
 import { z } from 'zod';
@@ -10,52 +10,43 @@ import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './type
 const MAX_WEB_SCRAPER_URLS = 5;
 
 export const webScraperArgsSchema = z.object({
-  urls: z.array(z.string()),
+  urls: z.array(z.string().trim()).min(1),
 });
 
 export type WebScraperToolResult = {
-  title: string | null;
-  url: string | null;
-  content: string | null;
-  error: string | null;
+  url?: string;
+  title?: string;
+  content?: string;
+  error?: string;
 };
 
-function formatWebScrapedContentForTool(result: WebSource) {
-  const title = result.name?.trim() || null;
-  const content = result.content?.trim() || null;
-
-  const response: WebScraperToolResult = {
-    title,
-    url: result.link ?? null,
-    content: null,
-    error: null,
-  };
+function formatWebScrapedContentForTool(result: WebSource): WebScraperToolResult {
+  const url = result.link ?? undefined;
+  const title = result.name?.trim() || undefined;
+  const content = result.content?.trim() || undefined;
 
   if (result.error) {
-    response.error = 'Failed to fetch the page.';
-    return response;
+    return { url, title, error: 'Failed to fetch the page.' };
   }
 
   if (!content) {
-    response.error = 'No usable content found.';
-    return response;
+    return { url, title, error: 'No usable content found.' };
   }
 
-  response.content = content;
-  return response;
+  return { url, title, content };
 }
 
-function validateWebScraperUrl(inputUrl: string): { url: string; error?: string } {
+function validateWebScraperUrl(inputUrl: string): { url: string } | { error: string } {
   let parsedUrl: URL;
 
   try {
     parsedUrl = new URL(inputUrl);
   } catch {
-    return { url: '', error: 'Error: Invalid URL.' };
+    return { error: 'Error: Invalid URL.' };
   }
 
   if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-    return { url: '', error: 'Error: Only http and https URLs are allowed.' };
+    return { error: 'Error: Only http and https URLs are allowed.' };
   }
 
   const hostname = parsedUrl.hostname.toLowerCase();
@@ -66,7 +57,7 @@ function validateWebScraperUrl(inputUrl: string): { url: string; error?: string 
     hostname.endsWith('.local') ||
     isIP(hostname) !== 0
   ) {
-    return { url: '', error: 'Error: Only domain hosts are allowed.' };
+    return { error: 'Error: Only domain hosts are allowed.' };
   }
 
   return { url: parsedUrl.toString() };
@@ -80,7 +71,7 @@ type BuildWebScraperToolParams = Pick<
 export function buildWebScraperTool({
   sourceUrls,
   attachedLinks,
-}: BuildWebScraperToolParams): ToolRegistration | null {
+}: BuildWebScraperToolParams): ToolRegistration<WebScraperToolResult[]> | null {
   const attachedSourceUrls = sourceUrls.length > 0 ? sourceUrls : attachedLinks;
 
   const definition: ToolDefinition = {
@@ -109,40 +100,28 @@ export function buildWebScraperTool({
     },
   };
 
-  const handler = async (args: Record<string, unknown>) => {
+  const handler = async (args: Record<string, unknown>): ToolOutcome<WebScraperToolResult[]> => {
     const parsed = webScraperArgsSchema.safeParse(args);
     const urls = parsed.success ? parsed.data.urls : [];
 
     if (urls.length === 0) {
-      return 'Error: Missing URLs.';
+      return { error: 'Missing URLs.' };
     }
 
     if (urls.length > MAX_WEB_SCRAPER_URLS) {
-      return `Error: Maximum ${MAX_WEB_SCRAPER_URLS} URLs allowed per call.`;
+      return { error: `Maximum ${MAX_WEB_SCRAPER_URLS} URLs allowed per call.` };
     }
 
     const results = await Promise.all(
       urls.map(async (url) => {
-        const urlString = typeof url === 'string' ? url.trim() : '';
-
-        if (urlString.length === 0) {
-          return {
-            title: null,
-            url: null,
-            content: null,
-            error: 'Empty URL.',
-          };
+        if (!url) {
+          return { error: 'Empty URL.' };
         }
 
-        const validationResult = validateWebScraperUrl(urlString);
+        const validationResult = validateWebScraperUrl(url);
 
-        if (validationResult.error) {
-          return {
-            title: null,
-            url: urlString,
-            content: null,
-            error: validationResult.error,
-          };
+        if ('error' in validationResult) {
+          return { url, error: validationResult.error };
         }
 
         const result = await webScraper(validationResult.url);
