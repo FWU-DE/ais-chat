@@ -188,9 +188,7 @@ export async function sendLearningScenarioMessage({
     apiKeyId,
   });
 
-  const aiActivity = createAiActivityStream(update, tools.toolRegistry, {
-    hideSensitiveDetails: true,
-  });
+  const aiActivity = createAiActivityStream(update, { hideSensitiveDetails: true });
 
   // Build system prompt
   const systemPrompt = constructLearningScenarioSystemPrompt({

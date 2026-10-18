@@ -1,7 +1,7 @@
 'use client';
 
 import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
-import { truncate } from '@/utils/chat/ai-activity';
+import { truncate } from '@/utils/chat/tool-result-parsing';
 import { cn } from '@/utils/tailwind';
 import {
   BooksIcon,
