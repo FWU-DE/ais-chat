@@ -144,7 +144,7 @@ export async function generateSpeechPreview({ text, voice }: { text: string; voi
 }
 
 /**
- * Generates speech for a static, non-conversational message (e.g. a character's initial message).
+ * Generates speech for a static message (e.g. a character's initial message).
  * The result is cached because the text is identical for every listener, and generation is unbilled.
  */
 export async function generateStaticMessageSpeech({
