@@ -170,7 +170,7 @@ export async function sendCharacterMessage({
   const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
   const assistantMessageId = crypto.randomUUID();
 
-  const tools = await buildTools({
+  const tools = buildTools({
     user: teacherUserAndContext,
     characterId: character.id,
     webSearchSettings: character,

@@ -1,5 +1,5 @@
 import type { AiActivityStep } from '@/types/ai-activity';
-import { type ChatStatus, type UIMessage } from '@/types/chat';
+import { type ChatStatus, type GenerateSpeechFn, type UIMessage } from '@/types/chat';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import { AiActivityPanel } from './activity/ai-activity';
@@ -22,8 +22,9 @@ interface MessagesProps {
   webSourceMapping?: Map<string, WebSource[]>;
   activitySteps?: AiActivityStep[];
   showActivityDialog?: boolean;
-  generateSpeechFn: (text: string) => Promise<Blob>;
+  generateSpeechFn: GenerateSpeechFn;
   isSpeechModelEnabled: boolean;
+  speechOnly: boolean;
 }
 
 export function Messages({
@@ -41,6 +42,7 @@ export function Messages({
   showActivityDialog = false,
   generateSpeechFn,
   isSpeechModelEnabled,
+  speechOnly,
 }: MessagesProps): React.JSX.Element {
   const canRegenerateMessage = messages.some((message) => message.role === 'user');
 
@@ -64,6 +66,7 @@ export function Messages({
           showActivityDialog={showActivityDialog}
           generateSpeechFn={generateSpeechFn}
           isSpeechModelEnabled={isSpeechModelEnabled}
+          speechOnly={speechOnly}
         />
       ))}
       {isLoading && <LoadingAnimation activitySteps={activitySteps} />}

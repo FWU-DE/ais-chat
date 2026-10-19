@@ -394,9 +394,9 @@ describe('template-service', () => {
         duplicateFileWithEmbeddings as MockedFunction<typeof duplicateFileWithEmbeddings>
       ).mockResolvedValue('file-copy-1' as never);
 
-      await copyRelatedTemplateFiles('assistant', 'template-1', 'result-1');
+      await copyRelatedTemplateFiles('assistant', 'template-1', 'result-1', 'target-user');
 
-      expect(duplicateFileWithEmbeddings).toHaveBeenCalledWith('file-1');
+      expect(duplicateFileWithEmbeddings).toHaveBeenCalledWith('file-1', 'target-user');
       expect(linkFileToAssistant).toHaveBeenCalledWith('file-copy-1', 'result-1');
     });
 
@@ -408,9 +408,9 @@ describe('template-service', () => {
         duplicateFileWithEmbeddings as MockedFunction<typeof duplicateFileWithEmbeddings>
       ).mockResolvedValue('file-copy-2' as never);
 
-      await copyRelatedTemplateFiles('character', 'template-2', 'result-2');
+      await copyRelatedTemplateFiles('character', 'template-2', 'result-2', 'target-user');
 
-      expect(duplicateFileWithEmbeddings).toHaveBeenCalledWith('file-2');
+      expect(duplicateFileWithEmbeddings).toHaveBeenCalledWith('file-2', 'target-user');
       expect(linkFileToCharacter).toHaveBeenCalledWith('file-copy-2', 'result-2');
     });
 
@@ -422,9 +422,9 @@ describe('template-service', () => {
         duplicateFileWithEmbeddings as MockedFunction<typeof duplicateFileWithEmbeddings>
       ).mockResolvedValue('file-copy-3' as never);
 
-      await copyRelatedTemplateFiles('learning-scenario', 'template-3', 'result-3');
+      await copyRelatedTemplateFiles('learning-scenario', 'template-3', 'result-3', 'target-user');
 
-      expect(duplicateFileWithEmbeddings).toHaveBeenCalledWith('file-3');
+      expect(duplicateFileWithEmbeddings).toHaveBeenCalledWith('file-3', 'target-user');
       expect(linkFileToLearningScenario).toHaveBeenCalledWith('file-copy-3', 'result-3');
     });
 
@@ -436,7 +436,7 @@ describe('template-service', () => {
         .mockRejectedValueOnce(new Error('copy failed'))
         .mockResolvedValueOnce('file-copy-2' as never);
 
-      await copyRelatedTemplateFiles('assistant', 'template-1', 'result-1');
+      await copyRelatedTemplateFiles('assistant', 'template-1', 'result-1', 'target-user');
 
       expect(logError).toHaveBeenCalledWith(
         expect.stringContaining('Error copying file'),
@@ -447,7 +447,12 @@ describe('template-service', () => {
 
     it('should log and swallow errors for invalid template type', async () => {
       await expect(
-        copyRelatedTemplateFiles('invalid-template-type' as never, 'template-1', 'result-1'),
+        copyRelatedTemplateFiles(
+          'invalid-template-type' as never,
+          'template-1',
+          'result-1',
+          'target-user',
+        ),
       ).resolves.not.toThrow();
 
       expect(logError).toHaveBeenCalledWith(

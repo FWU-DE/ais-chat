@@ -53,12 +53,34 @@ describe('searchWeb', () => {
     mocks.searchMock.mockResolvedValue({
       results: [
         {
+          type: 'text',
           name: 'Result',
           url: 'https://example.com',
           content: 'content',
+          favicon: 'https://example.com/favicon.ico',
         },
       ],
     });
+  });
+
+  it('returns the text search results from Linkup', async () => {
+    const { searchWeb } = await import('./websearch');
+
+    const results = await searchWeb({
+      query: 'aktuelles thema',
+      conversationId: 'conversation-1',
+      userId: 'user-1',
+    });
+
+    expect(results).toEqual([
+      {
+        type: 'text',
+        name: 'Result',
+        url: 'https://example.com',
+        content: 'content',
+        favicon: 'https://example.com/favicon.ico',
+      },
+    ]);
   });
 
   it('records normal chat tool call usage in conversation usage tracking', async () => {
@@ -187,6 +209,19 @@ describe('searchWeb', () => {
 
     expect(mocks.searchMock).toHaveBeenCalledTimes(1);
     expect(mocks.searchMock.mock.calls[0]![0]).not.toHaveProperty('includeDomains');
+  });
+
+  it('propagates errors from the Linkup client instead of swallowing them', async () => {
+    mocks.searchMock.mockRejectedValue(new Error('Linkup is down'));
+    const { searchWeb } = await import('./websearch');
+
+    await expect(
+      searchWeb({
+        query: 'current topic',
+        conversationId: 'conversation-1',
+        userId: 'user-1',
+      }),
+    ).rejects.toThrow('Linkup is down');
   });
 });
 

@@ -7,6 +7,7 @@ import ExpiredChatModal from '@/components/common/expired-chat-modal';
 import { getErrorMessageByType } from '@/error/get-error-message-by-type';
 import { useAutoScroll } from '@/hooks/use-auto-scroll';
 import type { UseChatReturn } from '@/hooks/use-chat-hooks';
+import type { GenerateSpeechFn } from '@/types/chat';
 import { getFileExtension, isImageFile } from '@/utils/files/generic';
 import { getSharedChatImageUrl } from '@/utils/shared-chat-files';
 import {
@@ -90,7 +91,8 @@ export type SharedChatViewProps = {
   assistantIcon?: ReactNode;
   uploadFileFn?: (file: File, sharedSessionId: string) => Promise<{ fileId: string }>;
   isSpeechModelEnabled: boolean;
-  generateSpeechFn: (text: string) => Promise<Blob>;
+  generateSpeechFn: GenerateSpeechFn;
+  speechOnly: boolean;
 };
 
 /**
@@ -116,6 +118,7 @@ export default function GenericSharedChat({
   uploadFileFn,
   isSpeechModelEnabled,
   generateSpeechFn,
+  speechOnly,
 }: SharedChatViewProps) {
   const tCommon = useTranslations('common');
   const tCustomChat = useTranslations('custom-chat.shared');
@@ -387,6 +390,7 @@ export default function GenericSharedChat({
                 showActivityDialog={showActivityDialog}
                 generateSpeechFn={generateSpeechFn}
                 isSpeechModelEnabled={isSpeechModelEnabled}
+                speechOnly={speechOnly}
               />
             )}
             {/* If there is a TokenPointsExceededError or SharedChatExpiredError we show a dialog instead */}

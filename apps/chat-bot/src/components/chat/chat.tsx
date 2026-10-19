@@ -1,34 +1,38 @@
 'use client';
 
-import { useMainChat, type ChatMessage } from '@/hooks/use-chat-hooks';
-import React, { ReactNode, SyntheticEvent, useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
-import { useLlmModels } from '../providers/llm-model-provider';
-import { type CharacterSelectModel, type AssistantSelectModel, FileModel } from '@shared/db/schema';
-import { type LearningScenarioSelectModel } from '@shared/db/schema';
-import PromptSuggestions from './prompt-suggestions';
-import MarkdownDisplay from './markdown-display';
-import { navigateWithoutRefresh } from '@/utils/navigation/router';
-import { useQueryClient } from '@tanstack/react-query';
-import RobotIcon from '../icons/robot';
-import { LocalFileState } from './send-message-form';
-import { deepCopy } from '@/utils/object';
-import { getFileExtension, isImageFile } from '@/utils/files/generic';
 import { refetchFileMapping } from '@/app/(authed)/(chat-bot)/actions';
-import { InitialChatContentDisplay } from './initial-content-display';
+import { getErrorMessageByType } from '@/error/get-error-message-by-type';
+import { useAutoScroll } from '@/hooks/use-auto-scroll';
+import { useMainChat, type ChatMessage } from '@/hooks/use-chat-hooks';
+import { getConversationPath } from '@/utils/chat/path';
+import { getFileExtension, isImageFile } from '@/utils/files/generic';
+import { navigateWithoutRefresh } from '@/utils/navigation/router';
+import { deepCopy } from '@/utils/object';
 import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
+import {
+  FileModel,
+  type AssistantSelectModel,
+  type CharacterSelectModel,
+  type LearningScenarioSelectModel,
+} from '@shared/db/schema';
+import { WebSource } from '@shared/db/types';
+import { logDebug, logError, logWarning } from '@shared/logging';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
+import React, { ReactNode, SyntheticEvent, useEffect, useState } from 'react';
+import RobotIcon from '../icons/robot';
+import { useFederalState } from '../providers/federal-state-provider';
+import { useLlmModels } from '../providers/llm-model-provider';
+import { AssistantIcon } from './assistant-icon';
 import { ChatInputBox } from './chat-input-box';
 import { ErrorChatPlaceholder } from './error-chat-placeholder';
-import { logError, logDebug, logWarning } from '@shared/logging';
-import { useSession } from 'next-auth/react';
-import { AssistantIcon } from './assistant-icon';
-import { useAutoScroll } from '@/hooks/use-auto-scroll';
-import { getConversationPath } from '@/utils/chat/path';
-import { Messages, type PendingFileModel } from './messages';
-import { WebSource } from '@shared/db/types';
 import { FloatingText } from './floating-text';
-import { useFederalState } from '../providers/federal-state-provider';
-import { getErrorMessageByType } from '@/error/get-error-message-by-type';
+import { InitialChatContentDisplay } from './initial-content-display';
+import MarkdownDisplay from './markdown-display';
+import { Messages, type PendingFileModel } from './messages';
+import PromptSuggestions from './prompt-suggestions';
+import { LocalFileState } from './send-message-form';
 
 type ChatProps = {
   id: string;
@@ -261,13 +265,20 @@ export default function Chat({
     });
   }
 
-  async function generateSpeech(text: string): Promise<Blob> {
+  async function generateSpeech(text: string, isInitialMessage: boolean): Promise<Blob> {
+    const useInitialMessage = isInitialMessage && character !== undefined;
     const voice = assistant?.voice ?? character?.voice ?? learningScenario?.voice;
-    const response = await fetch('/api/v1/speech', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conversationId: id, text, voice }),
-    });
+
+    const response = await fetch(
+      useInitialMessage ? '/api/v1/speech/initial-message' : '/api/v1/speech',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          useInitialMessage ? { characterId: character.id } : { conversationId: id, text, voice },
+        ),
+      },
+    );
 
     if (!response.ok) {
       throw new Error('Could not generate speech');
@@ -371,6 +382,12 @@ export default function Chat({
                   character?.isSpeechEnabled ??
                   learningScenario?.isSpeechEnabled ??
                   false)
+              }
+              speechOnly={
+                assistant?.speechOnly ??
+                character?.speechOnly ??
+                learningScenario?.speechOnly ??
+                false
               }
             />
           )}

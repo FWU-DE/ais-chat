@@ -53,6 +53,10 @@
     "read-aloud": "Nachricht vorlesen",
     "pause-message": "Vorlesen pausieren",
     "read-aloud-error": "Die Sprachausgabe ist fehlgeschlagen.",
+    "listen-to-answer": "Antwort anhören",
+    "pause-audio": "Pause",
+    "show-message-text": "Text anzeigen",
+    "hide-message-text": "Text ausblenden",
     "image-load-failed": "Bild konnte nicht geladen werden",
     "rate-limit-error": "Das bereitgestellte Tokenvolumen wurde aufgebraucht.",
     "api-key-quota-error": "Das bereitgestellte Kontingent des Bundeslandes wurde aufgebraucht.",
@@ -685,7 +689,9 @@
       "voice-label": "Stimme",
       "voice-placeholder": "Stimme auswählen",
       "voice-preview-label": "Stimme anhören",
-      "voice-preview-text": "Hallo, schön, dass du da bist. Wie kann ich dir heute helfen?"
+      "voice-preview-text": "Hallo, schön, dass du da bist. Wie kann ich dir heute helfen?",
+      "speech-only-label": "Nur Sprache, kein Text",
+      "speech-only-tooltip": "Falls aktiviert, werden Antworten standardmäßig nur als Sprache ausgegeben. Der Text kann zusätzlich eingeblendet werden."
     }
   },
   "assistants": {

@@ -24,6 +24,7 @@ export const env = createEnv({
       ])
       .default('info'),
     nodeEnv: z.string().default('development'),
+    otelMetricExportEndpoint: z.string().optional(),
     otelMetricExportInterval: z.coerce.number().default(60000),
     otelMetricExportTimeout: z.coerce.number().default(30000),
     port: z.coerce.number().default(3002),
@@ -39,6 +40,7 @@ export const env = createEnv({
     databaseUrl: process.env.API_DATABASE_URL,
     logLevel: process.env.LOG_LEVEL,
     nodeEnv: process.env.NODE_ENV,
+    otelMetricExportEndpoint: process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT,
     otelMetricExportInterval: process.env.OTEL_METRIC_EXPORT_INTERVAL,
     otelMetricExportTimeout: process.env.OTEL_METRIC_EXPORT_TIMEOUT,
     sentryDsn: process.env.SENTRY_DSN,

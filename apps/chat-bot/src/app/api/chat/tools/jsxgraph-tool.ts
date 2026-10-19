@@ -14,6 +14,7 @@ import {
 } from '@/utils/plot/plot-spec';
 import type { ToolDefinition, ToolRegistration } from './types';
 import { TOOL_NAMES } from '@/types/tool-names';
+import type { ToolOutcome } from '@ais-chat/ai-core/chat/types';
 
 export const createPlotArgsSchema = z.object({
   description: z.string().trim().min(1),
@@ -22,8 +23,6 @@ export const createPlotArgsSchema = z.object({
   previousAttempt: z.string().trim().min(1).nullable().optional(),
   previousError: z.string().trim().min(1).nullable().optional(),
 });
-
-export type CreatePlotToolResponse = PlotSpec | { error: string; invalidJson?: string };
 
 const ALLOWED_ELEMENT_TYPES_LIST = [...ALLOWED_ELEMENT_TYPES].sort().join(', ');
 // Generated from the sanitizer's allowlist so the prompt cannot drift from what passes validation.
@@ -87,7 +86,7 @@ function isPresent(value: string | null | undefined): value is string {
 export function buildJsxgraphTool({
   modelSelection,
   apiKeyId,
-}: BuildJsxgraphToolParams): ToolRegistration {
+}: BuildJsxgraphToolParams): ToolRegistration<PlotSpec> {
   const definition: ToolDefinition = {
     name: TOOL_NAMES.createPlot,
     description:
@@ -120,7 +119,7 @@ export function buildJsxgraphTool({
   const handler = async (
     args: Record<string, unknown>,
     options?: ToolHandlerOptions,
-  ): Promise<CreatePlotToolResponse> => {
+  ): ToolOutcome<PlotSpec, { invalidJson?: string }> => {
     const parsedArgs = createPlotArgsSchema.safeParse(args);
     if (!parsedArgs.success) {
       return { error: 'Invalid description.' };

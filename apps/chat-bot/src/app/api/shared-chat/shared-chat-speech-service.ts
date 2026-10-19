@@ -1,5 +1,10 @@
 import type { ChatSpeechStreamResult } from '@/app/api/chat/speech-service';
-import { generateSpeech, generateSpeechStream } from '@/app/api/chat/speech-service';
+import {
+  generateSpeech,
+  generateSpeechStream,
+  generateStaticMessageSpeech,
+} from '@/app/api/chat/speech-service';
+import { UserAndContext } from '@/auth/types';
 import { getUserAndContextByUserId } from '@/auth/utils';
 import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
 import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
@@ -9,7 +14,7 @@ import { TokenPointsExceededError } from '@ais-chat/ai-core';
 import { requireTeacherRole } from '@shared/auth/authorization-service';
 import { dbUpdateTokenUsageByCharacterChatId } from '@shared/db/functions/character';
 import { dbUpdateTokenUsageBySharedLearningScenarioId } from '@shared/db/functions/learning-scenario';
-import { ForbiddenError } from '@shared/error';
+import { ForbiddenError, NotFoundError } from '@shared/error';
 import {
   sharedCharacterChatHasReachedTokenPointsLimit,
   sharedChatHasExpired,
@@ -18,7 +23,11 @@ import {
 } from '@shared/users/usage';
 import { verify } from '.';
 import { getSharedChatEntity } from './shared-chat-get-entity';
-import { SharedChatCharacter, SharedChatLearningScenario } from './shared-chat-types';
+import {
+  SharedChatCharacter,
+  SharedChatEntity,
+  SharedChatLearningScenario,
+} from './shared-chat-types';
 
 export async function generateSharedChatSpeech({
   inviteCode,
@@ -31,33 +40,11 @@ export async function generateSharedChatSpeech({
   entityId: string;
   text: string;
 }): Promise<{ buffer: Buffer; contentType: string }> {
-  const entity = await getSharedChatEntity({ inviteCode, entityType, entityId });
-
-  verify.sharedChatEntityIsAccessible(entity);
-
-  if (entity.startedBy === null) {
-    throw new ForbiddenError('Shared chat has no owner');
-  }
-
-  const teacher = await getUserAndContextByUserId({ userId: entity.startedBy });
-
-  const productAccess = checkProductAccess(teacher);
-  if (!productAccess.hasAccess) {
-    throw new ForbiddenError(`Owner has no product access: ${productAccess.errorType}`);
-  }
-
-  requireTeacherRole(teacher.userRole);
-
-  if (
-    teacher.federalState.featureToggles.isSpeechModelEnabled !== true ||
-    !entity.isSpeechEnabled
-  ) {
-    throw new ForbiddenError('Speech is not enabled for this shared chat');
-  }
-
-  if (sharedChatHasExpired(entity)) {
-    throw new ForbiddenError('Shared chat has expired');
-  }
+  const { entity, teacher } = await verifySharedChatSpeechAccess({
+    inviteCode,
+    entityType,
+    entityId,
+  });
 
   const [sharedChatLimitReached, userLimitReached] = await Promise.all([
     entityType === 'character'
@@ -134,24 +121,15 @@ export async function generateSharedChatSpeech({
   return { buffer: speechResult.buffer, contentType: speechResult.contentType };
 }
 
-/**
- * Streaming counterpart of `generateSharedChatSpeech`. Reuses the same accessibility/role/expiry/
- * budget pre-checks, but yields raw PCM chunks as they arrive instead of waiting for the full
- * audio. This is a new, additive function — `generateSharedChatSpeech`/its route is untouched.
- */
-export async function generateSharedChatSpeechStream({
+async function verifySharedChatSpeechAccess({
   inviteCode,
   entityType,
   entityId,
-  text,
-  abortSignal,
 }: {
   inviteCode: string;
   entityType: 'character' | 'learningScenario';
   entityId: string;
-  text: string;
-  abortSignal?: AbortSignal;
-}): Promise<ChatSpeechStreamResult> {
+}): Promise<{ entity: SharedChatEntity; teacher: UserAndContext }> {
   const entity = await getSharedChatEntity({ inviteCode, entityType, entityId });
 
   verify.sharedChatEntityIsAccessible(entity);
@@ -179,6 +157,33 @@ export async function generateSharedChatSpeechStream({
   if (sharedChatHasExpired(entity)) {
     throw new ForbiddenError('Shared chat has expired');
   }
+
+  return { entity, teacher };
+}
+
+/**
+ * Streaming counterpart of `generateSharedChatSpeech`. Reuses the same accessibility/role/expiry/
+ * budget pre-checks, but yields raw PCM chunks as they arrive instead of waiting for the full
+ * audio.
+ */
+export async function generateSharedChatSpeechStream({
+  inviteCode,
+  entityType,
+  entityId,
+  text,
+  abortSignal,
+}: {
+  inviteCode: string;
+  entityType: 'character' | 'learningScenario';
+  entityId: string;
+  text: string;
+  abortSignal?: AbortSignal;
+}): Promise<ChatSpeechStreamResult> {
+  const { entity, teacher } = await verifySharedChatSpeechAccess({
+    inviteCode,
+    entityType,
+    entityId,
+  });
 
   const [sharedChatLimitReached, userLimitReached] = await Promise.all([
     entityType === 'character'
@@ -266,4 +271,33 @@ export async function generateSharedChatSpeechStream({
     contentType: speechResult.contentType,
     format: speechResult.format,
   };
+}
+
+/**
+ * Generates speech for a shared character's initial message. The text is resolved server-side from
+ * the character (not accepted from the client), and the result is cached and unbilled.
+ */
+export async function generateSharedChatInitialMessageSpeech({
+  inviteCode,
+  characterId,
+}: {
+  inviteCode: string;
+  characterId: string;
+}): Promise<{ buffer: Buffer; contentType: string }> {
+  const { entity } = await verifySharedChatSpeechAccess({
+    inviteCode,
+    entityType: 'character',
+    entityId: characterId,
+  });
+
+  const character = entity as SharedChatCharacter;
+
+  if (!character.initialMessage) {
+    throw new NotFoundError('Character has no initial message');
+  }
+
+  return generateStaticMessageSpeech({
+    text: character.initialMessage,
+    voice: character.voice,
+  });
 }
