@@ -12,6 +12,7 @@ export default defineConfig({
   external: [/.*/],
   // Important:
   // We bundle all workspace packages (e.g. @ais-chat/*) into the API bundle.
+  // This includes the OpenTelemetry metrics dependencies imported from shared-core.
   // Any third‑party modules imported from those packages must therefore be
   // resolvable from the API's runtime node_modules (not from packages/*/node_modules),
   // otherwise Node will fail at runtime.

@@ -60,5 +60,5 @@ Infrastructure configuration.
 Key contents:
 
 - `docker/docker-compose.local.yml` — Local development services (PostgreSQL, Keycloak, Valkey)
-- `docker/monitoring.yml` — Local monitoring stack (OpenTelemetry, Jaeger)
+- `docker/monitoring.yml` — Local metrics stack (Prometheus, Grafana)
 - `docker/keycloak/` — Keycloak realm configuration
