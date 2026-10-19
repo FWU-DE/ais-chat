@@ -27,7 +27,6 @@ export function initSentry({
   const aiServerActionNameSet = new Set(aiServerActionNames.map((name) => `serverAction/${name}`));
 
   Sentry.init({
-    debug: false,
     dsn: env.sentryDsn,
     environment: env.sentryEnvironment,
     initialScope: {
@@ -67,8 +66,8 @@ export function initSentry({
       beforeSend: (event) => scrubSentryEvent(event),
       beforeSendTransaction: (event) => scrubSentryEvent(event),
     }),
+    // Kept explicit: the RabbitMQ publisher traces via the OpenTelemetry API and needs this provider.
     enableOpenTelemetrySetup: true,
-    enableRuntimeChannelInjection: false,
   });
 
   const shutdownMetrics = initMetrics({
