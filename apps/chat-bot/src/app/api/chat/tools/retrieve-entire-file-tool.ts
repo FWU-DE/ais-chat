@@ -1,22 +1,49 @@
 import { RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT } from '@/configuration-text-inputs/const';
 import { TOOL_NAMES } from '@/types/tool-names';
-import { parseJsonRecord } from '@/utils/chat/ai-activity';
+import { parseJsonRecord } from '@/utils/chat/tool-result-parsing';
 import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { dbGetExtractedFileContent } from '@shared/db/functions/files';
 import type { FileModel } from '@shared/db/schema';
 import { z } from 'zod';
-import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
+import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
+import type { BuildToolsContext, ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 export const retrieveEntireFileArgsSchema = z.object({
   fileName: z.string().trim().min(1),
 });
 
-export type RetrieveEntireFileToolResponse = {
-  fileName: string | null;
-  content: string | null;
-  characterCount: number;
-  maxCharacters: number;
-  notice?: string;
+const retrieveEntireFileToolResponseSchema = z.object({
+  fileName: z.string().nullable(),
+  content: z.string().nullable(),
+  characterCount: z.number(),
+  maxCharacters: z.number(),
+  notice: z.string().optional(),
+});
+
+export type RetrieveEntireFileToolResponse = z.infer<typeof retrieveEntireFileToolResponseSchema>;
+
+// A `truncated: true` result isn't a failure, even though it carried an explanatory `error`;
+// both `truncated` and `error` are removed in that case.
+const legacyTruncatedResultSchema = retrieveEntireFileToolResponseSchema
+  .extend({ truncated: z.literal(true), error: z.string() })
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  .transform(({ truncated, error, ...rest }) => rest);
+
+export const retrieveEntireFileActivity: ToolActivity<RetrieveEntireFileToolResponse> = {
+  createStep: (toolCall: ToolCall) => {
+    const parsed = retrieveEntireFileArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.retrieveEntireFile,
+      detail: parsed.success ? parsed.data.fileName : undefined,
+    };
+  },
+  parsePersistedResult: (raw) => {
+    const generic = parseGenericPersistedToolResult<RetrieveEntireFileToolResponse>(raw);
+    const legacy = legacyTruncatedResultSchema.safeParse(generic);
+    return legacy.success ? legacy.data : generic;
+  },
 };
 
 function truncateToCharacterLimit(text: string, maxCharacters: number) {
@@ -97,16 +124,6 @@ export function buildRetrieveEntireFileTool({
   return {
     definition,
     handler,
-    activity: {
-      createStep: (toolCall: ToolCall) => {
-        const parsed = retrieveEntireFileArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
-        return {
-          kind: 'tool',
-          id: toolCall.id,
-          tool: TOOL_NAMES.retrieveEntireFile,
-          detail: parsed.success ? parsed.data.fileName : undefined,
-        };
-      },
-    },
+    activity: retrieveEntireFileActivity,
   };
 }

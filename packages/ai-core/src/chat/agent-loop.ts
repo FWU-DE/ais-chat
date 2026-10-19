@@ -54,7 +54,11 @@ type RunAgentLoopParams = {
   onTextChunk: (delta: string) => void;
   onReasoningSummary?: (delta: string) => void;
   onToolCalls?: (calls: ToolCall[]) => void;
-  onToolResult?: (result: { toolCallId: string; name: string; result: unknown }) => void;
+  onToolResult?: (result: {
+    toolCallId: string;
+    name: string;
+    result: ToolResult | ToolErrorResult;
+  }) => void;
   onComplete: (result: {
     fullText: string;
     usage: TokenUsage;

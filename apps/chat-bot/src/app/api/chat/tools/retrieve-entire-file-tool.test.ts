@@ -165,3 +165,32 @@ describe('buildRetrieveEntireFileTool', () => {
     });
   });
 });
+
+describe('retrieveEntireFileActivity.parsePersistedResult', () => {
+  it('treats a `truncated: true` result with an explanatory `error` as success, not a failure', async () => {
+    const { retrieveEntireFileActivity } = await import('./retrieve-entire-file-tool');
+
+    expect(
+      retrieveEntireFileActivity.parsePersistedResult({
+        fileName: 'a.txt',
+        content: 'abc',
+        characterCount: 100_001,
+        maxCharacters: 100_000,
+        truncated: true,
+        error: 'File content was truncated to fit the character limit.',
+      }),
+    ).toEqual({
+      fileName: 'a.txt',
+      content: 'abc',
+      characterCount: 100_001,
+      maxCharacters: 100_000,
+    });
+  });
+
+  it('keeps `error` when `truncated` is not `true`', async () => {
+    const generic = { fileName: 'a.txt', error: 'File not found.' };
+    const { retrieveEntireFileActivity } = await import('./retrieve-entire-file-tool');
+
+    expect(retrieveEntireFileActivity.parsePersistedResult(generic)).toEqual(generic);
+  });
+});

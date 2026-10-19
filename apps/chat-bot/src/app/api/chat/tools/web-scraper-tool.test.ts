@@ -321,3 +321,61 @@ describe('buildWebScraperTool', () => {
     expect(mocks.webScraperMock).not.toHaveBeenCalled();
   });
 });
+
+describe('webScraperActivity', () => {
+  it('createStep sets links to the parsed URLs for valid arguments', async () => {
+    const { webScraperActivity } = await import('./web-scraper-tool');
+
+    const step = webScraperActivity.createStep({
+      id: 'call-1',
+      name: 'web_scraper',
+      arguments: JSON.stringify({ urls: ['https://example.com/article'] }),
+    });
+
+    expect(step).toEqual({
+      kind: 'tool',
+      id: 'call-1',
+      tool: 'web_scraper',
+      links: [{ title: 'https://example.com/article', url: 'https://example.com/article' }],
+    });
+  });
+
+  it('createStep leaves links undefined for invalid arguments', async () => {
+    const { webScraperActivity } = await import('./web-scraper-tool');
+
+    const step = webScraperActivity.createStep({
+      id: 'call-1',
+      name: 'web_scraper',
+      arguments: JSON.stringify({ urls: [] }),
+    });
+
+    expect(step.links).toBeUndefined();
+  });
+
+  it('applyResult adds links derived from the results', async () => {
+    const { webScraperActivity } = await import('./web-scraper-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'web_scraper' } as const;
+    const result = webScraperActivity.applyResult!(step, [
+      { title: 'Beispielseite', url: 'https://example.com/article', content: 'Inhalt.' },
+    ]);
+
+    expect(result.links).toEqual([{ title: 'Beispielseite', url: 'https://example.com/article' }]);
+  });
+
+  it('applyResult leaves the step unchanged when no links can be derived', async () => {
+    const { webScraperActivity } = await import('./web-scraper-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'web_scraper' } as const;
+    const result = webScraperActivity.applyResult!(step, []);
+
+    expect(result).toEqual(step);
+  });
+
+  it('parsePersistedResult passes a persisted bare array through unchanged', async () => {
+    const { webScraperActivity } = await import('./web-scraper-tool');
+
+    const raw = [{ title: 'Beispielseite', url: 'https://example.com', content: 'Inhalt.' }];
+    expect(webScraperActivity.parsePersistedResult(raw)).toEqual(raw);
+  });
+});
