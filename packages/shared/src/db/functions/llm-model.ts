@@ -1,12 +1,12 @@
+import { logError } from '@shared/logging';
 import { and, eq, getTableColumns, inArray } from 'drizzle-orm';
 import { db } from '..';
+import { fetchLlmModels } from '../../knotenpunkt';
 import { federalStateLlmModelMappingTable, LlmModelSelectModel, llmModelTable } from '../schema';
 import {
-  dbGetFederalStateWithDecryptedApiKeyWithResult,
   dbGetFederalStates,
+  dbGetFederalStateWithDecryptedApiKeyWithResult,
 } from './federal-state';
-import { fetchLlmModels } from '../../knotenpunkt';
-import { logError } from '@shared/logging';
 
 export async function dbGetLlmModelById({ modelId }: { modelId: string | undefined }) {
   if (modelId === undefined) return undefined;
@@ -33,7 +33,7 @@ export async function dbGetAllLlmModels() {
 
 export async function dbGetSpeechModel() {
   const models = await dbGetAllLlmModels();
-  return models.find((model) => model.priceMetadata.type === 'speech');
+  return models.find((model) => model.isDeleted === false && model.priceMetadata.type === 'speech');
 }
 
 export async function dbGetLlmModelsByFederalStateId({
