@@ -52,7 +52,7 @@
     "@vitest/coverage-v8": "5.0.4",
     "eslint": "10.8.1",
     "pino-pretty": "13.2.0",
-    "tsup": "8.5.1",
+    "tsup": "9.0.0",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
     "vitest": "5.0.4"
