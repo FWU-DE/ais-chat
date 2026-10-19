@@ -1,24 +1,28 @@
-import MarkdownIt from 'markdown-it';
 import { PLOT_LANGUAGE } from '@/utils/code-blocks';
 import {
-  Paragraph,
-  HeadingLevel,
-  TextRun,
-  IParagraphPropertiesOptions,
-  Table,
-  TableRow,
-  TableCell,
-  WidthType,
   AlignmentType,
+  HeadingLevel,
+  IParagraphPropertiesOptions,
+  Paragraph,
+  Table,
+  TableCell,
+  TableRow,
+  TextRun,
+  WidthType,
 } from 'docx';
+import MarkdownIt from 'markdown-it';
+import {
+  normalizeMathDelimiters,
+  processMathTextToken,
+  type InlineChild,
+  type Token,
+} from './math-export';
 
 const md = new MarkdownIt();
 const fontSize = 22;
 
-type Token = ReturnType<typeof md.parse>[number];
-
-function processInlineTokens(children: Token[]): TextRun[] {
-  const runs: TextRun[] = [];
+function processInlineTokens(children: Token[]): InlineChild[] {
+  const runs: InlineChild[] = [];
   for (let i = 0; i < children.length; i += 1) {
     const child = children[i];
     const nextChild = children[i + 1];
@@ -29,17 +33,27 @@ function processInlineTokens(children: Token[]): TextRun[] {
       if (child.content.includes('<source>') && child.content.includes('</source>')) {
         continue;
       }
-      runs.push(new TextRun({ text: child.content, size: fontSize }));
+      const previousText = [...children.slice(0, i)]
+        .reverse()
+        .find((candidate) => candidate.type === 'text' && candidate.content.trim().length > 0);
+      if (
+        previousText !== undefined &&
+        /^\s*\$/.test(child.content) &&
+        !/\s$/.test(previousText.content)
+      ) {
+        runs.push(new TextRun({ text: ' ', size: fontSize }));
+      }
+      runs.push(...processMathTextToken(child.content));
     } else if (child.type === 'strong_open') {
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      nextChild !== undefined &&
-        runs.push(new TextRun({ bold: true, text: nextChild.content, size: fontSize }));
-      i += 1;
+      if (nextChild?.type === 'text') {
+        runs.push(...processMathTextToken(nextChild.content, { bold: true }));
+        i += 1;
+      }
     } else if (child.type === 'em_open') {
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      nextChild !== undefined &&
-        runs.push(new TextRun({ italics: true, text: nextChild.content, size: fontSize }));
-      i += 1;
+      if (nextChild?.type === 'text') {
+        runs.push(...processMathTextToken(nextChild.content, { italics: true }));
+        i += 1;
+      }
     } else if (child.type === 'link_open') {
       if (nextChild?.type === 'text' && nextChild?.content.includes('<source>')) {
         continue;
@@ -119,7 +133,7 @@ type ListType = 'bullet' | 'numbering';
 type SectionType = Paragraph | Table;
 
 export function markdownToDocx(markdownString: string): SectionType[] {
-  const tokens = md.parse(markdownString, {});
+  const tokens = md.parse(normalizeMathDelimiters(markdownString), {});
   const sections: SectionType[] = [];
   const currentListTypes: Array<ListType> = [];
   let currentTableRows: TableRow[] = [];
@@ -138,12 +152,7 @@ export function markdownToDocx(markdownString: string): SectionType[] {
       nextToken !== undefined &&
         sections.push(
           new Paragraph({
-            children: [
-              new TextRun({
-                text: nextToken.content,
-                size: fontSize,
-              }),
-            ],
+            children: [...processInlineTokens(nextToken.children ?? [])],
             heading: fromNumberToHeadingLevel(level),
           }),
         );
@@ -151,8 +160,7 @@ export function markdownToDocx(markdownString: string): SectionType[] {
     } else if (token.type === 'paragraph_open') {
       const inlineToken = tokens[i + 1];
       if (inlineToken?.type === 'inline') {
-        const children = processInlineTokens(inlineToken.children ?? []);
-        sections.push(new Paragraph({ children }));
+        sections.push(new Paragraph({ children: processInlineTokens(inlineToken.children ?? []) }));
       }
       i += 1;
     } else if (token.type === 'ordered_list_open') {
