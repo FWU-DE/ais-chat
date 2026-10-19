@@ -1,18 +1,29 @@
-import { generateSpeechById, streamSpeechById, TokenPointsExceededError } from '@ais-chat/ai-core';
-import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
-import { InvalidArgumentError } from '@shared/error';
-import { calculateSpeechCostsInCent } from '@/app/api/utils/utils';
 import {
   getCachedSpeechPreview,
   setCachedSpeechPreview,
 } from '@/app/api/utils/speech-preview-cache';
-import { getConversation } from '@shared/conversation/conversation-service';
-import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
-import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
-import { sendRabbitmqEvent } from '@/rabbitmq/send';
-import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
-import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
+import { calculateSpeechCostsInCent } from '@/app/api/utils/utils';
 import { UserAndContext } from '@/auth/types';
+import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
+import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
+import { sendRabbitmqEvent } from '@/rabbitmq/send';
+import type { AudioFormat } from '@ais-chat/ai-core';
+import { generateSpeechById, streamSpeechById, TokenPointsExceededError } from '@ais-chat/ai-core';
+import { getConversation } from '@shared/conversation/conversation-service';
+import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
+import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
+import { InvalidArgumentError } from '@shared/error';
+import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
+
+/**
+ * Public result of the chat-facing streaming speech functions.
+ * Raw PCM `chunks` in `format`, plus the `contentType` to send back.
+ */
+export type ChatSpeechStreamResult = {
+  chunks: AsyncGenerator<Buffer, void, unknown>;
+  contentType: string;
+  format: AudioFormat;
+};
 
 export async function generateSpeech({ text, voice }: { text: string; voice?: string }) {
   const speechModel = await dbGetSpeechModel();
@@ -80,7 +91,7 @@ export async function generateSpeechStream({
 
   const selectedVoice = voice && voices.some((v) => v.name === voice) ? voice : firstVoice.name;
 
-  const { chunks, usage } = await streamSpeechById({
+  const { chunks, usage, format } = await streamSpeechById({
     modelId: speechModel.id,
     text,
     voice: selectedVoice,
@@ -93,7 +104,8 @@ export async function generateSpeechStream({
 
   return {
     chunks,
-    contentType: 'audio/l16;rate=24000',
+    contentType: 'application/octet-stream',
+    format,
     costsInCent,
     modelId: speechModel.id,
     provider: speechModel.provider,
@@ -158,8 +170,7 @@ export async function generateChatSpeech({
 /**
  * Streaming counterpart of `generateChatSpeech`. Reuses the same pre-checks (conversation
  * ownership, token budget), but yields raw PCM chunks as they arrive from the provider instead of
- * waiting for the full audio to be generated, so the client can start playback sooner. This is a
- * new, additive endpoint path — `generateChatSpeech`/`/api/v1/speech` is untouched.
+ * waiting for the full audio to be generated, so the client can start playback sooner.
  */
 export async function generateChatSpeechStream({
   user,
@@ -173,7 +184,7 @@ export async function generateChatSpeechStream({
   text: string;
   voice?: string;
   abortSignal?: AbortSignal;
-}): Promise<{ chunks: AsyncGenerator<Buffer, void, unknown>; contentType: string }> {
+}): Promise<ChatSpeechStreamResult> {
   const conversation = await getConversation({
     conversationId,
     userId: user.id,
@@ -222,7 +233,11 @@ export async function generateChatSpeechStream({
     }
   }
 
-  return { chunks: chunksWithUsageLogging(), contentType: speechResult.contentType };
+  return {
+    chunks: chunksWithUsageLogging(),
+    contentType: speechResult.contentType,
+    format: speechResult.format,
+  };
 }
 
 export async function generateSpeechPreview({ text, voice }: { text: string; voice: string }) {

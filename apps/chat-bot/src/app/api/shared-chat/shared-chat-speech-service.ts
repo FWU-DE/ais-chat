@@ -1,20 +1,21 @@
+import type { ChatSpeechStreamResult } from '@/app/api/chat/speech-service';
 import { generateSpeech, generateSpeechStream } from '@/app/api/chat/speech-service';
 import { getUserAndContextByUserId } from '@/auth/utils';
+import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
+import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
+import { sendRabbitmqEvent } from '@/rabbitmq/send';
 import { checkProductAccess } from '@/utils/vidis/access';
+import { TokenPointsExceededError } from '@ais-chat/ai-core';
 import { requireTeacherRole } from '@shared/auth/authorization-service';
 import { dbUpdateTokenUsageByCharacterChatId } from '@shared/db/functions/character';
 import { dbUpdateTokenUsageBySharedLearningScenarioId } from '@shared/db/functions/learning-scenario';
 import { ForbiddenError } from '@shared/error';
-import { TokenPointsExceededError } from '@ais-chat/ai-core';
 import {
   sharedCharacterChatHasReachedTokenPointsLimit,
   sharedChatHasExpired,
   sharedLearningScenarioChatHasReachedTokenPointsLimit,
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
-import { sendRabbitmqEvent } from '@/rabbitmq/send';
-import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
-import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
 import { verify } from '.';
 import { getSharedChatEntity } from './shared-chat-get-entity';
 import { SharedChatCharacter, SharedChatLearningScenario } from './shared-chat-types';
@@ -148,7 +149,7 @@ export async function generateSharedChatSpeechStream({
   entityType: 'character' | 'learningScenario';
   entityId: string;
   text: string;
-}): Promise<{ chunks: AsyncGenerator<Buffer, void, unknown>; contentType: string }> {
+}): Promise<ChatSpeechStreamResult> {
   const entity = await getSharedChatEntity({ inviteCode, entityType, entityId });
 
   verify.sharedChatEntityIsAccessible(entity);
@@ -258,5 +259,9 @@ export async function generateSharedChatSpeechStream({
     }
   }
 
-  return { chunks: chunksWithUsageLogging(), contentType: speechResult.contentType };
+  return {
+    chunks: chunksWithUsageLogging(),
+    contentType: speechResult.contentType,
+    format: speechResult.format,
+  };
 }

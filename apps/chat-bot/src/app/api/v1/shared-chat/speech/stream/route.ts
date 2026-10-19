@@ -1,13 +1,12 @@
-import { NextRequest } from 'next/server';
-import { handleErrorInRoute } from '@/error/handle-error-in-route';
-import { requireValidInviteCode } from '@/auth/requireValidInviteCode';
-import { generateSharedChatSpeechStream } from '@/app/api/shared-chat/shared-chat-speech-service';
 import { sharedChatSpeechRequestSchema } from '@/app/api/shared-chat/shared-chat-request-schemas';
+import { generateSharedChatSpeechStream } from '@/app/api/shared-chat/shared-chat-speech-service';
+import { requireValidInviteCode } from '@/auth/requireValidInviteCode';
+import { handleErrorInRoute } from '@/error/handle-error-in-route';
 import { logError } from '@shared/logging';
+import { NextRequest } from 'next/server';
 
 /**
- * Streaming counterpart of /api/v1/shared-chat/speech. New, additive endpoint — the existing
- * non-streaming route is untouched.
+ * Streaming counterpart of /api/v1/shared-chat/speech.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -15,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     await requireValidInviteCode(parsed.inviteCode);
 
-    const { chunks, contentType } = await generateSharedChatSpeechStream({
+    const { chunks, contentType, format } = await generateSharedChatSpeechStream({
       inviteCode: parsed.inviteCode,
       entityType: parsed.entityType,
       entityId: parsed.entityId,
@@ -45,6 +44,9 @@ export async function POST(req: NextRequest) {
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'no-store',
+        'X-Audio-Encoding': format.encoding,
+        'X-Audio-Sample-Rate': String(format.sampleRate),
+        'X-Audio-Channels': String(format.channels),
       },
     });
   } catch (error) {

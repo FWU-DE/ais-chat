@@ -9,6 +9,7 @@ import { NextRequest } from 'next/server';
  * Streaming endpoint for speech.
  * It is recommended to use an endpoint for cancellable streaming requests
  * instead of a server action.
+ *
  * Returns headerless raw PCM (16-bit LE, 24 kHz, mono) as a chunked response
  * instead of a single WAV blob, so the client can start playback before the
  * full audio has been synthesized.
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
 
     const parsed = speechRequestSchema.parse(await req.json());
 
-    const { chunks, contentType } = await generateChatSpeechStream({
+    const { chunks, contentType, format } = await generateChatSpeechStream({
       user,
       conversationId: parsed.conversationId,
       text: parsed.text,
@@ -52,6 +53,9 @@ export async function POST(req: NextRequest) {
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'no-store',
+        'X-Audio-Encoding': format.encoding,
+        'X-Audio-Sample-Rate': String(format.sampleRate),
+        'X-Audio-Channels': String(format.channels),
       },
     });
   } catch (error) {
