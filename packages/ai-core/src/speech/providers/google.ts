@@ -135,20 +135,20 @@ export function constructGoogleStreamingSpeechGenerationFn(
 
       try {
         for await (const chunk of stream) {
-          const parts = chunk.candidates?.[0]?.content?.parts ?? [];
-          const inline = parts.find((p) => p.inlineData?.data)?.inlineData;
-          if (inline?.data) {
-            receivedAudio = true;
-            // returns raw PCM, signed 16-bit little-endian
-            yield Buffer.from(inline.data, 'base64');
-          }
-
+          // update usage first so that a cancellation during the yield doesn't lose the usage for this chunk
           const usageMetadata = chunk.usageMetadata;
           if (usageMetadata) {
             finalUsage = {
               inputTextTokens: usageMetadata.promptTokenCount ?? 0,
               outputAudioTokens: usageMetadata.candidatesTokenCount ?? 0,
             };
+          }
+
+          const parts = chunk.candidates?.[0]?.content?.parts ?? [];
+          const inline = parts.find((p) => p.inlineData?.data)?.inlineData;
+          if (inline?.data) {
+            receivedAudio = true;
+            yield Buffer.from(inline.data, 'base64');
           }
         }
       } catch (error) {
