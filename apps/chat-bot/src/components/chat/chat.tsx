@@ -266,26 +266,19 @@ export default function Chat({
   }
 
   async function generateSpeech(text: string, isInitialMessage: boolean): Promise<Blob> {
-    if (isInitialMessage && character !== undefined) {
-      const response = await fetch('/api/v1/speech/initial-message', {
+    const useInitialMessage = isInitialMessage && character !== undefined;
+    const voice = assistant?.voice ?? character?.voice ?? learningScenario?.voice;
+
+    const response = await fetch(
+      useInitialMessage ? '/api/v1/speech/initial-message' : '/api/v1/speech',
+      {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ characterId: character.id }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Could not generate speech');
-      }
-
-      return response.blob();
-    }
-
-    const voice = assistant?.voice ?? character?.voice ?? learningScenario?.voice;
-    const response = await fetch('/api/v1/speech', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conversationId: id, text, voice }),
-    });
+        body: JSON.stringify(
+          useInitialMessage ? { characterId: character.id } : { conversationId: id, text, voice },
+        ),
+      },
+    );
 
     if (!response.ok) {
       throw new Error('Could not generate speech');
