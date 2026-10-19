@@ -67,7 +67,7 @@ export function useFileUpload({
     }
 
     const filesToUpload = filesWithinImageLimit.slice(0, availableSlots);
-    const filesExceeded = validFiles.length - filesToUpload.length;
+    const filesExceeded = filesWithinImageLimit.length - filesToUpload.length;
     if (filesExceeded > 0) {
       toast.error(
         translations('upload.file-limit-reached', {
