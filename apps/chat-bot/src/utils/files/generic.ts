@@ -1,7 +1,8 @@
 import { isSupportedFileExtension, isSupportedImageExtension } from '@/const';
 
 function getLowercaseFileExtension(fileName: string): string | undefined {
-  return fileName.split('.').at(-1)?.toLowerCase();
+  const parts = fileName.split('.');
+  return parts.length > 1 ? parts.at(-1)?.toLowerCase() : undefined;
 }
 
 export function getFileExtension(fileName: string) {
