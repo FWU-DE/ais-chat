@@ -144,11 +144,13 @@ export async function generateSharedChatSpeechStream({
   entityType,
   entityId,
   text,
+  abortSignal,
 }: {
   inviteCode: string;
   entityType: 'character' | 'learningScenario';
   entityId: string;
   text: string;
+  abortSignal?: AbortSignal;
 }): Promise<ChatSpeechStreamResult> {
   const entity = await getSharedChatEntity({ inviteCode, entityType, entityId });
 
@@ -202,7 +204,7 @@ export async function generateSharedChatSpeechStream({
     throw new TokenPointsExceededError();
   }
 
-  const speechResult = await generateSpeechStream({ text, voice: entity.voice });
+  const speechResult = await generateSpeechStream({ text, voice: entity.voice, abortSignal });
   const startedBy = entity.startedBy;
 
   async function* chunksWithUsageLogging() {

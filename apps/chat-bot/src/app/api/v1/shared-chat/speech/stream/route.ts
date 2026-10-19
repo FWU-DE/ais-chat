@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
       entityType: parsed.entityType,
       entityId: parsed.entityId,
       text: parsed.text,
+      abortSignal: req.signal,
     });
 
     const body = new ReadableStream<Uint8Array>({
