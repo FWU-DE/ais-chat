@@ -1,17 +1,17 @@
-import type {
-  ResponsibleAIError,
-  SharedChatExpiredError,
-  TokenPointsExceededError,
-} from '@ais-chat/ai-core/errors';
-import type { NotFoundError } from '@shared/error';
 import type { ChatAttachment } from '@ais-chat/ai-core';
 import {
   CONVERSATION_ROLES,
   type ConversationRole,
   type ToolCall,
 } from '@ais-chat/ai-core/chat/types';
-import z from 'zod';
+import type {
+  ResponsibleAIError,
+  SharedChatExpiredError,
+  TokenPointsExceededError,
+} from '@ais-chat/ai-core/errors';
+import type { NotFoundError } from '@shared/error';
 import { isToolRelatedMessage } from '@shared/utils/tool-related-message';
+import z from 'zod';
 import { aiActivityStepSchema, type AiActivityStep } from './ai-activity';
 
 /**
@@ -31,6 +31,12 @@ export type SerializedError = {
  * - 'error': An error occurred
  */
 export type ChatStatus = 'ready' | 'submitted' | 'reasoning' | 'streaming' | 'error';
+
+/**
+ * Generates speech audio for a message. Receives a flag indicating whether this is an
+ * initial message (e.g. a character's initial message), in order to route it to a non-billed endpoint.
+ */
+export type GenerateSpeechFn = (text: string, isInitialMessage: boolean) => Promise<Blob>;
 
 export const chatMessageSchema = z.object({
   id: z.string(),

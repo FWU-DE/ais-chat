@@ -1,4 +1,4 @@
-import { type ChatStatus, type UIMessage } from '@/types/chat';
+import { type ChatStatus, type GenerateSpeechFn, type UIMessage } from '@/types/chat';
 import { replacePlotBlocks } from '@/utils/code-blocks';
 import { isImageFile } from '@/utils/files/generic';
 import { cn } from '@/utils/tailwind';
@@ -6,7 +6,7 @@ import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import { utils } from '@shared/utils';
 import { useTranslations } from 'next-intl';
-import { ReactNode, useMemo, useState } from 'react';
+import { ReactNode, useCallback, useMemo, useState } from 'react';
 import useBreakpoints from '../hooks/use-breakpoints';
 import { AiActivityPanel } from './activity/ai-activity';
 import DisplayFileAttachment from './display-file-attachment';
@@ -53,7 +53,7 @@ export function ChatBox({
   characterName?: string;
   status: ChatStatus;
   showActivityDialog?: boolean;
-  generateSpeechFn: (text: string) => Promise<Blob>;
+  generateSpeechFn: GenerateSpeechFn;
   isSpeechModelEnabled: boolean;
   speechOnly: boolean;
 }) {
@@ -157,6 +157,11 @@ export function ChatBox({
 
   const isAssistantSpeechOnly = message.role === 'assistant' && speechOnly && isSpeechModelEnabled;
   const isInitialMessage = message.id === 'initial-message';
+
+  const messageSpeechFn = useCallback(
+    (text: string) => generateSpeechFn(text, isInitialMessage),
+    [generateSpeechFn, isInitialMessage],
+  );
   const actionsVisible = message.role === 'assistant' && (!isLastNonUser || status !== 'streaming');
   const isSpeechOnlyStreaming = isAssistantSpeechOnly && isLastNonUser && status === 'streaming';
 
@@ -169,7 +174,7 @@ export function ChatBox({
       characterName={characterName}
       regenerateMessage={regenerateMessage}
       canRegenerateMessage={canRegenerateMessage}
-      generateSpeechFn={generateSpeechFn}
+      generateSpeechFn={messageSpeechFn}
       isSpeechModelEnabled={isSpeechModelEnabled}
       showActivityDialog={showActivityDialog}
       activitySteps={activitySteps}
@@ -182,15 +187,15 @@ export function ChatBox({
   ) : null;
 
   const maybeAudioButton =
-    isAssistantSpeechOnly && !isInitialMessage && (actionsVisible || isSpeechOnlyStreaming) ? (
+    isAssistantSpeechOnly && (actionsVisible || isSpeechOnlyStreaming) ? (
       <SpeechAudioButton
         text={plainText}
-        generateSpeechFn={generateSpeechFn}
+        generateSpeechFn={messageSpeechFn}
         isStreaming={isSpeechOnlyStreaming}
       />
     ) : null;
 
-  const showMessageText = !isAssistantSpeechOnly || isTextVisible || isInitialMessage;
+  const showMessageText = !isAssistantSpeechOnly || isTextVisible;
 
   const messageContent = (
     <PlotStreamingContext.Provider value={status === 'streaming' && isLastNonUser}>

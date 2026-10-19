@@ -1,5 +1,5 @@
 import type { AiActivityStep } from '@/types/ai-activity';
-import { type ChatStatus, type UIMessage } from '@/types/chat';
+import { type ChatStatus, type GenerateSpeechFn, type UIMessage } from '@/types/chat';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import { AiActivityPanel } from './activity/ai-activity';
@@ -22,7 +22,7 @@ interface MessagesProps {
   webSourceMapping?: Map<string, WebSource[]>;
   activitySteps?: AiActivityStep[];
   showActivityDialog?: boolean;
-  generateSpeechFn: (text: string) => Promise<Blob>;
+  generateSpeechFn: GenerateSpeechFn;
   isSpeechModelEnabled: boolean;
   speechOnly: boolean;
 }
