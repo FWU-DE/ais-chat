@@ -61,6 +61,7 @@
     "title": "AI activity",
     "toggle": "Show/hide AI activity",
     "open-source": "Open source: {source}",
+    "failed": "Failed",
     "steps": {
       "analysis": "Analysis",
       "analysis-summary": "Analysis summary",

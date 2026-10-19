@@ -14,6 +14,7 @@ import {
   GlobeSimpleIcon,
   MagnifyingGlassIcon,
   SparkleIcon,
+  XCircleIcon,
   type Icon,
 } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
@@ -107,42 +108,79 @@ function AnalysisSummaryContent({ content }: { content: string }) {
 function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean }) {
   const t = useTranslations('ai-activity');
   const links = step.kind === 'tool' ? (step.links ?? []) : [];
+  const stepId = step.kind === 'tool' ? step.id : undefined;
+  const isFailed = step.kind === 'tool' && step.failed === true;
 
   return (
     <li className="flex gap-3">
       <div className="flex flex-col items-center">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <span
+          className={cn(
+            'flex size-8 shrink-0 items-center justify-center rounded-lg',
+            isFailed ? 'bg-error/10 text-error' : 'bg-primary/10 text-primary',
+          )}
+        >
           <StepIcon step={step} />
         </span>
         {!isLast && <span className="w-px flex-1 bg-primary/15" />}
       </div>
 
       <div className={cn('flex min-w-0 flex-1 flex-col gap-2 pt-1', isLast ? 'pb-0' : 'pb-4')}>
-        <div className="flex flex-wrap items-baseline gap-2">
-          <span className="text-sm font-medium text-black">{getAiActivityStepTitle(step, t)}</span>
-          {step.kind === 'tool' && <StepDetail step={step} />}
-        </div>
+        {isFailed ? (
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-baseline gap-2">
+              <span className="text-sm font-medium text-black">
+                {getAiActivityStepTitle(step, t)}
+              </span>
+              <span className="text-sm text-black/50">{t('failed')}</span>
+            </div>
+            {step.kind === 'tool' && <StepDetail step={step} />}
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-baseline gap-2">
+            <span className="text-sm font-medium text-black">
+              {getAiActivityStepTitle(step, t)}
+            </span>
+            {step.kind === 'tool' && <StepDetail step={step} />}
+          </div>
+        )}
 
         {step.kind === 'analysis-summary' && <AnalysisSummaryContent content={step.content} />}
         {links.length > 0 && (
           <ul className="max-h-44 overflow-y-auto rounded-xl border border-border bg-background-2 p-1">
-            {links.map((link, index) => (
-              <li key={`${link.url}-${index}`}>
-                <a
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 hover:bg-background-2"
-                  title={link.title}
-                  aria-label={t('open-source', { source: link.title })}
-                >
-                  <span className="min-w-0 flex-1 truncate text-sm text-black">{link.title}</span>
-                  <span className="inline-flex h-5 shrink-0 items-center rounded-full border border-primary/15 bg-primary/8 px-2 text-[13px] font-medium leading-none text-primary">
-                    {getLinkDomain(link.url)}
-                  </span>
-                </a>
-              </li>
-            ))}
+            {links.map((link, index) => {
+              const failedIconId = `ai-activity-link-failed-${stepId}-${index}`;
+              return (
+                <li key={`${link.url}-${index}`}>
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 hover:bg-background-2"
+                    title={link.title}
+                    aria-label={t('open-source', { source: link.title })}
+                    aria-describedby={link.failed ? failedIconId : undefined}
+                  >
+                    <span className="flex min-w-0 flex-1 items-center gap-1">
+                      {link.failed && (
+                        <XCircleIcon
+                          id={failedIconId}
+                          role="img"
+                          aria-label={t('failed')}
+                          className="size-4 shrink-0 text-error"
+                        />
+                      )}
+                      <span className="min-w-0 flex-1 truncate text-sm text-black">
+                        {link.title}
+                      </span>
+                    </span>
+                    <span className="inline-flex h-5 shrink-0 items-center rounded-full border border-primary/15 bg-primary/8 px-2 text-[13px] font-medium leading-none text-primary">
+                      {getLinkDomain(link.url)}
+                    </span>
+                  </a>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

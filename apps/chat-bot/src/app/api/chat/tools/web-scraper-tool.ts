@@ -33,7 +33,12 @@ export const webScraperActivity: ToolActivity<WebScraperToolResult[]> = {
   },
   applyResult: (step, result) => {
     const links = toLinks(result);
-    return links === undefined ? step : { ...step, links };
+    if (links === undefined) {
+      return step;
+    }
+
+    const allFailed = links.every((link) => link.failed);
+    return { ...step, links, ...(allFailed && { failed: true }) };
   },
   parsePersistedResult: (raw) => parseGenericPersistedToolResult<WebScraperToolResult[]>(raw),
 };

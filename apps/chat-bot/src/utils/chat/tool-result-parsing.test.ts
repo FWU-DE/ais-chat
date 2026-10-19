@@ -30,6 +30,13 @@ describe('activity helpers', () => {
     expect(manyLinks).toHaveLength(10);
   });
 
+  it('marks links as failed when the entry carries an error', () => {
+    const links = toLinks([{ url: 'https://example.com', error: 'Invalid URL.' }]);
+    expect(links).toEqual([
+      { title: 'https://example.com', url: 'https://example.com/', failed: true },
+    ]);
+  });
+
   it('truncates long values while preserving short and missing values', () => {
     expect(truncate('short')).toBe('short');
     expect(truncate(undefined)).toBeUndefined();
