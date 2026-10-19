@@ -9,7 +9,6 @@ import { iconClassName } from '@/utils/tailwind/icon';
 import { useTranslations } from 'next-intl';
 import {
   ChangeEvent,
-  ClipboardEvent,
   Dispatch,
   KeyboardEvent,
   SetStateAction,
@@ -19,16 +18,10 @@ import {
 } from 'react';
 import AutoResizeTextarea from '../common/auto-resize-textarea';
 import { useToast } from '../common/toast';
-import {
-  getAllowedFileExtensions,
-  getFilesFromClipboard,
-  handleSingleFile,
-  type FileUploadResponse,
-  type LocalFileState,
-} from '../file-upload/upload-file';
+import type { FileUploadResponse, LocalFileState } from '../file-upload/upload-file';
+import { useFileUpload } from '../file-upload/use-file-upload';
 import ArrowRightIcon from '../icons/arrow-right';
 import StopIcon from '../icons/stop';
-import { useLlmModels } from '../providers/llm-model-provider';
 import ChatInputAttachmentPreview from './chat-input-attachment-preview';
 import UploadFileButton from './upload-file-button';
 
@@ -60,7 +53,11 @@ export function ChatInputBox({
   const tCommon = useTranslations('common');
   const tFileInteraction = useTranslations('file-interaction');
   const toast = useToast();
-  const { selectedModel } = useLlmModels();
+  const { allowedFileExtensions, handlePaste, hasUploadingFiles, uploadFiles } = useFileUpload({
+    files,
+    setFiles,
+    fileUploadFn,
+  });
 
   useEffect(() => {
     if (files && setFiles && files.size > NUMBER_OF_FILES_LIMIT) {
@@ -109,63 +106,6 @@ export function ChatInputBox({
       }
     }
   }
-
-  async function handlePaste(e: ClipboardEvent<HTMLTextAreaElement>) {
-    const clipboardFiles = getFilesFromClipboard(e.clipboardData);
-
-    if (
-      !enableFileUpload ||
-      files === undefined ||
-      setFiles === undefined ||
-      clipboardFiles.length === 0
-    ) {
-      return;
-    }
-
-    e.preventDefault();
-    const availableSlots = NUMBER_OF_FILES_LIMIT - files.size;
-    if (availableSlots <= 0) {
-      toast.error(
-        tFileInteraction('upload.file-limit-reached', {
-          max_files: NUMBER_OF_FILES_LIMIT,
-          files_exceeded: clipboardFiles.length,
-        }),
-      );
-      return;
-    }
-
-    const filesToUpload = clipboardFiles.slice(0, availableSlots);
-    const filesExceeded = clipboardFiles.length - filesToUpload.length;
-    if (filesExceeded > 0) {
-      toast.error(
-        tFileInteraction('upload.file-limit-reached', {
-          max_files: NUMBER_OF_FILES_LIMIT,
-          files_exceeded: filesExceeded,
-        }),
-      );
-    }
-
-    const allowedFileExtensions = getAllowedFileExtensions(
-      files.values(),
-      selectedModel?.supportedImageFormats,
-    );
-    await Promise.all(
-      filesToUpload.map((file) =>
-        handleSingleFile({
-          file,
-          setFiles,
-          fileUploadFn,
-          toast,
-          translations: tFileInteraction,
-          allowedFileExtensions,
-        }),
-      ),
-    );
-  }
-
-  const hasUploadingFiles = Array.from(files?.values() ?? []).some(
-    (file) => file.status === 'uploading',
-  );
 
   /** Either Send or StopGeneration */
   const userActionButton = isLoading ? (
@@ -225,7 +165,7 @@ export function ChatInputBox({
             onChange={handleInputChange}
             value={input}
             onKeyDown={handleSubmitOnEnter}
-            onPaste={handlePaste}
+            onPaste={enableFileUpload ? handlePaste : undefined}
             maxLength={CHAT_MESSAGE_LENGTH_LIMIT}
             data-testid="chat-input"
           />
@@ -233,9 +173,9 @@ export function ChatInputBox({
             <div className="flex flex-row gap-x-3 rounded-enterprise-sm">
               <UploadFileButton
                 className={iconClassName}
-                setFiles={setFiles}
                 files={files}
-                fileUploadFn={fileUploadFn}
+                allowedFileExtensions={allowedFileExtensions}
+                onFilesSelected={uploadFiles}
               />
             </div>
           )}

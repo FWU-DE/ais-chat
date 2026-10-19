@@ -3,8 +3,9 @@ import { MAX_FILE_SIZE } from '@/const';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   defaultUploadFile,
-  getAllowedFileExtensions,
+  filterValidFilesForUpload,
   getFilesFromClipboard,
+  getAllowedFileExtensions,
   handleSingleFile,
   type LocalFileState,
 } from './upload-file';
@@ -83,6 +84,24 @@ describe('getFilesFromClipboard', () => {
     } as unknown as Pick<DataTransfer, 'files' | 'getData'>;
 
     expect(getFilesFromClipboard(clipboardData)).toEqual([]);
+  });
+});
+
+describe('filterValidFilesForUpload', () => {
+  it('keeps valid files after invalid clipboard files', () => {
+    const toast = {
+      error: vi.fn(),
+      success: vi.fn(),
+    };
+
+    expect(
+      filterValidFilesForUpload([createFile('unsupported.exe'), createFile('document.pdf')], {
+        allowedFileExtensions: ['pdf'],
+        toast,
+        translations,
+      }),
+    ).toHaveLength(1);
+    expect(toast.error).toHaveBeenCalledWith('toasts.invalid-file-format');
   });
 });
 

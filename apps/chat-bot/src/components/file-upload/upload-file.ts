@@ -40,6 +40,45 @@ export function getAllowedFileExtensions(
   return [...SUPPORTED_DOCUMENTS_EXTENSIONS, ...allowedImageFormats];
 }
 
+export function validateFileUpload({
+  file,
+  allowedFileExtensions,
+  toast,
+  translations,
+}: {
+  file: File;
+  allowedFileExtensions: readonly string[];
+  toast: ToastContextType;
+  translations: ReturnType<typeof useTranslations>;
+}): boolean {
+  if (!validateFileExtension(file.name, allowedFileExtensions)) {
+    toast.error(
+      translations('toasts.invalid-file-format', {
+        supported_formats: allowedFileExtensions.join(', '),
+      }),
+    );
+    return false;
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    toast.error(
+      translations('toasts.file-too-large', {
+        file_name: file.name,
+        max_file_size: MAX_FILE_SIZE / 1_000_000,
+      }),
+    );
+    return false;
+  }
+
+  return true;
+}
+
+export function filterValidFilesForUpload(
+  files: readonly File[],
+  validation: Omit<Parameters<typeof validateFileUpload>[0], 'file'>,
+): File[] {
+  return files.filter((file) => validateFileUpload({ ...validation, file }));
+}
+
 export function getFilesFromClipboard(
   clipboardData: Pick<DataTransfer, 'files' | 'getData'>,
 ): File[] {
@@ -65,21 +104,7 @@ export async function handleSingleFile({
   translations: ReturnType<typeof useTranslations>;
   allowedFileExtensions?: readonly string[];
 }) {
-  if (!validateFileExtension(file.name, allowedFileExtensions)) {
-    toast.error(
-      translations('toasts.invalid-file-format', {
-        supported_formats: allowedFileExtensions.join(', '),
-      }),
-    );
-    return;
-  }
-  if (file.size > MAX_FILE_SIZE) {
-    toast.error(
-      translations('toasts.file-too-large', {
-        file_name: file.name,
-        max_file_size: MAX_FILE_SIZE / 1_000_000,
-      }),
-    );
+  if (!validateFileUpload({ file, allowedFileExtensions, toast, translations })) {
     return;
   }
 

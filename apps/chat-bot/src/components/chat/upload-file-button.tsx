@@ -2,44 +2,33 @@ import { NUMBER_OF_FILES_LIMIT } from '@/configuration-text-inputs/const';
 import { cn } from '@/utils/tailwind';
 import { useTranslations } from 'next-intl';
 import React from 'react';
-import { useToast } from '../common/toast';
-import {
-  getAllowedFileExtensions,
-  handleSingleFile,
-  type FileUploadProps,
-  type LocalFileState,
-} from '../file-upload/upload-file';
+import type { LocalFileState } from '../file-upload/upload-file';
 import AttachFileIcon from '../icons/attach-file';
-import { useLlmModels } from '../providers/llm-model-provider';
 
 export type { FileUploadResponse } from '../file-upload/upload-file';
 
-export type UploadFileButtonProps = FileUploadProps & {
+export type UploadFileButtonProps = {
   triggerButton?: React.ReactNode;
   onFileUploadStart?: () => void;
   className?: string;
   directoryId?: string;
   countOfFiles?: number;
   files?: Map<string, LocalFileState>;
+  allowedFileExtensions: readonly string[];
+  onFilesSelected: (files: File[]) => Promise<void>;
   disabled?: boolean;
 };
 
 export default function UploadFileButton({
-  setFiles,
   className,
   files,
-  fileUploadFn,
+  allowedFileExtensions,
+  onFilesSelected,
 }: UploadFileButtonProps) {
-  const toast = useToast();
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const t = useTranslations('file-interaction');
-  const { selectedModel } = useLlmModels();
 
   const totalNumberOfFiles = Array.from(files?.values() ?? []).length;
-  const currentSupportedFileFormats = getAllowedFileExtensions(
-    files?.values() ?? [],
-    selectedModel?.supportedImageFormats,
-  );
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const selectedFiles = event.target.files;
@@ -47,18 +36,7 @@ export default function UploadFileButton({
     if (selectedFiles === null) return;
 
     const files = Array.from(selectedFiles);
-    await Promise.all(
-      files.map((f) =>
-        handleSingleFile({
-          file: f,
-          setFiles,
-          fileUploadFn,
-          toast,
-          translations: t,
-          allowedFileExtensions: currentSupportedFileFormats,
-        }),
-      ),
-    );
+    await onFilesSelected(files);
     if (fileInputRef.current !== null) {
       fileInputRef.current.value = '';
     }
@@ -77,7 +55,7 @@ export default function UploadFileButton({
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        accept={currentSupportedFileFormats.map((e) => `.${e}`).join(',')}
+        accept={allowedFileExtensions.map((extension) => `.${extension}`).join(',')}
       />
       <button
         onClick={handleUploadClick}
