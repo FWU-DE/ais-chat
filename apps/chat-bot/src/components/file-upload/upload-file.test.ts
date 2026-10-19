@@ -6,7 +6,6 @@ import {
   filterFilesByImageLimit,
   filterValidFilesForUpload,
   getAllowedFileExtensions,
-  getFilesFromClipboard,
   handleSingleFile,
   type LocalFileState,
 } from './upload-file';
@@ -64,28 +63,6 @@ describe('getAllowedFileExtensions', () => {
     }));
 
     expect(getAllowedFileExtensions(files, ['png'])).not.toContain('png');
-  });
-});
-
-describe('getFilesFromClipboard', () => {
-  it('returns clipboard files when no text is present', () => {
-    const file = createFile('document.pdf');
-    const clipboardData = {
-      files: [file],
-      getData: () => '',
-    } as unknown as Pick<DataTransfer, 'files' | 'getData'>;
-
-    expect(getFilesFromClipboard(clipboardData)).toEqual([file]);
-  });
-
-  it('returns files when clipboard text is present', () => {
-    const file = createFile('document.pdf');
-    const clipboardData = {
-      files: [file],
-      getData: () => 'Copied text',
-    } as unknown as Pick<DataTransfer, 'files' | 'getData'>;
-
-    expect(getFilesFromClipboard(clipboardData)).toEqual([file]);
   });
 });
 

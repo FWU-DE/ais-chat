@@ -44,10 +44,7 @@ export function CustomChatFiles(props: CustomChatFilesProps) {
     }
   };
 
-  const activeAdditionalFilesCount = Array.from(additionalFiles.values()).filter(
-    (file) => file.status !== 'failed',
-  ).length;
-  const totalFileCount = currentFiles.length + activeAdditionalFilesCount;
+  const totalFileCount = currentFiles.length + additionalFiles.size;
 
   return (
     <>

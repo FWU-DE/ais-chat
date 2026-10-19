@@ -12,7 +12,7 @@ export type FileUploadResponse = {
   fileId: string;
 };
 
-export type FileStatus = 'uploading' | 'processed' | 'failed' | 'success';
+export type FileStatus = 'uploading' | 'processed' | 'success';
 
 export type LocalFileState = {
   file: File;
@@ -27,11 +27,15 @@ export type FileUploadProps = {
   showUploadConfirmation?: boolean;
 };
 
+function countImageFiles(files: Iterable<LocalFileState>): number {
+  return Array.from(files).filter((file) => isImageFile(file.file.name)).length;
+}
+
 export function getAllowedFileExtensions(
   files: Iterable<LocalFileState>,
   supportedImageFormats: string[] | null | undefined,
 ): readonly string[] {
-  const numberOfImages = Array.from(files).filter((file) => isImageFile(file.file.name)).length;
+  const numberOfImages = countImageFiles(files);
   const allowedImageFormats =
     numberOfImages < NUMBER_OF_IMAGES_LIMIT && supportedImageFormats?.length !== 0
       ? SUPPORTED_IMAGE_EXTENSIONS
@@ -83,9 +87,7 @@ export function filterFilesByImageLimit(
   files: readonly File[],
   existingFiles: Iterable<LocalFileState>,
 ): { files: File[]; imagesExceeded: number } {
-  let remainingImageSlots =
-    NUMBER_OF_IMAGES_LIMIT -
-    Array.from(existingFiles).filter((file) => isImageFile(file.file.name)).length;
+  let remainingImageSlots = NUMBER_OF_IMAGES_LIMIT - countImageFiles(existingFiles);
   let imagesExceeded = 0;
 
   const filteredFiles = files.filter((file) => {
@@ -99,12 +101,6 @@ export function filterFilesByImageLimit(
   });
 
   return { files: filteredFiles, imagesExceeded };
-}
-
-export function getFilesFromClipboard(
-  clipboardData: Pick<DataTransfer, 'files' | 'getData'>,
-): File[] {
-  return Array.from(clipboardData.files);
 }
 
 export async function handleSingleFile({

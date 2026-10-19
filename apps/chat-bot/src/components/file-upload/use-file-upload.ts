@@ -7,7 +7,6 @@ import {
   filterFilesByImageLimit,
   filterValidFilesForUpload,
   getAllowedFileExtensions,
-  getFilesFromClipboard,
   handleSingleFile,
   type FileUploadResponse,
   type LocalFileState,
@@ -92,7 +91,7 @@ export function useFileUpload({
   }
 
   async function handlePaste(event: React.ClipboardEvent<HTMLTextAreaElement>) {
-    const clipboardFiles = getFilesFromClipboard(event.clipboardData);
+    const clipboardFiles = Array.from(event.clipboardData.files);
     if (clipboardFiles.length === 0 || !setFiles || !files) return;
 
     if (event.clipboardData.getData('text/plain').length === 0) {
