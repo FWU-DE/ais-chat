@@ -64,8 +64,9 @@ export function initSentry({
     ...(scrubSensitiveData && {
       beforeBreadcrumb: (breadcrumb) => scrubSentryEvent(breadcrumb),
       beforeSend: (event) => scrubSentryEvent(event),
-      beforeSendTransaction: (event) => scrubSentryEvent(event),
     }),
+    // Prompts and completions are user data; model and token metadata stay.
+    dataCollection: { genAI: { inputs: false, outputs: false } },
     // Kept explicit: the RabbitMQ publisher traces via the OpenTelemetry API and needs this provider.
     enableOpenTelemetrySetup: true,
   });
