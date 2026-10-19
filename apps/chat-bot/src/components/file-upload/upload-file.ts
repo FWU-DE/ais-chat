@@ -79,6 +79,28 @@ export function filterValidFilesForUpload(
   return files.filter((file) => validateFileUpload({ ...validation, file }));
 }
 
+export function filterFilesByImageLimit(
+  files: readonly File[],
+  existingFiles: Iterable<LocalFileState>,
+): { files: File[]; imagesExceeded: number } {
+  let remainingImageSlots =
+    NUMBER_OF_IMAGES_LIMIT -
+    Array.from(existingFiles).filter((file) => isImageFile(file.file.name)).length;
+  let imagesExceeded = 0;
+
+  const filteredFiles = files.filter((file) => {
+    if (!isImageFile(file.name)) return true;
+    if (remainingImageSlots > 0) {
+      remainingImageSlots -= 1;
+      return true;
+    }
+    imagesExceeded += 1;
+    return false;
+  });
+
+  return { files: filteredFiles, imagesExceeded };
+}
+
 export function getFilesFromClipboard(
   clipboardData: Pick<DataTransfer, 'files' | 'getData'>,
 ): File[] {

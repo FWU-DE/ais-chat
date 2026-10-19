@@ -3,6 +3,7 @@ import { MAX_FILE_SIZE } from '@/const';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   defaultUploadFile,
+  filterFilesByImageLimit,
   filterValidFilesForUpload,
   getAllowedFileExtensions,
   getFilesFromClipboard,
@@ -103,6 +104,26 @@ describe('filterValidFilesForUpload', () => {
       }),
     ).toHaveLength(1);
     expect(toast.error).toHaveBeenCalledWith('toasts.invalid-file-format');
+  });
+});
+
+describe('filterFilesByImageLimit', () => {
+  it('keeps documents when excess images are removed', () => {
+    const existingFiles: LocalFileState[] = [
+      ...Array.from({ length: NUMBER_OF_IMAGES_LIMIT - 1 }, (_, index) => ({
+        file: createFile(`existing-${index}.png`),
+        status: 'processed' as const,
+        fileId: `file-${index}`,
+      })),
+    ];
+    const firstImage = createFile('first.png');
+    const secondImage = createFile('second.png');
+    const document = createFile('document.pdf');
+
+    const result = filterFilesByImageLimit([firstImage, secondImage, document], existingFiles);
+
+    expect(result.files).toEqual([firstImage, document]);
+    expect(result.imagesExceeded).toBe(1);
   });
 });
 

@@ -1,9 +1,10 @@
-import { NUMBER_OF_FILES_LIMIT } from '@/configuration-text-inputs/const';
+import { NUMBER_OF_FILES_LIMIT, NUMBER_OF_IMAGES_LIMIT } from '@/configuration-text-inputs/const';
 import { useTranslations } from 'next-intl';
 import type { Dispatch, SetStateAction } from 'react';
 import { useToast } from '../common/toast';
 import { useLlmModels } from '../providers/llm-model-provider';
 import {
+  filterFilesByImageLimit,
   filterValidFilesForUpload,
   getAllowedFileExtensions,
   getFilesFromClipboard,
@@ -52,7 +53,20 @@ export function useFileUpload({
       toast,
       translations,
     });
-    const filesToUpload = validFiles.slice(0, availableSlots);
+    const { files: filesWithinImageLimit, imagesExceeded } = filterFilesByImageLimit(
+      validFiles,
+      currentFiles.values(),
+    );
+    if (imagesExceeded > 0) {
+      toast.error(
+        translations('upload.image-limit-reached', {
+          max_images: NUMBER_OF_IMAGES_LIMIT,
+          images_exceeded: imagesExceeded,
+        }),
+      );
+    }
+
+    const filesToUpload = filesWithinImageLimit.slice(0, availableSlots);
     const filesExceeded = validFiles.length - filesToUpload.length;
     if (filesExceeded > 0) {
       toast.error(
