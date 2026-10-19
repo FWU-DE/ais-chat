@@ -82,10 +82,6 @@ export function filterValidFilesForUpload(
 export function getFilesFromClipboard(
   clipboardData: Pick<DataTransfer, 'files' | 'getData'>,
 ): File[] {
-  if (clipboardData.getData('text/plain').length > 0) {
-    return [];
-  }
-
   return Array.from(clipboardData.files);
 }
 

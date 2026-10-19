@@ -1,7 +1,8 @@
 import { NUMBER_OF_FILES_LIMIT } from '@/configuration-text-inputs/const';
-import type { Dispatch, SetStateAction } from 'react';
 import { useTranslations } from 'next-intl';
+import type { Dispatch, SetStateAction } from 'react';
 import { useToast } from '../common/toast';
+import { useLlmModels } from '../providers/llm-model-provider';
 import {
   filterValidFilesForUpload,
   getAllowedFileExtensions,
@@ -10,7 +11,6 @@ import {
   type FileUploadResponse,
   type LocalFileState,
 } from './upload-file';
-import { useLlmModels } from '../providers/llm-model-provider';
 
 export function useFileUpload({
   files,
@@ -81,7 +81,9 @@ export function useFileUpload({
     const clipboardFiles = getFilesFromClipboard(event.clipboardData);
     if (clipboardFiles.length === 0 || !setFiles || !files) return;
 
-    event.preventDefault();
+    if (event.clipboardData.getData('text/plain').length === 0) {
+      event.preventDefault();
+    }
     await uploadFiles(clipboardFiles);
   }
 

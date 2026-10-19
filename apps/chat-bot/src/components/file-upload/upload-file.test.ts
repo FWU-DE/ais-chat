@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   defaultUploadFile,
   filterValidFilesForUpload,
-  getFilesFromClipboard,
   getAllowedFileExtensions,
+  getFilesFromClipboard,
   handleSingleFile,
   type LocalFileState,
 } from './upload-file';
@@ -77,13 +77,14 @@ describe('getFilesFromClipboard', () => {
     expect(getFilesFromClipboard(clipboardData)).toEqual([file]);
   });
 
-  it('returns no files when clipboard text is present', () => {
+  it('returns files when clipboard text is present', () => {
+    const file = createFile('document.pdf');
     const clipboardData = {
-      files: [createFile('document.pdf')],
+      files: [file],
       getData: () => 'Copied text',
     } as unknown as Pick<DataTransfer, 'files' | 'getData'>;
 
-    expect(getFilesFromClipboard(clipboardData)).toEqual([]);
+    expect(getFilesFromClipboard(clipboardData)).toEqual([file]);
   });
 });
 
