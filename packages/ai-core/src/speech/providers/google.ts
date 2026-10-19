@@ -1,7 +1,13 @@
 import type { GenerateContentResponse } from '@google/genai';
 import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { createGoogleClient, formatGoogleError } from '../../google-client';
-import type { AiModel, SpeechGenerationFn, SpeechStreamGenerationFn, SpeechUsage } from '../types';
+import {
+  PCM_STREAM_AUDIO_FORMAT,
+  type AiModel,
+  type SpeechGenerationFn,
+  type SpeechStreamGenerationFn,
+  type SpeechUsage,
+} from '../types';
 
 function pcmToWav(pcm: Buffer): Buffer {
   // Gemini TTS generates 24 kHz mono signed 16-bit little-endian PCM:
@@ -81,12 +87,14 @@ export function constructGoogleSpeechGenerationFn(model: AiModel): SpeechGenerat
 }
 
 /**
- * Streaming counterpart of `constructGoogleSpeechGenerationFn`. Uses `client.models
- * .generateContentStream(...)` — the same `generateContent` surface as the non-streaming function
- * above, just the streaming variant — rather than the newer `client.interactions` surface, which
- * isn't supported by every Gemini TTS model (confirmed unsupported for `gemini-3.1-flash-tts-preview`).
+ * Streaming counterpart of `constructGoogleSpeechGenerationFn`.
+ * Uses `client.models.generateContentStream(...)` — the same `generateContent`
+ * surface as the non-streaming function, just the streaming variant
+ * rather than the newer `client.interactions` surface, which isn't supported by every Gemini
+ * TTS model (confirmed unsupported for `gemini-3.1-flash-tts-preview`).
+ *
  * Each yielded chunk can carry a piece of inline audio data (base64 raw PCM, 16-bit LE, 24 kHz,
- * mono) and/or updated usage metadata; the last usage metadata seen is treated as final.
+ * mono) and/or updated usage metadata. The last usage metadata seen is treated as final.
  */
 export function constructGoogleStreamingSpeechGenerationFn(
   model: AiModel,
@@ -131,6 +139,7 @@ export function constructGoogleStreamingSpeechGenerationFn(
           const inline = parts.find((p) => p.inlineData?.data)?.inlineData;
           if (inline?.data) {
             receivedAudio = true;
+            // returns raw PCM, signed 16-bit little-endian
             yield Buffer.from(inline.data, 'base64');
           }
 
@@ -153,6 +162,6 @@ export function constructGoogleStreamingSpeechGenerationFn(
       }
     }
 
-    return { chunks: readChunks(), usage };
+    return { chunks: readChunks(), usage, format: PCM_STREAM_AUDIO_FORMAT };
   };
 }
