@@ -17,7 +17,8 @@
     },
     "read-aloud": "Прочитать сообщение вслух",
     "pause-message": "Приостановить чтение",
-    "show-message-text": "Показать текст"
+    "show-message-text": "Показать текст",
+    "hide-message-text": "Скрыть текст"
   },
   "characters": {
     "shared": {

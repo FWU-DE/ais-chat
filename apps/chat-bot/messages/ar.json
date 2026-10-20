@@ -17,7 +17,8 @@
     },
     "read-aloud": "قراءة الرسالة بصوت عالٍ",
     "pause-message": "إيقاف القراءة مؤقتًا",
-    "show-message-text": "إظهار النص"
+    "show-message-text": "إظهار النص",
+    "hide-message-text": "إخفاء النص"
   },
   "characters": {
     "shared": {
