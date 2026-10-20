@@ -17,6 +17,7 @@
     },
     "read-aloud": "Lire le message à voix haute",
     "pause-message": "Mettre la lecture en pause",
+    "read-aloud-error": "La synthèse vocale a échoué.",
     "listen-to-answer": "Écouter la réponse",
     "pause-audio": "Pause",
     "show-message-text": "Afficher le texte",

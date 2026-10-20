@@ -17,6 +17,7 @@
     },
     "read-aloud": "قراءة الرسالة بصوت عالٍ",
     "pause-message": "إيقاف القراءة مؤقتًا",
+    "read-aloud-error": "فشلت عملية تحويل النص إلى كلام.",
     "listen-to-answer": "الاستماع إلى الإجابة",
     "pause-audio": "إيقاف مؤقت",
     "show-message-text": "إظهار النص",

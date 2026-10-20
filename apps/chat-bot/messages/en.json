@@ -17,6 +17,7 @@
     },
     "read-aloud": "Read message aloud",
     "pause-message": "Pause reading",
+    "read-aloud-error": "Text-to-speech failed.",
     "listen-to-answer": "Listen to answer",
     "pause-audio": "Pause",
     "show-message-text": "Show text",
