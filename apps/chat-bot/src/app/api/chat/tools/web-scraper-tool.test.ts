@@ -372,6 +372,38 @@ describe('webScraperActivity', () => {
     expect(result).toEqual(step);
   });
 
+  it('applyResult sets failed when every result has an error', async () => {
+    const { webScraperActivity } = await import('./web-scraper-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'web_scraper' } as const;
+    const result = webScraperActivity.applyResult!(step, [
+      { url: 'https://example.com/a', error: 'Failed to fetch the page.' },
+      { url: 'https://example.com/b', error: 'Failed to fetch the page.' },
+    ]);
+
+    expect(result.failed).toBe(true);
+    expect(result.links).toEqual([
+      { title: 'https://example.com/a', url: 'https://example.com/a', failed: true },
+      { title: 'https://example.com/b', url: 'https://example.com/b', failed: true },
+    ]);
+  });
+
+  it('applyResult does not set failed for mixed success and failure results', async () => {
+    const { webScraperActivity } = await import('./web-scraper-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'web_scraper' } as const;
+    const result = webScraperActivity.applyResult!(step, [
+      { title: 'Erfolgreiche Seite', url: 'https://example.com/success', content: 'Inhalt.' },
+      { url: 'https://example.com/failure', error: 'Failed to fetch the page.' },
+    ]);
+
+    expect(result.failed).toBeUndefined();
+    expect(result.links).toEqual([
+      { title: 'Erfolgreiche Seite', url: 'https://example.com/success' },
+      { title: 'https://example.com/failure', url: 'https://example.com/failure', failed: true },
+    ]);
+  });
+
   it('parsePersistedResult passes a persisted bare array through unchanged', async () => {
     const { webScraperActivity } = await import('./web-scraper-tool');
 
