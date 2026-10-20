@@ -25,6 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@ui/components/dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/tooltip';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
@@ -78,31 +79,62 @@ function StepIcon({ step }: { step: AiActivityStep }) {
   return <ToolIcon className="size-4" />;
 }
 
-function StepDetail({ step }: { step: Extract<AiActivityStep, { kind: 'tool' }> }) {
+function getStepDetailText(step: AiActivityStep): string | undefined {
+  if (step.kind === 'analysis-summary') {
+    return step.content.length > 0 ? step.content : undefined;
+  }
+
+  if (step.kind !== 'tool') {
+    return undefined;
+  }
+
   const visibleDetail = truncate(step.detail);
   const visibleResult = truncate(step.result);
-  const text =
-    visibleDetail === undefined
-      ? visibleResult === undefined
-        ? undefined
-        : `= ${visibleResult}`
-      : visibleResult === undefined
-        ? visibleDetail
-        : `${visibleDetail} = ${visibleResult}`;
+  if (!visibleDetail) {
+    return visibleResult ? `= ${visibleResult}` : undefined;
+  }
+  return visibleResult ? `${visibleDetail} = ${visibleResult}` : visibleDetail;
+}
 
-  return text === undefined || text.length === 0 ? null : (
-    <span title={step.detail} className="min-w-0 truncate text-sm text-black/50">
+function getStepDetailPlacement(step: AiActivityStep): 'inline' | 'below' {
+  if (step.kind === 'tool') {
+    return step.failed || step.detailPlacement === 'below' ? 'below' : 'inline';
+  }
+  return 'below';
+}
+
+function StepDetailText({
+  text,
+  placement,
+  tooltip,
+}: {
+  text: string;
+  placement: 'inline' | 'below';
+  tooltip?: string;
+}) {
+  const content = (
+    <span
+      className={cn(
+        'text-sm text-black/70',
+        placement === 'below' ? 'self-start whitespace-pre-wrap' : 'min-w-0 truncate',
+      )}
+    >
       {text}
     </span>
   );
-}
 
-function AnalysisSummaryContent({ content }: { content: string }) {
-  if (content.length === 0) {
-    return null;
+  if (!tooltip) {
+    return content;
   }
 
-  return <p className="whitespace-pre-wrap text-sm text-black/70">{content}</p>;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild disableKeyboardToggle>
+        {content}
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean }) {
@@ -110,6 +142,9 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
   const links = step.kind === 'tool' ? (step.links ?? []) : [];
   const stepId = step.kind === 'tool' ? step.id : undefined;
   const isFailed = step.kind === 'tool' && step.failed === true;
+  const detailText = getStepDetailText(step);
+  const detailPlacement = getStepDetailPlacement(step);
+  const detailTooltip = step.kind === 'tool' ? step.detail : undefined;
 
   return (
     <li className="flex gap-3">
@@ -126,26 +161,21 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
       </div>
 
       <div className={cn('flex min-w-0 flex-1 flex-col gap-2 pt-1', isLast ? 'pb-0' : 'pb-4')}>
-        {isFailed ? (
-          <div className="flex flex-col gap-1">
-            <div className="flex flex-wrap items-baseline gap-2">
-              <span className="text-sm font-medium text-black">
-                {getAiActivityStepTitle(step, t)}
-              </span>
-              <span className="text-sm text-black/50">{t('failed')}</span>
-            </div>
-            {step.kind === 'tool' && <StepDetail step={step} />}
-          </div>
-        ) : (
-          <div className="flex flex-wrap items-baseline gap-2">
-            <span className="text-sm font-medium text-black">
-              {getAiActivityStepTitle(step, t)}
-            </span>
-            {step.kind === 'tool' && <StepDetail step={step} />}
-          </div>
-        )}
+        <div className="flex flex-wrap items-baseline gap-2">
+          <span className="text-sm font-medium text-black">{getAiActivityStepTitle(step, t)}</span>
+          {isFailed && <span className="text-sm text-black/70">{t('failed')}</span>}
+          {detailText && detailPlacement === 'inline' && (
+            <StepDetailText text={detailText} placement="inline" tooltip={detailTooltip} />
+          )}
+        </div>
 
-        {step.kind === 'analysis-summary' && <AnalysisSummaryContent content={step.content} />}
+        {detailText && detailPlacement === 'below' && (
+          <StepDetailText
+            text={detailText}
+            placement="below"
+            tooltip={detailTooltip !== detailText ? detailTooltip : undefined}
+          />
+        )}
         {links.length > 0 && (
           <ul className="max-h-44 overflow-y-auto rounded-xl border border-border bg-background-2 p-1">
             {links.map((link, index) => {

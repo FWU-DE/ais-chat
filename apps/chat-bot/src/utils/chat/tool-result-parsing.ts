@@ -2,7 +2,7 @@ import { type AiActivityLink } from '@/types/ai-activity';
 
 // Parsing helpers for tool arguments/results, used by the individual tool files.
 
-const MAX_DETAIL_LENGTH = 300;
+const MAX_DETAIL_LENGTH = 200;
 const MAX_LINKS = 10;
 
 export function parseJsonRecord(value: string | undefined): unknown {

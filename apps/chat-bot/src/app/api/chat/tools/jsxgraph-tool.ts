@@ -16,6 +16,7 @@ import type { ToolActivity, ToolDefinition, ToolRegistration } from './types';
 import { TOOL_NAMES } from '@/types/tool-names';
 import type { ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
+import { parseJsonRecord } from '@/utils/chat/tool-result-parsing';
 
 export const createPlotArgsSchema = z.object({
   description: z.string().trim().min(1),
@@ -85,11 +86,16 @@ function isPresent(value: string | null | undefined): value is string {
 }
 
 export const createPlotActivity: ToolActivity<PlotSpec> = {
-  createStep: (toolCall: ToolCall) => ({
-    kind: 'tool',
-    id: toolCall.id,
-    tool: TOOL_NAMES.createPlot,
-  }),
+  createStep: (toolCall: ToolCall) => {
+    const parsed = createPlotArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.createPlot,
+      detail: parsed.success ? parsed.data.description : undefined,
+      detailPlacement: 'below',
+    };
+  },
   parsePersistedResult: (raw) => parseGenericPersistedToolResult<PlotSpec>(raw),
 };
 

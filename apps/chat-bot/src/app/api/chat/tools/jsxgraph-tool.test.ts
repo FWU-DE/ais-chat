@@ -158,7 +158,7 @@ describe('buildJsxgraphTool', () => {
 });
 
 describe('createPlotActivity', () => {
-  it('createStep sets only id and tool, with no detail', async () => {
+  it('createStep sets the description as detail, rendered below the title', async () => {
     const { createPlotActivity } = await import('./jsxgraph-tool');
 
     const step = createPlotActivity.createStep({
@@ -167,7 +167,13 @@ describe('createPlotActivity', () => {
       arguments: JSON.stringify({ description: 'a point at the origin' }),
     });
 
-    expect(step).toEqual({ kind: 'tool', id: 'call-1', tool: 'create_plot' });
+    expect(step).toEqual({
+      kind: 'tool',
+      id: 'call-1',
+      tool: 'create_plot',
+      detail: 'a point at the origin',
+      detailPlacement: 'below',
+    });
   });
 
   it('parsePersistedResult passes a persisted plot spec through unchanged', async () => {
