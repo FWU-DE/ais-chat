@@ -1,13 +1,13 @@
 'use client';
 
-import React from 'react';
-import { Button } from '@ui/components/button';
-import { useTranslations } from 'next-intl';
-import { SpeakerHighIcon, PauseIcon } from '@phosphor-icons/react';
-import Spinner from '@/components/icons/spinner';
 import { useToast } from '@/components/common/toast';
+import Spinner from '@/components/icons/spinner';
 import { PcmStreamPlayer } from '@/utils/audio/pcm-stream-player';
 import { readableStreamToAsyncIterable } from '@/utils/audio/readable-stream-to-async-iterable';
+import { PauseIcon, SpeakerHighIcon } from '@phosphor-icons/react';
+import { Button } from '@ui/components/button';
+import { useTranslations } from 'next-intl';
+import React from 'react';
 
 /**
  * Streaming counterpart of `SpeechButton`, rendered alongside it (see `message-actions.tsx`) so
@@ -68,6 +68,8 @@ export default function StreamingSpeechButton({
       const player = new PcmStreamPlayer({
         onStateChange: (next) => {
           if (next === 'ended' || next === 'error') {
+            playerRef.current?.dispose();
+            playerRef.current = null;
             setStatus('idle');
             return;
           }
