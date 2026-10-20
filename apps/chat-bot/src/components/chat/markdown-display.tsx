@@ -1,7 +1,7 @@
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import RehypeKatex from 'rehype-katex';
-import RemarkMathPlugin from 'remark-math';
+import RemarkMathPlugin from 'remark-math-extended';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { cn } from '@/utils/tailwind';
@@ -17,19 +17,7 @@ const KATEX_RENDER_OPTIONS = {
   strict: false,
 };
 
-function preprocessMathDelimiters(markdown: string) {
-  return (
-    markdown
-      // Replace \( ... \) with $ ... $ for inline math
-      .replace(/\\\((.*?)\\\)/gs, (_, content) => `$${content}$`)
-      // Replace \[ ... \] with $$ ... $$ for block math
-      .replace(/\\\[(.*?)\\\]/gs, (_, content) => `$$${content}$$`)
-  );
-}
-
-export default function MarkdownDisplay({ children: _children }: MarkdownDisplayProps) {
-  const children = preprocessMathDelimiters(_children);
-
+export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
   // remove the top-padding for the immediate sibling element following an hr to ensure the hr has symmetric top/bottom padding
   const removeTopPaddingAfterHrClass = '[&>hr+*]:pt-0';
 
