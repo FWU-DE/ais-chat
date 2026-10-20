@@ -152,14 +152,32 @@ export class PcmStreamPlayer {
     return buffer;
   }
 
-  /** Starts consuming the chunk stream, decoding and scheduling audio as it arrives. */
-  async start(chunks: AsyncIterable<Uint8Array<ArrayBufferLike>>): Promise<void> {
-    this.setState('loading');
+  /**
+   * Creates the `AudioContext` (if not already created) and resumes it. Browsers such as Safari
+   * only let an `AudioContext` leave the `suspended` state when `resume()` is called synchronously
+   * within a user-gesture event handler, so callers must invoke this directly inside their click
+   * handler, before awaiting anything, then pass the stream to `start()` once it's available.
+   */
+  unlockAudioContext(): void {
+    void this.ensureAudioContext().resume();
+  }
+
+  private ensureAudioContext(): AudioContext {
+    if (this.audioContext) {
+      return this.audioContext;
+    }
     const audioContext = new AudioContext();
     this.audioContext = audioContext;
     this.scheduledUntil = audioContext.currentTime;
     this.playbackStartContextTime = audioContext.currentTime;
     this.playbackStartOffset = 0;
+    return audioContext;
+  }
+
+  /** Starts consuming the chunk stream, decoding and scheduling audio as it arrives. */
+  async start(chunks: AsyncIterable<Uint8Array<ArrayBufferLike>>): Promise<void> {
+    this.setState('loading');
+    this.ensureAudioContext();
 
     try {
       for await (const chunk of chunks) {

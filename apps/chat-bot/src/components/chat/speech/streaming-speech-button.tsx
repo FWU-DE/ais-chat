@@ -62,27 +62,29 @@ export default function StreamingSpeechButton({
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
+    const player = new PcmStreamPlayer({
+      onStateChange: (next) => {
+        if (next === 'ended' || next === 'error') {
+          playerRef.current?.dispose();
+          playerRef.current = null;
+          setStatus('idle');
+          return;
+        }
+        setStatus(next);
+      },
+    });
+    player.unlockAudioContext();
+    playerRef.current = player;
+
     try {
       const body = await generateSpeechStreamFn(text, { signal: abortController.signal });
-
-      const player = new PcmStreamPlayer({
-        onStateChange: (next) => {
-          if (next === 'ended' || next === 'error') {
-            playerRef.current?.dispose();
-            playerRef.current = null;
-            setStatus('idle');
-            return;
-          }
-          setStatus(next);
-        },
-      });
-      playerRef.current = player;
-
       await player.start(readableStreamToAsyncIterable(body));
     } catch {
       if (abortController.signal.aborted) {
         return;
       }
+      playerRef.current?.dispose();
+      playerRef.current = null;
       toast.error(tCommon('read-aloud-error'));
       setStatus('idle');
     }
