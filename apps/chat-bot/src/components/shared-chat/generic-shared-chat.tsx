@@ -93,6 +93,10 @@ export type SharedChatViewProps = {
   isSpeechModelEnabled: boolean;
   generateSpeechFn: GenerateSpeechFn;
   speechOnly: boolean;
+  generateSpeechStreamFn: (
+    text: string,
+    options: { signal: AbortSignal },
+  ) => Promise<ReadableStream<Uint8Array>>;
 };
 
 /**
@@ -119,6 +123,7 @@ export default function GenericSharedChat({
   isSpeechModelEnabled,
   generateSpeechFn,
   speechOnly,
+  generateSpeechStreamFn,
 }: SharedChatViewProps) {
   const tCommon = useTranslations('common');
   const tCustomChat = useTranslations('custom-chat.shared');
@@ -389,6 +394,7 @@ export default function GenericSharedChat({
                 activitySteps={chat.activitySteps}
                 showActivityDialog={showActivityDialog}
                 generateSpeechFn={generateSpeechFn}
+                generateSpeechStreamFn={generateSpeechStreamFn}
                 isSpeechModelEnabled={isSpeechModelEnabled}
                 speechOnly={speechOnly}
               />

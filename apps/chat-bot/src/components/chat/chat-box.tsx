@@ -36,6 +36,7 @@ export function ChatBox({
   status,
   showActivityDialog,
   generateSpeechFn,
+  generateSpeechStreamFn,
   isSpeechModelEnabled,
   speechOnly,
 }: {
@@ -54,6 +55,10 @@ export function ChatBox({
   status: ChatStatus;
   showActivityDialog?: boolean;
   generateSpeechFn: GenerateSpeechFn;
+  generateSpeechStreamFn: (
+    text: string,
+    options: { signal: AbortSignal },
+  ) => Promise<ReadableStream<Uint8Array>>;
   isSpeechModelEnabled: boolean;
   speechOnly: boolean;
 }) {
@@ -175,6 +180,7 @@ export function ChatBox({
       regenerateMessage={regenerateMessage}
       canRegenerateMessage={canRegenerateMessage}
       generateSpeechFn={messageSpeechFn}
+      generateSpeechStreamFn={generateSpeechStreamFn}
       isSpeechModelEnabled={isSpeechModelEnabled}
       showActivityDialog={showActivityDialog}
       activitySteps={activitySteps}

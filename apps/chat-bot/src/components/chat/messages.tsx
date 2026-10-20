@@ -23,6 +23,10 @@ interface MessagesProps {
   activitySteps?: AiActivityStep[];
   showActivityDialog?: boolean;
   generateSpeechFn: GenerateSpeechFn;
+  generateSpeechStreamFn: (
+    text: string,
+    options: { signal: AbortSignal },
+  ) => Promise<ReadableStream<Uint8Array>>;
   isSpeechModelEnabled: boolean;
   speechOnly: boolean;
 }
@@ -41,6 +45,7 @@ export function Messages({
   activitySteps = [],
   showActivityDialog = false,
   generateSpeechFn,
+  generateSpeechStreamFn,
   isSpeechModelEnabled,
   speechOnly,
 }: MessagesProps): React.JSX.Element {
@@ -65,6 +70,7 @@ export function Messages({
           status={status}
           showActivityDialog={showActivityDialog}
           generateSpeechFn={generateSpeechFn}
+          generateSpeechStreamFn={generateSpeechStreamFn}
           isSpeechModelEnabled={isSpeechModelEnabled}
           speechOnly={speechOnly}
         />
