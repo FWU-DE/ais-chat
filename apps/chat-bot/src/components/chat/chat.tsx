@@ -341,6 +341,7 @@ export default function Chat({
   });
 
   const isLoading = status === 'submitted';
+  const isGenerating = status === 'submitted' || status === 'streaming';
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
@@ -415,7 +416,7 @@ export default function Chat({
               handleDeattachFile={handleDeattachFile}
               handleInputChange={handleInputChange}
               input={input}
-              isLoading={isLoading}
+              isGenerating={isGenerating}
             />
           </div>
         </div>

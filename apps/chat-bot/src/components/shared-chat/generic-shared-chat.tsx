@@ -302,6 +302,7 @@ export default function GenericSharedChat({
   }
 
   const isLoading = status === 'submitted';
+  const isGenerating = status === 'submitted' || status === 'streaming';
   const hasExerciseDescription =
     enableFloatingText && exerciseDescription !== undefined && exerciseDescription.trim() !== '';
   const showInitialContent =
@@ -410,7 +411,7 @@ export default function GenericSharedChat({
                   customHandleSubmit={customHandleSubmit}
                   handleStopGeneration={stop}
                   input={input}
-                  isLoading={isLoading}
+                  isGenerating={isGenerating}
                   handleInputChange={handleInputChange}
                   enableFileUpload
                   fileUploadFn={
