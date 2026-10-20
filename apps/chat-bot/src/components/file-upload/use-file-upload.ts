@@ -18,14 +18,14 @@ export function useFileUpload({
   fileUploadFn,
   maxFiles = NUMBER_OF_FILES_LIMIT,
   allowedFileExtensions: configuredFileExtensions,
-  onLimitExceeded,
+  imageLimit = NUMBER_OF_IMAGES_LIMIT,
 }: {
   files?: Map<string, LocalFileState>;
   setFiles?: Dispatch<SetStateAction<Map<string, LocalFileState>>>;
   fileUploadFn?: (file: File) => Promise<FileUploadResponse>;
   maxFiles?: number;
   allowedFileExtensions?: readonly string[];
-  onLimitExceeded?: (filesExceeded: number) => void;
+  imageLimit?: number;
 }) {
   const toast = useToast();
   const translations = useTranslations('file-interaction');
@@ -43,15 +43,12 @@ export function useFileUpload({
 
     const availableSlots = maxFiles - currentFiles.size;
     if (availableSlots <= 0) {
-      onLimitExceeded?.(selectedFiles.length);
-      if (onLimitExceeded === undefined) {
-        toast.error(
-          translations('upload.file-limit-reached', {
-            max_files: maxFiles,
-            files_exceeded: selectedFiles.length,
-          }),
-        );
-      }
+      toast.error(
+        translations('upload.file-limit-reached', {
+          max_files: maxFiles,
+          files_exceeded: selectedFiles.length,
+        }),
+      );
       return;
     }
 
@@ -63,28 +60,26 @@ export function useFileUpload({
     const { files: filesWithinImageLimit, imagesExceeded } = filterFilesByImageLimit(
       validFiles,
       currentFiles.values(),
+      imageLimit,
     );
+
+    const filesToUpload = filesWithinImageLimit.slice(0, availableSlots);
+    const filesExceeded = filesWithinImageLimit.length - filesToUpload.length;
     if (imagesExceeded > 0) {
       toast.error(
         translations('upload.image-limit-reached', {
-          max_images: NUMBER_OF_IMAGES_LIMIT,
+          max_images: imageLimit,
           images_exceeded: imagesExceeded,
         }),
       );
     }
-
-    const filesToUpload = filesWithinImageLimit.slice(0, availableSlots);
-    const filesExceeded = filesWithinImageLimit.length - filesToUpload.length;
     if (filesExceeded > 0) {
-      onLimitExceeded?.(filesExceeded);
-      if (onLimitExceeded === undefined) {
-        toast.error(
-          translations('upload.file-limit-reached', {
-            max_files: maxFiles,
-            files_exceeded: filesExceeded,
-          }),
-        );
-      }
+      toast.error(
+        translations('upload.file-limit-reached', {
+          max_files: maxFiles,
+          files_exceeded: filesExceeded,
+        }),
+      );
     }
 
     await Promise.all(

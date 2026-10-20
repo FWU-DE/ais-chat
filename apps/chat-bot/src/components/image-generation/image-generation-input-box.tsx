@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useRef } from 'react';
 import ChatInputAttachmentPreview from '../chat/chat-input-attachment-preview';
 import AutoResizeTextarea from '../common/auto-resize-textarea';
-import { useToast } from '../common/toast';
 import { FileUploadResponse, LocalFileState } from '../file-upload/upload-file';
 import { useFileUpload } from '../file-upload/use-file-upload';
 import AttachFileIcon from '../icons/attach-file';
@@ -40,7 +39,6 @@ export function ImageGenerationInputBox({
 }: ImageGenerationInputBoxProps) {
   const tImageGeneration = useTranslations('image-generation');
   const tFileInteraction = useTranslations('file-interaction');
-  const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const { allowedFileExtensions, handlePaste, hasUploadingFiles, uploadFiles } = useFileUpload({
@@ -48,14 +46,8 @@ export function ImageGenerationInputBox({
     setFiles,
     fileUploadFn,
     maxFiles,
+    imageLimit: maxFiles,
     allowedFileExtensions: supportedImageFormats ?? [],
-    onLimitExceeded: (filesExceeded) =>
-      toast.error(
-        tFileInteraction('upload.image-limit-reached', {
-          max_images: maxFiles,
-          images_exceeded: filesExceeded,
-        }),
-      ),
   });
 
   const uploadLimitReached = files.size >= maxFiles;
