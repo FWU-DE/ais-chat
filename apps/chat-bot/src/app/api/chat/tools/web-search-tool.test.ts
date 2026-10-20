@@ -231,3 +231,67 @@ describe('buildWebSearchTool', () => {
     expect(mocks.searchWebMock).not.toHaveBeenCalled();
   });
 });
+
+describe('webSearchActivity', () => {
+  it('createStep sets detail to the parsed query for valid arguments', async () => {
+    const { webSearchActivity } = await import('./web-search-tool');
+
+    const step = webSearchActivity.createStep({
+      id: 'call-1',
+      name: 'web_search',
+      arguments: JSON.stringify({ query: 'aktuelle information' }),
+    });
+
+    expect(step).toEqual({
+      kind: 'tool',
+      id: 'call-1',
+      tool: 'web_search',
+      detail: 'aktuelle information',
+    });
+  });
+
+  it('createStep leaves detail undefined for invalid arguments', async () => {
+    const { webSearchActivity } = await import('./web-search-tool');
+
+    const step = webSearchActivity.createStep({
+      id: 'call-1',
+      name: 'web_search',
+      arguments: JSON.stringify({ query: '' }),
+    });
+
+    expect(step.detail).toBeUndefined();
+  });
+
+  it('applyResult adds links derived from the results', async () => {
+    const { webSearchActivity } = await import('./web-search-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'web_search' } as const;
+    const result = webSearchActivity.applyResult!(step, {
+      results: [
+        { title: 'Beispielartikel', url: 'https://example.com/search-result', content: null },
+      ],
+    });
+
+    expect(result.links).toEqual([
+      { title: 'Beispielartikel', url: 'https://example.com/search-result' },
+    ]);
+  });
+
+  it('applyResult leaves the step unchanged when no links can be derived', async () => {
+    const { webSearchActivity } = await import('./web-search-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'web_search' } as const;
+    const result = webSearchActivity.applyResult!(step, { results: [] });
+
+    expect(result).toEqual(step);
+  });
+
+  it('parsePersistedResult passes a persisted success result through unchanged', async () => {
+    const { webSearchActivity } = await import('./web-search-tool');
+
+    const raw = {
+      results: [{ title: 'Beispielartikel', url: 'https://example.com', content: null }],
+    };
+    expect(webSearchActivity.parsePersistedResult(raw)).toEqual(raw);
+  });
+});

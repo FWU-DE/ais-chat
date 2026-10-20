@@ -14,30 +14,37 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('./tools/web-search-tool', () => ({
   buildWebSearchTool: mocks.buildWebSearchToolMock,
+  webSearchActivity: { createStep: vi.fn() },
 }));
 
 vi.mock('./tools/web-scraper-tool', () => ({
   buildWebScraperTool: mocks.buildWebScraperToolMock,
+  webScraperActivity: { createStep: vi.fn() },
 }));
 
 vi.mock('./tools/retrieve-entire-file-tool', () => ({
   buildRetrieveEntireFileTool: mocks.buildRetrieveEntireFileToolMock,
+  retrieveEntireFileActivity: { createStep: vi.fn() },
 }));
 
 vi.mock('./tools/retrieve-text-chunks-tool', () => ({
   buildRetrieveTextChunksTool: mocks.buildRetrieveTextChunksToolMock,
+  retrieveTextChunksActivity: { createStep: vi.fn() },
 }));
 
 vi.mock('./tools/mundo-search-tool', () => ({
   buildMundoSearchTool: mocks.buildMundoSearchToolMock,
+  mundoSearchActivity: { createStep: vi.fn() },
 }));
 
 vi.mock('./tools/math-calculate-tool', () => ({
   buildMathCalculateTool: mocks.buildMathCalculateToolMock,
+  mathCalculateActivity: { createStep: vi.fn() },
 }));
 
 vi.mock('./tools/jsxgraph-tool', () => ({
   buildJsxgraphTool: mocks.buildJsxgraphToolMock,
+  createPlotActivity: { createStep: vi.fn() },
 }));
 
 const modelSelection = { modelIds: ['model-1'] as [string, ...string[]], modelName: 'model-1' };

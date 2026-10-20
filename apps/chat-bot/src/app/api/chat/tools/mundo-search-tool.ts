@@ -5,7 +5,7 @@ import {
   MUNDO_SUBJECTS,
 } from '@/configuration-text-inputs/const';
 import { TOOL_NAMES } from '@/types/tool-names';
-import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
+import { parseJsonRecord, toLinks } from '@/utils/chat/tool-result-parsing';
 import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { z } from 'zod';
 import {
@@ -14,7 +14,8 @@ import {
   sanitizeClassLevel,
   sanitizeSubject,
 } from '../mundo-search';
-import type { ToolDefinition, ToolRegistration } from './types';
+import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
+import type { ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 export const mundoSearchArgsSchema = z.object({
   query: z.string().trim().min(1),
@@ -25,6 +26,23 @@ export const mundoSearchArgsSchema = z.object({
 export type MundoSearchToolResponse = {
   results: MundoSearchResult[];
   retriedWithoutFilters: boolean;
+};
+
+export const mundoSearchActivity: ToolActivity<MundoSearchToolResponse> = {
+  createStep: (toolCall: ToolCall) => {
+    const parsed = mundoSearchArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.mundoSearch,
+      detail: parsed.success ? parsed.data.query : undefined,
+    };
+  },
+  applyResult: (step, result) => {
+    const links = toLinks(result.results);
+    return links === undefined ? step : { ...step, links };
+  },
+  parsePersistedResult: (raw) => parseGenericPersistedToolResult<MundoSearchToolResponse>(raw),
 };
 
 export function buildMundoSearchTool(): ToolRegistration<MundoSearchToolResponse> {
@@ -91,22 +109,6 @@ export function buildMundoSearchTool(): ToolRegistration<MundoSearchToolResponse
   return {
     definition,
     handler,
-    activity: {
-      createStep: (toolCall: ToolCall) => {
-        const parsed = mundoSearchArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
-        return {
-          kind: 'tool',
-          id: toolCall.id,
-          tool: TOOL_NAMES.mundoSearch,
-          detail: parsed.success ? parsed.data.query : undefined,
-        };
-      },
-      applyResult: (step, result) => {
-        const typed = result as MundoSearchToolResponse;
-        const links = toLinks(typed.results);
-
-        return links === undefined ? step : { ...step, links };
-      },
-    },
+    activity: mundoSearchActivity,
   };
 }

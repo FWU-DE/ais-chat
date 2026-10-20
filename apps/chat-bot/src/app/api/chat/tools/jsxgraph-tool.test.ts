@@ -156,3 +156,32 @@ describe('buildJsxgraphTool', () => {
     });
   });
 });
+
+describe('createPlotActivity', () => {
+  it('createStep sets only id and tool, with no detail', async () => {
+    const { createPlotActivity } = await import('./jsxgraph-tool');
+
+    const step = createPlotActivity.createStep({
+      id: 'call-1',
+      name: 'create_plot',
+      arguments: JSON.stringify({ description: 'a point at the origin' }),
+    });
+
+    expect(step).toEqual({ kind: 'tool', id: 'call-1', tool: 'create_plot' });
+  });
+
+  it('parsePersistedResult passes a persisted plot spec through unchanged', async () => {
+    const { createPlotActivity } = await import('./jsxgraph-tool');
+
+    const raw = { board: { boundingBox: [-5, 5, 5, -5] }, elements: [['point', [0, 0]]] };
+    expect(createPlotActivity.parsePersistedResult(raw)).toEqual(raw);
+  });
+
+  it('parsePersistedResult passes a persisted error result through unchanged', async () => {
+    const { createPlotActivity } = await import('./jsxgraph-tool');
+
+    expect(createPlotActivity.parsePersistedResult({ error: 'Invalid description.' })).toEqual({
+      error: 'Invalid description.',
+    });
+  });
+});

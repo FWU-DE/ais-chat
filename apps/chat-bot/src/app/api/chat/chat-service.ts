@@ -440,7 +440,7 @@ export async function sendChatMessage({
     modelSelection,
     apiKeyId,
   });
-  const aiActivity = createAiActivityStream(update, tools.toolRegistry);
+  const aiActivity = createAiActivityStream(update);
 
   // Build system prompt
   const systemPrompt = constructChatSystemPrompt({

@@ -1,11 +1,12 @@
 import { TOOL_NAMES } from '@/types/tool-names';
-import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
+import { parseJsonRecord, toLinks } from '@/utils/chat/tool-result-parsing';
 import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import type { WebSource } from '@shared/db/types';
 import { isIP } from 'node:net';
 import { z } from 'zod';
 import { webScraper } from '../../web-scraper/web-scraper';
-import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
+import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
+import type { BuildToolsContext, ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 const MAX_WEB_SCRAPER_URLS = 5;
 
@@ -18,6 +19,23 @@ export type WebScraperToolResult = {
   title?: string;
   content?: string;
   error?: string;
+};
+
+export const webScraperActivity: ToolActivity<WebScraperToolResult[]> = {
+  createStep: (toolCall: ToolCall) => {
+    const parsed = webScraperArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.webScraper,
+      links: toLinks(parsed.success ? parsed.data.urls.map((url) => ({ url })) : []),
+    };
+  },
+  applyResult: (step, result) => {
+    const links = toLinks(result);
+    return links === undefined ? step : { ...step, links };
+  },
+  parsePersistedResult: (raw) => parseGenericPersistedToolResult<WebScraperToolResult[]>(raw),
 };
 
 function formatWebScrapedContentForTool(result: WebSource): WebScraperToolResult {
@@ -135,20 +153,6 @@ export function buildWebScraperTool({
   return {
     definition,
     handler,
-    activity: {
-      createStep: (toolCall: ToolCall) => {
-        const parsed = webScraperArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
-        return {
-          kind: 'tool',
-          id: toolCall.id,
-          tool: TOOL_NAMES.webScraper,
-          links: toLinks(parsed.success ? parsed.data.urls.map((url) => ({ url })) : []),
-        };
-      },
-      applyResult: (step, result) => {
-        const links = toLinks(result);
-        return links === undefined ? step : { ...step, links };
-      },
-    },
+    activity: webScraperActivity,
   };
 }

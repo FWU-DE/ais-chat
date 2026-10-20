@@ -1,9 +1,10 @@
 import { TOOL_NAMES } from '@/types/tool-names';
-import { parseJsonRecord, toLinks } from '@/utils/chat/ai-activity';
+import { parseJsonRecord, toLinks } from '@/utils/chat/tool-result-parsing';
 import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { z } from 'zod';
 import { resolveWebSearchConfig, searchWeb } from '../websearch';
-import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
+import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
+import type { BuildToolsContext, ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 export const webSearchArgsSchema = z.object({
   query: z.string().trim().min(1),
@@ -17,6 +18,23 @@ export type WebSearchToolResult = {
 
 export type WebSearchToolResponse = {
   results: WebSearchToolResult[];
+};
+
+export const webSearchActivity: ToolActivity<WebSearchToolResponse> = {
+  createStep: (toolCall: ToolCall) => {
+    const parsed = webSearchArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.webSearch,
+      detail: parsed.success ? parsed.data.query : undefined,
+    };
+  },
+  applyResult: (step, result) => {
+    const links = toLinks(result.results);
+    return links === undefined ? step : { ...step, links };
+  },
+  parsePersistedResult: (raw) => parseGenericPersistedToolResult<WebSearchToolResponse>(raw),
 };
 
 type BuildWebSearchToolParams = Pick<
@@ -106,21 +124,6 @@ export function buildWebSearchTool({
   return {
     definition,
     handler,
-    activity: {
-      createStep: (toolCall: ToolCall) => {
-        const parsed = webSearchArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
-        return {
-          kind: 'tool',
-          id: toolCall.id,
-          tool: TOOL_NAMES.webSearch,
-          detail: parsed.success ? parsed.data.query : undefined,
-        };
-      },
-      applyResult: (step, result) => {
-        const typed = result as WebSearchToolResponse;
-        const links = toLinks(typed.results);
-        return links === undefined ? step : { ...step, links };
-      },
-    },
+    activity: webSearchActivity,
   };
 }
