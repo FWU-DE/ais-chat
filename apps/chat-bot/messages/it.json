@@ -15,7 +15,8 @@
       "description": "Grafico: {title}",
       "error": "Non è stato possibile visualizzare il grafico."
     },
-    "read-aloud": "Leggi il messaggio ad alta voce"
+    "read-aloud": "Leggi il messaggio ad alta voce",
+    "pause-message": "Metti in pausa la lettura"
   },
   "characters": {
     "shared": {

@@ -15,7 +15,8 @@
       "description": "رسم بياني: {title}",
       "error": "تعذّر عرض الرسم البياني."
     },
-    "read-aloud": "قراءة الرسالة بصوت عالٍ"
+    "read-aloud": "قراءة الرسالة بصوت عالٍ",
+    "pause-message": "إيقاف القراءة مؤقتًا"
   },
   "characters": {
     "shared": {

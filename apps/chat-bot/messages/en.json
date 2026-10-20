@@ -15,7 +15,8 @@
       "description": "Figure: {title}",
       "error": "The figure could not be displayed."
     },
-    "read-aloud": "Read message aloud"
+    "read-aloud": "Read message aloud",
+    "pause-message": "Pause reading"
   },
   "characters": {
     "shared": {
