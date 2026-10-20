@@ -39,8 +39,8 @@ describe('createAiActivityStream', () => {
     const updates: string[] = [];
     const activity = createAiActivityStream((update) => updates.push(update));
 
-    activity.onReasoningSummary('First part. ');
-    activity.onReasoningSummary('Second part.');
+    activity.onReasoningSummary('First part. ', { itemId: 'item-1', summaryIndex: 0 });
+    activity.onReasoningSummary('Second part.', { itemId: 'item-1', summaryIndex: 0 });
 
     expect(decodeUpdates(updates)).toEqual([]);
 
@@ -66,7 +66,7 @@ describe('createAiActivityStream', () => {
       toolCallId: toolCall.id,
       result: { result: '42' } as ToolResult,
     });
-    activity.onReasoningSummary('Done.');
+    activity.onReasoningSummary('Done.', { itemId: 'item-1', summaryIndex: 0 });
     activity.finish();
 
     expect(decodeUpdates(updates)).toEqual([
@@ -90,7 +90,7 @@ describe('createAiActivityStream', () => {
     const activity = createAiActivityStream((update) => updates.push(update));
     const unregisteredToolCall = { ...toolCall, name: 'not_a_real_tool' } as ToolCall;
 
-    activity.onReasoningSummary('');
+    activity.onReasoningSummary('', { itemId: 'item-1', summaryIndex: 0 });
     activity.onToolCalls([unregisteredToolCall]);
     activity.onToolResult({ toolCallId: unregisteredToolCall.id, result: {} });
     activity.finish();

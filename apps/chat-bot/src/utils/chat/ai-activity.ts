@@ -51,14 +51,22 @@ export function createAiActivityCollector({
   const stepsById = new Map<string, AiActivityToolStep>();
   let hasToolActivity = false;
   let reasoningSummary = '';
+  let lastReasoningPart: { itemId: string; summaryIndex: number } | undefined;
 
   return {
-    addReasoningSummary(summary: string): boolean {
+    addReasoningSummary(summary: string, part?: { itemId: string; summaryIndex: number }): boolean {
       if (typeof summary !== 'string' || summary.length === 0) {
         return false;
       }
 
-      reasoningSummary += summary;
+      const isNewPart =
+        lastReasoningPart !== undefined &&
+        part !== undefined &&
+        (lastReasoningPart.itemId !== part.itemId ||
+          lastReasoningPart.summaryIndex !== part.summaryIndex);
+
+      reasoningSummary += isNewPart ? `\n\n${summary}` : summary;
+      lastReasoningPart = part;
       return true;
     },
     addToolCalls(toolCalls: ToolCall[]): boolean {

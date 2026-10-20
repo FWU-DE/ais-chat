@@ -146,7 +146,7 @@ export type TextResponse = {
  */
 export type StreamEvent =
   | { type: 'text'; delta: string }
-  | { type: 'reasoning_summary'; delta: string }
+  | { type: 'reasoning_summary'; delta: string; part?: { itemId: string; summaryIndex: number } }
   | { type: 'tool_call'; call: ToolCall }
   | {
       type: 'finish';
