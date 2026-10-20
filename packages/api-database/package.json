@@ -29,16 +29,16 @@
     "@ais-chat/shared-core": "workspace:*",
     "@t3-oss/env-core": "0.13.11",
     "bcryptjs": "3.0.3",
-    "drizzle-orm": "0.45.3",
+    "drizzle-orm": "0.45.4",
     "drizzle-zod": "0.8.3",
-    "nanoid": "6.0.1",
+    "nanoid": "6.0.2",
     "pg": "8.23.1",
-    "zod": "4.6.5"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@ais-chat/eslint-config": "workspace:*",
     "@ais-chat/typescript-config": "workspace:*",
-    "@dotenvx/dotenvx": "2.32.4",
+    "@dotenvx/dotenvx": "2.36.0",
     "@types/node": "24.19.2",
     "@types/pg": "8.23.1",
     "@vitest/coverage-v8": "5.0.4",
