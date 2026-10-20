@@ -118,11 +118,13 @@ export function MessageActions({
           isSpeechModelEnabled={isSpeechModelEnabled}
         />
       )}
-      <StreamingSpeechButton
-        text={plainText}
-        generateSpeechStreamFn={generateSpeechStreamFn}
-        isSpeechModelEnabled={isSpeechModelEnabled}
-      />
+      {!isInitialMessage && (
+        <StreamingSpeechButton
+          text={plainText}
+          generateSpeechStreamFn={generateSpeechStreamFn}
+          isSpeechModelEnabled={isSpeechModelEnabled}
+        />
+      )}
       {showActivityDialog && <AiActivityDialog steps={activitySteps} />}
     </div>
   );
