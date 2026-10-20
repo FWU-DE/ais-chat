@@ -116,7 +116,9 @@ function StepDetailText({
     <span
       className={cn(
         'text-sm text-black/70',
-        placement === 'below' ? 'self-start whitespace-pre-wrap' : 'min-w-0 truncate',
+        placement === 'below'
+          ? 'self-start max-w-full whitespace-pre-wrap break-words'
+          : 'min-w-0 truncate',
       )}
     >
       {text}
