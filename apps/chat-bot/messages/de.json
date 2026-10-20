@@ -54,7 +54,9 @@
     "not-found-error": "Diese Ressource existiert nicht oder ist nicht freigegeben.",
     "generic-error": "Ein Fehler ist aufgetreten",
     "retry-button": "Erneut versuchen",
-    "please-select": "Bitte auswählen"
+    "please-select": "Bitte auswählen",
+    "sidebar-toggle-close": "Seitenleiste schließen",
+    "sidebar-toggle-open": "Seitenleiste öffnen"
   },
   "errors": {
     "no-api-key": "Dem Bundesland wurde noch kein API-Schlüssel zugewiesen."
@@ -755,7 +757,8 @@
     "sort-name-desc": "Alphabetisch Z-A",
     "hits-for": "{count} Treffer zu",
     "close": "Schließen",
-    "chat": "Chatten"
+    "chat": "Chatten",
+    "chat-with-dialogue-partner": "Mit Dialogpartner chatten"
   },
   "filter": {
     "filter-label": "Filter",

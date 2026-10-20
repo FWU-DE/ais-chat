@@ -1,14 +1,13 @@
 'use client';
 
-import React from 'react';
+import { type UserAndContext } from '@/auth/types';
 import { UserIcon } from '@/components/icons/user';
 import { Button } from '@ui/components/button';
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
+  DropdownMenuTrigger,
 } from '@ui/components/dropdown-menu';
-import { type UserAndContext } from '@/auth/types';
 import { ProfileMenuContent } from './profile-menu-content';
 
 export default function ProfileMenu({ userAndContext }: { userAndContext?: UserAndContext }) {
@@ -18,7 +17,7 @@ export default function ProfileMenu({ userAndContext }: { userAndContext?: UserA
         <Button
           variant="ghost"
           size="icon-round"
-          aria-label="profileDropdown"
+          aria-label="Profil-Dropdown"
           className="text-primary"
           title="Profil"
         >

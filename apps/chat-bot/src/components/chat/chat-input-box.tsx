@@ -1,30 +1,30 @@
-import { useTranslations } from 'next-intl';
-import AutoResizeTextarea from '../common/auto-resize-textarea';
-import ChatInputAttachmentPreview from './chat-input-attachment-preview';
-import { LocalFileState } from './send-message-form';
 import {
   CHAT_MESSAGE_LENGTH_LIMIT,
   NUMBER_OF_FILES_LIMIT,
   NUMBER_OF_IMAGES_LIMIT,
 } from '@/configuration-text-inputs/const';
-import StopIcon from '../icons/stop';
-import ArrowRightIcon from '../icons/arrow-right';
-import UploadFileButton from './upload-file-button';
-import type { FileUploadResponse } from './upload-file-button';
-import { useToast } from '../common/toast';
+import { isImageFile } from '@/utils/files/generic';
+import { cn } from '@/utils/tailwind';
+import { iconClassName } from '@/utils/tailwind/icon';
+import { useTranslations } from 'next-intl';
 import {
   ChangeEvent,
   Dispatch,
   KeyboardEvent,
   SetStateAction,
   startTransition,
+  SyntheticEvent,
   useEffect,
   useState,
-  SyntheticEvent,
 } from 'react';
-import { iconClassName } from '@/utils/tailwind/icon';
-import { cn } from '@/utils/tailwind';
-import { isImageFile } from '@/utils/files/generic';
+import AutoResizeTextarea from '../common/auto-resize-textarea';
+import { useToast } from '../common/toast';
+import ArrowRightIcon from '../icons/arrow-right';
+import StopIcon from '../icons/stop';
+import ChatInputAttachmentPreview from './chat-input-attachment-preview';
+import { LocalFileState } from './send-message-form';
+import type { FileUploadResponse } from './upload-file-button';
+import UploadFileButton from './upload-file-button';
 
 export function ChatInputBox({
   files,
@@ -132,7 +132,7 @@ export function ChatInputBox({
       aria-label="Nachricht abschicken"
       data-testid="submit-button"
     >
-      <ArrowRightIcon className={cn('h-9 w-9')} />
+      <ArrowRightIcon className={cn('h-9 w-9')} aria-hidden="true" />
     </button>
   );
 
@@ -166,6 +166,7 @@ export function ChatInputBox({
             onKeyDown={handleSubmitOnEnter}
             maxLength={CHAT_MESSAGE_LENGTH_LIMIT}
             data-testid="chat-input"
+            aria-label="Chat-Eingabefeld"
           />
           {enableFileUpload && files !== undefined && setFiles !== undefined && (
             <div className="flex flex-row gap-x-3 rounded-enterprise-sm">

@@ -1,16 +1,16 @@
+import { NUMBER_OF_FILES_LIMIT, NUMBER_OF_IMAGES_LIMIT } from '@/configuration-text-inputs/const';
+import { MAX_FILE_SIZE, SUPPORTED_DOCUMENTS_EXTENSIONS, SUPPORTED_IMAGE_EXTENSIONS } from '@/const';
+import { isImageFile } from '@/utils/files/generic';
+import { cn } from '@/utils/tailwind';
+import { logError } from '@shared/logging';
 import { nanoid } from 'nanoid';
+import { useTranslations } from 'next-intl';
 import React from 'react';
-import { LocalFileState } from './send-message-form';
 import { z } from 'zod';
 import { ToastContextType, useToast } from '../common/toast';
 import AttachFileIcon from '../icons/attach-file';
-import { cn } from '@/utils/tailwind';
-import { SUPPORTED_DOCUMENTS_EXTENSIONS, MAX_FILE_SIZE, SUPPORTED_IMAGE_EXTENSIONS } from '@/const';
-import { useTranslations } from 'next-intl';
-import { NUMBER_OF_FILES_LIMIT, NUMBER_OF_IMAGES_LIMIT } from '@/configuration-text-inputs/const';
 import { useLlmModels } from '../providers/llm-model-provider';
-import { isImageFile } from '@/utils/files/generic';
-import { logError } from '@shared/logging';
+import { LocalFileState } from './send-message-form';
 
 export type FileUploadMetadata = {
   directoryId: string;
@@ -196,13 +196,18 @@ export default function UploadFileButton({
         className={cn(className, 'disabled:cursor-not-allowed')}
         disabled={isUploadLimitReached}
         type="button"
+        aria-label="Datei hochladen"
         title={
           isUploadLimitReached
             ? t('upload.upload-file-button-disabled', { max_files: NUMBER_OF_FILES_LIMIT })
             : t('upload.upload-file-button')
         }
       >
-        <AttachFileIcon className={cn('sm:w-10 sm:h-10 w-8 h-8')} stroke="black" />
+        <AttachFileIcon
+          className={cn('sm:w-10 sm:h-10 w-8 h-8')}
+          stroke="black"
+          aria-hidden="true"
+        />
       </button>
     </>
   );
