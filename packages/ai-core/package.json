@@ -27,7 +27,7 @@
     "@sentry/server-utils": "11.4.0",
     "google-auth-library": "11.1.0",
     "js-tiktoken": "1.0.21",
-    "openai": "7.27.0",
+    "openai": "7.33.0",
     "openaiv4": "npm:openai@4.104.0",
     "zod": "4.6.5"
   },
