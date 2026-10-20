@@ -14,7 +14,8 @@
       "fullscreen": "عرض بملء الشاشة",
       "description": "رسم بياني: {title}",
       "error": "تعذّر عرض الرسم البياني."
-    }
+    },
+    "read-aloud": "قراءة الرسالة بصوت عالٍ"
   },
   "characters": {
     "shared": {

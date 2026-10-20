@@ -14,7 +14,8 @@
       "fullscreen": "Mostra a schermo intero",
       "description": "Grafico: {title}",
       "error": "Non è stato possibile visualizzare il grafico."
-    }
+    },
+    "read-aloud": "Leggi il messaggio ad alta voce"
   },
   "characters": {
     "shared": {
