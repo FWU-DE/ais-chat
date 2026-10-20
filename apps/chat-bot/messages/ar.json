@@ -3,6 +3,7 @@
     "delete": "حذف",
     "cancel": "إلغاء",
     "information-disclaimer": "قد يخطئ AIS.chat. فكّر بشكل نقدي وتحقّق من جميع المعلومات.",
+    "message-copy": "نسخ الرسالة",
     "plot": {
       "label": "رسم بياني",
       "download-png": "تنزيل الرسم البياني",

@@ -3,6 +3,7 @@
     "delete": "Delete",
     "cancel": "Cancel",
     "information-disclaimer": "AIS.chat can make mistakes. Think critically and check all information.",
+    "message-copy": "Copy message",
     "plot": {
       "label": "Figure",
       "download-png": "Download figure",
