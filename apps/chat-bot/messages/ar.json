@@ -16,7 +16,8 @@
       "error": "تعذّر عرض الرسم البياني."
     },
     "read-aloud": "قراءة الرسالة بصوت عالٍ",
-    "pause-message": "إيقاف القراءة مؤقتًا"
+    "pause-message": "إيقاف القراءة مؤقتًا",
+    "show-message-text": "إظهار النص"
   },
   "characters": {
     "shared": {

@@ -16,7 +16,8 @@
       "error": "Non è stato possibile visualizzare il grafico."
     },
     "read-aloud": "Leggi il messaggio ad alta voce",
-    "pause-message": "Metti in pausa la lettura"
+    "pause-message": "Metti in pausa la lettura",
+    "show-message-text": "Mostra il testo"
   },
   "characters": {
     "shared": {
