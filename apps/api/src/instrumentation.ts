@@ -42,7 +42,8 @@ Sentry.init({
   },
   beforeSend: (event) => scrubSentryEvent(event),
   beforeBreadcrumb: (breadcrumb) => scrubSentryEvent(breadcrumb),
-  beforeSendTransaction: (event) => scrubSentryEvent(event),
+  // Prompts and completions are user data; model and token metadata stay.
+  dataCollection: { genAI: { inputs: false, outputs: false } },
   profileSessionSampleRate: env.sentryProfileSessionSampleRate,
   profileLifecycle: 'trace',
   environment: env.sentryEnvironment,
