@@ -28,6 +28,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/tooltip';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { AnalysisSummaryMarkdown } from './analysis-summary-markdown';
 
 const TOOL_ICONS: Record<AiActivityToolName, Icon> = {
   web_search: MagnifyingGlassIcon,
@@ -107,12 +108,18 @@ function StepDetailText({
   text,
   placement,
   tooltip,
+  isMarkdown,
 }: {
   text: string;
   placement: 'inline' | 'below';
   tooltip?: string;
+  isMarkdown?: boolean;
 }) {
-  const content = (
+  const content = isMarkdown ? (
+    <div className="self-start max-w-full break-words">
+      <AnalysisSummaryMarkdown>{text}</AnalysisSummaryMarkdown>
+    </div>
+  ) : (
     <span
       className={cn(
         'text-sm text-black/70',
@@ -176,6 +183,7 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
             text={detailText}
             placement="below"
             tooltip={detailTooltip !== detailText ? detailTooltip : undefined}
+            isMarkdown={step.kind === 'analysis-summary'}
           />
         )}
         {links.length > 0 && (
