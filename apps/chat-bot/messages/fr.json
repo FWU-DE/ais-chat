@@ -4,6 +4,7 @@
     "cancel": "Annuler",
     "information-disclaimer": "AIS.chat peut faire des erreurs. Fais preuve d'esprit critique et vérifie toutes les informations.",
     "message-copy": "Copier le message",
+    "regenerate-message-button": "Régénérer la réponse",
     "plot": {
       "label": "Graphique",
       "download-png": "Télécharger le graphique",

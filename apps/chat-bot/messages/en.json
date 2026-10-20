@@ -4,6 +4,7 @@
     "cancel": "Cancel",
     "information-disclaimer": "AIS.chat can make mistakes. Think critically and check all information.",
     "message-copy": "Copy message",
+    "regenerate-message-button": "Regenerate response",
     "plot": {
       "label": "Figure",
       "download-png": "Download figure",
