@@ -61,6 +61,7 @@
     "title": "نشاط الذكاء الاصطناعي",
     "toggle": "إظهار/إخفاء نشاط الذكاء الاصطناعي",
     "open-source": "فتح المصدر: {source}",
+    "failed": "فشل",
     "steps": {
       "analysis": "تحليل",
       "analysis-summary": "ملخص التحليل",

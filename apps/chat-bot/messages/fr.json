@@ -61,6 +61,7 @@
     "title": "Activité IA",
     "toggle": "Afficher/masquer l’activité IA",
     "open-source": "Ouvrir la source: {source}",
+    "failed": "Échec",
     "steps": {
       "analysis": "Analyse",
       "analysis-summary": "Résumé de l’analyse",

@@ -20,6 +20,7 @@ export type AiActivityToolName = (typeof AI_ACTIVITY_TOOL_NAMES)[number];
 const aiActivityLinkSchema = z.object({
   title: z.string(),
   url: z.string(),
+  failed: z.boolean().optional(),
 });
 
 export const aiActivityStepSchema = z.discriminatedUnion('kind', [
@@ -33,6 +34,7 @@ export const aiActivityStepSchema = z.discriminatedUnion('kind', [
     detail: z.string().optional(),
     result: z.string().optional(),
     links: z.array(aiActivityLinkSchema).optional(),
+    failed: z.boolean().optional(),
   }),
 ]);
 

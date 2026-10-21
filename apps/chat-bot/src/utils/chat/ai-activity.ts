@@ -102,7 +102,7 @@ export function createAiActivityCollector({
 
       const activity = toolActivityRegistry[step.tool];
       const enrichedStep = isToolErrorResult(result)
-        ? step
+        ? { ...step, failed: true }
         : applyResultSafely(activity, step, result);
 
       if (enrichedStep !== step) {

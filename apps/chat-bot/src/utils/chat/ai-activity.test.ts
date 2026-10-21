@@ -127,7 +127,7 @@ describe('createAiActivityCollector', () => {
     expect(sharedStep?.kind === 'tool' ? sharedStep.detail : undefined).toBeUndefined();
   });
 
-  it('skips applyResult for ToolErrorResult-shaped results', () => {
+  it('marks the step failed without calling applyResult for ToolErrorResult-shaped results', () => {
     const applyResult = vi.fn((step, result: MathCalculateToolSuccessResponse) => {
       return { ...step, result: result.result ?? undefined };
     });
@@ -137,7 +137,9 @@ describe('createAiActivityCollector', () => {
     collector.addToolCalls([toolCall]);
     expect(collector.addToolResult('call-1', { error: 'Invalid tool arguments' })).toBe(true);
     expect(applyResult).not.toHaveBeenCalled();
-    expect(collector.getSteps()).toEqual([{ kind: 'tool', id: 'call-1', tool: 'math_calculate' }]);
+    expect(collector.getSteps()).toEqual([
+      { kind: 'tool', id: 'call-1', tool: 'math_calculate', failed: true },
+    ]);
   });
 
   it('still applies the result when `error` is present but falsy (e.g. a stale `error: null`)', () => {

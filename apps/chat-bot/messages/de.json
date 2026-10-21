@@ -186,6 +186,7 @@
     "title": "KI-Aktivität",
     "toggle": "KI-Aktivität ein-/ausblenden",
     "open-source": "Quelle öffnen: {source}",
+    "failed": "Fehlgeschlagen",
     "steps": {
       "analysis": "Analyse",
       "analysis-summary": "Analyse Zusammenfassung",

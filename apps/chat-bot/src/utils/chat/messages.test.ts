@@ -49,7 +49,7 @@ function registerMathCalculateActivity(overrides: Partial<ToolActivity> = {}) {
 }
 
 describe('convertMessageModelToMessage', () => {
-  it('leaves the step unenriched when a tool activity throws while parsing a persisted result', () => {
+  it('marks the step as failed when a tool activity throws while parsing a persisted result', () => {
     registerMathCalculateActivity({
       parsePersistedResult: () => {
         throw new Error('malformed persisted result');
@@ -74,7 +74,7 @@ describe('convertMessageModelToMessage', () => {
     expect(() => convertMessageModelToMessage(messages)).not.toThrow();
     const result = convertMessageModelToMessage(messages);
     expect(result.find((message) => message.id === 'assistant-2')?.activitySteps).toEqual([
-      { kind: 'tool', id: 'call-1', tool: 'math_calculate' },
+      { kind: 'tool', id: 'call-1', tool: 'math_calculate', failed: true },
       { kind: 'done' },
     ]);
   });
