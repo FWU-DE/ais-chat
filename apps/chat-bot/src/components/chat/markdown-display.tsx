@@ -1,4 +1,4 @@
-import Markdown from 'react-markdown';
+import Markdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import RehypeKatex from 'rehype-katex';
 import RemarkMathPlugin from 'remark-math-extended';
@@ -11,18 +11,31 @@ import { JsxGraphPlotElement } from './plot/plot-block';
 
 type MarkdownDisplayProps = {
   children: string;
+  className?: string;
+  /** Per-element Tailwind class overrides, merged over the default styles. */
+  elementClassName?: { [Key in keyof Components]?: string };
 };
 
 const KATEX_RENDER_OPTIONS = {
   strict: false,
 };
 
-export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
+export default function MarkdownDisplay({
+  children,
+  className,
+  elementClassName,
+}: MarkdownDisplayProps) {
   // remove the top-padding for the immediate sibling element following an hr to ensure the hr has symmetric top/bottom padding
   const removeTopPaddingAfterHrClass = '[&>hr+*]:pt-0';
 
   return (
-    <div className={cn('w-full min-w-0 wrap-break-word text-base', removeTopPaddingAfterHrClass)}>
+    <div
+      className={cn(
+        'w-full min-w-0 wrap-break-word text-base',
+        removeTopPaddingAfterHrClass,
+        className,
+      )}
+    >
       <Markdown
         remarkPlugins={[RemarkMathPlugin, remarkGfm]}
         rehypePlugins={[[RehypeKatex, KATEX_RENDER_OPTIONS], rehypeJsxGraphPlot]}
@@ -30,7 +43,14 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           h1({ children, className, node, ...props }) {
             return (
-              <h1 className={cn('text-3xl font-bold pt-4 pb-2 first:pt-0', className)} {...props}>
+              <h1
+                className={cn(
+                  'text-3xl font-bold pt-4 pb-2 first:pt-0',
+                  elementClassName?.h1,
+                  className,
+                )}
+                {...props}
+              >
                 {children}
               </h1>
             );
@@ -38,7 +58,14 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           h2({ children, className, node, ...props }) {
             return (
-              <h2 className={cn('text-2xl font-bold pt-3 pb-2 first:pt-0', className)} {...props}>
+              <h2
+                className={cn(
+                  'text-2xl font-bold pt-3 pb-2 first:pt-0',
+                  elementClassName?.h2,
+                  className,
+                )}
+                {...props}
+              >
                 {children}
               </h2>
             );
@@ -46,7 +73,14 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           h3({ children, className, node, ...props }) {
             return (
-              <h3 className={cn('text-xl font-bold pt-3 pb-1 first:pt-0', className)} {...props}>
+              <h3
+                className={cn(
+                  'text-xl font-bold pt-3 pb-1 first:pt-0',
+                  elementClassName?.h3,
+                  className,
+                )}
+                {...props}
+              >
                 {children}
               </h3>
             );
@@ -55,7 +89,11 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
           h4({ children, className, node, ...props }) {
             return (
               <h4
-                className={cn('text-lg font-semibold pt-2 pb-1 first:pt-0', className)}
+                className={cn(
+                  'text-lg font-semibold pt-2 pb-1 first:pt-0',
+                  elementClassName?.h4,
+                  className,
+                )}
                 {...props}
               >
                 {children}
@@ -66,7 +104,11 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
           h5({ children, className, node, ...props }) {
             return (
               <h5
-                className={cn('text-base font-semibold pt-2 pb-1 first:pt-0', className)}
+                className={cn(
+                  'text-base font-semibold pt-2 pb-1 first:pt-0',
+                  elementClassName?.h5,
+                  className,
+                )}
                 {...props}
               >
                 {children}
@@ -77,7 +119,11 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
           h6({ children, className, node, ...props }) {
             return (
               <h6
-                className={cn('text-sm font-semibold pt-2 pb-1 first:pt-0', className)}
+                className={cn(
+                  'text-sm font-semibold pt-2 pb-1 first:pt-0',
+                  elementClassName?.h6,
+                  className,
+                )}
                 {...props}
               >
                 {children}
@@ -91,7 +137,7 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={cn('text-primary', className)}
+                className={cn('text-primary', elementClassName?.a, className)}
                 style={{
                   textDecoration: 'underline',
                   textUnderlineOffset: '4px',
@@ -117,12 +163,19 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
           },
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           hr({ className, node, ...props }) {
-            return <hr className={cn('my-6', className)} {...props} />;
+            return <hr className={cn('my-6', elementClassName?.hr, className)} {...props} />;
           },
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           th({ children, className, node, ...props }) {
             return (
-              <th className={cn('text-left p-2 border bg-muted font-medium', className)} {...props}>
+              <th
+                className={cn(
+                  'text-left p-2 border bg-muted font-medium',
+                  elementClassName?.th,
+                  className,
+                )}
+                {...props}
+              >
                 {children}
               </th>
             );
@@ -130,7 +183,7 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           td({ children, className, node, ...props }) {
             return (
-              <td className={cn('p-2 border', className)} {...props}>
+              <td className={cn('p-2 border', elementClassName?.td, className)} {...props}>
                 {children}
               </td>
             );
@@ -138,7 +191,7 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           tr({ children, className, node, ...props }) {
             return (
-              <tr className={cn(className)} {...props}>
+              <tr className={cn(elementClassName?.tr, className)} {...props}>
                 {children}
               </tr>
             );
@@ -149,7 +202,14 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
             // the table scrolls horizontally while the surrounding text stays within the viewport.
             return (
               <div className="my-4 first:mt-0 last:mb-0 max-w-full overflow-x-auto">
-                <table className={cn('w-full border border-collapse', className)} {...props}>
+                <table
+                  className={cn(
+                    'w-full border border-collapse',
+                    elementClassName?.table,
+                    className,
+                  )}
+                  {...props}
+                >
                   {children}
                 </table>
               </div>
@@ -158,7 +218,10 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           strong({ children, className, node, ...props }) {
             return (
-              <strong className={cn('font-semibold', className)} {...props}>
+              <strong
+                className={cn('font-semibold', elementClassName?.strong, className)}
+                {...props}
+              >
                 {children}
               </strong>
             );
@@ -166,7 +229,10 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           ul({ children, className, node, ...props }) {
             return (
-              <ul className={cn('ml-6 py-1 space-y-2 list-square', className)} {...props}>
+              <ul
+                className={cn('ml-6 py-1 space-y-2 list-square', elementClassName?.ul, className)}
+                {...props}
+              >
                 {children}
               </ul>
             );
@@ -174,7 +240,10 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           ol({ children, className, node, ...props }) {
             return (
-              <ol className={cn('list-decimal ml-6 py-1 space-y-2', className)} {...props}>
+              <ol
+                className={cn('list-decimal ml-6 py-1 space-y-2', elementClassName?.ol, className)}
+                {...props}
+              >
                 {children}
               </ol>
             );
@@ -182,7 +251,7 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           li({ children, className, node, ...props }) {
             return (
-              <li className={cn(className)} {...props}>
+              <li className={cn(elementClassName?.li, className)} {...props}>
                 {children}
               </li>
             );
@@ -191,7 +260,11 @@ export default function MarkdownDisplay({ children }: MarkdownDisplayProps) {
           p({ children, className, node, ...props }) {
             return (
               <p
-                className={cn('pt-1 pb-3 first:pt-0 last:pb-0 whitespace-pre-wrap', className)}
+                className={cn(
+                  'pt-1 pb-3 first:pt-0 last:pb-0 whitespace-pre-wrap',
+                  elementClassName?.p,
+                  className,
+                )}
                 {...props}
               >
                 {children}
