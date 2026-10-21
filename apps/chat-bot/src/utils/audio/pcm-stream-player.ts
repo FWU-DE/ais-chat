@@ -95,6 +95,49 @@ export class PcmStreamPlayer {
   }
 
   /**
+   * Downsamples the decoded PCM into `barCount` peak-amplitude values (normalized to `[0.08, 1]`,
+   * so even silent sections render as a small visible bar) for rendering a waveform. Only
+   * meaningful once the whole stream has been received (mirrors `seek()`'s availability); returns
+   * an all-zero array otherwise so callers can render a flat/placeholder waveform.
+   */
+  getWaveformPeaks(barCount: number): number[] {
+    if (!this.streamDone || barCount <= 0) {
+      return new Array(Math.max(barCount, 0)).fill(0) as number[];
+    }
+
+    const totalSamples = this.sampleChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+    const peaks = new Array<number>(barCount).fill(0);
+    if (totalSamples === 0) {
+      return peaks;
+    }
+
+    const samplesPerBar = totalSamples / barCount;
+    let chunkIndex = 0;
+    let indexInChunk = 0;
+    let globalIndex = 0;
+    for (let bar = 0; bar < barCount; bar++) {
+      const bucketEnd = Math.round((bar + 1) * samplesPerBar);
+      let peak = 0;
+      while (globalIndex < bucketEnd && chunkIndex < this.sampleChunks.length) {
+        const chunk = this.sampleChunks[chunkIndex];
+        const value = Math.abs(chunk?.[indexInChunk] ?? 0);
+        if (value > peak) peak = value;
+        globalIndex++;
+        indexInChunk++;
+        if (chunk && indexInChunk >= chunk.length) {
+          chunkIndex++;
+          indexInChunk = 0;
+        }
+      }
+      peaks[bar] = peak;
+    }
+
+    const maxPeak = Math.max(...peaks, Number.EPSILON);
+    const MIN_BAR_HEIGHT = 0.08;
+    return peaks.map((peak) => MIN_BAR_HEIGHT + (peak / maxPeak) * (1 - MIN_BAR_HEIGHT));
+  }
+
+  /**
    * Jumps playback to `time` seconds into the stream. Only available once the whole stream has
    * been received (so the full audio is already decoded locally); a no-op otherwise.
    */

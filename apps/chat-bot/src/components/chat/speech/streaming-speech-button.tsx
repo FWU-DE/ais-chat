@@ -4,7 +4,7 @@ import { useToast } from '@/components/common/toast';
 import Spinner from '@/components/icons/spinner';
 import { PcmStreamPlayer } from '@/utils/audio/pcm-stream-player';
 import { readableStreamToAsyncIterable } from '@/utils/audio/readable-stream-to-async-iterable';
-import { PauseIcon, SpeakerHighIcon } from '@phosphor-icons/react';
+import { PauseIcon, SpeakerSimpleHighIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
 import React from 'react';
@@ -112,7 +112,7 @@ export default function StreamingSpeechButton({
       ) : status === 'playing' ? (
         <PauseIcon className="size-5 text-primary" />
       ) : (
-        <SpeakerHighIcon className="size-5 text-primary" />
+        <SpeakerSimpleHighIcon className="size-5 text-primary" />
       )}
     </Button>
   );
