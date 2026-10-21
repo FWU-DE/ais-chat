@@ -106,7 +106,6 @@ export default function AudioPlayer({
         </Button>
         <AudioWaveform
           duration={duration}
-          isLoading={status === 'loading'}
           currentTime={displayedTime}
           getWaveformPeaks={getWaveformPeaks}
           onSeekPreview={setDragValue}

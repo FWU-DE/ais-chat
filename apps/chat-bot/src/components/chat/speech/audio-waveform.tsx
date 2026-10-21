@@ -6,8 +6,6 @@ import { formatTime } from './format-time';
 type AudioWaveformProps = {
   /** `null` while idle or the stream is still loading (duration not yet known); renders a placeholder. */
   duration: number | null;
-  /** Whether the stream is actively being fetched; only then does the placeholder pulse. */
-  isLoading: boolean;
   /** Position to render the progress fill at; the caller decides between live playback position
    *  and a drag-preview value, mirroring the `Slider`'s controlled `value` prop. */
   currentTime: number;
@@ -59,7 +57,6 @@ function Bars({ peaks, className }: { peaks: number[]; className?: string }) {
  */
 export function AudioWaveform({
   duration,
-  isLoading,
   currentTime,
   getWaveformPeaks,
   onSeekPreview,
@@ -181,7 +178,7 @@ export function AudioWaveform({
           peaks={new Array(barCount).fill(PLACEHOLDER_BAR_HEIGHT) as number[]}
           className={cn(
             'text-muted-foreground/50',
-            isLoading && 'animate-pulse [animation-duration:1.2s]',
+            !isInteractive && 'animate-pulse [animation-duration:1.2s]',
           )}
         />
       ) : (
