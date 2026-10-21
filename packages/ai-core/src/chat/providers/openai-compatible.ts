@@ -76,7 +76,11 @@ export async function* streamOpenAICompatibleAgenticResponse({
         content += chunk.delta;
         yield { type: 'text', delta: chunk.delta };
       } else if (chunk.type === 'response.reasoning_summary_text.delta') {
-        yield { type: 'reasoning_summary', delta: chunk.delta };
+        yield {
+          type: 'reasoning_summary',
+          delta: chunk.delta,
+          part: { itemId: chunk.item_id, summaryIndex: chunk.summary_index },
+        };
       } else if (chunk.type === 'response.function_call_arguments.delta') {
         const existingToolCall = toolCalls.get(chunk.output_index) ?? {
           id: '',

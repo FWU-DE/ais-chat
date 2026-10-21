@@ -21,8 +21,8 @@ export function createAiActivityStream(
     onToolCalls: (toolCalls: ToolCall[]) => {
       collector.addToolCalls(toolCalls);
     },
-    onReasoningSummary: (delta: string) => {
-      collector.addReasoningSummary(delta);
+    onReasoningSummary: (delta: string, part?: { itemId: string; summaryIndex: number }) => {
+      collector.addReasoningSummary(delta, part);
     },
     onToolResult: ({
       toolCallId,
