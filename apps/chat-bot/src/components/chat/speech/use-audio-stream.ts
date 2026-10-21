@@ -16,6 +16,7 @@ export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
   const [status, setStatus] = React.useState<AudioPlayerStatus>('idle');
   const [duration, setDuration] = React.useState<number | null>(null);
   const [currentTime, setCurrentTime] = React.useState(0);
+  const [playbackRate, setPlaybackRateState] = React.useState(1);
   const playerRef = React.useRef<PcmStreamPlayer | null>(null);
   const abortControllerRef = React.useRef<AbortController | null>(null);
 
@@ -123,5 +124,23 @@ export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
     return playerRef.current?.getWaveformPeaks(barCount) ?? null;
   }, []);
 
-  return { status, start, pause, resume, seek, restart, duration, currentTime, getWaveformPeaks };
+  /** Only takes effect once the whole stream has been received; a no-op otherwise. */
+  const setPlaybackRate = React.useCallback((rate: number) => {
+    playerRef.current?.setPlaybackRate(rate);
+    setPlaybackRateState(rate);
+  }, []);
+
+  return {
+    status,
+    start,
+    pause,
+    resume,
+    seek,
+    restart,
+    duration,
+    currentTime,
+    getWaveformPeaks,
+    playbackRate,
+    setPlaybackRate,
+  };
 }

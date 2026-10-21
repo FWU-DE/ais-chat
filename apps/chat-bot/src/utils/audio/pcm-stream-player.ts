@@ -32,6 +32,49 @@ export function decodePcm16ToFloat32(
   return { samples, leftover: combined.subarray(usableByteLength) };
 }
 
+/**
+ * Wraps raw Float32 PCM samples in a WAV header so they can be played back through an
+ * `HTMLAudioElement`. Unlike `AudioBufferSourceNode.playbackRate` (a Web Audio node, which simply
+ * resamples and therefore pitch-shifts), `HTMLMediaElement.playbackRate` combined with
+ * `preservesPitch` applies browser-native pitch correction when playing faster/slower.
+ */
+function encodeWavFromFloat32(samples: Float32Array, sampleRate: number): Blob {
+  const bytesPerSample = 2;
+  const blockAlign = bytesPerSample * CHANNELS;
+  const dataSize = samples.length * bytesPerSample;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  const writeString = (offset: number, value: string) => {
+    for (let i = 0; i < value.length; i++) {
+      view.setUint8(offset + i, value.charCodeAt(i));
+    }
+  };
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM format
+  view.setUint16(22, CHANNELS, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 16, true); // bits per sample
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  for (let i = 0; i < samples.length; i++) {
+    const clamped = Math.min(Math.max(samples[i] ?? 0, -1), 1);
+    view.setInt16(offset, clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff, true);
+    offset += 2;
+  }
+
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
 export type PcmPlayerState = 'idle' | 'loading' | 'playing' | 'paused' | 'ended' | 'error';
 
 const SAMPLE_RATE = 24_000;
@@ -42,8 +85,9 @@ const CHANNELS = 1;
  * instead of `<audio>`/MediaSource Extensions (MSE doesn't support headerless raw PCM as a
  * demuxable source). Chunks are scheduled back-to-back against the AudioContext clock for gapless
  * playback, and every decoded chunk is kept (not discarded after playing) so pause/resume works
- * via `AudioContext.suspend()/resume()` without re-fetching anything, and so seeking (once the
- * whole stream has been received) can rebuild a single buffer and jump to an arbitrary offset.
+ * via `AudioContext.suspend()/resume()` without re-fetching anything. Once the whole stream has
+ * been received, seeking or changing the playback speed hands playback off to a hidden `<audio>`
+ * element (see `playFromFullStream()`) built from the buffered samples.
  */
 export class PcmStreamPlayer {
   private audioContext: AudioContext | null = null;
@@ -56,13 +100,18 @@ export class PcmStreamPlayer {
   private disposed = false;
   private duration = 0;
   private sampleChunks: Float32Array<ArrayBuffer>[] = [];
-  private fullBuffer: AudioBuffer | null = null;
   // Reference point the current playback position is derived from: `playbackStartOffset` is the
   // buffer time (seconds into the full stream) that corresponded to the AudioContext clock reading
   // `playbackStartContextTime`. Since the clock doesn't advance while suspended, this also keeps
   // the position correct across pause/resume for free.
   private playbackStartContextTime = 0;
   private playbackStartOffset = 0;
+  private playbackRate = 1;
+  // Once a seek or a speed change happens (only possible after the whole stream is received),
+  // playback hands off from the chunk-scheduled AudioContext nodes to this element, which applies
+  // real pitch-corrected time-stretching for `playbackRate` (the Web Audio nodes used above don't).
+  private audioElement: HTMLAudioElement | null = null;
+  private audioElementUrl: string | null = null;
 
   constructor(
     private readonly callbacks: {
@@ -82,16 +131,24 @@ export class PcmStreamPlayer {
 
   /** Current playback position in seconds, clamped to `[0, duration]`. */
   getCurrentTime(): number {
+    if (this.state === 'ended') {
+      return this.duration;
+    }
+    if (this.audioElement) {
+      return Math.min(Math.max(this.audioElement.currentTime, 0), this.duration);
+    }
     const audioContext = this.audioContext;
     if (!audioContext || this.state === 'idle' || this.state === 'loading') {
       return 0;
     }
-    if (this.state === 'ended') {
-      return this.duration;
-    }
     const elapsed =
       this.playbackStartOffset + (audioContext.currentTime - this.playbackStartContextTime);
     return Math.min(Math.max(elapsed, 0), this.duration);
+  }
+
+  /** Current playback speed multiplier (only changeable once the whole stream has loaded). */
+  getPlaybackRate(): number {
+    return this.playbackRate;
   }
 
   /**
@@ -142,11 +199,36 @@ export class PcmStreamPlayer {
    * been received (so the full audio is already decoded locally); a no-op otherwise.
    */
   seek(time: number): void {
-    const audioContext = this.audioContext;
-    if (!audioContext || !this.streamDone || this.disposed) {
+    this.playFromFullStream(time);
+  }
+
+  /**
+   * Changes the playback speed. Only available once the whole stream has been received; a no-op
+   * otherwise. If already handed off to the audio element, the rate is updated in place (no
+   * restart); otherwise this performs the initial hand-off at the current position.
+   */
+  setPlaybackRate(rate: number): void {
+    if (!this.streamDone || this.disposed) {
       return;
     }
-    const clamped = Math.min(Math.max(time, 0), this.duration);
+    this.playbackRate = rate;
+    if (this.audioElement) {
+      this.audioElement.playbackRate = rate;
+      return;
+    }
+    this.playFromFullStream(this.getCurrentTime());
+  }
+
+  /**
+   * Hands playback off from the chunk-scheduled AudioContext nodes to a hidden `<audio>` element
+   * playing the full, already-buffered stream, starting at `time`. Backs both `seek()` and the
+   * initial `setPlaybackRate()` call; only available once the whole stream has been received (so
+   * the full audio is already decoded locally).
+   */
+  private playFromFullStream(time: number): void {
+    if (!this.streamDone || this.disposed) {
+      return;
+    }
 
     for (const source of this.activeSources) {
       source.onended = null;
@@ -156,31 +238,22 @@ export class PcmStreamPlayer {
     this.activeSources = [];
     this.pendingSourceCount = 0;
 
-    const source = audioContext.createBufferSource();
-    source.buffer = this.getOrBuildFullBuffer(audioContext);
-    source.connect(audioContext.destination);
-    source.start(audioContext.currentTime, clamped);
+    const audio = this.ensureAudioElement();
+    const clamped = Math.min(Math.max(time, 0), this.duration);
+    audio.playbackRate = this.playbackRate;
+    audio.currentTime = clamped;
 
-    this.playbackStartContextTime = audioContext.currentTime;
-    this.playbackStartOffset = clamped;
-    this.scheduledUntil = audioContext.currentTime + (this.duration - clamped);
-
-    this.activeSources.push(source);
-    this.pendingSourceCount = 1;
-    source.onended = () => {
-      this.activeSources = this.activeSources.filter((activeSource) => activeSource !== source);
-      this.pendingSourceCount -= 1;
-      if (this.pendingSourceCount === 0 && !this.disposed) {
-        this.setState('ended');
-      }
-    };
-
-    this.setState(audioContext.state === 'suspended' ? 'paused' : 'playing');
+    if (this.state === 'paused') {
+      this.setState('paused');
+      return;
+    }
+    void audio.play();
+    this.setState('playing');
   }
 
-  private getOrBuildFullBuffer(audioContext: AudioContext): AudioBuffer {
-    if (this.fullBuffer) {
-      return this.fullBuffer;
+  private ensureAudioElement(): HTMLAudioElement {
+    if (this.audioElement) {
+      return this.audioElement;
     }
     const totalSamples = this.sampleChunks.reduce((sum, chunk) => sum + chunk.length, 0);
     const merged = new Float32Array(totalSamples);
@@ -189,10 +262,19 @@ export class PcmStreamPlayer {
       merged.set(chunk, offset);
       offset += chunk.length;
     }
-    const buffer = audioContext.createBuffer(CHANNELS, merged.length, SAMPLE_RATE);
-    buffer.copyToChannel(merged, 0);
-    this.fullBuffer = buffer;
-    return buffer;
+
+    const url = URL.createObjectURL(encodeWavFromFloat32(merged, SAMPLE_RATE));
+    const audio = new Audio(url);
+    audio.preservesPitch = true;
+    audio.addEventListener('ended', () => {
+      if (!this.disposed) {
+        this.setState('ended');
+      }
+    });
+
+    this.audioElement = audio;
+    this.audioElementUrl = url;
+    return audio;
   }
 
   /**
@@ -281,13 +363,18 @@ export class PcmStreamPlayer {
     };
   }
 
-  /** Pauses the whole AudioContext clock; incoming chunks (if the stream is still open) keep
-   * being decoded and scheduled in the background so resuming is instant. */
+  /** Pauses the whole AudioContext clock (or the audio element, once handed off); incoming chunks
+   * (if the stream is still open) keep being decoded and scheduled in the background so resuming
+   * is instant. */
   pause(): void {
     if (this.state !== 'playing') {
       return;
     }
-    void this.audioContext?.suspend();
+    if (this.audioElement) {
+      this.audioElement.pause();
+    } else {
+      void this.audioContext?.suspend();
+    }
     this.setState('paused');
   }
 
@@ -295,7 +382,11 @@ export class PcmStreamPlayer {
     if (this.state !== 'paused') {
       return;
     }
-    void this.audioContext?.resume();
+    if (this.audioElement) {
+      void this.audioElement.play();
+    } else {
+      void this.audioContext?.resume();
+    }
     this.setState('playing');
   }
 
@@ -303,6 +394,15 @@ export class PcmStreamPlayer {
     this.disposed = true;
     void this.audioContext?.close();
     this.audioContext = null;
+    if (this.audioElement) {
+      this.audioElement.pause();
+      this.audioElement.src = '';
+    }
+    if (this.audioElementUrl) {
+      URL.revokeObjectURL(this.audioElementUrl);
+      this.audioElementUrl = null;
+    }
+    this.audioElement = null;
   }
 
   private setState(state: PcmPlayerState): void {
