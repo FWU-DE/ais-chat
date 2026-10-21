@@ -3,6 +3,8 @@
     "delete": "Удалить",
     "cancel": "Отменить",
     "information-disclaimer": "AIS.chat может допускать ошибки. Относись критически и проверяй всю информацию.",
+    "message-copy": "Копировать сообщение",
+    "regenerate-message-button": "Сгенерировать ответ заново",
     "plot": {
       "label": "Рисунок",
       "download-png": "Скачать рисунок",
@@ -12,7 +14,14 @@
       "fullscreen": "Показать на весь экран",
       "description": "Рисунок: {title}",
       "error": "Не удалось отобразить рисунок."
-    }
+    },
+    "read-aloud": "Прочитать сообщение вслух",
+    "pause-message": "Приостановить чтение",
+    "read-aloud-error": "Не удалось выполнить озвучивание.",
+    "listen-to-answer": "Прослушать ответ",
+    "pause-audio": "Пауза",
+    "show-message-text": "Показать текст",
+    "hide-message-text": "Скрыть текст"
   },
   "characters": {
     "shared": {

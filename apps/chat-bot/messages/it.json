@@ -3,6 +3,8 @@
     "delete": "Cancella",
     "cancel": "Annulla",
     "information-disclaimer": "AIS.chat può commettere errori. Mantieni un atteggiamento critico e verifica tutte le informazioni.",
+    "message-copy": "Copia messaggio",
+    "regenerate-message-button": "Rigenera la risposta",
     "plot": {
       "label": "Grafico",
       "download-png": "Scarica il grafico",
@@ -12,7 +14,14 @@
       "fullscreen": "Mostra a schermo intero",
       "description": "Grafico: {title}",
       "error": "Non è stato possibile visualizzare il grafico."
-    }
+    },
+    "read-aloud": "Leggi il messaggio ad alta voce",
+    "pause-message": "Metti in pausa la lettura",
+    "read-aloud-error": "La sintesi vocale non è riuscita.",
+    "listen-to-answer": "Ascolta la risposta",
+    "pause-audio": "Pausa",
+    "show-message-text": "Mostra il testo",
+    "hide-message-text": "Nascondi il testo"
   },
   "characters": {
     "shared": {

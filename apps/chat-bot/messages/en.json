@@ -3,6 +3,8 @@
     "delete": "Delete",
     "cancel": "Cancel",
     "information-disclaimer": "AIS.chat can make mistakes. Think critically and check all information.",
+    "message-copy": "Copy message",
+    "regenerate-message-button": "Regenerate response",
     "plot": {
       "label": "Figure",
       "download-png": "Download figure",
@@ -12,7 +14,14 @@
       "fullscreen": "Show in fullscreen",
       "description": "Figure: {title}",
       "error": "The figure could not be displayed."
-    }
+    },
+    "read-aloud": "Read message aloud",
+    "pause-message": "Pause reading",
+    "read-aloud-error": "Text-to-speech failed.",
+    "listen-to-answer": "Listen to answer",
+    "pause-audio": "Pause",
+    "show-message-text": "Show text",
+    "hide-message-text": "Hide text"
   },
   "characters": {
     "shared": {
