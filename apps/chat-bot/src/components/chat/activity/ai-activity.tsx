@@ -28,7 +28,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/tooltip';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { AnalysisSummaryMarkdown } from './analysis-summary-markdown';
+import MarkdownDisplay from '../markdown-display';
 
 const TOOL_ICONS: Record<AiActivityToolName, Icon> = {
   web_search: MagnifyingGlassIcon,
@@ -116,15 +116,20 @@ function StepDetailText({
   isMarkdown?: boolean;
 }) {
   const content = isMarkdown ? (
-    <div className="self-start max-w-full break-words">
-      <AnalysisSummaryMarkdown>{text}</AnalysisSummaryMarkdown>
+    <div className="self-start max-w-full wrap-break-word">
+      <MarkdownDisplay
+        className="text-sm text-black/70"
+        elementClassName={{ p: 'pt-0 pb-1', strong: 'font-medium' }}
+      >
+        {text}
+      </MarkdownDisplay>
     </div>
   ) : (
     <span
       className={cn(
         'text-sm text-black/70',
         placement === 'below'
-          ? 'self-start max-w-full whitespace-pre-wrap break-words'
+          ? 'self-start max-w-full whitespace-pre-wrap wrap-break-word'
           : 'min-w-0 truncate',
       )}
     >
