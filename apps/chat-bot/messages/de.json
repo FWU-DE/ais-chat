@@ -39,7 +39,6 @@
     "message-download": "Nachricht als Word-Datei herunterladen",
     "message-download-error": "Der Download der Nachricht ist fehlgeschlagen.",
     "regenerate-message-button": "Antwort erneut generieren",
-    "regenerate-message-button-aria-label": "Antwort erneut generieren",
     "plot": {
       "label": "Grafik",
       "download-png": "Grafik herunterladen",
