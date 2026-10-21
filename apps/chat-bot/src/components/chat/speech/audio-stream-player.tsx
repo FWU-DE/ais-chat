@@ -31,14 +31,14 @@ export default function AudioStreamPlayer({
   isSpeechModelEnabled,
   hidden = false,
 }: AudioStreamPlayerProps) {
-  const tCommon = useTranslations('common');
-
+  const t = useTranslations('common');
   const { status, duration, currentTime, start, pause, resume, seek, restart, getWaveformPeaks } =
     useAudioStream(generateSpeechStreamFn);
-  const [dragValue, setDragValue] = React.useState<number | null>(null);
 
-  const label = status === 'playing' ? tCommon('pause-message') : tCommon('read-aloud');
+  const [dragValue, setDragValue] = React.useState<number | null>(null);
   const displayedTime = dragValue ?? currentTime;
+  const label = status === 'playing' ? t('pause-message') : t('read-aloud');
+  const isStreamFullyLoaded = duration !== null;
 
   React.useEffect(() => {
     if (hidden && status === 'playing') {
@@ -50,9 +50,7 @@ export default function AudioStreamPlayer({
 
   async function handleButtonClick() {
     if (status === 'idle') {
-      // `duration` stays set after the stream ends, so the audio is already fully buffered and
-      // can be replayed directly instead of generating and re-fetching it again.
-      if (duration !== null) {
+      if (isStreamFullyLoaded) {
         restart();
       } else {
         await start(text);
@@ -99,9 +97,9 @@ export default function AudioStreamPlayer({
         <Button
           variant="ghost"
           size="icon-sm"
-          disabled={duration === null}
-          aria-label={tCommon('seek-back-5-seconds')}
-          title={tCommon('seek-back-5-seconds')}
+          disabled={isStreamFullyLoaded}
+          aria-label={t('seek-back-5-seconds')}
+          title={t('seek-back-5-seconds')}
           onClick={handleBack}
         >
           <ArrowCounterClockwiseIcon />
@@ -110,7 +108,7 @@ export default function AudioStreamPlayer({
 
       <span className="text-xs text-muted-foreground tabular-nums">
         {formatTime(displayedTime)}
-        {duration !== null && ` / ${formatTime(duration)}`}
+        {isStreamFullyLoaded && ` / ${formatTime(duration)}`}
       </span>
     </div>
   );
