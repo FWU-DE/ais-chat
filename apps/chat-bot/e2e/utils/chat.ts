@@ -78,7 +78,7 @@ export async function selectDifferentModel(page: Page, modelName?: string) {
   const isDisabled = await dropdown.evaluate((el) => (el as HTMLButtonElement).disabled);
   if (isDisabled) return;
 
-  const selectedModel = await dropdown.innerText();
+  const selectedModel = await page.getByTestId('main-menu-item-text-model-selected').innerText();
   if (modelName && selectedModel === modelName) {
     // requested model is already selected
     return;

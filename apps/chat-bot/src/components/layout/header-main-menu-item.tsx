@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useId } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,7 +8,6 @@ import {
 import { CaretDownIcon } from '@phosphor-icons/react';
 import { GreenLeafIcon } from '../icons/green-leaf-icon';
 import { Badge } from '../common/badge';
-import React from 'react';
 
 type HeaderMainMenuItemProps = {
   caption: string;
@@ -32,14 +32,20 @@ export function HeaderMainMenuItem({
   selectedMenuItemTestId,
   mainMenuItemTestId,
 }: HeaderMainMenuItemProps) {
+  const captionId = useId();
+  const contentId = useId();
+
   const mainMenuItem = (
-    <span className="flex flex-row gap-1.5 items-center text-primary text-base font-medium min-w-0">
+    <span
+      id={contentId}
+      className="flex flex-row gap-1.5 items-center text-primary text-base font-medium min-w-0"
+    >
       <span className="min-w-0 wrap-break-word line-clamp-2" data-testid={selectedMenuItemTestId}>
         {triggerLabel}
       </span>
-      {isGreen && <GreenLeafIcon />}
+      {isGreen && <GreenLeafIcon aria-hidden="true" />}
       {isNew && <Badge text="NEU" />}
-      {isDropdownEnabled && <CaretDownIcon className="shrink-0" />}
+      {isDropdownEnabled && <CaretDownIcon aria-hidden="true" className="shrink-0" />}
     </span>
   );
   const triggerButton = (
@@ -47,9 +53,12 @@ export function HeaderMainMenuItem({
       type="button"
       disabled={!isDropdownEnabled}
       className="outline-none focus-visible:rounded-lg focus-visible:ring-2 focus-visible:ring-ring/50 min-w-0 max-w-full"
-      aria-label={triggerAriaLabel}
+      aria-labelledby={`${captionId} ${contentId}`}
       data-testid={mainMenuItemTestId}
     >
+      <span id={captionId} className="sr-only">
+        {triggerAriaLabel}
+      </span>
       {mainMenuItem}
     </button>
   );
