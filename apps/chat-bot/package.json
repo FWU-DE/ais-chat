@@ -64,7 +64,7 @@
     "jsxgraph": "1.14.0",
     "katex": "0.19.0",
     "linkup-sdk": "3.7.1",
-    "markdown-it": "15.0.2",
+    "markdown-it": "15.0.3",
     "nanoid": "6.0.2",
     "next": "16.4.1",
     "next-auth": "5.0.0-beta.32",
