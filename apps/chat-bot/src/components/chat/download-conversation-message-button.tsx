@@ -2,7 +2,8 @@
 
 import { useToast } from '@/components/common/toast';
 import Spinner from '@/components/icons/spinner';
-import { downloadFileFromBlob, extractFilenameFromResponse } from '@/utils/files/blob-download';
+import { downloadFileFromBlob } from '@/utils/files/blob-download';
+import { formatConversationExport, markdownToDocxBlob } from '@/utils/files/markdown-docx';
 import { DownloadSimpleIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
@@ -35,14 +36,24 @@ export async function fetchConversationMessageDownload({
   }
 
   const response = await fetch(`/api/download-conversation?${searchParams.toString()}`);
-  const fileName = extractFilenameFromResponse(response, `Nachricht_${messageId}.docx`);
 
   if (!response.ok) {
     throw new Error('Failed to download the document');
   }
 
+  const { fileName, createdAt, modelName, messages } = (await response.json()) as {
+    fileName: string;
+    createdAt: string;
+    modelName: string;
+    messages: Array<{
+      role: string;
+      content: string;
+      images: Array<{ alt: string; url: string }>;
+    }>;
+  };
+
   return {
-    blob: await response.blob(),
+    blob: await markdownToDocxBlob(formatConversationExport({ messages, createdAt, modelName })),
     fileName,
   };
 }

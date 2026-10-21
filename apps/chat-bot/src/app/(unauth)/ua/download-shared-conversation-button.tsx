@@ -1,14 +1,15 @@
 'use client';
 
-import React from 'react';
-import Spinner from '@/components/icons/spinner';
 import { useToast } from '@/components/common/toast';
-import { useTranslations } from 'next-intl';
+import Spinner from '@/components/icons/spinner';
 import { type ChatMessage as Message } from '@/types/chat';
-import { Button } from '@ui/components/button';
-import { BoxArrowDownIcon } from '@phosphor-icons/react';
-import { downloadFileFromBlob, extractFilenameFromResponse } from '@/utils/files/blob-download';
+import { downloadFileFromBlob } from '@/utils/files/blob-download';
+import { markdownToDocxBlob } from '@/utils/files/markdown-docx';
 import { loadSharedChat } from '@/utils/shared-chat-storage';
+import { BoxArrowDownIcon } from '@phosphor-icons/react';
+import { Button } from '@ui/components/button';
+import { useTranslations } from 'next-intl';
+import React from 'react';
 
 type DownloadConversationButtonProps = {
   conversationMessages: Message[];
@@ -48,9 +49,7 @@ export async function fetchSharedConversationDownload({
 
   const response = await fetch(`/api/download-conversation/shared`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       messages: messagesWithFiles,
       characterName,
@@ -59,15 +58,24 @@ export async function fetchSharedConversationDownload({
       sharedSessionId,
     }),
   });
-
-  const fileName = extractFilenameFromResponse(response, 'Konversation_AIS.chat.docx');
+  const { fileName, messages } = (await response.json()) as {
+    fileName: string;
+    messages: Array<{ content: string; images: Array<{ alt: string; url: string }> }>;
+  };
 
   if (!response.ok) {
     throw new Error('Failed to download the document');
   }
 
   return {
-    blob: await response.blob(),
+    blob: await markdownToDocxBlob(
+      messages
+        .map(
+          ({ content, images }) =>
+            `${content}\n\n${images.map(({ alt, url }) => `![${alt}](${url})`).join('\n')}`,
+        )
+        .join('\n\n'),
+    ),
     fileName,
   };
 }

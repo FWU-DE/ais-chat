@@ -1,13 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { generateConversationDocxFile, generateConversationMessageDocxFile } from './utils';
 import { getUser } from '@/auth/utils';
-import { type ConversationModel } from '@shared/db/types';
+import { handleErrorInRoute } from '@/error/handle-error-in-route';
+import { isImageFile } from '@/utils/files/generic';
 import {
   getConversationAndMessagesForExport,
   getConversationMessageForExport,
 } from '@shared/conversation/conversation-service';
+import { type ConversationModel } from '@shared/db/types';
+import { getReadOnlySignedUrl } from '@shared/s3';
+import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
-import { handleErrorInRoute } from '@/error/handle-error-in-route';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,8 +21,7 @@ const downloadConversationParamsSchema = z.object({
 });
 
 /**
- * User wants to download a conversation or a single message as a .docx file.
- * We generate the file on the fly and return it as a response.
+ * Returns Markdown content and authorized image URLs for a conversation or single message export.
  * The user must be the owner of the conversation.
  *
  * enterpriseGptName contains the character name if a character was used.
@@ -38,59 +38,69 @@ export async function GET(req: NextRequest) {
     const user = await getUser();
     const gptName = enterpriseGptName || DEFAULT_GPT_NAME;
 
-    let document: ArrayBuffer | undefined;
-    let fileName: string;
-
     if (messageId === undefined) {
       const { conversation, messages, fileMapping } = await getConversationAndMessagesForExport({
         conversationId,
         userId: user.id,
       });
 
-      document = await generateConversationDocxFile({
-        conversation,
-        messages,
-        fileMapping,
-        gptName,
+      return NextResponse.json({
+        fileName: generateFileName({ conversation, gptName }),
+        conversationTitle: conversation.name,
+        createdAt: conversation.createdAt.toISOString(),
+        modelName: messages.find((message) => message.modelName)?.modelName ?? gptName,
+        messages: await serializeMessages({ messages, fileMapping }),
       });
+    }
 
-      fileName = generateFileName({ conversation, gptName });
-    } else {
-      const { conversation, message, fileMapping } = await getConversationMessageForExport({
-        conversationId,
-        messageId,
-        userId: user.id,
-      });
+    const { conversation, message, fileMapping } = await getConversationMessageForExport({
+      conversationId,
+      messageId,
+      userId: user.id,
+    });
 
-      document = await generateConversationMessageDocxFile({
-        message,
-        fileMapping,
-        gptName,
-      });
-
-      fileName = generateMessageFileName({
+    return NextResponse.json({
+      fileName: generateMessageFileName({
         conversationName: conversation.name,
         gptName,
         createdAt: message.createdAt,
-      });
-    }
-
-    if (document === undefined) {
-      return NextResponse.json({ error: 'Failed to generate the document' }, { status: 500 });
-    }
-
-    return new NextResponse(document, {
-      status: 200,
-      headers: {
-        'Content-Disposition': 'attachment',
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'Content-Length': document.byteLength.toString(),
-        'X-Filename': encodeURIComponent(fileName),
-      },
+      }),
+      createdAt: message.createdAt.toISOString(),
+      modelName: message.modelName,
+      messages: await serializeMessages({ messages: [message], fileMapping }),
     });
   } catch (error) {
     return handleErrorInRoute(error);
   }
+}
+
+async function serializeMessages({
+  messages,
+  fileMapping,
+}: {
+  messages: Array<{ id: string; role: string; content: string }>;
+  fileMapping: Map<string, Array<{ id: string; name: string; type: string }>>;
+}) {
+  return Promise.all(
+    messages.map(async ({ id, role, content }) => ({
+      role,
+      content,
+      images: await Promise.all(
+        (fileMapping.get(id) ?? [])
+          .filter((file) => isImageFile(file.name))
+          .map(async (file) => ({
+            alt: file.name,
+            url: await getReadOnlySignedUrl({
+              key: `message_attachments/${file.id}`,
+              filename: file.name,
+              contentType: file.type,
+              attachment: false,
+              options: { expiresIn: 300 },
+            }),
+          })),
+      ),
+    })),
+  );
 }
 
 function generateFileName({
