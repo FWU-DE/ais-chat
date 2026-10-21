@@ -1,4 +1,5 @@
 import { cn } from '@/utils/tailwind';
+import { useTranslations } from 'next-intl';
 import React from 'react';
 import { formatTime } from './format-time';
 
@@ -15,6 +16,10 @@ type AudioWaveformProps = {
   onSeekPreview: (time: number) => void;
   /** Fired once the pointer is released (or on a keyboard step), committing the seek. */
   onSeekCommit: (time: number) => void;
+  /** Fired when a drag gesture is interrupted (e.g. `pointercancel` or an unexpected loss of
+   *  pointer capture) without ever reaching `pointerup`. The caller should clear any preview
+   *  value it derived from `onSeekPreview` without seeking. */
+  onSeekCancel: () => void;
   className?: string;
 };
 
@@ -59,11 +64,15 @@ export function AudioWaveform({
   getWaveformPeaks,
   onSeekPreview,
   onSeekCommit,
+  onSeekCancel,
   className,
 }: AudioWaveformProps) {
+  const t = useTranslations('common');
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [barCount, setBarCount] = React.useState(DEFAULT_BAR_COUNT);
-  const [isDragging, setIsDragging] = React.useState(false);
+  // Not rendered, so a ref (rather than state) keeps the value synchronously accurate for the
+  // `lostpointercapture` check below, which can fire within the same tick as `pointerup`/`pointercancel`.
+  const isDraggingRef = React.useRef(false);
 
   React.useEffect(() => {
     const container = containerRef.current;
@@ -94,20 +103,33 @@ export function AudioWaveform({
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
     if (!isInteractive) return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    setIsDragging(true);
+    isDraggingRef.current = true;
     onSeekPreview(timeFromPointerEvent(event));
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
-    if (!isInteractive || !isDragging) return;
+    if (!isInteractive || !isDraggingRef.current) return;
     onSeekPreview(timeFromPointerEvent(event));
   }
 
   function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
     if (!isInteractive) return;
+    isDraggingRef.current = false;
     event.currentTarget.releasePointerCapture(event.pointerId);
-    setIsDragging(false);
     onSeekCommit(timeFromPointerEvent(event));
+  }
+
+  /** Handles `pointercancel` (e.g. an interrupted touch gesture) and `lostpointercapture` (any
+   *  other unexpected loss of capture). Both can fire without a preceding `pointerup`, so without
+   *  this the drag would appear stuck: `isDraggingRef` would stay `true`, pointer moves elsewhere
+   *  on the page would keep updating the parent's preview, and the preview value would never be
+   *  cleared (the component falls back to `currentTime` only via that callback). Ignored if we're
+   *  not currently dragging, since `handlePointerUp` already clears `isDraggingRef` before
+   *  releasing capture, and both events can follow a normal `pointerup`. */
+  function handlePointerInterrupt() {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    onSeekCancel();
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
@@ -136,6 +158,7 @@ export function AudioWaveform({
         className,
       )}
       role="slider"
+      aria-label={t('audio-playback-position')}
       aria-valuemin={0}
       aria-valuemax={duration ?? 0}
       aria-valuenow={isInteractive ? currentTime : undefined}
@@ -149,6 +172,8 @@ export function AudioWaveform({
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerInterrupt}
+      onLostPointerCapture={handlePointerInterrupt}
       onKeyDown={handleKeyDown}
     >
       {peaks === null ? (

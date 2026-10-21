@@ -60,26 +60,30 @@ export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
+      // The AudioContext must be created and unlocked synchronously within the user gesture
+      // (click handler), before any `await`, otherwise browsers like Safari leave it suspended.
+      const player = new PcmStreamPlayer({
+        onStateChange: (next) => {
+          if (next === 'ended' || next === 'error') {
+            setStatus('idle');
+            return;
+          }
+          setStatus(next);
+        },
+        onDurationKnown: setDuration,
+      });
+      player.unlockAudioContext();
+      playerRef.current = player;
+
       try {
         const body = await generateSpeechStreamFn(text, { signal: abortController.signal });
-
-        const player = new PcmStreamPlayer({
-          onStateChange: (next) => {
-            if (next === 'ended' || next === 'error') {
-              setStatus('idle');
-              return;
-            }
-            setStatus(next);
-          },
-          onDurationKnown: setDuration,
-        });
-        playerRef.current = player;
-
         await player.start(readableStreamToAsyncIterable(body));
       } catch {
         if (abortController.signal.aborted) {
           return;
         }
+        playerRef.current?.dispose();
+        playerRef.current = null;
         toast.error(tCommon('read-aloud-error'));
         setStatus('idle');
       }

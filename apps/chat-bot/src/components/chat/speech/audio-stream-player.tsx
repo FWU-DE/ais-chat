@@ -94,6 +94,7 @@ export default function AudioStreamPlayer({
             seek(time);
             setDragValue(null);
           }}
+          onSeekCancel={() => setDragValue(null)}
         />
         <Button
           variant="ghost"
