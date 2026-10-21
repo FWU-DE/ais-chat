@@ -1,15 +1,14 @@
-import { useTranslations } from 'next-intl';
-import AutoResizeTextarea from '../common/auto-resize-textarea';
 import { CHAT_MESSAGE_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
-import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useRef } from 'react';
-import { Button } from '@ui/components/button';
-import { LocalFileState } from '../chat/send-message-form';
-import { FileUploadResponse, handleSingleFile } from '../chat/upload-file-button';
-import AttachFileIcon from '../icons/attach-file';
-import { useToast } from '../common/toast';
 import { cn } from '@/utils/tailwind';
 import { iconClassName } from '@/utils/tailwind/icon';
+import { Button } from '@ui/components/button';
+import { useTranslations } from 'next-intl';
+import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useRef } from 'react';
 import ChatInputAttachmentPreview from '../chat/chat-input-attachment-preview';
+import AutoResizeTextarea from '../common/auto-resize-textarea';
+import { useToast } from '../common/toast';
+import { FileUploadResponse, handleSingleFile, LocalFileState } from '../file-upload/upload-file';
+import AttachFileIcon from '../icons/attach-file';
 
 type ImageGenerationInputBoxProps = {
   isLoading: boolean;
@@ -69,6 +68,7 @@ export function ImageGenerationInputBox({
           fileUploadFn,
           toast,
           translations: tFileInteraction,
+          allowedFileExtensions: supportedImageFormats ?? [],
         }),
       ),
     );

@@ -21,6 +21,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import React, { ReactNode, SyntheticEvent, useEffect, useState } from 'react';
+import { LocalFileState } from '../file-upload/upload-file';
 import RobotIcon from '../icons/robot';
 import { useFederalState } from '../providers/federal-state-provider';
 import { useLlmModels } from '../providers/llm-model-provider';
@@ -32,7 +33,6 @@ import { InitialChatContentDisplay } from './initial-content-display';
 import MarkdownDisplay from './markdown-display';
 import { Messages, type PendingFileModel } from './messages';
 import PromptSuggestions from './prompt-suggestions';
-import { LocalFileState } from './send-message-form';
 
 type ChatProps = {
   id: string;
