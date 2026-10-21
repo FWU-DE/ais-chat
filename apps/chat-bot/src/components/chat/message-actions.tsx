@@ -9,7 +9,7 @@ import CopyToClipboardButton from '../common/clipboard-button';
 import ReloadIcon from '../icons/reload';
 import { AiActivityDialog } from './activity/ai-activity';
 import DownloadConversationMessageButton from './download-conversation-message-button';
-import AudioStreamPlayer from './speech/audio-stream-player';
+import AudioPlayer from './speech/audio-player';
 import ShowAudioPlayerButton from './speech/show-audio-player-button';
 import SpeechButton from './speech/speech-button';
 import { GenerateSpeechStreamFn } from './speech/types';
@@ -57,7 +57,7 @@ export function MessageActions({
 
   return (
     <div className="flex flex-col gap-4 w-full">
-      <AudioStreamPlayer
+      <AudioPlayer
         isSpeechModelEnabled={isSpeechModelEnabled}
         text={plainText}
         generateSpeechStreamFn={generateSpeechStreamFn}

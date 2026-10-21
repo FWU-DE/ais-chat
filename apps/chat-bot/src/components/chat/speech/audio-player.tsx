@@ -11,7 +11,7 @@ import { useAudioStream } from './use-audio-stream';
 
 const SEEK_BACK_SECONDS = 5;
 
-type AudioStreamPlayerProps = {
+type AudioPlayerProps = {
   text: string;
   generateSpeechStreamFn: GenerateSpeechStreamFn;
   isSpeechModelEnabled: boolean;
@@ -23,12 +23,12 @@ type AudioStreamPlayerProps = {
   hidden?: boolean;
 };
 
-export default function AudioStreamPlayer({
+export default function AudioPlayer({
   text,
   generateSpeechStreamFn,
   isSpeechModelEnabled,
   hidden = false,
-}: AudioStreamPlayerProps) {
+}: AudioPlayerProps) {
   const t = useTranslations('common');
   const { status, duration, currentTime, start, pause, resume, seek, restart, getWaveformPeaks } =
     useAudioStream(generateSpeechStreamFn);
