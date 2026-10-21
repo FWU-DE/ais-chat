@@ -94,13 +94,14 @@ export default function AudioPlayer({
         />
         <Button
           variant="ghost"
-          size="icon-sm"
-          disabled={isStreamFullyLoaded}
+          size="sm"
+          disabled={!isStreamFullyLoaded}
           aria-label={t('seek-back-5-seconds')}
           title={t('seek-back-5-seconds')}
           onClick={handleBack}
         >
           <ArrowCounterClockwiseIcon />
+          {t('5-seconds-label')}
         </Button>
       </div>
 
