@@ -32,6 +32,7 @@ export const aiActivityStepSchema = z.discriminatedUnion('kind', [
     id: z.string(),
     tool: z.enum(AI_ACTIVITY_TOOL_NAMES),
     detail: z.string().optional(),
+    detailPlacement: z.enum(['inline', 'below']).optional(),
     result: z.string().optional(),
     links: z.array(aiActivityLinkSchema).optional(),
     failed: z.boolean().optional(),

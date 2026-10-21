@@ -40,6 +40,6 @@ describe('activity helpers', () => {
   it('truncates long values while preserving short and missing values', () => {
     expect(truncate('short')).toBe('short');
     expect(truncate(undefined)).toBeUndefined();
-    expect(truncate('a'.repeat(301))).toBe(`${'a'.repeat(300)}…`);
+    expect(truncate('a'.repeat(201))).toBe(`${'a'.repeat(200)}…`);
   });
 });
