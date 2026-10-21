@@ -86,8 +86,9 @@ export function filterValidFilesForUpload(
 export function filterFilesByImageLimit(
   files: readonly File[],
   existingFiles: Iterable<LocalFileState>,
+  imageLimit = NUMBER_OF_IMAGES_LIMIT,
 ): { files: File[]; imagesExceeded: number } {
-  let remainingImageSlots = NUMBER_OF_IMAGES_LIMIT - countImageFiles(existingFiles);
+  let remainingImageSlots = imageLimit - countImageFiles(existingFiles);
   let imagesExceeded = 0;
 
   const filteredFiles = files.filter((file) => {

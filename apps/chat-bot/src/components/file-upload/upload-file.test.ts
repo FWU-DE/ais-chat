@@ -102,6 +102,15 @@ describe('filterFilesByImageLimit', () => {
     expect(result.files).toEqual([firstImage, document]);
     expect(result.imagesExceeded).toBe(1);
   });
+
+  it('uses a custom image limit', () => {
+    const image = createFile('image.png');
+
+    const result = filterFilesByImageLimit([image, image], [], 1);
+
+    expect(result.files).toEqual([image]);
+    expect(result.imagesExceeded).toBe(1);
+  });
 });
 
 describe('handleSingleFile', () => {

@@ -6,8 +6,8 @@ import { useTranslations } from 'next-intl';
 import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useRef } from 'react';
 import ChatInputAttachmentPreview from '../chat/chat-input-attachment-preview';
 import AutoResizeTextarea from '../common/auto-resize-textarea';
-import { useToast } from '../common/toast';
-import { FileUploadResponse, handleSingleFile, LocalFileState } from '../file-upload/upload-file';
+import { FileUploadResponse, LocalFileState } from '../file-upload/upload-file';
+import { useFileUpload } from '../file-upload/use-file-upload';
 import AttachFileIcon from '../icons/attach-file';
 
 type ImageGenerationInputBoxProps = {
@@ -39,8 +39,16 @@ export function ImageGenerationInputBox({
 }: ImageGenerationInputBoxProps) {
   const tImageGeneration = useTranslations('image-generation');
   const tFileInteraction = useTranslations('file-interaction');
-  const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const { allowedFileExtensions, handlePaste, hasUploadingFiles, uploadFiles } = useFileUpload({
+    files,
+    setFiles,
+    fileUploadFn,
+    maxFiles,
+    imageLimit: maxFiles,
+    allowedFileExtensions: supportedImageFormats ?? [],
+  });
 
   const uploadLimitReached = files.size >= maxFiles;
 
@@ -48,41 +56,15 @@ export function ImageGenerationInputBox({
     const selected = event.target.files;
     if (selected === null) return;
 
-    const accepted = Array.from(selected).slice(0, maxFiles - files.size);
-    const rejectedCount = selected.length - accepted.length;
-
-    if (rejectedCount > 0) {
-      toast.error(
-        tFileInteraction('upload.image-limit-reached', {
-          max_images: maxFiles,
-          images_exceeded: rejectedCount,
-        }),
-      );
-    }
-
-    await Promise.all(
-      accepted.map((file) =>
-        handleSingleFile({
-          file,
-          setFiles,
-          fileUploadFn,
-          toast,
-          translations: tFileInteraction,
-          allowedFileExtensions: supportedImageFormats ?? [],
-        }),
-      ),
-    );
+    await uploadFiles(Array.from(selected));
 
     if (fileInputRef.current !== null) {
       fileInputRef.current.value = '';
     }
   }
 
-  const hasUploadingFile = Array.from(files.values()).some((f) => f.status === 'uploading');
-  const canUploadImages = (supportedImageFormats?.length ?? 0) > 0;
-  const acceptedFileExtensions = (supportedImageFormats ?? [])
-    .map((format) => `.${format}`)
-    .join(',');
+  const canUploadImages = allowedFileExtensions.length > 0;
+  const acceptedFileExtensions = allowedFileExtensions.map((format) => `.${format}`).join(',');
 
   const placeholderText = isEditMode
     ? tImageGeneration('edit-placeholder')
@@ -111,6 +93,7 @@ export function ImageGenerationInputBox({
             className="w-full text-base focus:outline-hidden bg-transparent max-h-40 sm:max-h-60 overflow-y-auto placeholder:text-muted-foreground py-3 px-4"
             onChange={handleInputChange}
             value={input}
+            onPaste={canUploadImages ? handlePaste : undefined}
             maxLength={CHAT_MESSAGE_LENGTH_LIMIT}
             disabled={isLoading}
           />
@@ -160,7 +143,7 @@ export function ImageGenerationInputBox({
         <Button
           type="button"
           onClick={customHandleSubmit}
-          disabled={input.trim().length === 0 || isLoading || hasUploadingFile}
+          disabled={input.trim().length === 0 || isLoading || hasUploadingFiles}
           aria-label={submitButtonText}
           data-testid="image-generate-button"
           className="shrink-0"

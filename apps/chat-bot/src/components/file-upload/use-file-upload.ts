@@ -16,19 +16,24 @@ export function useFileUpload({
   files,
   setFiles,
   fileUploadFn,
+  maxFiles = NUMBER_OF_FILES_LIMIT,
+  allowedFileExtensions: configuredFileExtensions,
+  imageLimit = NUMBER_OF_IMAGES_LIMIT,
 }: {
   files?: Map<string, LocalFileState>;
   setFiles?: Dispatch<SetStateAction<Map<string, LocalFileState>>>;
   fileUploadFn?: (file: File) => Promise<FileUploadResponse>;
+  maxFiles?: number;
+  allowedFileExtensions?: readonly string[];
+  imageLimit?: number;
 }) {
   const toast = useToast();
   const translations = useTranslations('file-interaction');
   const { selectedModel } = useLlmModels();
   const currentFiles = files ?? new Map<string, LocalFileState>();
-  const allowedFileExtensions = getAllowedFileExtensions(
-    currentFiles.values(),
-    selectedModel?.supportedImageFormats,
-  );
+  const allowedFileExtensions =
+    configuredFileExtensions ??
+    getAllowedFileExtensions(currentFiles.values(), selectedModel?.supportedImageFormats);
   const hasUploadingFiles = Array.from(currentFiles.values()).some(
     (file) => file.status === 'uploading',
   );
@@ -36,11 +41,11 @@ export function useFileUpload({
   async function uploadFiles(selectedFiles: File[]) {
     if (setFiles === undefined || selectedFiles.length === 0) return;
 
-    const availableSlots = NUMBER_OF_FILES_LIMIT - currentFiles.size;
+    const availableSlots = maxFiles - currentFiles.size;
     if (availableSlots <= 0) {
       toast.error(
         translations('upload.file-limit-reached', {
-          max_files: NUMBER_OF_FILES_LIMIT,
+          max_files: maxFiles,
           files_exceeded: selectedFiles.length,
         }),
       );
@@ -55,22 +60,23 @@ export function useFileUpload({
     const { files: filesWithinImageLimit, imagesExceeded } = filterFilesByImageLimit(
       validFiles,
       currentFiles.values(),
+      imageLimit,
     );
+
+    const filesToUpload = filesWithinImageLimit.slice(0, availableSlots);
+    const filesExceeded = filesWithinImageLimit.length - filesToUpload.length;
     if (imagesExceeded > 0) {
       toast.error(
         translations('upload.image-limit-reached', {
-          max_images: NUMBER_OF_IMAGES_LIMIT,
+          max_images: imageLimit,
           images_exceeded: imagesExceeded,
         }),
       );
     }
-
-    const filesToUpload = filesWithinImageLimit.slice(0, availableSlots);
-    const filesExceeded = filesWithinImageLimit.length - filesToUpload.length;
     if (filesExceeded > 0) {
       toast.error(
         translations('upload.file-limit-reached', {
-          max_files: NUMBER_OF_FILES_LIMIT,
+          max_files: maxFiles,
           files_exceeded: filesExceeded,
         }),
       );
