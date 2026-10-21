@@ -4,6 +4,7 @@ import { refetchFileMapping } from '@/app/(authed)/(chat-bot)/actions';
 import { getErrorMessageByType } from '@/error/get-error-message-by-type';
 import { useAutoScroll } from '@/hooks/use-auto-scroll';
 import { useMainChat, type ChatMessage } from '@/hooks/use-chat-hooks';
+import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
 import { getConversationPath } from '@/utils/chat/path';
 import { getFileExtension, isImageFile } from '@/utils/files/generic';
 import { navigateWithoutRefresh } from '@/utils/navigation/router';
@@ -287,6 +288,14 @@ export default function Chat({
     return response.blob();
   }
 
+  async function generateSpeechStream(
+    text: string,
+    { signal }: { signal: AbortSignal },
+  ): Promise<ReadableStream<Uint8Array>> {
+    const voice = assistant?.voice ?? character?.voice ?? learningScenario?.voice;
+    return fetchSpeechStream('/api/v1/speech/stream', { conversationId: id, text, voice }, signal);
+  }
+
   let placeholderElement: ReactNode;
 
   if (character !== undefined) {
@@ -377,6 +386,7 @@ export default function Chat({
               activitySteps={activitySteps}
               showActivityDialog={character !== undefined}
               generateSpeechFn={generateSpeech}
+              generateSpeechStreamFn={generateSpeechStream}
               isSpeechModelEnabled={
                 federalState?.featureToggles?.isSpeechModelEnabled === true &&
                 (assistant?.isSpeechEnabled ??

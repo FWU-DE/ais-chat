@@ -1,6 +1,7 @@
 'use client';
 
 import { useCharacterChat, type ChatMessage } from '@/hooks/use-chat-hooks';
+import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
 import { loadSharedChat } from '@/utils/shared-chat-storage';
 import { reductionBreakpoint } from '@/utils/tailwind/layout';
 import { CharacterWithShareDataModel } from '@shared/db/schema';
@@ -104,6 +105,17 @@ export default function CharacterSharedChat({
     return response.blob();
   }
 
+  async function generateSharedCharacterSpeechStream(
+    text: string,
+    { signal }: { signal: AbortSignal },
+  ): Promise<ReadableStream<Uint8Array>> {
+    return fetchSpeechStream(
+      '/api/v1/shared-chat/speech/stream',
+      { text, inviteCode, entityType: 'character', entityId: id },
+      signal,
+    );
+  }
+
   return (
     <GenericSharedChat
       headerT={t}
@@ -119,6 +131,7 @@ export default function CharacterSharedChat({
       isSpeechModelEnabled={isSpeechModelEnabled}
       generateSpeechFn={generateSharedCharacterSpeech}
       speechOnly={character.speechOnly}
+      generateSpeechStreamFn={generateSharedCharacterSpeechStream}
     />
   );
 }

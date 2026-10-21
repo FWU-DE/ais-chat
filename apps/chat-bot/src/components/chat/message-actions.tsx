@@ -8,7 +8,8 @@ import CopyToClipboardButton from '../common/clipboard-button';
 import ReloadIcon from '../icons/reload';
 import { AiActivityDialog } from './activity/ai-activity';
 import DownloadConversationMessageButton from './download-conversation-message-button';
-import SpeechButton from './speech-button';
+import SpeechButton from './speech/speech-button';
+import StreamingSpeechButton from './speech/streaming-speech-button';
 
 export function MessageActions({
   message,
@@ -19,6 +20,7 @@ export function MessageActions({
   regenerateMessage,
   canRegenerateMessage,
   generateSpeechFn,
+  generateSpeechStreamFn,
   isSpeechModelEnabled,
   showActivityDialog,
   activitySteps,
@@ -36,6 +38,10 @@ export function MessageActions({
   regenerateMessage: () => void;
   canRegenerateMessage: boolean;
   generateSpeechFn: (text: string) => Promise<Blob>;
+  generateSpeechStreamFn: (
+    text: string,
+    options: { signal: AbortSignal },
+  ) => Promise<ReadableStream<Uint8Array>>;
   isSpeechModelEnabled: boolean;
   showActivityDialog?: boolean;
   activitySteps: AiActivityStep[];
@@ -109,6 +115,13 @@ export function MessageActions({
         <SpeechButton
           text={plainText}
           generateSpeechFn={generateSpeechFn}
+          isSpeechModelEnabled={isSpeechModelEnabled}
+        />
+      )}
+      {!isInitialMessage && (
+        <StreamingSpeechButton
+          text={plainText}
+          generateSpeechStreamFn={generateSpeechStreamFn}
           isSpeechModelEnabled={isSpeechModelEnabled}
         />
       )}

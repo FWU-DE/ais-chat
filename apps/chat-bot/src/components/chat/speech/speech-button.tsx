@@ -4,7 +4,7 @@ import Spinner from '@/components/icons/spinner';
 import { PauseIcon, SpeakerSimpleHighIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
-import { useSpeechPlayback } from '../hooks/use-speech-playback';
+import { useSpeechPlayback } from '../../hooks/use-speech-playback';
 
 export default function SpeechButton({
   text,
