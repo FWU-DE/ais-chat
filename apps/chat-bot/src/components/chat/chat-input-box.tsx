@@ -28,7 +28,7 @@ import UploadFileButton from './upload-file-button';
 export function ChatInputBox({
   files,
   setFiles,
-  isLoading,
+  isGenerating,
   handleDeattachFile,
   handleInputChange,
   handleStopGeneration,
@@ -40,7 +40,7 @@ export function ChatInputBox({
 }: {
   files?: Map<string, LocalFileState>;
   setFiles?: Dispatch<SetStateAction<Map<string, LocalFileState>>>;
-  isLoading: boolean;
+  isGenerating: boolean;
   handleDeattachFile?: (localId: string) => void;
   handleInputChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
   handleStopGeneration: () => void;
@@ -99,7 +99,7 @@ export function ChatInputBox({
   }, [files]);
 
   async function handleSubmitOnEnter(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !isLoading && !e.shiftKey) {
+    if (e.key === 'Enter' && !isGenerating && !e.shiftKey) {
       e.preventDefault();
       if (e.currentTarget.value.trim().length > 0) {
         await customHandleSubmit(e);
@@ -108,7 +108,7 @@ export function ChatInputBox({
   }
 
   /** Either Send or StopGeneration */
-  const userActionButton = isLoading ? (
+  const userActionButton = isGenerating ? (
     <button
       type="button"
       title="Stop generating"

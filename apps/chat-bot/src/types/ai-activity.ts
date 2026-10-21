@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { TOOL_NAMES } from './tool-names';
 
 /**
- * Tools whose calls are surfaced to the user in the "KI-Aktivität" section.
+ * Tools whose calls are surfaced to the user in the "AI Activity" section.
  * Calls of any other tool are not displayed.
  */
 export const AI_ACTIVITY_TOOL_NAMES = [

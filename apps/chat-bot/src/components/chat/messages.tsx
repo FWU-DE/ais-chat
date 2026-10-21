@@ -2,7 +2,6 @@ import type { AiActivityStep } from '@/types/ai-activity';
 import { type ChatStatus, type GenerateSpeechFn, type UIMessage } from '@/types/chat';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
-import { AiActivityPanel } from './activity/ai-activity';
 import { ChatBox, type PendingFileModel } from './chat-box';
 import LoadingAnimation from './loading-animation';
 
@@ -45,6 +44,12 @@ export function Messages({
   speechOnly,
 }: MessagesProps): React.JSX.Element {
   const canRegenerateMessage = messages.some((message) => message.role === 'user');
+  const lastMessage = messages[messages.length - 1];
+  // Keep the loading animation visible until the assistant actually starts emitting text,
+  // even once the message placeholder exists for early activity steps (status: 'streaming').
+  const showLoadingAnimation =
+    isLoading ||
+    (status === 'streaming' && lastMessage?.role === 'assistant' && lastMessage.content === '');
 
   return (
     <div className={containerClassName}>
@@ -69,10 +74,7 @@ export function Messages({
           speechOnly={speechOnly}
         />
       ))}
-      {isLoading && <LoadingAnimation activitySteps={activitySteps} />}
-      {isLoading && !showActivityDialog && activitySteps.length > 0 && (
-        <AiActivityPanel steps={activitySteps} panelId="live-ai-activity" />
-      )}
+      {showLoadingAnimation && <LoadingAnimation activitySteps={activitySteps} />}
     </div>
   );
 }

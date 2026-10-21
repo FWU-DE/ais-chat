@@ -168,10 +168,7 @@ export function useAisChat({
             if (streamEvent?.type === 'ai_activity') {
               assistantActivitySteps = streamEvent.steps;
               setActivitySteps(assistantActivitySteps);
-
-              if (firstChunk) {
-                continue;
-              }
+              ensureAssistantMessage();
 
               setMessages((prev) => {
                 const updated = [...prev];
