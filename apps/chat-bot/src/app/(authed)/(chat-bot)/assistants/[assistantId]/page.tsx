@@ -1,4 +1,5 @@
 import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
+import { resolveSpeechAvailability } from '@shared/speech/speech-availability';
 import { requireAuth } from '@/auth/requireAuth';
 import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 import { getAssistantByUser } from '@shared/assistants/assistant-service';
@@ -25,6 +26,8 @@ export default async function Page(props: PageProps<'/assistants/[assistantId]'>
     user,
   }).catch(handleErrorInServerComponent);
 
+  const { isSpeechAvailable } = await resolveSpeechAvailability(federalState.featureToggles);
+
   return (
     <DefaultPageLayout>
       <AssistantView
@@ -32,7 +35,7 @@ export default async function Page(props: PageProps<'/assistants/[assistantId]'>
         fileMappings={fileMappings}
         pictureUrl={pictureUrl}
         isWebSearchAvailable={isWebSearchAvailableForFederalState(federalState.featureToggles)}
-        isSpeechAvailable={federalState.featureToggles.isSpeechModelEnabled === true}
+        isSpeechAvailable={isSpeechAvailable}
       />
     </DefaultPageLayout>
   );

@@ -13,6 +13,7 @@ import { getConversation } from '@shared/conversation/conversation-service';
 import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
 import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
 import { InvalidArgumentError } from '@shared/error';
+import { resolveVoice } from '@shared/speech/voice-selection';
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
 /**
  * Public result of the chat-facing streaming speech functions.
@@ -32,13 +33,12 @@ async function resolveSpeechModelAndVoice(voice?: string) {
   }
 
   const voices = speechModel.modelConfig?.voices ?? [];
-  const [firstVoice] = voices;
 
-  if (firstVoice === undefined) {
+  if (voices.length === 0) {
     throw new Error('No voices configured for the speech model');
   }
 
-  const selectedVoice = voice && voices.some((v) => v.name === voice) ? voice : firstVoice.name;
+  const selectedVoice = resolveVoice(voice ?? '', voices);
 
   return { speechModel, selectedVoice };
 }
@@ -78,23 +78,7 @@ export async function generateSpeechStream({
   voice?: string;
   abortSignal?: AbortSignal;
 }) {
-  const speechModelOrUndefined = await dbGetSpeechModel();
-
-  if (!speechModelOrUndefined) {
-    throw new Error('No speech model configured');
-  }
-  // Rebound to a new const so the non-undefined narrowing survives being captured by the
-  // closures below (narrowing doesn't flow into nested closures/generators).
-  const speechModel = speechModelOrUndefined;
-
-  const voices = speechModel.modelConfig?.voices ?? [];
-  const [firstVoice] = voices;
-
-  if (firstVoice === undefined) {
-    throw new Error('No voices configured for the speech model');
-  }
-
-  const selectedVoice = voice && voices.some((v) => v.name === voice) ? voice : firstVoice.name;
+  const { speechModel, selectedVoice } = await resolveSpeechModelAndVoice(voice);
 
   const { chunks, usage, format } = await streamSpeechById({
     modelId: speechModel.id,

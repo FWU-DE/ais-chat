@@ -82,7 +82,7 @@ import {
 import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
 import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
 import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
-import { resolveInitialVoice } from '@/components/custom-chat/speech/resolve-initial-voice';
+import { resolveVoice } from '@shared/speech/voice-selection';
 
 type LearningScenarioTranslator = ReturnType<typeof useTranslations<'learning-scenarios'>>;
 
@@ -209,7 +209,7 @@ export function LearningScenarioEdit({
     webSearchScope: learningScenario.webSearchScope,
     webSearchIncludedDomains: learningScenario.webSearchIncludedDomains,
     isSpeechEnabled: learningScenario.isSpeechEnabled,
-    voice: resolveInitialVoice(learningScenario.voice, speechVoices),
+    voice: resolveVoice(learningScenario.voice, speechVoices),
     speechOnly: learningScenario.speechOnly,
   };
 

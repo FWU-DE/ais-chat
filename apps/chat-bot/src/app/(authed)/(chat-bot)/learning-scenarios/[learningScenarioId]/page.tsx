@@ -1,5 +1,6 @@
 import { requireAuth } from '@/auth/requireAuth';
 import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
+import { resolveSpeechAvailability } from '@shared/speech/speech-availability';
 import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 import { getLearningScenarioForEditView } from '@shared/learning-scenarios/learning-scenario-service';
 import { LearningScenarioView } from './learning-scenario-view';
@@ -35,6 +36,8 @@ export default async function Page(props: PageProps<'/learning-scenarios/[learni
 
   const initialLinks = learningScenario.attachedLinks.map((url) => ({ link: url }));
 
+  const { isSpeechAvailable } = await resolveSpeechAvailability(federalState.featureToggles);
+
   return (
     <DefaultPageLayout>
       <LearningScenarioView
@@ -46,7 +49,7 @@ export default async function Page(props: PageProps<'/learning-scenarios/[learni
         maxBudget={maxBudget ?? 500}
         budgetUsedBySharedChat={budgetUsedBySharedChat}
         isWebSearchAvailable={isWebSearchAvailableForFederalState(federalState.featureToggles)}
-        isSpeechAvailable={federalState.featureToggles.isSpeechModelEnabled === true}
+        isSpeechAvailable={isSpeechAvailable}
       />
     </DefaultPageLayout>
   );

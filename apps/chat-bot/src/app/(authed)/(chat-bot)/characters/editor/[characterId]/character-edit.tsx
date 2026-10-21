@@ -68,7 +68,7 @@ import { CustomChatModelSelect } from '@/components/custom-chat/custom-chat-mode
 import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
 import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
 import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
-import { resolveInitialVoice } from '@/components/custom-chat/speech/resolve-initial-voice';
+import { resolveVoice } from '@shared/speech/voice-selection';
 import CustomShareSection from '@/components/custom-chat/custom-chat-share-section';
 import { FormField } from '@ui/components/form/form-field';
 import { createNewCharacterAction } from '../../actions';
@@ -200,7 +200,7 @@ export function CharacterEdit({
     webSearchScope: character.webSearchScope,
     webSearchIncludedDomains: character.webSearchIncludedDomains,
     isSpeechEnabled: character.isSpeechEnabled,
-    voice: resolveInitialVoice(character.voice, speechVoices),
+    voice: resolveVoice(character.voice, speechVoices),
     speechOnly: character.speechOnly,
   };
 

@@ -1,3 +1,4 @@
+import { resolveSpeechAvailability } from '@shared/speech/speech-availability';
 import { generateUUID } from '@shared/utils/uuid';
 import { notFound } from 'next/navigation';
 import Chat from '@/components/chat/chat';
@@ -30,6 +31,7 @@ export default async function Page(props: PageProps<'/learning-scenarios/d/[lear
 
   const id = generateUUID();
   const { user, federalState } = await requireAuth();
+  const { isSpeechAvailable } = await resolveSpeechAvailability(federalState.featureToggles);
   const userAndContext = {
     ...user,
     federalState,
@@ -77,6 +79,7 @@ export default async function Page(props: PageProps<'/learning-scenarios/d/[lear
           learningScenario={learningScenario}
           imageSource={avatarPictureUrl}
           enableFileUpload={true}
+          isSpeechAvailable={isSpeechAvailable}
           logoElement={logoElement}
         />
       </DefaultPageLayout>

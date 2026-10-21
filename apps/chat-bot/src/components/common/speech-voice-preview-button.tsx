@@ -7,8 +7,7 @@ import { useTranslations } from 'next-intl';
 import Spinner from '@/components/icons/spinner';
 import { useToast } from '@/components/common/toast';
 
-export function SpeechVoicePreviewButton({ voice }: { voice: string }) {
-  const t = useTranslations('custom-chat.speech');
+export function SpeechVoicePreviewButton({ voice, label }: { voice: string; label: string }) {
   const tCommon = useTranslations('common');
   const toast = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
@@ -69,8 +68,6 @@ export function SpeechVoicePreviewButton({ voice }: { voice: string }) {
       setIsLoading(false);
     }
   }
-
-  const label = t('voice-preview-label');
 
   return (
     <Button

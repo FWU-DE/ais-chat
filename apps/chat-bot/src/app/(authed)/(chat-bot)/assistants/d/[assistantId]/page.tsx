@@ -1,3 +1,4 @@
+import { resolveSpeechAvailability } from '@shared/speech/speech-availability';
 import { generateUUID } from '@shared/utils/uuid';
 import Chat from '@/components/chat/chat';
 import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
@@ -25,6 +26,7 @@ export default async function Page(props: PageProps<'/assistants/d/[assistantId]
   const { assistantId } = await props.params;
   const id = generateUUID();
   const { user, federalState } = await requireAuth();
+  const { isSpeechAvailable } = await resolveSpeechAvailability(federalState.featureToggles);
   const userAndContext = {
     ...user,
     federalState,
@@ -67,6 +69,7 @@ export default async function Page(props: PageProps<'/assistants/d/[assistantId]
           enableFileUpload={true}
           promptSuggestions={assistant.promptSuggestions}
           imageSource={avatarPictureUrl}
+          isSpeechAvailable={isSpeechAvailable}
           logoElement={logoElement}
         />
       </DefaultPageLayout>

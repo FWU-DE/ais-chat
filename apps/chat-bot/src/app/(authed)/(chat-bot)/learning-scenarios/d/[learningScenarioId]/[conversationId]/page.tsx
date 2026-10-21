@@ -1,3 +1,4 @@
+import { resolveSpeechAvailability } from '@shared/speech/speech-availability';
 import Chat from '@/components/chat/chat';
 import Logo from '@/components/common/logo';
 import { convertMessageModelToMessage } from '@/utils/chat/messages';
@@ -35,6 +36,7 @@ export default async function Page(
   const params = await props.params;
   const searchParams = parseSearchParams(searchParamsSchema, await props.searchParams);
   const { user, federalState } = await requireAuth();
+  const { isSpeechAvailable } = await resolveSpeechAvailability(federalState.featureToggles);
   const userAndContext = {
     ...user,
     federalState,
@@ -99,6 +101,7 @@ export default async function Page(
           learningScenario={learningScenario}
           enableFileUpload={true}
           imageSource={avatarPictureUrl}
+          isSpeechAvailable={isSpeechAvailable}
           logoElement={logoElement}
         />
       </DefaultPageLayout>

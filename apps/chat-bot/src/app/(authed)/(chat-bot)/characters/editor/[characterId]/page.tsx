@@ -1,6 +1,6 @@
 import { getCharacterForEditView } from '@shared/characters/character-service';
 import { getCommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
-import { getSpeechModelVoices } from '@shared/llm-models/llm-model-service';
+import { resolveSpeechAvailability } from '@shared/speech/speech-availability';
 import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
 import { requireAuth } from '@/auth/requireAuth';
 import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
@@ -58,8 +58,9 @@ export default async function Page(props: PageProps<'/characters/editor/[charact
         }) as WebSource,
     );
 
-  const isSpeechAvailable = federalState.featureToggles.isSpeechModelEnabled === true;
-  const speechVoices = isSpeechAvailable ? await getSpeechModelVoices() : [];
+  const { isSpeechAvailable, speechVoices } = await resolveSpeechAvailability(
+    federalState.featureToggles,
+  );
 
   return (
     <DefaultPageLayout layoutConfig={{ layout: 'form' }}>

@@ -66,7 +66,7 @@ import { RichText, stripRichTextTags } from '@/components/common/rich-text';
 import { CustomChatHeaderContent } from '@/components/custom-chat/custom-chat-header-content';
 import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
 import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
-import { resolveInitialVoice } from '@/components/custom-chat/speech/resolve-initial-voice';
+import { resolveVoice } from '@shared/speech/voice-selection';
 import { CustomChatSuspensionError } from '@/components/custom-chat/custom-chat-suspension-error';
 import FilterSelectSection from '@/components/custom-chat/filter/custom-chat-filter-select-section';
 import {
@@ -189,7 +189,7 @@ export function AssistantEdit({
     webSearchScope: assistant.webSearchScope,
     webSearchIncludedDomains: assistant.webSearchIncludedDomains,
     isSpeechEnabled: assistant.isSpeechEnabled,
-    voice: resolveInitialVoice(assistant.voice, speechVoices),
+    voice: resolveVoice(assistant.voice, speechVoices),
     speechOnly: assistant.speechOnly,
     promptSuggestions:
       assistant.promptSuggestions && assistant.promptSuggestions.length > 0

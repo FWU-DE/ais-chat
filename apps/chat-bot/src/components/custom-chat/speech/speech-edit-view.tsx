@@ -13,7 +13,7 @@ import { Switch } from '@ui/components/switch';
 import { InfoTooltip } from '@ui/components/tooltip';
 import { useTranslations } from 'next-intl';
 import { Control, FieldPath, FieldValues, useController } from 'react-hook-form';
-import { SpeechVoicePreviewButton } from './speech-voice-preview-button';
+import { SpeechVoicePreviewButton } from '@/components/common/speech-voice-preview-button';
 import type { SpeechFields } from './speech.types';
 
 export type SpeechEditViewProps<TFieldValues extends FieldValues = FieldValues> = {
@@ -84,7 +84,7 @@ export function SpeechEditView<TFieldValues extends FieldValues = FieldValues>(
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <SpeechVoicePreviewButton voice={voiceField.value} />
+              <SpeechVoicePreviewButton voice={voiceField.value} label={t('voice-preview-label')} />
             </div>
 
             <div className="flex items-center gap-2">

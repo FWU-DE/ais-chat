@@ -1,5 +1,6 @@
 import { getCharacterForEditView } from '@shared/characters/character-service';
 import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
+import { resolveSpeechAvailability } from '@shared/speech/speech-availability';
 import { requireAuth } from '@/auth/requireAuth';
 import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 import { WebSource } from '@shared/db/types';
@@ -44,6 +45,8 @@ export default async function Page(props: PageProps<'/characters/[characterId]'>
         }) as WebSource,
     );
 
+  const { isSpeechAvailable } = await resolveSpeechAvailability(federalState.featureToggles);
+
   return (
     <DefaultPageLayout>
       <CharacterView
@@ -55,7 +58,7 @@ export default async function Page(props: PageProps<'/characters/[characterId]'>
         maxBudget={maxBudget ?? 500}
         budgetUsedBySharedChat={budgetUsedBySharedChat}
         isWebSearchAvailable={isWebSearchAvailableForFederalState(federalState.featureToggles)}
-        isSpeechAvailable={federalState.featureToggles.isSpeechModelEnabled === true}
+        isSpeechAvailable={isSpeechAvailable}
       />
     </DefaultPageLayout>
   );

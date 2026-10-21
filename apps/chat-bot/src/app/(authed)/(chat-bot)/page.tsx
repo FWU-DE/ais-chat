@@ -1,3 +1,4 @@
+import { resolveSpeechAvailability } from '@shared/speech/speech-availability';
 import Chat from '@/components/chat/chat';
 import { generateUUID } from '@shared/utils/uuid';
 import { getRandomPromptSuggestions } from '@/utils/prompt-suggestions/utils';
@@ -22,6 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function Page() {
   const id = generateUUID();
   const { user, federalState } = await requireAuth();
+  const { isSpeechAvailable } = await resolveSpeechAvailability(federalState.featureToggles);
   const userAndContext = {
     ...user,
     federalState,
@@ -60,6 +62,7 @@ export default async function Page() {
           initialMessages={[]}
           promptSuggestions={promptSuggestions}
           enableFileUpload={true}
+          isSpeechAvailable={isSpeechAvailable}
           logoElement={logoElement}
         />
       </DefaultPageLayout>

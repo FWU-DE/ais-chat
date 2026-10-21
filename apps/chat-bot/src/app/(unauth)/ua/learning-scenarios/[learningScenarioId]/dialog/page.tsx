@@ -1,3 +1,4 @@
+import { resolveSpeechAvailability } from '@shared/speech/speech-availability';
 import LearningScenarioSharedChat from '@/components/shared-chat/learning-scenario-shared-chat';
 import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
@@ -55,6 +56,7 @@ export default async function Page(
     sharingUserId: learningScenario.startedBy,
   });
   const messages = await loadTranslations(locale);
+  const { isSpeechAvailable } = await resolveSpeechAvailability(federalState?.featureToggles);
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
@@ -68,10 +70,7 @@ export default async function Page(
             {...learningScenario}
             inviteCode={searchParams.inviteCode}
             avatarPictureUrl={avatarPictureUrl}
-            isSpeechModelEnabled={
-              federalState?.featureToggles?.isSpeechModelEnabled === true &&
-              learningScenario.isSpeechEnabled
-            }
+            isSpeechModelEnabled={isSpeechAvailable && learningScenario.isSpeechEnabled}
           />
         </ThemeProvider>
       </LlmModelsProvider>

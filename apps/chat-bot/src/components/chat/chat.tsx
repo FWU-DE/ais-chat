@@ -23,7 +23,6 @@ import { useTranslations } from 'next-intl';
 import React, { ReactNode, SyntheticEvent, useEffect, useState } from 'react';
 import { LocalFileState } from '../file-upload/upload-file';
 import RobotIcon from '../icons/robot';
-import { useFederalState } from '../providers/federal-state-provider';
 import { useLlmModels } from '../providers/llm-model-provider';
 import { AssistantIcon } from './assistant-icon';
 import { ChatInputBox } from './chat-input-box';
@@ -45,6 +44,7 @@ type ChatProps = {
   initialFileMapping?: Map<string, FileModel[]>;
   enableFileUpload: boolean;
   webSourceMapping?: Map<string, WebSource[]>;
+  isSpeechAvailable: boolean;
   logoElement: ReactNode;
 };
 
@@ -59,13 +59,13 @@ export default function Chat({
   initialFileMapping,
   enableFileUpload,
   webSourceMapping,
+  isSpeechAvailable,
   logoElement,
 }: ChatProps) {
   const tHelpMode = useTranslations('help-mode');
   const tCommon = useTranslations('common');
   const tLearningScenarioShared = useTranslations('learning-scenarios.shared');
 
-  const federalState = useFederalState();
   const { selectedModel, setDownloadConversationEnabled } = useLlmModels();
   const conversationPath = getConversationPath({
     customGptId: assistant?.id,
@@ -378,7 +378,7 @@ export default function Chat({
               showActivityDialog={character !== undefined}
               generateSpeechFn={generateSpeech}
               isSpeechModelEnabled={
-                federalState?.featureToggles?.isSpeechModelEnabled === true &&
+                isSpeechAvailable &&
                 (assistant?.isSpeechEnabled ??
                   character?.isSpeechEnabled ??
                   learningScenario?.isSpeechEnabled ??

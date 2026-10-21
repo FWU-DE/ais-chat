@@ -1,3 +1,4 @@
+import { resolveSpeechAvailability } from '@shared/speech/speech-availability';
 import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
 import { dbGetLlmModelById } from '@shared/db/functions/llm-model';
 import { dbGetCharacterByIdAndInviteCode } from '@shared/db/functions/character';
@@ -50,6 +51,7 @@ export default async function Page(props: PageProps<'/ua/characters/[characterId
     sharingUserId: character.startedBy,
   });
   const messages = await loadTranslations(locale);
+  const { isSpeechAvailable } = await resolveSpeechAvailability(federalState?.featureToggles);
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
@@ -64,10 +66,7 @@ export default async function Page(props: PageProps<'/ua/characters/[characterId
             initialMessage={character.initialMessage ?? ''}
             inviteCode={searchParams.inviteCode}
             avatarPictureUrl={avatarPictureUrl}
-            isSpeechModelEnabled={
-              federalState?.featureToggles?.isSpeechModelEnabled === true &&
-              character.isSpeechEnabled
-            }
+            isSpeechModelEnabled={isSpeechAvailable && character.isSpeechEnabled}
           />
         </ThemeProvider>
       </LlmModelsProvider>

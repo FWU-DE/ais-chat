@@ -2,7 +2,7 @@ import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
 import { requireAuth } from '@/auth/requireAuth';
 import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 import { getAssistantByUser } from '@shared/assistants/assistant-service';
-import { getSpeechModelVoices } from '@shared/llm-models/llm-model-service';
+import { resolveSpeechAvailability } from '@shared/speech/speech-availability';
 import { getCommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
 import { AssistantEdit } from './assistant-edit';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
@@ -36,8 +36,9 @@ export default async function Page(props: PageProps<'/assistants/editor/[assista
     .filter((l) => l !== '')
     .map((url) => ({ link: url }));
 
-  const isSpeechAvailable = federalState.featureToggles.isSpeechModelEnabled === true;
-  const speechVoices = isSpeechAvailable ? await getSpeechModelVoices() : [];
+  const { isSpeechAvailable, speechVoices } = await resolveSpeechAvailability(
+    federalState.featureToggles,
+  );
 
   return (
     <DefaultPageLayout layoutConfig={{ layout: 'form' }}>
