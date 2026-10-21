@@ -15,11 +15,11 @@ import {
   startTransition,
   SyntheticEvent,
   useEffect,
-  useState,
 } from 'react';
 import AutoResizeTextarea from '../common/auto-resize-textarea';
 import { useToast } from '../common/toast';
 import type { FileUploadResponse, LocalFileState } from '../file-upload/upload-file';
+import { useFileUpload } from '../file-upload/use-file-upload';
 import ArrowRightIcon from '../icons/arrow-right';
 import StopIcon from '../icons/stop';
 import ChatInputAttachmentPreview from './chat-input-attachment-preview';
@@ -53,7 +53,11 @@ export function ChatInputBox({
   const tCommon = useTranslations('common');
   const tFileInteraction = useTranslations('file-interaction');
   const toast = useToast();
-  const [fileUploading, setFileUploading] = useState(false);
+  const { allowedFileExtensions, handlePaste, hasUploadingFiles, uploadFiles } = useFileUpload({
+    files,
+    setFiles,
+    fileUploadFn,
+  });
 
   useEffect(() => {
     if (files && setFiles && files.size > NUMBER_OF_FILES_LIMIT) {
@@ -66,7 +70,6 @@ export function ChatInputBox({
       const trimmedFiles = new Map(Array.from(files.entries()).slice(0, NUMBER_OF_FILES_LIMIT));
       startTransition(() => {
         setFiles(trimmedFiles);
-        setFileUploading(false);
       });
     }
     const imageEntries = Array.from(files?.entries() ?? []).filter(([, file]) =>
@@ -89,7 +92,6 @@ export function ChatInputBox({
       });
       startTransition(() => {
         setFiles(newFiles);
-        setFileUploading(false);
       });
     }
 
@@ -123,7 +125,7 @@ export function ChatInputBox({
     <button
       type="submit"
       title="Nachricht abschicken"
-      disabled={input.trim().length === 0 || fileUploading}
+      disabled={input.trim().length === 0 || hasUploadingFiles}
       className={cn(
         iconClassName,
         'my-2 mx-2 flex items-center self-end justify-center group disabled:cursor-not-allowed text-dark-gray',
@@ -163,6 +165,7 @@ export function ChatInputBox({
             onChange={handleInputChange}
             value={input}
             onKeyDown={handleSubmitOnEnter}
+            onPaste={enableFileUpload ? handlePaste : undefined}
             maxLength={CHAT_MESSAGE_LENGTH_LIMIT}
             data-testid="chat-input"
           />
@@ -170,10 +173,9 @@ export function ChatInputBox({
             <div className="flex flex-row gap-x-3 rounded-enterprise-sm">
               <UploadFileButton
                 className={iconClassName}
-                setFiles={setFiles}
                 files={files}
-                setFileUploading={setFileUploading}
-                fileUploadFn={fileUploadFn}
+                allowedFileExtensions={allowedFileExtensions}
+                onFilesSelected={uploadFiles}
               />
             </div>
           )}

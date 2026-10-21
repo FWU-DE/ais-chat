@@ -1,5 +1,6 @@
+import { NUMBER_OF_IMAGES_LIMIT } from '@/configuration-text-inputs/const';
 import { MAX_FILE_SIZE, SUPPORTED_DOCUMENTS_EXTENSIONS, SUPPORTED_IMAGE_EXTENSIONS } from '@/const';
-import { validateFileExtension } from '@/utils/files/generic';
+import { isImageFile, validateFileExtension } from '@/utils/files/generic';
 import { logError } from '@shared/logging';
 import { nanoid } from 'nanoid';
 import { useTranslations } from 'next-intl';
@@ -11,7 +12,7 @@ export type FileUploadResponse = {
   fileId: string;
 };
 
-export type FileStatus = 'uploading' | 'processed' | 'failed' | 'success';
+export type FileStatus = 'uploading' | 'processed' | 'success';
 
 export type LocalFileState = {
   file: File;
@@ -25,6 +26,82 @@ export type FileUploadProps = {
   fileUploadFn?: (file: File) => Promise<FileUploadResponse>;
   showUploadConfirmation?: boolean;
 };
+
+function countImageFiles(files: Iterable<LocalFileState>): number {
+  return Array.from(files).filter((file) => isImageFile(file.file.name)).length;
+}
+
+export function getAllowedFileExtensions(
+  files: Iterable<LocalFileState>,
+  supportedImageFormats: string[] | null | undefined,
+): readonly string[] {
+  const numberOfImages = countImageFiles(files);
+  const allowedImageFormats =
+    numberOfImages < NUMBER_OF_IMAGES_LIMIT && supportedImageFormats?.length !== 0
+      ? SUPPORTED_IMAGE_EXTENSIONS
+      : [];
+
+  return [...SUPPORTED_DOCUMENTS_EXTENSIONS, ...allowedImageFormats];
+}
+
+export function validateFileUpload({
+  file,
+  allowedFileExtensions,
+  toast,
+  translations,
+}: {
+  file: File;
+  allowedFileExtensions: readonly string[];
+  toast: ToastContextType;
+  translations: ReturnType<typeof useTranslations>;
+}): boolean {
+  if (!validateFileExtension(file.name, allowedFileExtensions)) {
+    toast.error(
+      translations('toasts.invalid-file-format', {
+        supported_formats: allowedFileExtensions.join(', '),
+      }),
+    );
+    return false;
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    toast.error(
+      translations('toasts.file-too-large', {
+        file_name: file.name,
+        max_file_size: MAX_FILE_SIZE / 1_000_000,
+      }),
+    );
+    return false;
+  }
+
+  return true;
+}
+
+export function filterValidFilesForUpload(
+  files: readonly File[],
+  validation: Omit<Parameters<typeof validateFileUpload>[0], 'file'>,
+): File[] {
+  return files.filter((file) => validateFileUpload({ ...validation, file }));
+}
+
+export function filterFilesByImageLimit(
+  files: readonly File[],
+  existingFiles: Iterable<LocalFileState>,
+): { files: File[]; imagesExceeded: number } {
+  let remainingImageSlots = NUMBER_OF_IMAGES_LIMIT - countImageFiles(existingFiles);
+  let imagesExceeded = 0;
+
+  const filteredFiles = files.filter((file) => {
+    if (!isImageFile(file.name)) return true;
+    if (remainingImageSlots > 0) {
+      remainingImageSlots -= 1;
+      return true;
+    }
+    imagesExceeded += 1;
+    return false;
+  });
+
+  return { files: filteredFiles, imagesExceeded };
+}
 
 export async function handleSingleFile({
   file,
@@ -41,21 +118,7 @@ export async function handleSingleFile({
   translations: ReturnType<typeof useTranslations>;
   allowedFileExtensions?: readonly string[];
 }) {
-  if (!validateFileExtension(file.name, allowedFileExtensions)) {
-    toast.error(
-      translations('toasts.invalid-file-format', {
-        supported_formats: allowedFileExtensions.join(', '),
-      }),
-    );
-    return;
-  }
-  if (file.size > MAX_FILE_SIZE) {
-    toast.error(
-      translations('toasts.file-too-large', {
-        file_name: file.name,
-        max_file_size: MAX_FILE_SIZE / 1_000_000,
-      }),
-    );
+  if (!validateFileUpload({ file, allowedFileExtensions, toast, translations })) {
     return;
   }
 

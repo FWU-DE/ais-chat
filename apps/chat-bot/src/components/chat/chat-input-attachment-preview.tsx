@@ -51,7 +51,7 @@ export default function ChatInputAttachmentPreview({
           </button>
         )}
         <div className="relative flex items-center gap-2 h-14 w-14 overflow-hidden rounded-enterprise-sm">
-          {file.status !== 'failed' && imageUrl !== undefined ? (
+          {imageUrl !== undefined ? (
             <>
               <span className="sr-only">{fileName}</span>
               {/* eslint-disable-next-line @next/next/no-img-element */}
