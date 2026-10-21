@@ -8,6 +8,8 @@ import { AudioWaveform } from './audio-waveform';
 import { formatTime } from './format-time';
 import { useAudioStream } from './use-audio-stream';
 
+const SEEK_BACK_SECONDS = 5;
+
 type AudioStreamPlayerProps = {
   text: string;
   generateSpeechStreamFn: (
@@ -62,6 +64,10 @@ export default function AudioStreamPlayer({
     }
   }
 
+  function handleBack() {
+    seek(Math.max(currentTime - SEEK_BACK_SECONDS, 0));
+  }
+
   return (
     <div className={cn('flex flex-col gap-1 pt-4', hidden && 'hidden')}>
       <div className="flex flex-row gap-2 items-center">
@@ -89,7 +95,14 @@ export default function AudioStreamPlayer({
             setDragValue(null);
           }}
         />
-        <Button variant="ghost" size="icon-sm" title="Back">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          disabled={duration === null}
+          aria-label={tCommon('seek-back-5-seconds')}
+          title={tCommon('seek-back-5-seconds')}
+          onClick={handleBack}
+        >
           <ArrowCounterClockwiseIcon />
         </Button>
       </div>

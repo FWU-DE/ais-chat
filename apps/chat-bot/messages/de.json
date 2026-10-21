@@ -58,6 +58,7 @@
     "hide-message-text": "Text ausblenden",
     "show-audio-player": "Audio-Player anzeigen",
     "hide-audio-player": "Audio-Player ausblenden",
+    "seek-back-5-seconds": "5 Sekunden zurück",
     "image-load-failed": "Bild konnte nicht geladen werden",
     "rate-limit-error": "Das bereitgestellte Tokenvolumen wurde aufgebraucht.",
     "api-key-quota-error": "Das bereitgestellte Kontingent des Bundeslandes wurde aufgebraucht.",
