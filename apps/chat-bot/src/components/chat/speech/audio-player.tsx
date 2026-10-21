@@ -118,7 +118,7 @@ export default function AudioPlayer({
         />
         <Button
           variant="ghost"
-          size="xs"
+          size="sm"
           disabled={!isStreamFullyLoaded}
           aria-label={t('seek-back-5-seconds')}
           title={t('seek-back-5-seconds')}
