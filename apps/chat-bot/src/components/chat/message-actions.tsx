@@ -80,7 +80,7 @@ export function MessageActions({
           type="button"
           title={tCommon('regenerate-message-button')}
           onClick={() => regenerateMessage()}
-          aria-label={tCommon('regenerate-message-button-aria-label')}
+          aria-label={tCommon('regenerate-message-button')}
           className="text-primary"
           data-testid="regenerate-message-button"
         >
