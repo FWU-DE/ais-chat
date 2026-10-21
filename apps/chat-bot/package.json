@@ -84,7 +84,7 @@
     "react-textarea-autosize": "8.5.9",
     "rehype-katex": "7.0.1",
     "remark-gfm": "4.0.1",
-    "remark-math": "6.0.0",
+    "remark-math-extended": "6.1.1",
     "require-in-the-middle": "8.0.1",
     "sharp": "0.35.5",
     "strip-json-comments": "5.0.3",
