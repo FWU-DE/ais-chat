@@ -1,4 +1,5 @@
-import { expect, Page, test } from '@playwright/test';
+import { expect, test } from '../../fixtures/test';
+import type { Page } from '@playwright/test';
 import { AUTH_FILES } from '../../utils/const';
 import { enterMessage, selectDifferentModel, sendMessage } from '../../utils/chat';
 import { configureCharacter, deleteCharacter } from '../../utils/character';

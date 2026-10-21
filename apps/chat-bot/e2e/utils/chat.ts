@@ -58,7 +58,7 @@ export async function sendMessage(
 export async function uploadFile(page: Page, filePath: string) {
   const fileInput = page.locator('input[type="file"]');
 
-  const uploadPromise = page.waitForResponse('/api/v1/files');
+  const uploadPromise = page.waitForResponse('/api/v1/files', { timeout: 15_000 });
   await fileInput.setInputFiles(filePath);
 
   // Wait for the upload to complete

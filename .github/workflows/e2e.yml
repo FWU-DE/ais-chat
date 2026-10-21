@@ -25,6 +25,9 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
+      pull-requests: write # for the smart-reporter pull request comment
 
     env:
       # smoke: pipeline subset (@smoke tests, chromium) on PR open/update; regression: all tests incl. firefox and real LLMs, run on merge to main
@@ -71,6 +74,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+
+      - name: Restore smart-reporter test history
+        uses: actions/cache/restore@v4
+        with:
+          path: apps/chat-bot/smart-report/test-history.json
+          # On a PR, restore the target branch's history (read-only baseline, see baseline.branch
+          # in smart-report/merge.config.ts); on a push, restore this branch's own history.
+          key: test-history-${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            test-history-${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}-
 
       - name: Start e2e container dependencies
         run: docker compose -f devops/docker/docker-compose.local.yml up -d --build &
@@ -218,6 +231,7 @@ jobs:
         run: docker compose -f devops/docker/docker-compose.local.yml logs --no-color --timestamps --follow > "$CONTAINER_LOG_FILE" 2>&1 &
 
       - name: Run E2E tests (app)
+        id: app-e2e
         run: pnpm --filter ais-chat-app ${{ env.E2E_SUITE == 'regression' && 'e2e' || 'e2e:smoke' }}
         env:
           CI: true
@@ -226,11 +240,14 @@ jobs:
           E2E_TEXT_MODEL_2: Mock LLM (2)
 
       - name: Run E2E tests (admin)
+        # Run even if the app suite failed, but not if it was skipped (e.g. setup failed) or cancelled.
+        if: ${{ !cancelled() && steps.app-e2e.conclusion != 'skipped' }}
         run: pnpm --filter ais-chat-admin ${{ env.E2E_SUITE == 'regression' && 'e2e' || 'e2e:smoke' }}
         env:
           CI: true
 
       - name: Run E2E tests (api)
+        if: ${{ !cancelled() && steps.app-e2e.conclusion != 'skipped' }}
         run: pnpm --filter ais-chat-api ${{ env.E2E_SUITE == 'regression' && 'e2e' || 'e2e:smoke' }}
         env:
           CI: true
@@ -259,6 +276,39 @@ jobs:
           name: admin-playwright-report-${{ env.E2E_SUITE }}
           path: apps/admin/playwright-report
           retention-days: 30
+
+      - name: Merge app/admin/api blob reports into one aggregated smart report
+        if: always()
+        run: |
+          mkdir -p apps/chat-bot/smart-report/blobs
+          cp apps/chat-bot/blob-report/*.zip apps/chat-bot/smart-report/blobs/ 2>/dev/null || true
+          cp apps/admin/blob-report/*.zip apps/chat-bot/smart-report/blobs/ 2>/dev/null || true
+          cp apps/api/blob-report/*.zip apps/chat-bot/smart-report/blobs/ 2>/dev/null || true
+          pnpm --filter ais-chat-app exec playwright merge-reports \
+            --config=smart-report/merge.config.ts smart-report/blobs
+
+      - name: Upload aggregated smart report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: smart-report-${{ env.E2E_SUITE }}
+          path: |
+            apps/chat-bot/smart-report/smart-report.html
+            apps/chat-bot/smart-report/smart-report-data.json
+          retention-days: 30
+
+      - name: Save smart-reporter test history
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/cache/save@v4
+        with:
+          path: apps/chat-bot/smart-report/test-history.json
+          key: test-history-${{ github.ref_name }}-${{ github.run_id }}
+
+      - name: Post smart-reporter pull request comment
+        if: always() && github.event_name == 'pull_request'
+        uses: qa-gary-parker/playwright-smart-reporter@v4.0.0
+        with:
+          data: apps/chat-bot/smart-report/smart-report-data.json
 
       - name: Print ais-chat-api logs
         if: always()
