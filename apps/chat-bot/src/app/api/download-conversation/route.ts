@@ -5,6 +5,7 @@ import {
   getConversationAndMessagesForExport,
   getConversationMessageForExport,
 } from '@shared/conversation/conversation-service';
+import { dbGetModelByName } from '@shared/db/functions/llm-model';
 import { type ConversationModel } from '@shared/db/types';
 import { getReadOnlySignedUrl } from '@shared/s3';
 import { NextRequest, NextResponse } from 'next/server';
@@ -43,12 +44,14 @@ export async function GET(req: NextRequest) {
         conversationId,
         userId: user.id,
       });
+      const modelName = messages.findLast((message) => message.role === 'assistant')?.modelName;
+      const model = modelName === undefined ? undefined : await dbGetModelByName(modelName);
 
       return NextResponse.json({
         fileName: generateFileName({ conversation, gptName }),
         conversationTitle: conversation.name,
         createdAt: conversation.createdAt.toISOString(),
-        modelName: messages.find((message) => message.modelName)?.modelName ?? gptName,
+        modelName: model?.displayName ?? modelName ?? gptName,
         messages: await serializeMessages({ messages, fileMapping }),
       });
     }
@@ -58,6 +61,8 @@ export async function GET(req: NextRequest) {
       messageId,
       userId: user.id,
     });
+    const model =
+      message.modelName === undefined ? undefined : await dbGetModelByName(message.modelName);
 
     return NextResponse.json({
       fileName: generateMessageFileName({
@@ -66,7 +71,7 @@ export async function GET(req: NextRequest) {
         createdAt: message.createdAt,
       }),
       createdAt: message.createdAt.toISOString(),
-      modelName: message.modelName,
+      modelName: model?.displayName ?? message.modelName ?? gptName,
       messages: await serializeMessages({ messages: [message], fileMapping }),
     });
   } catch (error) {

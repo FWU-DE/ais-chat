@@ -1,4 +1,5 @@
 import { AlignmentType, BorderStyle, Paragraph, Table, TableCell, TableRow, WidthType } from 'docx';
+import type { Root } from 'mdast';
 import type { DocxOptions, RemarkDocxPlugin } from 'remark-docx';
 import remarkDocx from 'remark-docx';
 import { imagePlugin } from 'remark-docx/plugins/image';
@@ -70,6 +71,10 @@ export type ConversationExportMessage = {
   images: Array<{ alt: string; url: string }>;
 };
 
+export type ConversationExport = {
+  markdownBlocks: string[];
+};
+
 export function formatConversationExport({
   messages,
   createdAt,
@@ -80,22 +85,33 @@ export function formatConversationExport({
   createdAt: string;
   modelName: string;
   conversationTitle?: string;
-}): string {
+}): ConversationExport {
   const formattedDate = new Intl.DateTimeFormat('de-DE', {
     dateStyle: 'short',
     timeStyle: 'short',
+    timeZone: 'Europe/Berlin',
   }).format(new Date(createdAt));
-  const heading = conversationTitle === undefined ? '' : `# Konversation: ${conversationTitle}\n\n`;
-  const messageContent = messages
-    .map(({ role, content, images }) => {
-      const messageHeading = role === 'user' ? 'Nutzer/in' : 'AIS.chat';
-      const imageMarkdown = images.map(({ alt, url }) => `![${alt}](${url})`).join('\n');
+  const markdownBlocks: string[] = [];
 
-      return `### ${messageHeading}:\n\n${content}\n\n${imageMarkdown}`;
-    })
-    .join(`\n\n${PARAGRAPH_SPACER}\n\n`);
+  if (conversationTitle !== undefined) {
+    markdownBlocks.push(`# Konversation: ${conversationTitle}`);
+  }
+  markdownBlocks.push(`Erstellt am: ${formattedDate}`, PARAGRAPH_SPACER);
 
-  return `${heading}Erstellt am: ${formattedDate}\n\n${PARAGRAPH_SPACER}\n\n${messageContent}\n\n${PARAGRAPH_SPACER}\n\n${PARAGRAPH_SPACER}\n\n#### Generiert von AIS.chat unter Nutzung von ${modelName}`;
+  for (const { role, content, images } of messages) {
+    const messageHeading = role === 'user' ? 'Nutzer/in' : 'AIS.chat';
+    markdownBlocks.push(`### ${messageHeading}:`, PARAGRAPH_SPACER, content);
+    markdownBlocks.push(...images.map(({ alt, url }) => `![${alt}](${url})`));
+    markdownBlocks.push(PARAGRAPH_SPACER);
+  }
+
+  markdownBlocks.push(
+    PARAGRAPH_SPACER,
+    PARAGRAPH_SPACER,
+    `#### Generiert von AIS.chat unter Nutzung von ${modelName}`,
+  );
+
+  return { markdownBlocks };
 }
 
 async function loadImageForDocx(url: string): Promise<ArrayBuffer> {
@@ -177,9 +193,18 @@ const processor = unified()
   .use(remarkGfm)
   .use(remarkDocx, docxOptions);
 
-export async function markdownToDocxBlob(markdown: string): Promise<Blob> {
-  const file = await processor.process(markdown);
-  const arrayBuffer = await file.result;
+export async function markdownToDocxBlob(exportDocument: ConversationExport): Promise<Blob> {
+  const roots = await Promise.all(
+    exportDocument.markdownBlocks.map(async (markdownBlock) => {
+      const parsedRoot = processor.parse(markdownBlock) as Root;
+      return (await processor.run(parsedRoot)) as Root;
+    }),
+  );
+  const combinedRoot: Root = {
+    type: 'root',
+    children: roots.flatMap((root) => root.children),
+  };
+  const arrayBuffer = await processor.stringify(combinedRoot);
 
   return new Blob([arrayBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
