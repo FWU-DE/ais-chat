@@ -1,4 +1,5 @@
-import type { DocxOptions } from 'remark-docx';
+import { AlignmentType, BorderStyle, Paragraph, Table, TableCell, TableRow, WidthType } from 'docx';
+import type { DocxOptions, RemarkDocxPlugin } from 'remark-docx';
 import remarkDocx from 'remark-docx';
 import { imagePlugin } from 'remark-docx/plugins/image';
 import { latexPlugin } from 'remark-docx/plugins/latex';
@@ -11,6 +12,57 @@ import { unified } from 'unified';
 const MAX_IMAGE_WIDTH = 200;
 const MAX_IMAGE_HEIGHT = 320;
 const PARAGRAPH_SPACER = '\u200B';
+
+const styledBlocksPlugin: RemarkDocxPlugin = async () => ({
+  thematicBreak: () =>
+    new Paragraph({
+      border: {
+        bottom: {
+          color: 'D9E1E8',
+          size: 4,
+          space: 1,
+          style: BorderStyle.SINGLE,
+        },
+      },
+      spacing: { before: 120, after: 120 },
+    }),
+  table: ({ children, align }, context) => {
+    const columnCount = children[0]?.children.length ?? 1;
+    const columnWidth = context.width / columnCount;
+    const textAlign = align?.map((alignment) => {
+      if (alignment === 'center') return AlignmentType.CENTER;
+      if (alignment === 'right') return AlignmentType.RIGHT;
+      return AlignmentType.LEFT;
+    });
+
+    return new Table({
+      columnWidths: Array.from({ length: columnCount }, () => columnWidth),
+      rows: children.map(
+        (row) =>
+          new TableRow({
+            children: row.children.map(
+              (cell, index) =>
+                new TableCell({
+                  width: { size: columnWidth, type: WidthType.DXA },
+                  children: [
+                    new Paragraph({
+                      alignment: textAlign?.[index] ?? AlignmentType.LEFT,
+                      children: context.render(cell.children, {
+                        ...context,
+                        rtl: undefined,
+                      }),
+                    }),
+                  ],
+                }),
+            ),
+          }),
+      ),
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      alignment: AlignmentType.CENTER,
+      style: 'TableGrid',
+    });
+  },
+});
 
 export type ConversationExportMessage = {
   role: string;
@@ -43,7 +95,7 @@ export function formatConversationExport({
     })
     .join(`\n\n${PARAGRAPH_SPACER}\n\n`);
 
-  return `${heading}Erstellt am: ${formattedDate}\n\n${PARAGRAPH_SPACER}\n\n${messageContent}\n\n${PARAGRAPH_SPACER}\n\n${PARAGRAPH_SPACER}\n\n${PARAGRAPH_SPACER}\n\n#### Generiert von AIS.chat unter Nutzung von ${modelName}`;
+  return `${heading}Erstellt am: ${formattedDate}\n\n${PARAGRAPH_SPACER}\n\n${messageContent}\n\n${PARAGRAPH_SPACER}\n\n${PARAGRAPH_SPACER}\n\n#### Generiert von AIS.chat unter Nutzung von ${modelName}`;
 }
 
 async function loadImageForDocx(url: string): Promise<ArrayBuffer> {
@@ -84,10 +136,9 @@ const docxOptions: DocxOptions = {
     latexPlugin(),
     imagePlugin({ load: loadImageForDocx }),
     shikiPlugin({ theme: 'dark-plus' }),
+    styledBlocksPlugin,
   ],
   spacing: 80,
-  // This prevents page breaks from occurring at thematic breaks, but also renders a black line.
-  // The line styling can not be adapted for now in docx version (which we need for math support)
   thematicBreak: 'line',
   orderedListFormat: [
     { format: 'DECIMAL', text: '%1.' },
@@ -100,10 +151,10 @@ const docxOptions: DocxOptions = {
       document: {
         run: { font: 'Barlow', size: 22 },
       },
-      title: { run: { font: 'Barlow', size: 40, bold: true } },
-      heading1: { run: { font: 'Barlow', size: 28, bold: true } },
+      title: { run: { font: 'Barlow SemiBold', size: 40 } },
+      heading1: { run: { font: 'Barlow SemiBold', size: 28 } },
       heading2: {
-        run: { font: 'Barlow', size: 22, bold: true },
+        run: { font: 'Barlow SemiBold', size: 22 },
       },
       heading3: {
         run: { font: 'Barlow', size: 18, bold: false, italics: true, color: '666666' },

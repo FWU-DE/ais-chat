@@ -337,8 +337,8 @@ importers:
         specifier: 4.4.0
         version: 4.4.0
       docx:
-        specifier: 9.12.0
-        version: 9.12.0
+        specifier: 9.7.1
+        version: 9.7.1
       drizzle-kit:
         specifier: 0.31.11
         version: 0.31.11
@@ -6405,10 +6405,6 @@ packages:
   doctrine@2.1.0:
     resolution: {integrity: sha512-35mSku4ZXK0vfCuHEDAwt55dg2jNajHZ1odvF+8SSr82EsZY4QmXfuWso8oEd8zRhVObSN18aM0CjSdoBX7zIw==}
     engines: {node: '>=0.10.0'}
-
-  docx@9.12.0:
-    resolution: {integrity: sha512-pRxdJP7cJpqhSxzfhlB01RToOFMAY7+QJ59zT2LowpXjS2q5fAnrvAuQIyGgkuBxTcXii0LFqM96GFjhQcTicQ==}
-    engines: {node: '>=10'}
 
   docx@9.7.1:
     resolution: {integrity: sha512-ilXFf9Moz47ABjFpDiA5s1w9lpb4EFSp7+5iiJSbfyYDM+bpZdAgLlSr7fW4aXhVe/E+F6QCv0EvRVFEd5CsWg==}
@@ -14348,6 +14344,7 @@ snapshots:
   '@types/node@26.6.5':
     dependencies:
       undici-types: 8.9.0
+    optional: true
 
   '@types/pg@8.23.1':
     dependencies:
@@ -15650,15 +15647,6 @@ snapshots:
   doctrine@2.1.0:
     dependencies:
       esutils: 2.0.3
-
-  docx@9.12.0:
-    dependencies:
-      '@types/node': 26.6.5
-      hash.js: 1.1.7
-      jszip: 3.10.2
-      nanoid: 6.0.2
-      xml: 1.0.1
-      xml-js: 1.6.11
 
   docx@9.7.1:
     dependencies:
@@ -19809,7 +19797,8 @@ snapshots:
 
   undici-types@8.11.2: {}
 
-  undici-types@8.9.0: {}
+  undici-types@8.9.0:
+    optional: true
 
   undici@7.30.0: {}
 

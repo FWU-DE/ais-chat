@@ -4,7 +4,7 @@ import { useToast } from '@/components/common/toast';
 import Spinner from '@/components/icons/spinner';
 import { type ChatMessage as Message } from '@/types/chat';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
-import { markdownToDocxBlob } from '@/utils/files/markdown-docx';
+import { formatConversationExport, markdownToDocxBlob } from '@/utils/files/markdown-docx';
 import { loadSharedChat } from '@/utils/shared-chat-storage';
 import { BoxArrowDownIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
@@ -60,7 +60,11 @@ export async function fetchSharedConversationDownload({
   });
   const { fileName, messages } = (await response.json()) as {
     fileName: string;
-    messages: Array<{ content: string; images: Array<{ alt: string; url: string }> }>;
+    messages: Array<{
+      role: string;
+      content: string;
+      images: Array<{ alt: string; url: string }>;
+    }>;
   };
 
   if (!response.ok) {
@@ -69,12 +73,12 @@ export async function fetchSharedConversationDownload({
 
   return {
     blob: await markdownToDocxBlob(
-      messages
-        .map(
-          ({ content, images }) =>
-            `${content}\n\n${images.map(({ alt, url }) => `![${alt}](${url})`).join('\n')}`,
-        )
-        .join('\n\n'),
+      formatConversationExport({
+        messages,
+        createdAt: new Date().toISOString(),
+        modelName: 'AIS.chat',
+        conversationTitle: sharedConversationName ?? characterName,
+      }),
     ),
     fileName,
   };
