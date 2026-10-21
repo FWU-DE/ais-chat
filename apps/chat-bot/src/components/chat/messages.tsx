@@ -4,6 +4,7 @@ import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import { ChatBox, type PendingFileModel } from './chat-box';
 import LoadingAnimation from './loading-animation';
+import { AudioPlaybackCoordinatorProvider } from './speech/audio-playback-coordinator';
 import { GenerateSpeechStreamFn } from './speech/types';
 
 // Re-export for consumers that import from this file
@@ -56,28 +57,30 @@ export function Messages({
 
   return (
     <div className={containerClassName}>
-      {messages.map((message, index) => (
-        <ChatBox
-          key={index}
-          index={index}
-          message={message}
-          fileMapping={fileMapping}
-          pendingFileMapping={pendingFileMapping}
-          isLastNonUser={index === messages.length - 1 && message.role !== 'user'}
-          isLoading={isLoading}
-          regenerateMessage={reload}
-          canRegenerateMessage={canRegenerateMessage}
-          conversationId={conversationId}
-          assistantIcon={assistantIcon}
-          webSources={message.role === 'user' ? webSourceMapping?.get(message.id) : undefined}
-          status={status}
-          showActivityDialog={showActivityDialog}
-          generateSpeechFn={generateSpeechFn}
-          generateSpeechStreamFn={generateSpeechStreamFn}
-          isSpeechModelEnabled={isSpeechModelEnabled}
-          speechOnly={speechOnly}
-        />
-      ))}
+      <AudioPlaybackCoordinatorProvider>
+        {messages.map((message, index) => (
+          <ChatBox
+            key={index}
+            index={index}
+            message={message}
+            fileMapping={fileMapping}
+            pendingFileMapping={pendingFileMapping}
+            isLastNonUser={index === messages.length - 1 && message.role !== 'user'}
+            isLoading={isLoading}
+            regenerateMessage={reload}
+            canRegenerateMessage={canRegenerateMessage}
+            conversationId={conversationId}
+            assistantIcon={assistantIcon}
+            webSources={message.role === 'user' ? webSourceMapping?.get(message.id) : undefined}
+            status={status}
+            showActivityDialog={showActivityDialog}
+            generateSpeechFn={generateSpeechFn}
+            generateSpeechStreamFn={generateSpeechStreamFn}
+            isSpeechModelEnabled={isSpeechModelEnabled}
+            speechOnly={speechOnly}
+          />
+        ))}
+      </AudioPlaybackCoordinatorProvider>
       {showLoadingAnimation && <LoadingAnimation activitySteps={activitySteps} />}
     </div>
   );

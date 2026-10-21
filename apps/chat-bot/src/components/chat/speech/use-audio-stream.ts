@@ -3,16 +3,21 @@ import { PcmStreamPlayer } from '@/utils/audio/pcm-stream-player';
 import { readableStreamToAsyncIterable } from '@/utils/audio/readable-stream-to-async-iterable';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { useAudioPlaybackCoordinator } from './audio-playback-coordinator';
 import { GenerateSpeechStreamFn } from './types';
 
 export type AudioPlayerStatus = 'idle' | 'loading' | 'playing' | 'paused';
 
 /**
  * Drives a `PcmStreamPlayer` from React, exposing play/pause/resume controls and status.
+ * Starting or resuming playback pauses all other `AudioPlayer` instances registered with the
+ * nearest `AudioPlaybackCoordinatorProvider`, keeping their state and position intact.
  */
 export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
   const toast = useToast();
   const tCommon = useTranslations('common');
+  const { register, notifyPlaying } = useAudioPlaybackCoordinator();
+  const id = React.useId();
   const [status, setStatus] = React.useState<AudioPlayerStatus>('idle');
   const [duration, setDuration] = React.useState<number | null>(null);
   const [currentTime, setCurrentTime] = React.useState(0);
@@ -51,6 +56,7 @@ export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
         return;
       }
 
+      notifyPlaying(id);
       setStatus('loading');
       setDuration(null);
       setCurrentTime(0);
@@ -85,7 +91,7 @@ export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
         setStatus('idle');
       }
     },
-    [generateSpeechStreamFn, status, toast, tCommon],
+    [generateSpeechStreamFn, status, toast, tCommon, notifyPlaying, id],
   );
 
   const pause = React.useCallback(() => {
@@ -96,9 +102,12 @@ export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
     }
   }, []);
 
+  React.useEffect(() => register(id, pause), [register, id, pause]);
+
   const resume = React.useCallback(() => {
+    notifyPlaying(id);
     playerRef.current?.resume();
-  }, []);
+  }, [notifyPlaying, id]);
 
   const seek = React.useCallback((time: number) => {
     const player = playerRef.current;
@@ -115,9 +124,10 @@ export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
   const restart = React.useCallback(() => {
     const player = playerRef.current;
     if (!player) return;
+    notifyPlaying(id);
     player.seek(0);
     setCurrentTime(player.getCurrentTime());
-  }, []);
+  }, [notifyPlaying, id]);
 
   /** Peak-amplitude bars for waveform rendering; only meaningful once `duration` is known. */
   const getWaveformPeaks = React.useCallback((barCount: number): number[] | null => {
