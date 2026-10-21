@@ -3,13 +3,9 @@ import { PcmStreamPlayer } from '@/utils/audio/pcm-stream-player';
 import { readableStreamToAsyncIterable } from '@/utils/audio/readable-stream-to-async-iterable';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { GenerateSpeechStreamFn } from './types';
 
 export type AudioPlayerStatus = 'idle' | 'loading' | 'playing' | 'paused';
-
-type GenerateSpeechStreamFn = (
-  text: string,
-  options: { signal: AbortSignal },
-) => Promise<ReadableStream<Uint8Array>>;
 
 /**
  * Drives a `PcmStreamPlayer` from React, exposing play/pause/resume controls and status.

@@ -12,6 +12,7 @@ import DownloadConversationMessageButton from './download-conversation-message-b
 import AudioStreamPlayer from './speech/audio-stream-player';
 import ShowAudioPlayerButton from './speech/show-audio-player-button';
 import SpeechButton from './speech/speech-button';
+import { GenerateSpeechStreamFn } from './speech/types';
 
 export function MessageActions({
   message,
@@ -40,10 +41,7 @@ export function MessageActions({
   regenerateMessage: () => void;
   canRegenerateMessage: boolean;
   generateSpeechFn: (text: string) => Promise<Blob>;
-  generateSpeechStreamFn: (
-    text: string,
-    options: { signal: AbortSignal },
-  ) => Promise<ReadableStream<Uint8Array>>;
+  generateSpeechStreamFn: GenerateSpeechStreamFn;
   isSpeechModelEnabled: boolean;
   showActivityDialog?: boolean;
   activitySteps: AiActivityStep[];

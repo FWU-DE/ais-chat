@@ -28,6 +28,7 @@ import { ReactNode, RefObject, SyntheticEvent, useEffect, useRef, useState } fro
 import { ErrorChatPlaceholder } from '../chat/error-chat-placeholder';
 import { FloatingText } from '../chat/floating-text';
 import { Messages, PendingFileModel } from '../chat/messages';
+import { GenerateSpeechStreamFn } from '../chat/speech/types';
 import StreamingFinishedMarker from '../chat/streaming-finished-marker';
 import { LocalFileState } from '../file-upload/upload-file';
 
@@ -93,10 +94,7 @@ export type SharedChatViewProps = {
   isSpeechModelEnabled: boolean;
   generateSpeechFn: GenerateSpeechFn;
   speechOnly: boolean;
-  generateSpeechStreamFn: (
-    text: string,
-    options: { signal: AbortSignal },
-  ) => Promise<ReadableStream<Uint8Array>>;
+  generateSpeechStreamFn: GenerateSpeechStreamFn;
 };
 
 /**

@@ -4,6 +4,7 @@ import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import { ChatBox, type PendingFileModel } from './chat-box';
 import LoadingAnimation from './loading-animation';
+import { GenerateSpeechStreamFn } from './speech/types';
 
 // Re-export for consumers that import from this file
 export type { ChatStatus, PendingFileModel };
@@ -22,10 +23,7 @@ interface MessagesProps {
   activitySteps?: AiActivityStep[];
   showActivityDialog?: boolean;
   generateSpeechFn: GenerateSpeechFn;
-  generateSpeechStreamFn: (
-    text: string,
-    options: { signal: AbortSignal },
-  ) => Promise<ReadableStream<Uint8Array>>;
+  generateSpeechStreamFn: GenerateSpeechStreamFn;
   isSpeechModelEnabled: boolean;
   speechOnly: boolean;
 }

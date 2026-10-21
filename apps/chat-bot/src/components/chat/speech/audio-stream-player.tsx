@@ -6,16 +6,14 @@ import { useTranslations } from 'next-intl';
 import React from 'react';
 import { AudioWaveform } from './audio-waveform';
 import { formatTime } from './format-time';
+import { GenerateSpeechStreamFn } from './types';
 import { useAudioStream } from './use-audio-stream';
 
 const SEEK_BACK_SECONDS = 5;
 
 type AudioStreamPlayerProps = {
   text: string;
-  generateSpeechStreamFn: (
-    text: string,
-    options: { signal: AbortSignal },
-  ) => Promise<ReadableStream<Uint8Array>>;
+  generateSpeechStreamFn: GenerateSpeechStreamFn;
   isSpeechModelEnabled: boolean;
   /**
    * Visually hides the player without unmounting it, so the buffered audio, playback position,
