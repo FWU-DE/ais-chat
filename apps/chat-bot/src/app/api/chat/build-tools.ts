@@ -1,6 +1,7 @@
 import type { UserAndContext } from '@/auth/types';
 import type { AiActivityToolName } from '@/types/ai-activity';
 import { TOOL_NAMES } from '@/types/tool-names';
+import { isImageFile } from '@/utils/files/generic';
 import type { ModelSelection } from '@ais-chat/ai-core/chat/types';
 import type { FileModel, WebSearchModel } from '@shared/db/schema';
 import { buildJsxgraphTool, createPlotActivity } from './tools/jsxgraph-tool';
@@ -84,10 +85,15 @@ export function buildTools({
     ? buildWebScraperTool({ sourceUrls, attachedLinks })
     : undefined;
   const mundoSearchTool = allowMundoSearch ? buildMundoSearchTool() : undefined;
-  const retrieveEntireFileTool = buildRetrieveEntireFileTool({ relatedFileEntities });
+
+  const textFileEntities = relatedFileEntities.filter((file) => !isImageFile(file.name));
+
+  const retrieveEntireFileTool = buildRetrieveEntireFileTool({
+    relatedFileEntities: textFileEntities,
+  });
   const retrieveTextChunksTool = buildRetrieveTextChunksTool({
     user,
-    relatedFileEntities,
+    relatedFileEntities: textFileEntities,
     sourceUrls,
     attachedLinks,
   });
