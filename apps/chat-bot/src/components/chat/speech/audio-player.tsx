@@ -119,8 +119,8 @@ export default function AudioPlayer({
           variant="ghost"
           size="sm"
           disabled={!isStreamFullyLoaded}
-          aria-label={t('seek-back-5-seconds')}
-          title={t('seek-back-5-seconds')}
+          aria-label={t('jump-back-5-seconds')}
+          title={t('jump-back-5-seconds')}
           onClick={handleBack}
         >
           <ArrowCounterClockwiseIcon />
