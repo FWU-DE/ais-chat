@@ -56,6 +56,11 @@ export default function ChatInputAttachmentPreview({
               <span className="sr-only">{fileName}</span>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={imageUrl} alt={fileName} className="w-full h-full object-cover" />
+              {file.status === 'uploading' && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/60">
+                  <Spinner className="size-5" />
+                </div>
+              )}
             </>
           ) : file.status === 'uploading' ? (
             <Spinner className="w-14 h-5" />

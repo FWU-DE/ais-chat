@@ -98,10 +98,12 @@ export function ChatInputBox({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files]);
 
+  const canSubmit = input.trim().length > 0 && !hasUploadingFiles;
+
   async function handleSubmitOnEnter(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !isGenerating && !e.shiftKey) {
       e.preventDefault();
-      if (e.currentTarget.value.trim().length > 0) {
+      if (canSubmit) {
         await customHandleSubmit(e);
       }
     }
@@ -125,7 +127,7 @@ export function ChatInputBox({
     <button
       type="submit"
       title="Nachricht abschicken"
-      disabled={input.trim().length === 0 || hasUploadingFiles}
+      disabled={!canSubmit}
       className={cn(
         iconClassName,
         'my-2 mx-2 flex items-center self-end justify-center group disabled:cursor-not-allowed text-dark-gray',
