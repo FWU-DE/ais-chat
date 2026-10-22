@@ -269,6 +269,7 @@ export function createBoard(
 
   const board = JXG.JSXGraph.initBoard(container, {
     boundingBox: viewState?.boundingBox ?? spec.board.boundingBox ?? DEFAULT_BOUNDING_BOX,
+    renderer: 'svg',
     axis: spec.board.axis ?? true,
     grid: spec.board.grid ?? false,
     showCopyright: false,
