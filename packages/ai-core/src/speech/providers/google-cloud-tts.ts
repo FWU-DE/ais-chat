@@ -94,6 +94,14 @@ export function constructGoogleCloudTtsStreamingSpeechGenerationFn(
   const client = new v1beta1.TextToSpeechClient({ auth: createGoogleAuth(model) });
 
   return async function getGoogleCloudTtsSpeechStream({ text, voice, abortSignal, audioFormat }) {
+    // `AbortSignal` only fires the `abort` event at the moment `.abort()` is called, so a listener
+    // added after that (the `addEventListener` call below) would never run if the signal was
+    // already aborted when we got here. Bail out before creating the gRPC stream/sending any text
+    // so an already-cancelled caller doesn't still trigger synthesis.
+    if (abortSignal.aborted) {
+      throw new AiGenerationError('Google Cloud Text-to-Speech (stream) request was aborted');
+    }
+
     const languageCode = getChirp3HdLanguageCode(voice);
 
     const grpcStream = client.streamingSynthesize();
@@ -161,7 +169,8 @@ export function constructGoogleCloudTtsStreamingSpeechGenerationFn(
       } finally {
         grpcStream.off('error', captureEarlyError);
         abortSignal.removeEventListener('abort', onAbort);
-        resolveUsage({ inputTextTokens: text.length, outputAudioTokens: 0 });
+        // Todo: google cloud tts does not return token usage information
+        resolveUsage({ inputTextTokens: 0, outputAudioTokens: 0 });
       }
 
       if (!receivedAudio) {
