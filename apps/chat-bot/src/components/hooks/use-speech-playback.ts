@@ -1,24 +1,19 @@
 'use client';
 
-import React from 'react';
-import { Button } from '@ui/components/button';
-import { useTranslations } from 'next-intl';
-import { SpeakerHighIcon, PauseIcon } from '@phosphor-icons/react';
-import Spinner from '@/components/icons/spinner';
 import { useToast } from '@/components/common/toast';
+import { useTranslations } from 'next-intl';
+import React from 'react';
 
-export default function SpeechButton({
-  text,
-  generateSpeechFn,
-  isSpeechModelEnabled,
-}: {
-  text: string;
-  generateSpeechFn: (text: string) => Promise<Blob>;
-  isSpeechModelEnabled: boolean;
-}) {
+export type SpeechPlaybackStatus = 'idle' | 'loading' | 'playing' | 'paused';
+
+/**
+ * Encapsulates the audio generation and playback lifecycle.
+ * Generated audio is cached per text.
+ */
+export function useSpeechPlayback(text: string, generateSpeechFn: (text: string) => Promise<Blob>) {
   const toast = useToast();
   const tCommon = useTranslations('common');
-  const [status, setStatus] = React.useState<'idle' | 'loading' | 'playing' | 'paused'>('idle');
+  const [status, setStatus] = React.useState<SpeechPlaybackStatus>('idle');
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = React.useRef<string | null>(null);
   const cachedTextRef = React.useRef<string | null>(null);
@@ -33,6 +28,19 @@ export default function SpeechButton({
       }
     };
   }, []);
+
+  async function playAudio(audio: HTMLAudioElement, restart: boolean) {
+    try {
+      if (restart) {
+        audio.currentTime = 0;
+      }
+      await audio.play();
+      setStatus('playing');
+    } catch {
+      toast.error(tCommon('read-aloud-error'));
+      setStatus('idle');
+    }
+  }
 
   async function handleClick() {
     if (status === 'loading') {
@@ -82,42 +90,5 @@ export default function SpeechButton({
     }
   }
 
-  async function playAudio(audio: HTMLAudioElement, restart: boolean) {
-    try {
-      if (restart) {
-        audio.currentTime = 0;
-      }
-      await audio.play();
-      setStatus('playing');
-    } catch {
-      toast.error(tCommon('read-aloud-error'));
-      setStatus('idle');
-    }
-  }
-
-  const label = status === 'playing' ? tCommon('pause-message') : tCommon('read-aloud');
-
-  if (!isSpeechModelEnabled) {
-    return null;
-  }
-
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      onClick={handleClick}
-      disabled={status === 'loading'}
-      aria-label={label}
-      title={label}
-      className="text-primary"
-    >
-      {status === 'loading' ? (
-        <Spinner className="p-1 size-5" />
-      ) : status === 'playing' ? (
-        <PauseIcon className="size-5 text-primary" />
-      ) : (
-        <SpeakerHighIcon className="size-5 text-primary" />
-      )}
-    </Button>
-  );
+  return { status, handleClick };
 }

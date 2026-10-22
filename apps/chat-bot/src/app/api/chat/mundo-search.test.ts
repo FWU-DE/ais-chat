@@ -65,7 +65,7 @@ describe('mundoSearch', () => {
     ]);
   });
 
-  it('returns an empty array when the API responds with a non-ok status', async () => {
+  it('propagates an error when the API responds with a non-ok status', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 500,
@@ -73,9 +73,28 @@ describe('mundoSearch', () => {
       json: async () => ({}),
     });
 
-    const { mundoSearch } = await import('./mundo-search');
+    const { mundoSearch, MundoSearchError } = await import('./mundo-search');
 
-    await expect(mundoSearch({ query: 'test' })).resolves.toEqual([]);
+    await expect(mundoSearch({ query: 'test' })).rejects.toBeInstanceOf(MundoSearchError);
+  });
+
+  it('logs and propagates an error when a 2xx response body is not valid JSON', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError('Unexpected token');
+      },
+    });
+
+    const { mundoSearch, MundoSearchError } = await import('./mundo-search');
+    const { logError } = await import('@shared/logging');
+
+    await expect(mundoSearch({ query: 'test' })).rejects.toBeInstanceOf(MundoSearchError);
+    expect(logError).toHaveBeenCalledWith(
+      'Failed to parse MUNDO search response as JSON',
+      expect.any(SyntaxError),
+    );
   });
 
   it('returns an empty array when the API returns no tiles', async () => {
@@ -90,12 +109,12 @@ describe('mundoSearch', () => {
     await expect(mundoSearch({ query: 'nichts hier' })).resolves.toEqual([]);
   });
 
-  it('returns an empty array when fetch throws', async () => {
+  it('propagates errors from fetch instead of swallowing them', async () => {
     fetchMock.mockRejectedValueOnce(new Error('network down'));
 
-    const { mundoSearch } = await import('./mundo-search');
+    const { mundoSearch, MundoSearchError } = await import('./mundo-search');
 
-    await expect(mundoSearch({ query: 'test' })).resolves.toEqual([]);
+    await expect(mundoSearch({ query: 'test' })).rejects.toBeInstanceOf(MundoSearchError);
   });
 
   it('skips tiles without an identifier', async () => {

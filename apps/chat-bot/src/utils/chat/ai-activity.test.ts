@@ -1,15 +1,9 @@
-import type { CalculatorResponse } from '@/app/api/chat/calculator';
-import type { ToolRegistration } from '@/app/api/chat/tools/types';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { describe, expect, it, vi } from 'vitest';
-import {
-  createAiActivityCollector,
-  parseJsonRecord,
-  readString,
-  readValue,
-  toLinks,
-  truncate,
-} from './ai-activity';
+import type { MathCalculateToolSuccessResponse } from '@/app/api/chat/tools/math-calculate-tool';
+import { parseGenericPersistedToolResult } from '@/app/api/chat/tools/parse-persisted-tool-result';
+import type { ToolActivity } from '@/app/api/chat/tools/types';
+import type { ToolCall, ToolResult } from '@ais-chat/ai-core/chat/types';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createAiActivityCollector } from './ai-activity';
 
 const toolCall: ToolCall = {
   id: 'call-1',
@@ -17,90 +11,47 @@ const toolCall: ToolCall = {
   arguments: '{}',
 };
 
-function createToolRegistry(overrides: Partial<ToolRegistration['activity']> = {}) {
-  const registration = {
-    definition: { name: 'math_calculate', description: '', parameters: {} },
-    handler: vi.fn(async (): Promise<CalculatorResponse> => ({
-      status: 'success',
-      result: '42',
-      error: null,
-    })),
-    activity: {
-      createStep: () => ({
-        kind: 'tool' as const,
-        id: 'call-1',
-        tool: 'math_calculate' as const,
-      }),
-      ...overrides,
-    },
-  };
+// Mutable so each test can register exactly the activities it needs: `createAiActivityCollector`
+// always reads the real `toolActivityRegistry`, so tests control it through this mock instead of
+// passing a registry in.
+const mockToolActivityRegistry: Record<string, ToolActivity> = vi.hoisted(() => ({}));
 
-  return {
-    math_calculate: registration,
+vi.mock('@/app/api/chat/build-tools', () => ({
+  toolActivityRegistry: mockToolActivityRegistry,
+}));
+
+afterEach(() => {
+  for (const key of Object.keys(mockToolActivityRegistry)) {
+    delete mockToolActivityRegistry[key];
+  }
+});
+
+function registerMathCalculateActivity(overrides: Partial<ToolActivity> = {}) {
+  mockToolActivityRegistry.math_calculate = {
+    createStep: () => ({
+      kind: 'tool' as const,
+      id: 'call-1',
+      tool: 'math_calculate' as const,
+    }),
+    parsePersistedResult: (raw) => parseGenericPersistedToolResult<ToolResult>(raw),
+    ...overrides,
   };
 }
 
-describe('activity helpers', () => {
-  it('parses valid JSON and rejects missing, blank, and invalid values', () => {
-    expect(parseJsonRecord('{"query":"test"}')).toEqual({ query: 'test' });
-    expect(parseJsonRecord(undefined)).toBeUndefined();
-    expect(parseJsonRecord('   ')).toBeUndefined();
-    expect(parseJsonRecord('{')).toBeUndefined();
-  });
-
-  it('reads trimmed strings and arbitrary object values safely', () => {
-    const source = { value: '  text  ', number: 42 };
-    expect(readString(source, 'value')).toBe('text');
-    expect(readString(source, 'number')).toBeUndefined();
-    expect(readString(source, 'missing')).toBeUndefined();
-    expect(readString(null, 'value')).toBeUndefined();
-    expect(readValue(source, 'number')).toBe(42);
-    expect(readValue(null, 'number')).toBeUndefined();
-  });
-
-  it('normalizes valid links, skips invalid links, and limits the result', () => {
-    const links = toLinks([
-      { title: 'Example', url: 'https://example.com/path' },
-      { url: 'http://example.org' },
-      { url: 'javascript:alert(1)' },
-      { url: 'not-a-url' },
-      { title: 'Empty' },
-      null,
-    ]);
-
-    expect(links).toEqual([
-      { title: 'Example', url: 'https://example.com/path' },
-      { title: 'http://example.org', url: 'http://example.org/' },
-    ]);
-    expect(toLinks(undefined)).toBeUndefined();
-    expect(toLinks([])).toBeUndefined();
-
-    const manyLinks = toLinks(
-      Array.from({ length: 12 }, (_, index) => ({ url: `https://example.com/${index}` })),
-    );
-    expect(manyLinks).toHaveLength(10);
-  });
-
-  it('truncates long values while preserving short and missing values', () => {
-    expect(truncate('short')).toBe('short');
-    expect(truncate(undefined)).toBeUndefined();
-    expect(truncate('a'.repeat(301))).toBe(`${'a'.repeat(300)}…`);
-  });
-});
-
 describe('createAiActivityCollector', () => {
   it('accumulates provider reasoning summaries without exposing raw analysis', () => {
-    const collector = createAiActivityCollector({});
+    const collector = createAiActivityCollector();
+    const part = { itemId: 'item-1', summaryIndex: 0 };
 
-    expect(collector.addReasoningSummary('First part. ')).toBe(true);
-    expect(collector.addReasoningSummary('Second part.')).toBe(true);
+    expect(collector.addReasoningSummary('First part. ', part)).toBe(true);
+    expect(collector.addReasoningSummary('Second part.', part)).toBe(true);
     expect(collector.getSteps()).toEqual([]);
   });
 
   it('adds the full reasoning summary before the done step', () => {
-    const collector = createAiActivityCollector({});
+    const collector = createAiActivityCollector();
 
-    collector.addReasoningSummary('Reasoning trace.');
+    collector.addReasoningSummary('Reasoning trace.', { itemId: 'item-1', summaryIndex: 0 });
 
     expect(collector.finish()).toBe(true);
     expect(collector.getSteps()).toEqual([
@@ -109,29 +60,54 @@ describe('createAiActivityCollector', () => {
     ]);
   });
 
+  it('concatenates without a separator when no part identity is given (e.g. Gemini, persisted summaries)', () => {
+    const collector = createAiActivityCollector();
+
+    collector.addReasoningSummary('First part.');
+    collector.addReasoningSummary(' Second part.');
+
+    collector.finish();
+    expect(collector.getSteps()).toEqual([
+      { kind: 'analysis-summary', content: 'First part. Second part.' },
+      { kind: 'done' },
+    ]);
+  });
+
+  it('inserts a separator between distinct reasoning summary parts', () => {
+    const collector = createAiActivityCollector();
+
+    collector.addReasoningSummary('First part.', { itemId: 'item-1', summaryIndex: 0 });
+    collector.addReasoningSummary(' continued.', { itemId: 'item-1', summaryIndex: 0 });
+    collector.addReasoningSummary('Second part.', { itemId: 'item-1', summaryIndex: 1 });
+
+    collector.finish();
+    expect(collector.getSteps()).toEqual([
+      { kind: 'analysis-summary', content: 'First part. continued.\n\nSecond part.' },
+      { kind: 'done' },
+    ]);
+  });
+
   it('does not add a reasoning summary step when no summary was received', () => {
-    const collector = createAiActivityCollector({});
+    const collector = createAiActivityCollector();
 
     expect(collector.finish()).toBe(false);
     expect(collector.getSteps()).toEqual([]);
   });
 
   it('starts, adds tool calls, applies results, and finishes', () => {
-    const applyResult = vi.fn((step, result: unknown) => {
-      const typed = result as CalculatorResponse;
-      return { ...step, result: typed.result ?? undefined };
+    const applyResult = vi.fn((step, result: MathCalculateToolSuccessResponse) => {
+      return { ...step, result: result.result ?? undefined };
     });
-    const collector = createAiActivityCollector(createToolRegistry({ applyResult }));
+    registerMathCalculateActivity({ applyResult });
+    const collector = createAiActivityCollector();
 
     expect(collector.addToolCalls([toolCall])).toBe(true);
     expect(collector.getSteps()).toEqual([{ kind: 'tool', id: 'call-1', tool: 'math_calculate' }]);
-    expect(collector.addToolResult('unknown', 'ignored')).toBe(false);
-    expect(
-      collector.addToolResult('call-1', { status: 'success', result: '42', error: null }),
-    ).toBe(true);
+    expect(collector.addToolResult('unknown', {})).toBe(false);
+    expect(collector.addToolResult('call-1', { result: '42' } as ToolResult)).toBe(true);
     expect(applyResult).toHaveBeenCalledWith(
       { kind: 'tool', id: 'call-1', tool: 'math_calculate' },
-      { status: 'success', result: '42', error: null },
+      { result: '42' },
     );
     expect(collector.finish()).toBe(true);
     expect(collector.finish()).toBe(true);
@@ -148,23 +124,18 @@ describe('createAiActivityCollector', () => {
       name: 'retrieve_entire_file',
       arguments: '{"fileName":"private.pdf"}',
     };
-    const toolRegistry = {
-      retrieve_entire_file: {
-        definition: { name: 'retrieve_entire_file', description: '', parameters: {} },
-        handler: vi.fn(),
-        activity: {
-          createStep: (call: ToolCall) => ({
-            kind: 'tool' as const,
-            id: call.id,
-            tool: 'retrieve_entire_file' as const,
-            detail: 'private.pdf',
-          }),
-        },
-      },
-    } satisfies Record<string, ToolRegistration>;
+    mockToolActivityRegistry.retrieve_entire_file = {
+      createStep: (call: ToolCall) => ({
+        kind: 'tool' as const,
+        id: call.id,
+        tool: 'retrieve_entire_file' as const,
+        detail: 'private.pdf',
+      }),
+      parsePersistedResult: (raw) => parseGenericPersistedToolResult<ToolResult>(raw),
+    };
 
-    const defaultCollector = createAiActivityCollector(toolRegistry);
-    const sharedCollector = createAiActivityCollector(toolRegistry, { hideSensitiveDetails: true });
+    const defaultCollector = createAiActivityCollector();
+    const sharedCollector = createAiActivityCollector({ hideSensitiveDetails: true });
 
     defaultCollector.addToolCalls([retrieveFileCall]);
     sharedCollector.addToolCalls([retrieveFileCall]);
@@ -184,40 +155,70 @@ describe('createAiActivityCollector', () => {
     expect(sharedStep?.kind === 'tool' ? sharedStep.detail : undefined).toBeUndefined();
   });
 
-  it('skips activity result enrichment for string error results', () => {
-    const applyResult = vi.fn((step, result: unknown) => {
-      const typed = result as CalculatorResponse;
-      return { ...step, result: typed.result ?? undefined };
+  it('marks the step failed without calling applyResult for ToolErrorResult-shaped results', () => {
+    const applyResult = vi.fn((step, result: MathCalculateToolSuccessResponse) => {
+      return { ...step, result: result.result ?? undefined };
     });
-    const collector = createAiActivityCollector(createToolRegistry({ applyResult }));
+    registerMathCalculateActivity({ applyResult });
+    const collector = createAiActivityCollector();
 
     collector.addToolCalls([toolCall]);
-    expect(collector.addToolResult('call-1', 'Error: Invalid tool arguments')).toBe(true);
+    expect(collector.addToolResult('call-1', { error: 'Invalid tool arguments' })).toBe(true);
     expect(applyResult).not.toHaveBeenCalled();
+    expect(collector.getSteps()).toEqual([
+      { kind: 'tool', id: 'call-1', tool: 'math_calculate', failed: true },
+    ]);
+  });
+
+  it('still applies the result when `error` is present but falsy (e.g. a stale `error: null`)', () => {
+    const applyResult = vi.fn((step, result: MathCalculateToolSuccessResponse) => {
+      return { ...step, result: result.result ?? undefined };
+    });
+    registerMathCalculateActivity({ applyResult });
+    const collector = createAiActivityCollector();
+
+    collector.addToolCalls([toolCall]);
+    expect(collector.addToolResult('call-1', { result: '4', error: null } as never)).toBe(true);
+    expect(applyResult).toHaveBeenCalledWith(
+      { kind: 'tool', id: 'call-1', tool: 'math_calculate' },
+      { result: '4', error: null },
+    );
+    expect(collector.getSteps()).toEqual([
+      { kind: 'tool', id: 'call-1', tool: 'math_calculate', result: '4' },
+    ]);
+  });
+
+  it('leaves the step unenriched when applyResult throws on a malformed result', () => {
+    const applyResult = vi.fn(() => {
+      throw new Error('malformed persisted result');
+    });
+    registerMathCalculateActivity({ applyResult });
+    const collector = createAiActivityCollector();
+
+    collector.addToolCalls([toolCall]);
+    expect(collector.addToolResult('call-1', {})).toBe(true);
     expect(collector.getSteps()).toEqual([{ kind: 'tool', id: 'call-1', tool: 'math_calculate' }]);
   });
 
   it('ignores calls without registered activity and handles activity without result enrichment', () => {
-    const collector = createAiActivityCollector({});
+    const collector = createAiActivityCollector();
     expect(collector.addToolCalls([toolCall])).toBe(false);
-    expect(collector.addToolResult('call-1', 'ignored')).toBe(false);
+    expect(collector.addToolResult('call-1', {})).toBe(false);
     expect(collector.finish()).toBe(false);
     expect(collector.getSteps()).toEqual([]);
 
-    const noResultCollector = createAiActivityCollector(
-      createToolRegistry({ applyResult: undefined }),
-    );
+    registerMathCalculateActivity({ applyResult: undefined });
+    const noResultCollector = createAiActivityCollector();
     expect(noResultCollector.addToolCalls([toolCall])).toBe(true);
-    expect(noResultCollector.addToolResult('call-1', 'ignored')).toBe(true);
+    expect(noResultCollector.addToolResult('call-1', {})).toBe(true);
     expect(noResultCollector.finish()).toBe(true);
   });
 
   it('publishes tool completion when an activity result is unchanged', () => {
-    const collector = createAiActivityCollector(
-      createToolRegistry({ applyResult: (step) => step }),
-    );
+    registerMathCalculateActivity({ applyResult: (step) => step });
+    const collector = createAiActivityCollector();
     collector.addToolCalls([toolCall]);
-    expect(collector.addToolResult('call-1', 'same')).toBe(true);
+    expect(collector.addToolResult('call-1', {})).toBe(true);
     expect(collector.getSteps()).toHaveLength(1);
   });
 });

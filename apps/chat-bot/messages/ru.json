@@ -1,0 +1,87 @@
+{
+  "common": {
+    "delete": "Удалить",
+    "cancel": "Отменить",
+    "information-disclaimer": "AIS.chat может допускать ошибки. Относись критически и проверяй всю информацию.",
+    "message-copy": "Копировать сообщение",
+    "regenerate-message-button": "Сгенерировать ответ заново",
+    "plot": {
+      "label": "Рисунок",
+      "download-png": "Скачать рисунок",
+      "reset": "Сбросить изменения",
+      "zoom-in": "Увеличить",
+      "zoom-out": "Уменьшить",
+      "fullscreen": "Показать на весь экран",
+      "description": "Рисунок: {title}",
+      "error": "Не удалось отобразить рисунок."
+    },
+    "read-aloud": "Прочитать сообщение вслух",
+    "pause-message": "Приостановить чтение",
+    "read-aloud-error": "Не удалось выполнить озвучивание.",
+    "listen-to-answer": "Прослушать ответ",
+    "pause-audio": "Пауза",
+    "show-message-text": "Показать текст",
+    "hide-message-text": "Скрыть текст"
+  },
+  "characters": {
+    "shared": {
+      "delete-chat-modal-title": "Удалить текущий чат?",
+      "delete-chat-modal-description": "Будет начат новый чат. Текущий чат будет безвозвратно удалён.",
+      "delete-chat-modal-confirm-button": "Удалить"
+    }
+  },
+  "learning-scenarios": {
+    "shared": {
+      "exercise-title": "Твоё задание",
+      "delete-chat-modal-title": "Удалить текущий чат?",
+      "delete-chat-modal-description": "Будет начат новый чат. Текущий чат будет безвозвратно удалён.",
+      "delete-chat-modal-confirm-button": "Удалить"
+    }
+  },
+  "sharing": {
+    "copy-link": "Скопировать ссылку"
+  },
+  "custom-chat": {
+    "shared": {
+      "join-code": "Присоединиться по коду",
+      "enter-chat": "Присоединиться к диалогу",
+      "start-chat": "Начать диалог",
+      "invalid-code-toast": "Введённый код либо истёк, либо недействителен."
+    },
+    "share-page": {
+      "go-to": "Перейди на",
+      "enter-code": "Введи код.",
+      "open-chat": "Открыть чат",
+      "use-qr": "Отсканируй QR-код.",
+      "copy-link": "Скопировать ссылку для начала",
+      "learning-scenario": {
+        "sub-header": "Учебный сценарий",
+        "back-button": "Вернуться к учебному сценарию",
+        "join": "Начать учебный сценарий"
+      },
+      "character": {
+        "sub-header": "Партнёр по диалогу",
+        "back-button": "Вернуться к партнёру по диалогу",
+        "join": "Присоединиться к диалогу"
+      }
+    }
+  },
+  "ai-activity": {
+    "title": "Активность ИИ",
+    "toggle": "Показать/скрыть активность ИИ",
+    "open-source": "Открыть источник: {source}",
+    "failed": "Не удалось",
+    "steps": {
+      "analysis": "Анализ",
+      "analysis-summary": "Резюме анализа",
+      "done": "Готово",
+      "web_search": "Веб-поиск",
+      "web_scraper": "Веб-страница прочитана",
+      "retrieve_text_chunks": "Прочитаны релевантные фрагменты файла",
+      "retrieve_entire_file": "Файл полностью прочитан",
+      "mundo_search": "Поиск в Mundo",
+      "math_calculate": "Выполнено вычисление",
+      "create_plot": "Рисунок создан"
+    }
+  }
+}

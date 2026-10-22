@@ -96,6 +96,8 @@ describe('generateImageWithBilling', () => {
     );
     expect(result).toEqual({
       ...mockImageResponse,
+      provider: mockModel.provider,
+      modelName: mockModel.name,
       priceInCents: 50,
     });
   });

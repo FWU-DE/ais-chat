@@ -22,7 +22,7 @@ import { scrubSentryEvent } from '@ais-chat/shared-core/sentry/scrub';
 export async function clientSentryInit({
   scrubSensitiveData = true,
   ...options
-}: Omit<Sentry.BrowserOptions, 'beforeSend' | 'beforeSendTransaction' | 'beforeBreadcrumb'> & {
+}: Omit<Sentry.BrowserOptions, 'beforeSend' | 'beforeBreadcrumb'> & {
   scrubSensitiveData?: boolean;
 } = {}) {
   const publicConfig = await getPublicConfig();
@@ -51,7 +51,6 @@ export async function clientSentryInit({
       ...(scrubSensitiveData && {
         beforeBreadcrumb: (breadcrumb) => scrubSentryEvent(breadcrumb),
         beforeSend: (event) => scrubSentryEvent(event),
-        beforeSendTransaction: (event) => scrubSentryEvent(event),
       }),
     });
   }

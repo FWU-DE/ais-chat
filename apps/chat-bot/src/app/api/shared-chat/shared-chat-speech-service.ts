@@ -1,16 +1,33 @@
-import { getUserAndContextByUserId } from '@/auth/utils';
-import { checkProductAccess } from '@/utils/vidis/access';
-import { requireTeacherRole } from '@shared/auth/authorization-service';
-import { ForbiddenError } from '@shared/error';
+import type { ChatSpeechStreamResult } from '@/app/api/chat/speech-service';
 import {
-  sharedChatHasExpired,
+  generateSpeech,
+  generateSpeechStream,
+  generateStaticMessageSpeech,
+} from '@/app/api/chat/speech-service';
+import { UserAndContext } from '@/auth/types';
+import { getUserAndContextByUserId } from '@/auth/utils';
+import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
+import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
+import { sendRabbitmqEvent } from '@/rabbitmq/send';
+import { checkProductAccess } from '@/utils/vidis/access';
+import { TokenPointsExceededError } from '@ais-chat/ai-core';
+import { requireTeacherRole } from '@shared/auth/authorization-service';
+import { dbUpdateTokenUsageByCharacterChatId } from '@shared/db/functions/character';
+import { dbUpdateTokenUsageBySharedLearningScenarioId } from '@shared/db/functions/learning-scenario';
+import { ForbiddenError, NotFoundError } from '@shared/error';
+import {
   sharedCharacterChatHasReachedTokenPointsLimit,
+  sharedChatHasExpired,
   sharedLearningScenarioChatHasReachedTokenPointsLimit,
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
-import { generateSpeech } from '@/app/api/chat/speech-service';
-import { getSharedChatEntity } from './shared-chat-get-entity';
 import { verify } from '.';
+import { getSharedChatEntity } from './shared-chat-get-entity';
+import {
+  SharedChatCharacter,
+  SharedChatEntity,
+  SharedChatLearningScenario,
+} from './shared-chat-types';
 
 export async function generateSharedChatSpeech({
   inviteCode,
@@ -22,7 +39,97 @@ export async function generateSharedChatSpeech({
   entityType: 'character' | 'learningScenario';
   entityId: string;
   text: string;
-}): Promise<Awaited<ReturnType<typeof generateSpeech>>> {
+}): Promise<{ buffer: Buffer; contentType: string }> {
+  const { entity, teacher } = await verifySharedChatSpeechAccess({
+    inviteCode,
+    entityType,
+    entityId,
+  });
+
+  const [sharedChatLimitReached, userLimitReached] = await Promise.all([
+    entityType === 'character'
+      ? sharedCharacterChatHasReachedTokenPointsLimit({ user: teacher, character: entity })
+      : sharedLearningScenarioChatHasReachedTokenPointsLimit({
+          user: teacher,
+          learningScenario: entity,
+        }),
+    userHasReachedTokenPointsLimit({ user: teacher }),
+  ]);
+
+  if (userLimitReached) {
+    await sendRabbitmqEvent(
+      constructTokenBudgetExceededEvent(
+        entityType === 'character'
+          ? { anonymous: true, user: teacher, character: entity as SharedChatCharacter }
+          : { anonymous: true, user: teacher, sharedChat: entity as SharedChatLearningScenario },
+      ),
+    );
+  }
+
+  if (sharedChatLimitReached || userLimitReached) {
+    throw new TokenPointsExceededError();
+  }
+
+  const speechResult = await generateSpeech({ text, voice: entity.voice });
+
+  if (entityType === 'character') {
+    await dbUpdateTokenUsageByCharacterChatId({
+      characterId: entityId,
+      userId: entity.startedBy,
+      modelId: speechResult.modelId,
+      completionTokens: 0,
+      promptTokens: 0,
+      costsInCent: speechResult.costsInCent,
+    });
+
+    await sendRabbitmqEvent(
+      constructNewMessageEvent({
+        user: teacher,
+        anonymous: true,
+        character: entity as SharedChatCharacter,
+        provider: speechResult.provider,
+        modelName: speechResult.modelName,
+        promptTokens: 0,
+        completionTokens: 0,
+        costsInCent: speechResult.costsInCent,
+      }),
+    );
+  } else {
+    await dbUpdateTokenUsageBySharedLearningScenarioId({
+      learningScenarioId: entityId,
+      userId: entity.startedBy,
+      modelId: speechResult.modelId,
+      completionTokens: 0,
+      promptTokens: 0,
+      costsInCent: speechResult.costsInCent,
+    });
+
+    await sendRabbitmqEvent(
+      constructNewMessageEvent({
+        user: teacher,
+        anonymous: true,
+        sharedChat: entity as SharedChatLearningScenario,
+        provider: speechResult.provider,
+        modelName: speechResult.modelName,
+        promptTokens: 0,
+        completionTokens: 0,
+        costsInCent: speechResult.costsInCent,
+      }),
+    );
+  }
+
+  return { buffer: speechResult.buffer, contentType: speechResult.contentType };
+}
+
+async function verifySharedChatSpeechAccess({
+  inviteCode,
+  entityType,
+  entityId,
+}: {
+  inviteCode: string;
+  entityType: 'character' | 'learningScenario';
+  entityId: string;
+}): Promise<{ entity: SharedChatEntity; teacher: UserAndContext }> {
   const entity = await getSharedChatEntity({ inviteCode, entityType, entityId });
 
   verify.sharedChatEntityIsAccessible(entity);
@@ -51,6 +158,33 @@ export async function generateSharedChatSpeech({
     throw new ForbiddenError('Shared chat has expired');
   }
 
+  return { entity, teacher };
+}
+
+/**
+ * Streaming counterpart of `generateSharedChatSpeech`. Reuses the same accessibility/role/expiry/
+ * budget pre-checks, but yields raw PCM chunks as they arrive instead of waiting for the full
+ * audio.
+ */
+export async function generateSharedChatSpeechStream({
+  inviteCode,
+  entityType,
+  entityId,
+  text,
+  abortSignal,
+}: {
+  inviteCode: string;
+  entityType: 'character' | 'learningScenario';
+  entityId: string;
+  text: string;
+  abortSignal?: AbortSignal;
+}): Promise<ChatSpeechStreamResult> {
+  const { entity, teacher } = await verifySharedChatSpeechAccess({
+    inviteCode,
+    entityType,
+    entityId,
+  });
+
   const [sharedChatLimitReached, userLimitReached] = await Promise.all([
     entityType === 'character'
       ? sharedCharacterChatHasReachedTokenPointsLimit({ user: teacher, character: entity })
@@ -61,9 +195,109 @@ export async function generateSharedChatSpeech({
     userHasReachedTokenPointsLimit({ user: teacher }),
   ]);
 
-  if (sharedChatLimitReached || userLimitReached) {
-    throw new ForbiddenError('Token points limit reached');
+  if (userLimitReached) {
+    await sendRabbitmqEvent(
+      constructTokenBudgetExceededEvent(
+        entityType === 'character'
+          ? { anonymous: true, user: teacher, character: entity as SharedChatCharacter }
+          : { anonymous: true, user: teacher, sharedChat: entity as SharedChatLearningScenario },
+      ),
+    );
   }
 
-  return generateSpeech({ text, voice: entity.voice });
+  if (sharedChatLimitReached || userLimitReached) {
+    throw new TokenPointsExceededError();
+  }
+
+  const speechResult = await generateSpeechStream({ text, voice: entity.voice, abortSignal });
+  const startedBy = entity.startedBy;
+
+  async function* chunksWithUsageLogging() {
+    try {
+      yield* speechResult.chunks;
+    } finally {
+      const costsInCent = await speechResult.costsInCent;
+
+      if (entityType === 'character') {
+        await dbUpdateTokenUsageByCharacterChatId({
+          characterId: entityId,
+          userId: startedBy,
+          modelId: speechResult.modelId,
+          completionTokens: 0,
+          promptTokens: 0,
+          costsInCent,
+        });
+
+        await sendRabbitmqEvent(
+          constructNewMessageEvent({
+            user: teacher,
+            anonymous: true,
+            character: entity as SharedChatCharacter,
+            provider: speechResult.provider,
+            modelName: speechResult.modelName,
+            promptTokens: 0,
+            completionTokens: 0,
+            costsInCent,
+          }),
+        );
+      } else {
+        await dbUpdateTokenUsageBySharedLearningScenarioId({
+          learningScenarioId: entityId,
+          userId: startedBy,
+          modelId: speechResult.modelId,
+          completionTokens: 0,
+          promptTokens: 0,
+          costsInCent,
+        });
+
+        await sendRabbitmqEvent(
+          constructNewMessageEvent({
+            user: teacher,
+            anonymous: true,
+            sharedChat: entity as SharedChatLearningScenario,
+            provider: speechResult.provider,
+            modelName: speechResult.modelName,
+            promptTokens: 0,
+            completionTokens: 0,
+            costsInCent,
+          }),
+        );
+      }
+    }
+  }
+
+  return {
+    chunks: chunksWithUsageLogging(),
+    contentType: speechResult.contentType,
+    format: speechResult.format,
+  };
+}
+
+/**
+ * Generates speech for a shared character's initial message. The text is resolved server-side from
+ * the character (not accepted from the client), and the result is cached and unbilled.
+ */
+export async function generateSharedChatInitialMessageSpeech({
+  inviteCode,
+  characterId,
+}: {
+  inviteCode: string;
+  characterId: string;
+}): Promise<{ buffer: Buffer; contentType: string }> {
+  const { entity } = await verifySharedChatSpeechAccess({
+    inviteCode,
+    entityType: 'character',
+    entityId: characterId,
+  });
+
+  const character = entity as SharedChatCharacter;
+
+  if (!character.initialMessage) {
+    throw new NotFoundError('Character has no initial message');
+  }
+
+  return generateStaticMessageSpeech({
+    text: character.initialMessage,
+    voice: character.voice,
+  });
 }

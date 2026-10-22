@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runAgentLoop } from './agent-loop';
-import type { Message, StreamEvent, TokenUsage } from './types';
+import type { Message, ModelUsage, StreamEvent, TokenUsage } from './types';
 
 // Mock the generateAgenticStreamWithBilling import
 const mockGenerateAgenticStreamWithBilling = vi.fn();
@@ -193,7 +193,7 @@ describe('agent-loop', () => {
       expect.arrayContaining([
         expect.objectContaining({
           role: 'tool',
-          content: expect.stringContaining('Error: Converting circular structure to JSON'),
+          content: expect.stringContaining('Converting circular structure to JSON'),
         }),
       ]),
     );
@@ -302,7 +302,7 @@ describe('agent-loop', () => {
     const toolRegistry = {
       test_tool: {
         definition: { name: 'test_tool', description: 'Test', parameters: {} },
-        handler: async () => 'tool result',
+        handler: async () => ({ value: 'tool result' }),
       },
     };
 
@@ -364,7 +364,7 @@ describe('agent-loop', () => {
     const toolRegistry = {
       test_tool: {
         definition: { name: 'test_tool', description: 'Test', parameters: {} },
-        handler: async () => 'tool result',
+        handler: async () => ({ value: 'tool result' }),
       },
     };
 
@@ -429,7 +429,7 @@ describe('agent-loop', () => {
     const toolRegistry = {
       test_tool: {
         definition: { name: 'test_tool', description: 'Test', parameters: {} },
-        handler: async () => 'tool result',
+        handler: async () => ({ value: 'tool result' }),
       },
     };
 
@@ -493,7 +493,7 @@ describe('agent-loop', () => {
           `tool${toolNumber}`,
           {
             definition: { name: `tool${toolNumber}`, description: '', parameters: {} },
-            handler: async () => `result${toolNumber}`,
+            handler: async () => ({ value: `result${toolNumber}` }),
           },
         ];
       }),
@@ -531,9 +531,9 @@ describe('agent-loop', () => {
     expect(toolResultMessages).toHaveLength(10);
 
     // The first eight tool calls should execute normally.
-    expect(toolResultMessages[0].content).toBe('result1');
-    expect(toolResultMessages[1].content).toBe('result2');
-    expect(toolResultMessages[7].content).toBe('result8');
+    expect(toolResultMessages[0].content).toBe('{"value":"result1"}');
+    expect(toolResultMessages[1].content).toBe('{"value":"result2"}');
+    expect(toolResultMessages[7].content).toBe('{"value":"result8"}');
 
     // The last two should get budget errors.
     expect(toolResultMessages[8].content).toContain('Tool call budget exceeded');
@@ -589,7 +589,7 @@ describe('agent-loop', () => {
       const toolRegistry = {
         test_tool: {
           definition: { name: 'test_tool', description: 'Test', parameters: {} },
-          handler: async () => 'result',
+          handler: async () => ({ value: 'result' }),
         },
       };
 
@@ -641,11 +641,11 @@ describe('agent-loop', () => {
       const toolRegistry = {
         tool1: {
           definition: { name: 'tool1', description: '', parameters: {} },
-          handler: async () => 'r1',
+          handler: async () => ({ value: 'r1' }),
         },
         tool2: {
           definition: { name: 'tool2', description: '', parameters: {} },
-          handler: async () => 'r2',
+          handler: async () => ({ value: 'r2' }),
         },
       };
 
@@ -692,7 +692,7 @@ describe('agent-loop', () => {
       const toolRegistry = {
         test_tool: {
           definition: { name: 'test_tool', description: 'Test', parameters: {} },
-          handler: async () => 'tool result',
+          handler: async () => ({ value: 'tool result' }),
         },
       };
 
@@ -749,6 +749,55 @@ describe('agent-loop', () => {
       );
     });
 
+    it('passes the signal to a tool handler as its second argument', async () => {
+      const messages: Message[] = [{ role: 'user', content: 'Test query' }];
+      const abortController = new AbortController();
+      const handler = vi.fn(async () => ({ value: 'tool result' }));
+
+      let callCount = 0;
+      mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+        callCount++;
+        if (callCount === 1) {
+          yield {
+            type: 'tool_call',
+            call: { id: 'call_123', name: 'test_tool', arguments: '{}' },
+          } satisfies StreamEvent;
+          yield { type: 'finish', usage } satisfies StreamEvent;
+        } else {
+          yield { type: 'text', delta: 'Done.' } satisfies StreamEvent;
+          yield { type: 'finish', usage } satisfies StreamEvent;
+        }
+      });
+
+      const onComplete = vi.fn();
+
+      runAgentLoop({
+        modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+        apiKeyId: 'test-key',
+        messages,
+        toolRegistry: {
+          test_tool: {
+            definition: { name: 'test_tool', description: 'Test', parameters: {} },
+            handler,
+          },
+        },
+        agentName: 'Test Agent',
+        abortSignal: abortController.signal,
+        onTextChunk: vi.fn(),
+        onComplete,
+        onError: vi.fn(),
+      });
+
+      await vi.waitFor(() => {
+        expect(onComplete).toHaveBeenCalled();
+      });
+
+      expect(handler).toHaveBeenCalledWith(
+        {},
+        { abortSignal: abortController.signal, reportUsage: expect.any(Function) },
+      );
+    });
+
     it('stops before the next iteration once aborted and keeps the partial text', async () => {
       const messages: Message[] = [{ role: 'user', content: 'Test query' }];
       const onTextChunk = vi.fn();
@@ -770,7 +819,7 @@ describe('agent-loop', () => {
           definition: { name: 'test_tool', description: 'Test', parameters: {} },
           handler: async () => {
             abortController.abort();
-            return 'tool result';
+            return { value: 'tool result' };
           },
         },
       };
@@ -835,7 +884,7 @@ describe('agent-loop', () => {
       const onComplete = vi.fn();
       const onError = vi.fn();
       const abortController = new AbortController();
-      const handler = vi.fn(async () => 'tool result');
+      const handler = vi.fn(async () => ({ value: 'tool result' }));
 
       mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
         yield { type: 'text', delta: 'Partial answer.' } satisfies StreamEvent;
@@ -1023,7 +1072,7 @@ describe('agent-loop', () => {
       const toolRegistry = {
         test_tool: {
           definition: { name: 'test_tool', description: 'Test', parameters: {} },
-          handler: async () => 'tool result',
+          handler: async () => ({ value: 'tool result' }),
         },
       };
 
@@ -1048,6 +1097,81 @@ describe('agent-loop', () => {
         expect.objectContaining({
           priceInCents: 3,
           modelUsages: [{ modelId: 'test-model', usage, priceInCents: 3 }],
+        }),
+      );
+    });
+  });
+
+  describe('tool-reported usage', () => {
+    it('aggregates usage a tool handler reports into modelUsages and the totals', async () => {
+      const messages: Message[] = [{ role: 'user', content: 'Test query' }];
+      const toolUsage: TokenUsage = { promptTokens: 5, completionTokens: 2, totalTokens: 7 };
+      const onComplete = vi.fn();
+
+      let callCount = 0;
+      mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+        callCount++;
+        if (callCount === 1) {
+          yield {
+            type: 'tool_call',
+            call: { id: 'call_123', name: 'test_tool', arguments: '{}' },
+          } satisfies StreamEvent;
+          yield { type: 'finish', usage } satisfies StreamEvent;
+        } else {
+          yield { type: 'text', delta: 'Done.' } satisfies StreamEvent;
+          yield { type: 'finish', usage } satisfies StreamEvent;
+        }
+      });
+
+      const toolRegistry = {
+        test_tool: {
+          definition: { name: 'test_tool', description: 'Test', parameters: {} },
+          handler: async (
+            _args: Record<string, unknown>,
+            options?: {
+              reportUsage?: (usage: ModelUsage) => void;
+            },
+          ) => {
+            options?.reportUsage?.({
+              modelId: 'sub-model',
+              usage: toolUsage,
+              priceInCents: 11,
+              provider: 'bifrost-anthropic',
+              modelName: 'claude-x',
+            });
+            return { value: 'tool result' };
+          },
+        },
+      };
+
+      runAgentLoop({
+        modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+        apiKeyId: 'test-key',
+        messages,
+        toolRegistry,
+        agentName: 'Test Agent',
+        onTextChunk: vi.fn(),
+        onComplete,
+        onError: vi.fn(),
+      });
+
+      await vi.waitFor(() => {
+        expect(onComplete).toHaveBeenCalled();
+      });
+
+      expect(onComplete).toHaveBeenCalledWith(
+        expect.objectContaining({
+          usage: toolUsage,
+          priceInCents: 11,
+          modelUsages: expect.arrayContaining([
+            {
+              modelId: 'sub-model',
+              usage: toolUsage,
+              priceInCents: 11,
+              provider: 'bifrost-anthropic',
+              modelName: 'claude-x',
+            },
+          ]),
         }),
       );
     });

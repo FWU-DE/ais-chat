@@ -22,17 +22,20 @@ import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-cha
 import { extractFilterValues } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import { FieldGroup } from '@ui/components/field';
 import { CustomChatWebSearchView } from '@/components/custom-chat/web-search/custom-chat-web-search-view';
+import { CustomChatSpeechView } from '@/components/custom-chat/speech/custom-chat-speech-view';
 
 export function AssistantView({
   assistant,
   fileMappings,
   pictureUrl,
   isWebSearchAvailable,
+  isSpeechAvailable,
 }: {
   assistant: AssistantSelectModel;
   fileMappings: FileModel[];
   pictureUrl: string | undefined;
   isWebSearchAvailable: boolean;
+  isSpeechAvailable: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -113,6 +116,7 @@ export function AssistantView({
         onDownloadFile={handleDownloadFile}
       />
       {isWebSearchAvailable && <CustomChatWebSearchView {...assistant} />}
+      {isSpeechAvailable && <CustomChatSpeechView {...assistant} />}
 
       {(assistant.hasLinkAccess || assistant.isCommunityShared) && (
         <CustomChatCreateSuspensionRequestButton

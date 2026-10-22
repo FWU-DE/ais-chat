@@ -1,8 +1,7 @@
 'use client';
 
-import { FileStatus } from './upload-file-button';
-import { ConversationMessageMetadata } from '@shared/utils/chat';
 import { AssistantSelectModel } from '@shared/db/schema';
+import { ConversationMessageMetadata } from '@shared/utils/chat';
 
 export type SendMessageProps = {
   className?: string;
@@ -19,10 +18,4 @@ export type SendMessageProps = {
   messages: string[];
   assistant?: AssistantSelectModel;
   hideStartMessages?: boolean;
-};
-
-export type LocalFileState = {
-  file: File;
-  status: FileStatus;
-  fileId: string | undefined;
 };

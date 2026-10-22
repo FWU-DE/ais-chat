@@ -10,6 +10,7 @@ import {
   SharedChatExpiredError,
   TokenPointsExceededError,
   runAgentLoop,
+  type ModelUsage,
   type TokenUsage,
 } from '@ais-chat/ai-core';
 import {
@@ -49,14 +50,12 @@ export async function sendCharacterMessage({
   characterId,
   inviteCode,
   messages,
-  modelId,
   fileIds,
   sharedSessionId,
 }: {
   characterId: string;
   inviteCode: string;
   messages: ChatMessage[];
-  modelId: string;
   fileIds?: string[];
   sharedSessionId?: string;
 }): Promise<SendMessageResult> {
@@ -80,7 +79,7 @@ export async function sendCharacterMessage({
 
   // Get model and API key
   const [error, modelAndApiKey] = await getModelAndApiKeyWithResult({
-    modelId,
+    modelId: character.modelId,
     federalStateId: teacherUserAndContext.federalState.id,
   });
 
@@ -171,7 +170,7 @@ export async function sendCharacterMessage({
   const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
   const assistantMessageId = crypto.randomUUID();
 
-  const tools = await buildTools({
+  const tools = buildTools({
     user: teacherUserAndContext,
     characterId: character.id,
     webSearchSettings: character,
@@ -180,12 +179,11 @@ export async function sendCharacterMessage({
     sourceUrls: processedUrls,
     allowWebTools,
     allowMundoSearch: false,
-    isCalculatorEnabled: teacherUserAndContext.federalState.featureToggles.isCalculatorEnabled,
+    modelSelection,
+    apiKeyId,
   });
 
-  const aiActivity = createAiActivityStream(update, tools.toolRegistry, {
-    hideSensitiveDetails: true,
-  });
+  const aiActivity = createAiActivityStream(update, { hideSensitiveDetails: true });
 
   // Build system prompt
   const systemPrompt = constructCharacterSystemPrompt({
@@ -200,7 +198,7 @@ export async function sendCharacterMessage({
   }: {
     usage: TokenUsage;
     priceInCents: number;
-    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+    modelUsages: ModelUsage[];
   }) => {
     if (modelUsages.length === 0) {
       return;
@@ -219,13 +217,22 @@ export async function sendCharacterMessage({
       });
     }
 
+    // Report the real provider/model that generated the first response, i.e. the one that
+    // served the first agentic iteration.
+    const firstModelUsage = modelUsages.at(0);
+    if (!firstModelUsage) {
+      return;
+    }
+    const { provider, modelName } = firstModelUsage;
+
     await sendRabbitmqEvent(
       constructNewMessageEvent({
         user: teacherUserAndContext,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
         costsInCent: priceInCents,
-        provider: definedModel.provider,
+        provider,
+        modelName,
         anonymous: true,
         character,
       }),

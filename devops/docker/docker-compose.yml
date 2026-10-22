@@ -3,9 +3,10 @@ name: ais-chat-local
 services:
   # Keycloak for authentication (PRIMARY NETWORK HOST)
   # Containers share this network namespace via network_mode: "service:keycloak"
-  # This is required to access keycloak using the same URL from within the container and the browser
+  # so that a service is reachable under the same URL from within a container and
+  # from the browser
   keycloak:
-    image: quay.io/keycloak/keycloak:26.8.0-0
+    image: quay.io/keycloak/keycloak:26.8.1-0
     restart: unless-stopped
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
@@ -23,6 +24,8 @@ services:
       - '3001:3001' # ais-chat-admin
       - '3002:3002' # ais-chat-api
       - '8080:8080' # keycloak
+      - '9000:9000' # rustfs
+      - '9001:9001' # rustfs console
     depends_on:
       fix-keycloak-volume-ownership:
         condition: service_completed_successfully
@@ -88,7 +91,7 @@ services:
 
   # Crawl4AI for web scraping capabilities
   crawl4ai:
-    image: unclecode/crawl4ai:0.9.4
+    image: unclecode/crawl4ai:0.9.5
     environment:
       CRAWL4AI_API_TOKEN: ais-chat-crawl4ai-token
     restart: unless-stopped
@@ -110,7 +113,7 @@ services:
 
   # Xberg text extraction service
   xberg:
-    image: ghcr.io/xberg-io/xberg:1.3.6-core
+    image: ghcr.io/xberg-io/xberg:1.3.9-core
     restart: unless-stopped
     environment:
       XBERG_MAX_REQUEST_BODY_BYTES: '26214400'
@@ -129,8 +132,10 @@ services:
       retries: 3
 
   # RustFS - S3-compatible object storage
+  # Shares keycloak's netns so presigned URLs signed for http://localhost:9000 are
+  # reachable both from the app containers and from the browser on the host.
   rustfs:
-    image: rustfs/rustfs:1.0.1
+    image: rustfs/rustfs:1.0.2
     restart: unless-stopped
     environment:
       RUSTFS_ADDRESS: 0.0.0.0:9000
@@ -142,18 +147,19 @@ services:
       RUSTFS_CORS_ALLOWED_ORIGINS: 'http://localhost:3000'
     volumes:
       - rustfs_data:/data
-    ports:
-      - '9000:9000'
-      - '9001:9001'
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://127.0.0.1:9000/health']
       interval: 2s
       timeout: 2s
       retries: 10
       start_period: 2s
+    network_mode: service:keycloak
+    depends_on:
+      keycloak:
+        condition: service_started
 
   bifrost:
-    image: ghcr.io/maximhq/bifrost:v2.2.6
+    image: ghcr.io/maximhq/bifrost:v2.3.1
     restart: unless-stopped
     environment:
       BIFROST_ADMIN_USERNAME: admin
@@ -286,11 +292,13 @@ services:
       BIFROST_API_KEY: sk-bf-example-key
 
       # S3 Object Storage for file uploads and image generation
-      # RustFS here is internal-only (not publicly reachable), so IMAGE_ATTACHMENT_MODE=base64 is required
-      # for the LLM to access uploaded images.
+      # RustFS shares keycloak's netns, so localhost:9000 resolves to it both inside
+      # the container and in the browser that loads the presigned URLs.
+      # IMAGE_ATTACHMENT_MODE=base64 is still required because the LLM provider
+      # (not the browser) cannot reach localhost:9000.
       OTC_SECRET_ACCESS_KEY: RustFS-Admin-123456
       OTC_ACCESS_KEY_ID: rustfsadmin
-      OTC_S3_HOSTNAME: http://rustfs:9000
+      OTC_S3_HOSTNAME: http://localhost:9000
       OTC_S3_REGION: eu-de
       OTC_BUCKET_NAME: ais-chat
       IMAGE_ATTACHMENT_MODE: base64
@@ -361,7 +369,7 @@ services:
       # S3 Object Storage for file uploads
       OTC_SECRET_ACCESS_KEY: RustFS-Admin-123456
       OTC_ACCESS_KEY_ID: rustfsadmin
-      OTC_S3_HOSTNAME: http://rustfs:9000
+      OTC_S3_HOSTNAME: http://localhost:9000
       OTC_S3_REGION: eu-de
       OTC_BUCKET_NAME: ais-chat
 
@@ -403,7 +411,7 @@ services:
         apk add --no-cache s3cmd
 
         echo '=== Creating S3 bucket: ais-chat ==='
-        s3cmd --access_key=rustfsadmin --secret_key=RustFS-Admin-123456 --host=rustfs:9000 --host-bucket='rustfs:9000/%(bucket)' --region=eu-de --no-ssl --no-check-certificate mb s3://ais-chat
+        s3cmd --access_key=rustfsadmin --secret_key=RustFS-Admin-123456 --host=localhost:9000 --host-bucket='localhost:9000/%(bucket)' --region=eu-de --no-ssl --no-check-certificate mb s3://ais-chat
 
         echo '=== Seeding api_db ==='
         apk add --no-cache postgresql-client

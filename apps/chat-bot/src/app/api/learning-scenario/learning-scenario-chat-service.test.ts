@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { runAgentLoop } from '@ais-chat/ai-core';
 import type { ChatMessage } from '@/types/chat';
+import type { runAgentLoop } from '@ais-chat/ai-core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   runAgentLoopMock: vi.fn(),
@@ -120,6 +120,7 @@ vi.mock('@shared/logging', () => ({
 
 vi.mock('../chat/build-tools', () => ({
   buildTools: mocks.buildToolsMock,
+  toolActivityRegistry: {},
 }));
 
 vi.mock('../file-operations/preprocess-image', () => ({
@@ -159,6 +160,7 @@ const safetyModel = {
 const learningScenario = {
   id: 'learning-scenario-1',
   name: 'Learning scenario',
+  modelId: model.id,
   attachedLinks: ['https://scenario.example/context'],
   startedBy: 'teacher-1',
   suspended: false,
@@ -217,7 +219,7 @@ beforeEach(() => {
   mocks.combineSharedRelatedFilesMock.mockResolvedValue([]);
   mocks.ingestWebContentMock.mockResolvedValue({ processedUrls: [], errorUrls: [] });
   mocks.isWebSearchEnabledForEntityMock.mockReturnValue(true);
-  mocks.buildToolsMock.mockResolvedValue({ toolRegistry: {} });
+  mocks.buildToolsMock.mockReturnValue({ toolRegistry: {} });
   mocks.constructLearningScenarioSystemPromptMock.mockReturnValue('system-prompt');
   mocks.limitChatHistoryMock.mockImplementation(
     (incomingMessages: ChatMessage[]) => incomingMessages,
@@ -251,6 +253,8 @@ beforeEach(() => {
             modelId: model.id,
             usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
             priceInCents: 4,
+            provider: model.provider,
+            modelName: model.name,
           },
         ],
         agentLoopMessages: [],
@@ -267,17 +271,24 @@ describe('sendLearningScenarioMessage', () => {
       learningScenarioId: learningScenario.id,
       inviteCode: 'invite-code',
       messages,
-      modelId: model.id,
     });
 
     await collectStream(result.stream);
 
+    expect(mocks.getModelAndApiKeyWithResultMock).toHaveBeenCalledWith({
+      modelId: learningScenario.modelId,
+      federalStateId: teacherUserAndContext.federalState.id,
+    });
     expect(mocks.ingestWebContentMock).toHaveBeenCalledWith({
       urls: ['https://scenario.example/context'],
       federalStateId: teacherUserAndContext.federalState.id,
     });
     expect(mocks.buildToolsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ isCalculatorEnabled: true }),
+      expect.objectContaining({
+        user: expect.objectContaining({
+          federalState: expect.objectContaining({ featureToggles: { isCalculatorEnabled: true } }),
+        }),
+      }),
     );
   });
 
@@ -288,7 +299,6 @@ describe('sendLearningScenarioMessage', () => {
       learningScenarioId: learningScenario.id,
       inviteCode: 'invite-code',
       messages,
-      modelId: model.id,
       fileIds: ['file-1', 'file-2'],
       sharedSessionId: 'session-1',
     });
@@ -313,13 +323,12 @@ describe('sendLearningScenarioMessage', () => {
       },
     });
     mocks.isWebSearchEnabledForEntityMock.mockReturnValue(false);
-    mocks.buildToolsMock.mockResolvedValue({ toolRegistry: {} });
+    mocks.buildToolsMock.mockReturnValue({ toolRegistry: {} });
 
     await sendLearningScenarioMessage({
       learningScenarioId: learningScenario.id,
       inviteCode: 'invite-code',
       messages,
-      modelId: model.id,
     });
 
     expect(mocks.isWebSearchEnabledForEntityMock).toHaveBeenCalledWith(

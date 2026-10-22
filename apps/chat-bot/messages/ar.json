@@ -2,7 +2,26 @@
   "common": {
     "delete": "حذف",
     "cancel": "إلغاء",
-    "information-disclaimer": "قد يخطئ AIS.chat. فكّر بشكل نقدي وتحقّق من جميع المعلومات."
+    "information-disclaimer": "قد يخطئ AIS.chat. فكّر بشكل نقدي وتحقّق من جميع المعلومات.",
+    "message-copy": "نسخ الرسالة",
+    "regenerate-message-button": "إعادة توليد الرد",
+    "plot": {
+      "label": "رسم بياني",
+      "download-png": "تنزيل الرسم البياني",
+      "reset": "إعادة تعيين التغييرات",
+      "zoom-in": "تكبير",
+      "zoom-out": "تصغير",
+      "fullscreen": "عرض بملء الشاشة",
+      "description": "رسم بياني: {title}",
+      "error": "تعذّر عرض الرسم البياني."
+    },
+    "read-aloud": "قراءة الرسالة بصوت عالٍ",
+    "pause-message": "إيقاف القراءة مؤقتًا",
+    "read-aloud-error": "فشلت عملية تحويل النص إلى كلام.",
+    "listen-to-answer": "الاستماع إلى الإجابة",
+    "pause-audio": "إيقاف مؤقت",
+    "show-message-text": "إظهار النص",
+    "hide-message-text": "إخفاء النص"
   },
   "characters": {
     "shared": {
@@ -51,16 +70,18 @@
     "title": "نشاط الذكاء الاصطناعي",
     "toggle": "إظهار/إخفاء نشاط الذكاء الاصطناعي",
     "open-source": "فتح المصدر: {source}",
+    "failed": "فشل",
     "steps": {
       "analysis": "تحليل",
       "analysis-summary": "ملخص التحليل",
       "done": "تم",
       "web_search": "بحث في الإنترنت",
       "web_scraper": "تمت قراءة صفحة ويب",
-      "retrieve_text_chunks": "تمت قراءة الملف",
+      "retrieve_text_chunks": "تمت قراءة مقاطع ذات صلة من الملف",
       "retrieve_entire_file": "تمت قراءة الملف بالكامل",
       "mundo_search": "البحث في Mundo",
-      "math_calculate": "تم إجراء الحساب"
+      "math_calculate": "تم إجراء الحساب",
+      "create_plot": "تم إنشاء الرسم البياني"
     }
   }
 }

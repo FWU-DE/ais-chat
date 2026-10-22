@@ -1,29 +1,28 @@
 'use client';
 
+import aiBadge from '@/assets/ai-badge.png';
+import { IMAGE_GENERATION_INPUT_LIMIT } from '@/configuration-text-inputs/const';
+import { bakeAiBadge } from '@/utils/images/bake-ai-badge';
+import { FileModel } from '@shared/db/schema';
+import { ConversationMessageModel } from '@shared/db/types';
+import { logError } from '@shared/logging';
+import { useTranslations } from 'next-intl';
+import Image from 'next/image';
 import React, { useEffect, useRef, useState } from 'react';
+import { ImageAttachment } from '../chat/message-image-attachment';
+import { defaultUploadFile, LocalFileState } from '../file-upload/upload-file';
 import { useImageModels } from '../providers/image-model-provider';
 import { useImageStyle } from '../providers/image-style-provider';
-import { ImageGenerationInputBox } from './image-generation-input-box';
 import { ImageActionButtons } from './image-action-buttons';
-import { ImageGenerationError } from './image-generation-error';
-import { ImageGenerationWarning } from './image-generation-warning';
-import { useTranslations } from 'next-intl';
-import LoadingAnimation from './loading-animation';
-import { ConversationMessageModel } from '@shared/db/types';
-import { FileModel } from '@shared/db/schema';
-import Image from 'next/image';
 import { useImageAspectRatio } from './image-aspect-ratio-provider';
-import { LocalFileState } from '../chat/send-message-form';
-import { defaultUploadFile } from '../chat/upload-file-button';
+import { ImageGenerationError } from './image-generation-error';
+import { ImageGenerationInputBox } from './image-generation-input-box';
 import { ImageGenerationResult } from './image-generation-result';
-import { IMAGE_GENERATION_INPUT_LIMIT } from '@/configuration-text-inputs/const';
+import { ImageGenerationWarning } from './image-generation-warning';
 import { ImageVersionSelect } from './image-version-select';
-import { useImageVersions } from './use-image-versions';
+import LoadingAnimation from './loading-animation';
 import { useImageGeneration } from './use-image-generation';
-import { ImageAttachment } from '../chat/message-image-attachment';
-import aiBadge from '@/assets/ai-badge.png';
-import { bakeAiBadge } from '@/utils/images/bake-ai-badge';
-import { logError } from '@shared/logging';
+import { useImageVersions } from './use-image-versions';
 
 interface ImageGenerationChatProps {
   conversationId?: string;

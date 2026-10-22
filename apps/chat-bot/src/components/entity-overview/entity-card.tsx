@@ -2,6 +2,8 @@
 
 import CountDownTimer from '@/app/(authed)/(chat-bot)/learning-scenarios/_components/count-down';
 import AvatarPicture from '@/components/common/avatar-picture';
+import { useId } from 'react';
+import Link from 'next/link';
 import { cn } from '@/utils/tailwind';
 import { truncateClassName } from '@/utils/tailwind/truncate';
 import { ChatTextIcon, ImageSquareIcon } from '@phosphor-icons/react';
@@ -9,7 +11,6 @@ import { calculateShareSessionState } from '@shared/sharing/calculate-share-sess
 import { Button } from '@ui/components/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/tooltip';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 
 type ShareInfo = {
   expiredAt: Date | null;
@@ -43,6 +44,8 @@ export default function EntityCard({
   const t = useTranslations('entity-overview');
   const tCommon = useTranslations('common');
 
+  const descriptionId = useId();
+
   return (
     <div
       className="rounded-enterprise-md border flex items-center w-full hover:border-primary bg-card has-[[data-card-link]:focus-visible]:ring-2 has-[[data-card-link]:focus-visible]:ring-ring"
@@ -52,6 +55,7 @@ export default function EntityCard({
         href={href}
         prefetch={false}
         aria-label={name}
+        aria-describedby={description ? descriptionId : undefined}
         data-card-link
         className="flex items-center gap-4 grow min-w-0 p-4 outline-none"
         data-testid="entity-link"
@@ -78,7 +82,9 @@ export default function EntityCard({
             )}
           </div>
           {description && (
-            <span className={cn(truncateClassName, 'text-gray-600')}>{description}</span>
+            <span id={descriptionId} className={cn(truncateClassName, 'text-gray-600')}>
+              {description}
+            </span>
           )}
         </div>
       </Link>
@@ -103,7 +109,7 @@ export default function EntityCard({
               className="mx-4"
             >
               <Link href={chatHref} prefetch={false} aria-label={tCommon('new-chat')}>
-                <ChatTextIcon aria-hidden="true" className="size-6   text-primary" />
+                <ChatTextIcon aria-hidden="true" className="size-6 text-primary" />
               </Link>
             </Button>
           </TooltipTrigger>

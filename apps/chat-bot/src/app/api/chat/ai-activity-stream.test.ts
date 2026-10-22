@@ -1,10 +1,10 @@
-import type { CalculatorResponse } from '@/app/api/chat/calculator';
-import type { AiActivityToolStep } from '@/types/ai-activity';
+import type { MathCalculateToolSuccessResponse } from '@/app/api/chat/tools/math-calculate-tool';
+import { parseGenericPersistedToolResult } from '@/app/api/chat/tools/parse-persisted-tool-result';
 import { decodeChatStreamEvent } from '@/utils/streaming';
-import type { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { ToolCall, ToolResult } from '@ais-chat/ai-core/chat/types';
 import { describe, expect, it, vi } from 'vitest';
 import { createAiActivityStream } from './ai-activity-stream';
-import type { ToolRegistration } from './tools/types';
+import type { ToolActivity } from './tools/types';
 
 const toolCall: ToolCall = {
   id: 'call-1',
@@ -12,31 +12,23 @@ const toolCall: ToolCall = {
   arguments: '{}',
 };
 
-function createToolRegistry() {
-  const registration: ToolRegistration = {
-    definition: { name: 'math_calculate', description: '', parameters: {} },
-    handler: vi.fn(async (): Promise<CalculatorResponse> => ({
-      status: 'success',
-      result: '42',
-      error: null,
-    })),
-    activity: {
+vi.mock('./build-tools', () => ({
+  toolActivityRegistry: {
+    math_calculate: {
       createStep: (call: ToolCall) => ({
         kind: 'tool' as const,
         id: call.id,
         tool: 'math_calculate' as const,
       }),
-      applyResult: (step: AiActivityToolStep, result: unknown) => {
-        const typed = result as CalculatorResponse;
-        return { ...step, result: typed.result ?? undefined };
-      },
-    },
-  };
-
-  return {
-    math_calculate: registration,
-  };
-}
+      applyResult: (step, result: MathCalculateToolSuccessResponse) => ({
+        ...step,
+        result: result.result,
+      }),
+      parsePersistedResult: (raw) =>
+        parseGenericPersistedToolResult<MathCalculateToolSuccessResponse>(raw),
+    } satisfies ToolActivity<MathCalculateToolSuccessResponse>,
+  },
+}));
 
 function decodeUpdates(updates: string[]) {
   return updates.map((update) => decodeChatStreamEvent(update));
@@ -45,10 +37,10 @@ function decodeUpdates(updates: string[]) {
 describe('createAiActivityStream', () => {
   it('defers reasoning updates until the stream is finished', () => {
     const updates: string[] = [];
-    const activity = createAiActivityStream((update) => updates.push(update), {});
+    const activity = createAiActivityStream((update) => updates.push(update));
 
-    activity.onReasoningSummary('First part. ');
-    activity.onReasoningSummary('Second part.');
+    activity.onReasoningSummary('First part. ', { itemId: 'item-1', summaryIndex: 0 });
+    activity.onReasoningSummary('Second part.', { itemId: 'item-1', summaryIndex: 0 });
 
     expect(decodeUpdates(updates)).toEqual([]);
 
@@ -67,14 +59,14 @@ describe('createAiActivityStream', () => {
 
   it('publishes tool calls and results while retaining the final summary', () => {
     const updates: string[] = [];
-    const activity = createAiActivityStream((update) => updates.push(update), createToolRegistry());
+    const activity = createAiActivityStream((update) => updates.push(update));
 
     activity.onToolCalls([toolCall]);
     activity.onToolResult({
       toolCallId: toolCall.id,
-      result: { status: 'success', result: '42', error: null },
+      result: { result: '42' } as ToolResult,
     });
-    activity.onReasoningSummary('Done.');
+    activity.onReasoningSummary('Done.', { itemId: 'item-1', summaryIndex: 0 });
     activity.finish();
 
     expect(decodeUpdates(updates)).toEqual([
@@ -95,11 +87,12 @@ describe('createAiActivityStream', () => {
 
   it('does not publish empty or unregistered activity', () => {
     const updates: string[] = [];
-    const activity = createAiActivityStream((update) => updates.push(update), {});
+    const activity = createAiActivityStream((update) => updates.push(update));
+    const unregisteredToolCall = { ...toolCall, name: 'not_a_real_tool' } as ToolCall;
 
-    activity.onReasoningSummary('');
-    activity.onToolCalls([toolCall]);
-    activity.onToolResult({ toolCallId: toolCall.id, result: 'ignored' });
+    activity.onReasoningSummary('', { itemId: 'item-1', summaryIndex: 0 });
+    activity.onToolCalls([unregisteredToolCall]);
+    activity.onToolResult({ toolCallId: unregisteredToolCall.id, result: {} });
     activity.finish();
 
     expect(decodeUpdates(updates)).toEqual([]);

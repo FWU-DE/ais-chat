@@ -39,10 +39,10 @@ export function SpeechVoicePreviewButton({ voice }: { voice: string }) {
 
       if (url === undefined) {
         setIsLoading(true);
-        const response = await fetch('/api/v1/speech', {
+        const response = await fetch('/api/v1/speech/preview', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: t('voice-preview-text'), voice }),
+          body: JSON.stringify({ voice }),
         });
 
         if (!response.ok) {

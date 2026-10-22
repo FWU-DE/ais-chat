@@ -11,6 +11,7 @@ type CommonProps = {
   completionTokens: number;
   costsInCent: number;
   provider: string;
+  modelName: string;
 };
 
 type FunctionProps =
@@ -30,6 +31,7 @@ export function constructNewMessageEvent(props: FunctionProps): NewChatMessageEv
     school_id: props.user.schoolIds?.[0] ?? '',
     federal_state: props.user.federalState.id,
     provider: props.provider,
+    model_name: props.modelName,
     cost_in_cent: props.costsInCent,
     timestamp: new Date(),
     user_role: props.anonymous ? 'anonymous' : props.user.userRole,
