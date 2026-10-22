@@ -96,13 +96,13 @@ export function formatConversationExport({
   if (conversationTitle !== undefined) {
     markdownBlocks.push(`# Konversation: ${conversationTitle}`);
   }
-  markdownBlocks.push(`Erstellt am: ${formattedDate}`, PARAGRAPH_SPACER);
+  markdownBlocks.push(`Erstellt am: ${formattedDate}`);
 
   for (const { role, content, images } of messages) {
-    const messageHeading = role === 'user' ? 'Nutzer/in' : 'AIS.chat';
-    markdownBlocks.push(`### ${messageHeading}:`, PARAGRAPH_SPACER, content);
-    markdownBlocks.push(...images.map(({ alt, url }) => `![${alt}](${url})`));
     markdownBlocks.push(PARAGRAPH_SPACER);
+    const messageHeading = role === 'user' ? 'Nutzer/in' : 'AIS.chat';
+    markdownBlocks.push(`### ${messageHeading}:`, content);
+    markdownBlocks.push(...images.map(({ alt, url }) => `![${alt}](${url})`));
   }
 
   markdownBlocks.push(
