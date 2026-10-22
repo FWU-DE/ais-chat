@@ -56,7 +56,6 @@ export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
         return;
       }
 
-      notifyPlaying(id);
       setStatus('loading');
       setDuration(null);
       setCurrentTime(0);
@@ -70,6 +69,12 @@ export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
           if (next === 'ended' || next === 'error') {
             setStatus('idle');
             return;
+          }
+          // Covers every path that can make this player audible (initial start, resume, restart,
+          // seeking/rate-changing an ended player), not just the explicit start()/resume() calls -
+          // seeking a still-paused player never reaches 'playing', so it won't pause others.
+          if (next === 'playing') {
+            notifyPlaying(id);
           }
           setStatus(next);
         },
@@ -105,9 +110,8 @@ export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
   React.useEffect(() => register(id, pause), [register, id, pause]);
 
   const resume = React.useCallback(() => {
-    notifyPlaying(id);
     playerRef.current?.resume();
-  }, [notifyPlaying, id]);
+  }, []);
 
   const seek = React.useCallback((time: number) => {
     const player = playerRef.current;
@@ -124,10 +128,9 @@ export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
   const restart = React.useCallback(() => {
     const player = playerRef.current;
     if (!player) return;
-    notifyPlaying(id);
     player.seek(0);
     setCurrentTime(player.getCurrentTime());
-  }, [notifyPlaying, id]);
+  }, []);
 
   /** Peak-amplitude bars for waveform rendering; only meaningful once `duration` is known. */
   const getWaveformPeaks = React.useCallback((barCount: number): number[] | null => {

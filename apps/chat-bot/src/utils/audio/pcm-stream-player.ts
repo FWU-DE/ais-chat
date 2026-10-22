@@ -97,6 +97,10 @@ export class PcmStreamPlayer {
   private pendingSourceCount = 0;
   private streamDone = false;
   private state: PcmPlayerState = 'idle';
+  // Latches a `pause()` call that arrived while still 'idle'/'loading' (e.g. another player was
+  // started first), so the request keeps buffering in the background but never starts audible
+  // playback once its first chunk is scheduled; cleared once consumed or on `resume()`.
+  private pausedBeforePlaying = false;
   private disposed = false;
   private duration = 0;
   private sampleChunks: Float32Array<ArrayBuffer>[] = [];
@@ -311,7 +315,7 @@ export class PcmStreamPlayer {
         }
         this.scheduleChunk(chunk);
         if (this.state === 'loading') {
-          this.setState('playing');
+          this.setState(this.pausedBeforePlaying ? 'paused' : 'playing');
         }
       }
       this.streamDone = true;
@@ -365,8 +369,15 @@ export class PcmStreamPlayer {
 
   /** Pauses the whole AudioContext clock (or the audio element, once handed off); incoming chunks
    * (if the stream is still open) keep being decoded and scheduled in the background so resuming
-   * is instant. */
+   * is instant. If called while still 'idle'/'loading' (a request superseded before its first
+   * chunk arrived), the intent is latched so playback never becomes audible once scheduling
+   * starts, rather than being silently ignored. */
   pause(): void {
+    if (this.state === 'idle' || this.state === 'loading') {
+      this.pausedBeforePlaying = true;
+      void this.audioContext?.suspend();
+      return;
+    }
     if (this.state !== 'playing') {
       return;
     }
@@ -382,6 +393,7 @@ export class PcmStreamPlayer {
     if (this.state !== 'paused') {
       return;
     }
+    this.pausedBeforePlaying = false;
     if (this.audioElement) {
       void this.audioElement.play();
     } else {
