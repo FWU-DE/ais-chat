@@ -3,16 +3,21 @@ import { PcmStreamPlayer } from '@/utils/audio/pcm-stream-player';
 import { readableStreamToAsyncIterable } from '@/utils/audio/readable-stream-to-async-iterable';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { useAudioPlaybackCoordinator } from './audio-playback-coordinator';
 import { GenerateSpeechStreamFn } from './types';
 
 export type AudioPlayerStatus = 'idle' | 'loading' | 'playing' | 'paused';
 
 /**
  * Drives a `PcmStreamPlayer` from React, exposing play/pause/resume controls and status.
+ * Starting or resuming playback pauses all other `AudioPlayer` instances registered with the
+ * nearest `AudioPlaybackCoordinatorProvider`, keeping their state and position intact.
  */
 export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
   const toast = useToast();
   const tCommon = useTranslations('common');
+  const { register, notifyPlaying } = useAudioPlaybackCoordinator();
+  const id = React.useId();
   const [status, setStatus] = React.useState<AudioPlayerStatus>('idle');
   const [duration, setDuration] = React.useState<number | null>(null);
   const [currentTime, setCurrentTime] = React.useState(0);
@@ -65,6 +70,12 @@ export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
             setStatus('idle');
             return;
           }
+          // Covers every path that can make this player audible (initial start, resume, restart,
+          // seeking/rate-changing an ended player), not just the explicit start()/resume() calls -
+          // seeking a still-paused player never reaches 'playing', so it won't pause others.
+          if (next === 'playing') {
+            notifyPlaying(id);
+          }
           setStatus(next);
         },
         onDurationKnown: setDuration,
@@ -85,7 +96,7 @@ export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
         setStatus('idle');
       }
     },
-    [generateSpeechStreamFn, status, toast, tCommon],
+    [generateSpeechStreamFn, status, toast, tCommon, notifyPlaying, id],
   );
 
   const pause = React.useCallback(() => {
@@ -95,6 +106,8 @@ export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
       setCurrentTime(player.getCurrentTime());
     }
   }, []);
+
+  React.useEffect(() => register(id, pause), [register, id, pause]);
 
   const resume = React.useCallback(() => {
     playerRef.current?.resume();
