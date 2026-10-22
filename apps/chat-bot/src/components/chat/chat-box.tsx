@@ -16,6 +16,7 @@ import MessageImageAttachment, { type PendingFileModel } from './message-image-a
 import { PlotStreamingContext } from './plot/plot-block';
 import Citation from './sources/citation';
 import SpeechAudioButton from './speech-audio-button';
+import { GenerateSpeechStreamFn } from './speech/types';
 
 // Re-export for consumers
 export type { PendingFileModel };
@@ -55,10 +56,7 @@ export function ChatBox({
   status: ChatStatus;
   showActivityDialog?: boolean;
   generateSpeechFn: GenerateSpeechFn;
-  generateSpeechStreamFn: (
-    text: string,
-    options: { signal: AbortSignal },
-  ) => Promise<ReadableStream<Uint8Array>>;
+  generateSpeechStreamFn: GenerateSpeechStreamFn;
   isSpeechModelEnabled: boolean;
   speechOnly: boolean;
 }) {
