@@ -16,7 +16,7 @@ import { formatTime } from './format-time';
 import { GenerateSpeechStreamFn } from './types';
 import { useAudioStream } from './use-audio-stream';
 
-const SEEK_BACK_SECONDS = 5;
+const JUMP_BACK_SECONDS = 5;
 const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2];
 
 /** Formats a rate as e.g. `0.75x`, `1.0x`, `1.25x`, matching whole numbers getting one decimal. */
@@ -85,7 +85,7 @@ export default function AudioPlayer({
   }
 
   function handleBack() {
-    seek(Math.max(currentTime - SEEK_BACK_SECONDS, 0));
+    seek(Math.max(currentTime - JUMP_BACK_SECONDS, 0));
   }
 
   return (
