@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '..';
 import { userSettingsTable, type UserSettings } from '../schema';
 
@@ -22,7 +22,12 @@ export async function dbUpsertUserSettings({
     .values({ userId, settings })
     .onConflictDoUpdate({
       target: userSettingsTable.userId,
-      set: { settings, updatedAt: new Date() },
+      // Merge with the stored JSON inside the statement so concurrent partial
+      // updates cannot overwrite each other's fields.
+      set: {
+        settings: sql`${userSettingsTable.settings} || ${JSON.stringify(settings)}::jsonb`,
+        updatedAt: new Date(),
+      },
     })
     .returning();
   return userSettings;

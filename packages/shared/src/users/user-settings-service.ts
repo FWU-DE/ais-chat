@@ -22,10 +22,8 @@ export async function updateUserSettings({
   settings: UserSettings;
 }) {
   const parsedSettings = userSettingsSchema.parse(settings);
-  const currentSettings = await getUserSettings({ userId });
-  const mergedSettings = { ...currentSettings, ...parsedSettings };
 
-  const updatedSettings = await dbUpsertUserSettings({ userId, settings: mergedSettings });
+  const updatedSettings = await dbUpsertUserSettings({ userId, settings: parsedSettings });
   if (!updatedSettings) {
     throw new Error(`Failed to upsert user settings for user ${userId}`);
   }
