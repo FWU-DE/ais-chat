@@ -63,6 +63,7 @@ const mockLlm: LlmInsertModel = {
     promptTokenPrice: 0,
     completionTokenPrice: 0,
   },
+  supportedImageFormats: ['jpeg', 'jpg', 'png', 'webp'],
 };
 
 // All prices are rough estimates, probably outdated and just for mocking purposes

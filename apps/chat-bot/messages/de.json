@@ -58,7 +58,7 @@
     "hide-message-text": "Text ausblenden",
     "show-audio-player": "Audio-Player anzeigen",
     "hide-audio-player": "Audio-Player ausblenden",
-    "seek-back-5-seconds": "5 Sekunden zurück",
+    "jump-back-5-seconds": "5 Sekunden zurück",
     "5-seconds-label": "5s",
     "playback-speed": "Wiedergabegeschwindigkeit",
     "audio-playback-position": "Audio-Wiedergabeposition",
