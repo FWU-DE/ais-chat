@@ -1,20 +1,38 @@
 'use client';
 
+import { SpeechVoice, UserSettings } from '@shared/db/schema';
 import React from 'react';
-import { UserSettings } from '@shared/db/schema';
 
-const UserSettingsContext = React.createContext<UserSettings | undefined>(undefined);
+type UserSettingsContextProps = {
+  settings: UserSettings;
+  setSettings: (settings: UserSettings) => void;
+  speechVoices: SpeechVoice[];
+};
 
-export function useUserSettings(): UserSettings | undefined {
-  return React.useContext(UserSettingsContext);
+const UserSettingsContext = React.createContext<UserSettingsContextProps | undefined>(undefined);
+
+export function useUserSettings(): UserSettingsContextProps {
+  const context = React.useContext(UserSettingsContext);
+  if (!context) {
+    throw new Error('useUserSettings must be used within a UserSettingsProvider');
+  }
+  return context;
 }
 
 export function UserSettingsProvider({
   children,
-  settings,
+  settings: initialSettings,
+  speechVoices,
 }: {
   children: React.ReactNode;
   settings: UserSettings;
+  speechVoices: SpeechVoice[];
 }) {
-  return <UserSettingsContext value={settings}>{children}</UserSettingsContext>;
+  const [settings, setSettings] = React.useState<UserSettings>(initialSettings);
+
+  return (
+    <UserSettingsContext value={{ settings, setSettings, speechVoices }}>
+      {children}
+    </UserSettingsContext>
+  );
 }

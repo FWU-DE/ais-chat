@@ -15,7 +15,7 @@ const dialogContentVariants = cva(
     variants: {
       variant: {
         default:
-          'fixed top-1/2 left-1/2 w-full max-w-xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 gap-8 rounded-2xl p-8 pt-6',
+          'fixed top-1/2 left-1/2 w-full max-w-[calc(100%-2rem)] sm:max-w-xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 gap-8 rounded-2xl p-4 pt-4 sm:p-8 sm:pt-6',
         lg: 'fixed inset-4 gap-2 rounded-lg p-3 sm:inset-8',
       },
     },

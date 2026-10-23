@@ -1,17 +1,18 @@
 'use client';
 
-import React from 'react';
+import { type UserAndContext } from '@/auth/types';
+import type { ApplicationHeaderMenuItem } from '@/components/layout/application-header';
+import { SettingsDialog } from '@/components/settings/settings-dialog';
 import { DotsThreeIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@ui/components/dropdown-menu';
-import { type UserAndContext } from '@/auth/types';
-import type { ApplicationHeaderMenuItem } from '@/components/layout/application-header';
+import React from 'react';
 import { ProfileMenuContent } from './profile-menu-content';
 
 export type ThreeDotsProfileMenuItem = ApplicationHeaderMenuItem;
@@ -23,8 +24,11 @@ export function ThreeDotsProfileMenu({
   customItems?: ThreeDotsProfileMenuItem[];
   userAndContext?: UserAndContext;
 }) {
+  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
@@ -56,8 +60,12 @@ export function ThreeDotsProfileMenu({
         {(customItems?.length ?? 0) > 0 && (
           <DropdownMenuSeparator className="border-gray-200 mx-2" />
         )}
-        <ProfileMenuContent userAndContext={userAndContext} />
+        <ProfileMenuContent
+          userAndContext={userAndContext}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+        />
       </DropdownMenuContent>
+      <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
     </DropdownMenu>
   );
 }
