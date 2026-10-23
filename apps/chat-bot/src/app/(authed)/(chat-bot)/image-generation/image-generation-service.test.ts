@@ -74,11 +74,11 @@ vi.mock('@shared/image-generation/image-generation-service', () => ({
 vi.mock('@shared/users/usage', () => ({
   userHasReachedTokenPointsLimit: mocks.userHasReachedTokenPointsLimit,
 }));
-vi.mock('@/rabbitmq/send', () => ({ sendRabbitmqEvent: mocks.sendRabbitmqEvent }));
-vi.mock('@/rabbitmq/events/new-message', () => ({
+vi.mock('@shared/rabbitmq/send', () => ({ sendRabbitmqEvent: mocks.sendRabbitmqEvent }));
+vi.mock('@shared/rabbitmq/events/new-message', () => ({
   constructNewMessageEvent: mocks.constructNewMessageEvent,
 }));
-vi.mock('@/rabbitmq/events/budget-exceeded', () => ({
+vi.mock('@shared/rabbitmq/events/budget-exceeded', () => ({
   constructTokenBudgetExceededEvent: vi.fn(),
 }));
 

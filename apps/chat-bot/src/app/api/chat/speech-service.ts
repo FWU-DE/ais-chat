@@ -4,9 +4,9 @@ import {
 } from '@/app/api/utils/speech-preview-cache';
 import { calculateSpeechCostsInCent } from '@/app/api/utils/utils';
 import { UserAndContext } from '@/auth/types';
-import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
-import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
-import { sendRabbitmqEvent } from '@/rabbitmq/send';
+import { constructTokenBudgetExceededEvent } from '@shared/rabbitmq/events/budget-exceeded';
+import { constructNewMessageEvent } from '@shared/rabbitmq/events/new-message';
+import { sendRabbitmqEvent } from '@shared/rabbitmq/send';
 import type { AudioFormat } from '@ais-chat/ai-core';
 import { generateSpeechById, streamSpeechById, TokenPointsExceededError } from '@ais-chat/ai-core';
 import { getConversation } from '@shared/conversation/conversation-service';

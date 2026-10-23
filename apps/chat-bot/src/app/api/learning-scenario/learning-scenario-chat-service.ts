@@ -1,7 +1,7 @@
 import { getUserAndContextByUserId } from '@/auth/utils';
-import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
-import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
-import { sendRabbitmqEvent } from '@/rabbitmq/send';
+import { constructTokenBudgetExceededEvent } from '@shared/rabbitmq/events/budget-exceeded';
+import { constructNewMessageEvent } from '@shared/rabbitmq/events/new-message';
+import { sendRabbitmqEvent } from '@shared/rabbitmq/send';
 import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
 import { createTextStream } from '@/utils/streaming';
 import { checkProductAccess } from '@/utils/vidis/access';

@@ -1,11 +1,11 @@
 import { trace } from '@opentelemetry/api';
-import { Connection } from 'rabbitmq-client';
+import { env } from '@shared/env';
 import { logDebug, logError } from '@shared/logging';
-import { env } from '@/env';
+import { Connection } from 'rabbitmq-client';
 
 const tracer = trace.getTracer('rabbitmq-client');
 
-const rabbit = new Connection(env.rabbitmqUri);
+const rabbit = new Connection(env.rabbitmqUri ?? '');
 
 const publisher = rabbit.createPublisher({ confirm: true });
 

@@ -6,9 +6,9 @@ import {
 } from '@/app/api/chat/speech-service';
 import { UserAndContext } from '@/auth/types';
 import { getUserAndContextByUserId } from '@/auth/utils';
-import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
-import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
-import { sendRabbitmqEvent } from '@/rabbitmq/send';
+import { constructTokenBudgetExceededEvent } from '@shared/rabbitmq/events/budget-exceeded';
+import { constructNewMessageEvent } from '@shared/rabbitmq/events/new-message';
+import { sendRabbitmqEvent } from '@shared/rabbitmq/send';
 import { checkProductAccess } from '@/utils/vidis/access';
 import { TokenPointsExceededError } from '@ais-chat/ai-core';
 import { requireTeacherRole } from '@shared/auth/authorization-service';

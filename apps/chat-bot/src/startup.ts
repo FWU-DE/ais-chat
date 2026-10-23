@@ -8,7 +8,7 @@ import { logError, logInfo } from '@shared/logging';
 import { listFilesFromS3 } from '@shared/s3';
 import { registerCleanupHandler } from '@shared/shutdown/cleanup';
 import { fixInvalidPictureIds } from '@shared/templates/fix-invalid-picture-ids';
-import { shutdownRabbitMQ } from '@/rabbitmq/send';
+import { shutdownRabbitMQ } from '@shared/rabbitmq/send';
 
 /**
  * Custom code that will be executed on application startup.

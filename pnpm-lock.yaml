@@ -402,9 +402,6 @@ importers:
       qrcode.react:
         specifier: 4.2.0
         version: 4.2.0(react@19.3.1)
-      rabbitmq-client:
-        specifier: 5.1.0
-        version: 5.1.0
       react:
         specifier: 19.3.1
         version: 19.3.1
@@ -775,6 +772,9 @@ importers:
       pg:
         specifier: 8.23.1
         version: 8.23.1
+      rabbitmq-client:
+        specifier: 5.1.0
+        version: 5.1.0
       unstorage:
         specifier: 1.17.6
         version: 1.17.6(@vercel/functions@2.2.13(@aws-sdk/credential-provider-web-identity@3.972.80))(ioredis@6.0.0)
