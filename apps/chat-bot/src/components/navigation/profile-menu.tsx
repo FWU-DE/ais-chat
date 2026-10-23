@@ -15,11 +15,13 @@ import { ProfileMenuContent } from './profile-menu-content';
 export default function ProfileMenu({ userAndContext }: { userAndContext?: UserAndContext }) {
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
 
   return (
     <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
       <DropdownMenuTrigger asChild>
         <Button
+          ref={triggerRef}
           variant="ghost"
           size="icon-round"
           aria-label="profileDropdown"
@@ -41,7 +43,11 @@ export default function ProfileMenu({ userAndContext }: { userAndContext?: UserA
       </DropdownMenuContent>
       {/* Public shared chats render this menu without a UserSettingsProvider. */}
       {userAndContext !== undefined && (
-        <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+        <SettingsDialog
+          open={isSettingsOpen}
+          onOpenChange={setIsSettingsOpen}
+          restoreFocusRef={triggerRef}
+        />
       )}
     </DropdownMenu>
   );
