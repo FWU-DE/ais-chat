@@ -4,15 +4,17 @@ import {
 } from '@/app/api/utils/speech-preview-cache';
 import { calculateSpeechCostsInCent } from '@/app/api/utils/utils';
 import { UserAndContext } from '@/auth/types';
-import { constructTokenBudgetExceededEvent } from '@shared/rabbitmq/events/budget-exceeded';
-import { constructNewMessageEvent } from '@shared/rabbitmq/events/new-message';
-import { sendRabbitmqEvent } from '@shared/rabbitmq/send';
 import type { AudioFormat } from '@ais-chat/ai-core';
 import { generateSpeechById, streamSpeechById, TokenPointsExceededError } from '@ais-chat/ai-core';
 import { getConversation } from '@shared/conversation/conversation-service';
 import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
 import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
 import { InvalidArgumentError } from '@shared/error';
+import {
+  constructNewMessageEvent,
+  constructTokenBudgetExceededEvent,
+  sendRabbitmqEvent,
+} from '@shared/rabbitmq';
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
 /**
  * Public result of the chat-facing streaming speech functions.
@@ -135,13 +137,7 @@ export async function generateChatSpeech({
   });
 
   if (await userHasReachedTokenPointsLimit({ user })) {
-    await sendRabbitmqEvent(
-      constructTokenBudgetExceededEvent({
-        anonymous: false,
-        user,
-        conversation,
-      }),
-    );
+    await sendRabbitmqEvent(constructTokenBudgetExceededEvent({ user }));
     throw new TokenPointsExceededError();
   }
 
@@ -170,79 +166,6 @@ export async function generateChatSpeech({
   );
 
   return { buffer: speechResult.buffer, contentType: speechResult.contentType };
-}
-
-/**
- * Streaming counterpart of `generateChatSpeech`. Reuses the same pre-checks (conversation
- * ownership, token budget), but yields raw PCM chunks as they arrive from the provider instead of
- * waiting for the full audio to be generated, so the client can start playback sooner.
- */
-export async function generateChatSpeechStream({
-  user,
-  conversationId,
-  text,
-  voice,
-  abortSignal,
-}: {
-  user: UserAndContext;
-  conversationId: string;
-  text: string;
-  voice?: string;
-  abortSignal?: AbortSignal;
-}): Promise<ChatSpeechStreamResult> {
-  const conversation = await getConversation({
-    conversationId,
-    userId: user.id,
-  });
-
-  if (await userHasReachedTokenPointsLimit({ user })) {
-    await sendRabbitmqEvent(
-      constructTokenBudgetExceededEvent({
-        anonymous: false,
-        user,
-        conversation,
-      }),
-    );
-    throw new TokenPointsExceededError();
-  }
-
-  const speechResult = await generateSpeechStream({ text, voice, abortSignal });
-
-  async function* chunksWithUsageLogging() {
-    try {
-      yield* speechResult.chunks;
-    } finally {
-      const costsInCent = await speechResult.costsInCent;
-
-      await dbInsertConversationUsage({
-        conversationId,
-        userId: user.id,
-        modelId: speechResult.modelId,
-        completionTokens: 0,
-        promptTokens: 0,
-        costsInCent,
-      });
-
-      await sendRabbitmqEvent(
-        constructNewMessageEvent({
-          user,
-          promptTokens: 0,
-          completionTokens: 0,
-          costsInCent,
-          provider: speechResult.provider,
-          modelName: speechResult.modelName,
-          anonymous: false,
-          conversation,
-        }),
-      );
-    }
-  }
-
-  return {
-    chunks: chunksWithUsageLogging(),
-    contentType: speechResult.contentType,
-    format: speechResult.format,
-  };
 }
 
 export async function generateSpeechPreview({ text, voice }: { text: string; voice: string }) {
