@@ -1,14 +1,14 @@
-import { Card, CardContent } from '@ui/components/card';
+import { AVATAR_MAX_SIZE } from '@/const';
+import { ImageSquareIcon, UploadIcon } from '@phosphor-icons/react';
 import { ServerActionResult } from '@shared/actions/server-action-result';
+import { Button } from '@ui/components/button';
+import { Card, CardContent } from '@ui/components/card';
+import { Input } from '@ui/components/input';
 import { useTranslations } from 'next-intl';
+import Image from 'next/image';
 import React from 'react';
 import { useToast } from '../common/toast';
-import { Input } from '@ui/components/input';
-import { ImageSquareIcon, UploadIcon } from '@phosphor-icons/react';
-import { Button } from '@ui/components/button';
 import AvatarCropModal from './custom-chat-avatar-crop-modal';
-import Image from 'next/image';
-import { AVATAR_MAX_SIZE } from '@/const';
 
 type AvatarUploadResult = {
   picturePath: string;
@@ -82,7 +82,7 @@ export function CustomChatImageUpload({
               src={displayedAvatarUrl}
               fill
               unoptimized
-              alt={t('profile-picture')}
+              alt={t('uploaded-profile-picture')}
               className="rounded-full"
               priority
             />

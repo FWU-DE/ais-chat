@@ -1,16 +1,16 @@
 'use client';
 
+import CountDownTimer from '@/app/(authed)/(chat-bot)/learning-scenarios/_components/count-down';
+import AvatarPicture from '@/components/common/avatar-picture';
 import { useId } from 'react';
 import Link from 'next/link';
 import { cn } from '@/utils/tailwind';
 import { truncateClassName } from '@/utils/tailwind/truncate';
-import AvatarPicture from '@/components/common/avatar-picture';
-import { useTranslations } from 'next-intl';
 import { ChatTextIcon, ImageSquareIcon } from '@phosphor-icons/react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/tooltip';
-import { Button } from '@ui/components/button';
-import CountDownTimer from '@/app/(authed)/(chat-bot)/learning-scenarios/_components/count-down';
 import { calculateShareSessionState } from '@shared/sharing/calculate-share-session-state';
+import { Button } from '@ui/components/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/tooltip';
+import { useTranslations } from 'next-intl';
 
 type ShareInfo = {
   expiredAt: Date | null;
@@ -113,7 +113,7 @@ export default function EntityCard({
               </Link>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t('chat')}</TooltipContent>
+          <TooltipContent>{t('chat-with-dialogue-partner')}</TooltipContent>
         </Tooltip>
       )}
     </div>

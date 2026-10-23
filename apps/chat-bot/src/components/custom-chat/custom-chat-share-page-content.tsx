@@ -1,24 +1,24 @@
 'use client';
 
-import Link from 'next/link';
-import { QRCodeSVG } from 'qrcode.react';
-import { Button } from '@ui/components/button';
-import CollapseSidebar from '@/components/common/collapse-sidebar';
+import { getCharacterShareDataAction } from '@/app/(authed)/(chat-bot)/characters/editor/[characterId]/actions';
+import CountDownTimer from '@/app/(authed)/(chat-bot)/learning-scenarios/_components/count-down';
+import { getLearningScenarioShareDataAction } from '@/app/(authed)/(chat-bot)/learning-scenarios/editor/[learningScenarioId]/actions';
 import CopyToClipboardButton from '@/components/common/clipboard-button';
+import CollapseSidebar from '@/components/common/collapse-sidebar';
 import SidebarCloseIcon from '@/components/icons/sidebar-close';
 import Footer from '@/components/navigation/footer';
-import CountDownTimer from '@/app/(authed)/(chat-bot)/learning-scenarios/_components/count-down';
-import CustomChatHeader from './custom-chat-header';
+import type { SharePollingData } from '@/hooks/use-share-data-polling';
 import { useShareDataPolling } from '@/hooks/use-share-data-polling';
+import type { ServerActionResult } from '@shared/actions/server-action-result';
 import {
   ShareSessionState,
   calculateShareSessionState,
 } from '@shared/sharing/calculate-share-session-state';
-import type { ServerActionResult } from '@shared/actions/server-action-result';
-import type { SharePollingData } from '@/hooks/use-share-data-polling';
-import { getCharacterShareDataAction } from '@/app/(authed)/(chat-bot)/characters/editor/[characterId]/actions';
-import { getLearningScenarioShareDataAction } from '@/app/(authed)/(chat-bot)/learning-scenarios/editor/[learningScenarioId]/actions';
+import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
+import { QRCodeSVG } from 'qrcode.react';
+import CustomChatHeader from './custom-chat-header';
 import { CustomChatShareWarning } from './share-with-learners/custom-chat-share-warning';
 
 type CustomChatSharePageContentProps = {
@@ -174,6 +174,7 @@ export default function CustomChatSharePageContent({
             data-testid="qr-code"
             className="w-full h-full max-w-64 sm:max-w-80 md:max-w-96 max-h-64 sm:max-h-80 md:max-h-96"
             value={absoluteShareUrl}
+            aria-hidden="true"
           />
         </section>
       </main>

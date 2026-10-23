@@ -135,7 +135,7 @@ export function ChatInputBox({
       aria-label="Nachricht abschicken"
       data-testid="submit-button"
     >
-      <ArrowRightIcon className={cn('h-9 w-9')} />
+      <ArrowRightIcon className={cn('h-9 w-9')} aria-hidden="true" />
     </button>
   );
 
@@ -170,6 +170,7 @@ export function ChatInputBox({
             onPaste={enableFileUpload ? handlePaste : undefined}
             maxLength={CHAT_MESSAGE_LENGTH_LIMIT}
             data-testid="chat-input"
+            aria-label="Chat-Eingabefeld"
           />
           {enableFileUpload && files !== undefined && setFiles !== undefined && (
             <div className="flex flex-row gap-x-3 rounded-enterprise-sm">
