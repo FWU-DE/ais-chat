@@ -1,7 +1,18 @@
 import { createBoard } from '@/components/chat/plot/jsxgraph-board';
 import { PLOT_LANGUAGE } from '@/utils/code-blocks';
 import { parsePlotSpec, type BoundingBox } from '@/utils/plot/plot-spec';
-import { AlignmentType, BorderStyle, Paragraph, Table, TableCell, TableRow, WidthType } from 'docx';
+import {
+  AlignmentType,
+  BorderStyle,
+  Paragraph,
+  ShadingType,
+  Table,
+  TableBorders,
+  TableCell,
+  TableRow,
+  TextRun,
+  WidthType,
+} from 'docx';
 import JXG from 'jsxgraph';
 import type { Root } from 'mdast';
 import type { DocxOptions, RemarkDocxPlugin } from 'remark-docx';
@@ -22,7 +33,88 @@ const PLOT_IMAGE_WIDTH = 600;
 const PLOT_IMAGE_MIN_HEIGHT = 260;
 const PLOT_IMAGE_MAX_HEIGHT = 450;
 const DEFAULT_PLOT_BOUNDING_BOX: BoundingBox = [-5, 5, 5, -5];
+const TABLE_CELL_PADDING = 80;
+const CODE_BLOCK_HORIZONTAL_PADDING = 160;
+const CODE_BLOCK_VERTICAL_PADDING = 120;
+const CODE_BLOCK_BACKGROUND = '011627';
+const CODE_BLOCK_HEADER_BACKGROUND = 'F1F5F9';
+const CODE_BLOCK_HEADER_TEXT_COLOR = '000000';
 const plotCodeNodes = new WeakSet<object>();
+
+const paddedCodeBlockPlugin: RemarkDocxPlugin = (() => {
+  const highlightCodeBlocks = shikiPlugin({ theme: 'night-owl' });
+
+  return async (pluginContext) => {
+    const { code } = await highlightCodeBlocks(pluginContext);
+
+    return {
+      code: (node, context) => {
+        const highlightedCode = code?.(node, context);
+        const paragraphs = (
+          Array.isArray(highlightedCode) ? highlightedCode : [highlightedCode]
+        ).filter((child): child is Paragraph => child instanceof Paragraph);
+
+        if (paragraphs.length === 0) {
+          return null;
+        }
+
+        return new Table({
+          rows: [
+            new TableRow({
+              children: [
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      alignment: AlignmentType.CENTER,
+                      children: [
+                        new TextRun({
+                          text: node.lang ?? '',
+                          color: CODE_BLOCK_HEADER_TEXT_COLOR,
+                          size: 22,
+                        }),
+                      ],
+                    }),
+                  ],
+                  margins: {
+                    top: TABLE_CELL_PADDING,
+                    bottom: TABLE_CELL_PADDING,
+                    left: CODE_BLOCK_HORIZONTAL_PADDING,
+                    right: CODE_BLOCK_HORIZONTAL_PADDING,
+                  },
+                  shading: {
+                    type: ShadingType.CLEAR,
+                    color: 'auto',
+                    fill: CODE_BLOCK_HEADER_BACKGROUND,
+                  },
+                }),
+              ],
+            }),
+            new TableRow({
+              children: [
+                new TableCell({
+                  children: paragraphs,
+                  margins: {
+                    top: CODE_BLOCK_VERTICAL_PADDING,
+                    bottom: CODE_BLOCK_VERTICAL_PADDING,
+                    left: CODE_BLOCK_HORIZONTAL_PADDING,
+                    right: CODE_BLOCK_HORIZONTAL_PADDING,
+                  },
+                  shading: {
+                    type: ShadingType.CLEAR,
+                    color: 'auto',
+                    fill: CODE_BLOCK_BACKGROUND,
+                  },
+                }),
+              ],
+            }),
+          ],
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: TableBorders.NONE,
+        });
+      },
+    };
+  };
+})();
 
 const styledBlocksPlugin: RemarkDocxPlugin = async () => ({
   thematicBreak: () =>
@@ -71,6 +163,12 @@ const styledBlocksPlugin: RemarkDocxPlugin = async () => ({
       width: { size: 100, type: WidthType.PERCENTAGE },
       alignment: AlignmentType.CENTER,
       style: 'TableGrid',
+      margins: {
+        top: TABLE_CELL_PADDING,
+        bottom: TABLE_CELL_PADDING,
+        left: TABLE_CELL_PADDING,
+        right: TABLE_CELL_PADDING,
+      },
     });
   },
 });
@@ -282,7 +380,7 @@ const docxOptions: DocxOptions = {
     latexPlugin(),
     imagePlugin({ load: loadImageForDocx }),
     plotPlugin,
-    shikiPlugin({ theme: 'dark-plus' }),
+    paddedCodeBlockPlugin,
     styledBlocksPlugin,
   ],
   spacing: 80,
