@@ -22,6 +22,7 @@ export async function serializeMessages({
 }) {
   return Promise.all(
     messages.map(async ({ id, role, content }) => ({
+      id,
       role,
       content,
       images: await Promise.all(

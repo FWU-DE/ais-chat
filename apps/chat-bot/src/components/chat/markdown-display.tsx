@@ -1,17 +1,18 @@
-import Markdown, { type Components } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import RehypeKatex from 'rehype-katex';
-import RemarkMathPlugin from 'remark-math-extended';
+import { cn } from '@/utils/tailwind';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import { cn } from '@/utils/tailwind';
+import Markdown, { type Components } from 'react-markdown';
+import RehypeKatex from 'rehype-katex';
+import remarkGfm from 'remark-gfm';
+import RemarkMathPlugin from 'remark-math-extended';
 import { MarkdownCode } from './markdown-code';
-import { rehypeJsxGraphPlot, JSXGRAPH_PLOT_HNAME } from './plot/rehype-jsxgraph-plot';
 import { JsxGraphPlotElement } from './plot/plot-block';
+import { JSXGRAPH_PLOT_HNAME, rehypeJsxGraphPlot } from './plot/rehype-jsxgraph-plot';
 
 type MarkdownDisplayProps = {
   children: string;
   className?: string;
+  messageId?: string;
   /** Per-element Tailwind class overrides, merged over the default styles. */
   elementClassName?: { [Key in keyof Components]?: string };
 };
@@ -23,6 +24,7 @@ const KATEX_RENDER_OPTIONS = {
 export default function MarkdownDisplay({
   children,
   className,
+  messageId,
   elementClassName,
 }: MarkdownDisplayProps) {
   // remove the top-padding for the immediate sibling element following an hr to ensure the hr has symmetric top/bottom padding
@@ -38,7 +40,10 @@ export default function MarkdownDisplay({
     >
       <Markdown
         remarkPlugins={[RemarkMathPlugin, remarkGfm]}
-        rehypePlugins={[[RehypeKatex, KATEX_RENDER_OPTIONS], rehypeJsxGraphPlot]}
+        rehypePlugins={[
+          [RehypeKatex, KATEX_RENDER_OPTIONS],
+          [rehypeJsxGraphPlot, { messageId }],
+        ]}
         components={{
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           h1({ children, className, node, ...props }) {

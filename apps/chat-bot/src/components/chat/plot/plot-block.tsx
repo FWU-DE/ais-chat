@@ -1,12 +1,12 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo } from 'react';
+import { parsePlotSpec } from '@/utils/plot/plot-spec';
+import { logError } from '@shared/logging/logging';
 import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
-import { logError } from '@shared/logging/logging';
+import { createContext, useContext, useEffect, useMemo } from 'react';
 import { PlotError } from './plot-error';
 import { PlotErrorBoundary } from './plot-error-boundary';
-import { parsePlotSpec } from '@/utils/plot/plot-spec';
 
 const JsxGraphPlot = dynamic(() => import('./jsxgraph-plot'), { ssr: false });
 
@@ -15,7 +15,15 @@ export const PlotStreamingContext = createContext(false);
 // Effects run twice in dev and blocks remount, so log each broken source only once.
 const loggedSources = new Set<string>();
 
-export function PlotBlock({ source, title }: { source: string; title?: string }) {
+export function PlotBlock({
+  source,
+  title,
+  plotId,
+}: {
+  source: string;
+  title?: string;
+  plotId?: string;
+}) {
   const result = useMemo(() => parsePlotSpec(source), [source]);
   const parseError = 'error' in result ? result.error : undefined;
 
@@ -45,7 +53,7 @@ export function PlotBlock({ source, title }: { source: string; title?: string })
 
   return (
     <PlotErrorBoundary key={source} title={title}>
-      <JsxGraphPlot spec={result.spec} title={title} />
+      <JsxGraphPlot spec={result.spec} title={title} plotId={plotId} />
     </PlotErrorBoundary>
   );
 }
@@ -57,13 +65,15 @@ export function JsxGraphPlotElement({
   source,
   title,
   incomplete,
+  plotId,
 }: {
   source: string;
   title?: string;
   incomplete?: boolean;
+  plotId?: string;
 }) {
   if (incomplete) {
     return null;
   }
-  return <PlotBlock source={source} title={title} />;
+  return <PlotBlock source={source} title={title} plotId={plotId} />;
 }

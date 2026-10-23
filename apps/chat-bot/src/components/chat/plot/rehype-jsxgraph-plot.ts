@@ -1,6 +1,7 @@
+import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
 import type { Element, Root } from 'hast';
 import { visit } from 'unist-util-visit';
-import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
+import { getRenderedPlotId } from './rendered-plots';
 
 export const JSXGRAPH_PLOT_HNAME = 'jsxgraph-plot';
 
@@ -31,8 +32,9 @@ function getSource(code: Element): string {
 // `code`/`pre` renderers, without the plot ending up nested in an invalid `<pre>` wrapper. While
 // a fence's language is still streaming in, the block is rewritten to render nothing yet, rather
 // than flashing a syntax-highlighted block for the wrong language.
-export function rehypeJsxGraphPlot() {
+export function rehypeJsxGraphPlot({ messageId }: { messageId?: string } = {}) {
   return (tree: Root) => {
+    let plotIndex = 0;
     visit(tree, 'element', (node, index, parent) => {
       if (node.tagName !== 'pre' || parent === undefined || index === undefined) {
         return;
@@ -56,6 +58,9 @@ export function rehypeJsxGraphPlot() {
         return;
       }
 
+      const plotId = messageId === undefined ? undefined : getRenderedPlotId(messageId, plotIndex);
+      plotIndex += 1;
+
       parent.children[index] = {
         type: 'element',
         tagName: JSXGRAPH_PLOT_HNAME,
@@ -63,6 +68,7 @@ export function rehypeJsxGraphPlot() {
           source: getSource(code),
           title: getCodeTitle(code.data?.meta),
           incomplete: !complete,
+          ...(plotId === undefined ? {} : { plotId }),
         },
         children: [],
       };

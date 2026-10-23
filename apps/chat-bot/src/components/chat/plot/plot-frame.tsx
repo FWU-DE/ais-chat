@@ -1,6 +1,12 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import {
+  ArrowCounterClockwiseIcon,
+  CornersOutIcon,
+  DownloadSimpleIcon,
+  MagnifyingGlassMinusIcon,
+  MagnifyingGlassPlusIcon,
+} from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import {
   Dialog,
@@ -10,14 +16,8 @@ import {
   DialogTrigger,
 } from '@ui/components/dialog';
 import { Slider } from '@ui/components/slider';
+import { useTranslations } from 'next-intl';
 import type { Ref } from 'react';
-import {
-  ArrowCounterClockwiseIcon,
-  CornersOutIcon,
-  DownloadSimpleIcon,
-  MagnifyingGlassMinusIcon,
-  MagnifyingGlassPlusIcon,
-} from '@phosphor-icons/react';
 import { downloadPng } from './png-export';
 import type { SliderDefinition } from './slider-definitions';
 

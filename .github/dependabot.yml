@@ -47,6 +47,13 @@ updates:
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
     groups:
+      #remark-docx uses currentyl 9.7.1 for docx, so we group them together here to ensure compatible updates
+      remark-docx-docx:
+        applies-to: version-updates
+        patterns:
+          - 'docx'
+          - 'remark-docx'
+
       # Group safe, non-breaking bumps to reduce PRs; split by dependency-type
       # so each group's updater job has a smaller dependency graph to resolve
       # (the combined group was timing out on this large pnpm workspace).
