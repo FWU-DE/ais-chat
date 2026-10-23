@@ -1,6 +1,26 @@
-import { and, eq, gt, sql, sum } from 'drizzle-orm';
+import { and, eq, gt, gte, ne, sql, sum } from 'drizzle-orm';
 import { db } from '..';
 import { VoucherInsertModel, VoucherTable, VoucherUpdateModel } from '../schema';
+import { getStartOfCurrentMonth } from '../../utils/date';
+
+/**
+ * Sums the budget a user has passed on to colleagues this month (transfer vouchers created by
+ * the user, redeemed or still open). Revoked transfers are not counted.
+ */
+export async function dbGetTransferredBudgetForCurrentMonth(createdByTag: string) {
+  const [result] = await db
+    .select({ total: sum(VoucherTable.increaseAmount) })
+    .from(VoucherTable)
+    .where(
+      and(
+        eq(VoucherTable.createdBy, createdByTag),
+        ne(VoucherTable.status, 'revoked'),
+        gte(VoucherTable.createdAt, getStartOfCurrentMonth()),
+      ),
+    );
+
+  return Number(result?.total ?? 0);
+}
 
 export async function dbGetCreditIncreaseForCurrentMonth(userId: string) {
   const [result] = await db

@@ -61,6 +61,7 @@ function transformToFederalStateEditForm(federalState: FederalStateModel): Feder
       isCalculatorEnabled: federalState.featureToggles.isCalculatorEnabled ?? false,
       isSpeechModelEnabled: federalState.featureToggles.isSpeechModelEnabled ?? false,
       isJsxGraphEnabled: federalState.featureToggles.isJsxGraphEnabled ?? false,
+      isBudgetTransferEnabled: federalState.featureToggles.isBudgetTransferEnabled ?? false,
       isSharedPageLocaleDetectionEnabled:
         federalState.featureToggles.isSharedPageLocaleDetectionEnabled ?? true,
     },
@@ -289,6 +290,12 @@ export function FederalStateView(props: FederalStateViewProps) {
             name="featureToggles.isJsxGraphEnabled"
             label="Graphen aktivieren"
             description="Erlaubt die Darstellung von JSXGraph-Plots im Chat."
+            control={control}
+          />
+          <FormFieldCheckbox
+            name="featureToggles.isBudgetTransferEnabled"
+            label="Weitergabe von Tokenvolumen aktivieren"
+            description="Lehrkräfte können ungenutztes Tokenvolumen des laufenden Monats per Code an Lehrkräfte derselben Schule weitergeben."
             control={control}
           />
           <FormFieldCheckbox

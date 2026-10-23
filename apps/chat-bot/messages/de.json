@@ -186,7 +186,9 @@
     "chats-error": "Etwas ist schiefgelaufen...",
     "chats-reload": "Dialoge neu laden",
     "untitled-conversation": "Neue Konversation",
-    "search-clear": "Suche löschen"
+    "search-clear": "Suche löschen",
+    "token-points-manage": "Aufladen oder weitergeben",
+    "token-points-redeem": "Gutschein einlösen"
   },
   "ai-activity": {
     "title": "KI-Aktivität",
@@ -488,7 +490,20 @@
     "redeem-button": "Gutschein einlösen",
     "toasts": {
       "redeem-success": "Dein Tokenvolumen wurde erfolgreich aufgeladen.",
-      "redeem-invalid": "Der eingegebene Gutscheincode ist ungültig."
+      "redeem-invalid": "Der eingegebene Gutscheincode ist ungültig.",
+      "transfer-success": "Code erzeugt – {percent} % wurden von deinem Tokenvolumen abgezogen.",
+      "transfer-failed": "Die Weitergabe hat nicht geklappt. Bitte prüfe den Anteil und versuche es erneut."
+    },
+    "transfer": {
+      "title": "Tokenvolumen an Kolleginnen und Kollegen weitergeben",
+      "description": "Gib einen Teil deines ungenutzten Tokenvolumens an eine Lehrkraft deiner Schule weiter. Es entsteht ein Code, den du ihr persönlich gibst. Das Tokenvolumen wird dir sofort abgezogen; der Code gilt bis zum Monatsende.",
+      "available": "Diesen Monat noch verfügbar: {percent} % deines monatlichen Tokenvolumens.",
+      "amount-label": "Anteil in Prozent",
+      "amount-placeholder": "1 bis {max}",
+      "button": "Code erzeugen",
+      "nothing-left": "Diesen Monat ist kein Tokenvolumen mehr übrig, das du weitergeben kannst.",
+      "result": "Gib diesen Code an deine Kollegin oder deinen Kollegen weiter (gültig bis {date}). Eingelöst wird er auf dieser Seite unter „Gutschein einlösen“.",
+      "copy": "Code kopieren"
     }
   },
   "image-generation": {
