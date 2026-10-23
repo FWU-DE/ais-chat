@@ -1,8 +1,8 @@
 import { speechRequestSchema } from '@/app/api/chat/speech-request-schemas';
-import { generateChatSpeechStream } from '@/app/api/chat/speech-service';
 import { getUser } from '@/auth/utils';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
 import { logError } from '@shared/logging';
+import { generateChatSpeechStream } from '@shared/speech/speech-service';
 import { NextRequest } from 'next/server';
 
 /**

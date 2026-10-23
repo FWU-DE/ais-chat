@@ -4,15 +4,15 @@ import {
 } from '@/app/api/utils/speech-preview-cache';
 import { calculateSpeechCostsInCent } from '@/app/api/utils/utils';
 import { UserAndContext } from '@/auth/types';
-import { constructTokenBudgetExceededEvent } from '@shared/rabbitmq/events/budget-exceeded';
-import { constructNewMessageEvent } from '@shared/rabbitmq/events/new-message';
-import { sendRabbitmqEvent } from '@shared/rabbitmq/send';
 import type { AudioFormat } from '@ais-chat/ai-core';
 import { generateSpeechById, streamSpeechById, TokenPointsExceededError } from '@ais-chat/ai-core';
 import { getConversation } from '@shared/conversation/conversation-service';
 import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
 import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
 import { InvalidArgumentError } from '@shared/error';
+import { constructTokenBudgetExceededEvent } from '@shared/rabbitmq/events/budget-exceeded';
+import { constructNewMessageEvent } from '@shared/rabbitmq/events/new-message';
+import { sendRabbitmqEvent } from '@shared/rabbitmq/send';
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
 /**
  * Public result of the chat-facing streaming speech functions.
@@ -135,13 +135,7 @@ export async function generateChatSpeech({
   });
 
   if (await userHasReachedTokenPointsLimit({ user })) {
-    await sendRabbitmqEvent(
-      constructTokenBudgetExceededEvent({
-        anonymous: false,
-        user,
-        conversation,
-      }),
-    );
+    await sendRabbitmqEvent(constructTokenBudgetExceededEvent({ user }));
     throw new TokenPointsExceededError();
   }
 
@@ -196,13 +190,7 @@ export async function generateChatSpeechStream({
   });
 
   if (await userHasReachedTokenPointsLimit({ user })) {
-    await sendRabbitmqEvent(
-      constructTokenBudgetExceededEvent({
-        anonymous: false,
-        user,
-        conversation,
-      }),
-    );
+    await sendRabbitmqEvent(constructTokenBudgetExceededEvent({ user }));
     throw new TokenPointsExceededError();
   }
 

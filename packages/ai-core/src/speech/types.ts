@@ -19,6 +19,10 @@ export type SpeechUsage = {
   outputAudioTokens: number;
 };
 
+export type SpeechCosts = {
+  costsInCent: number;
+};
+
 export type SpeechResponse = {
   wavBuffer: Buffer;
   usage: SpeechUsage;
@@ -37,7 +41,7 @@ export type SpeechGenerationFn = (args: {
  */
 export type SpeechStreamResult = {
   chunks: AsyncGenerator<Buffer, void, unknown>;
-  usage: Promise<SpeechUsage>;
+  usage: Promise<SpeechUsage | SpeechCosts>;
   format: AudioFormat;
 };
 
