@@ -78,6 +78,7 @@
       "web_search": "Recherche web",
       "web_scraper": "Page web lue",
       "retrieve_text_chunks": "Extraits pertinents du fichier lus",
+      "retrieve_text_chunks_prefix": "Termes de recherche :",
       "retrieve_entire_file": "Fichier entièrement lu",
       "mundo_search": "Recherche dans Mundo",
       "math_calculate": "Calcul effectué",

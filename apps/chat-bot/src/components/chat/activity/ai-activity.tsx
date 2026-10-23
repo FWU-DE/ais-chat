@@ -80,7 +80,7 @@ function StepIcon({ step }: { step: AiActivityStep }) {
   return <ToolIcon className="size-4" />;
 }
 
-function getStepDetailText(step: AiActivityStep): string | undefined {
+function getStepDetailText(step: AiActivityStep, t: Translator): string | undefined {
   if (step.kind === 'analysis-summary') {
     return step.content.length > 0 ? step.content : undefined;
   }
@@ -91,10 +91,17 @@ function getStepDetailText(step: AiActivityStep): string | undefined {
 
   const visibleDetail = truncate(step.detail);
   const visibleResult = truncate(step.result);
-  if (!visibleDetail) {
-    return visibleResult ? `= ${visibleResult}` : undefined;
-  }
-  return visibleResult ? `${visibleDetail} = ${visibleResult}` : visibleDetail;
+  const detail = !visibleDetail
+    ? visibleResult
+      ? `= ${visibleResult}`
+      : undefined
+    : visibleResult
+      ? `${visibleDetail} = ${visibleResult}`
+      : visibleDetail;
+
+  return step.tool === 'retrieve_text_chunks' && detail !== undefined
+    ? `${t('steps.retrieve_text_chunks_prefix')} ${detail}`
+    : detail;
 }
 
 function getStepDetailPlacement(step: AiActivityStep): 'inline' | 'below' {
@@ -156,7 +163,7 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
   const links = step.kind === 'tool' ? (step.links ?? []) : [];
   const stepId = step.kind === 'tool' ? step.id : undefined;
   const isFailed = step.kind === 'tool' && step.failed === true;
-  const detailText = getStepDetailText(step);
+  const detailText = getStepDetailText(step, t);
   const detailPlacement = getStepDetailPlacement(step);
   const detailTooltip = step.kind === 'tool' ? step.detail : undefined;
 

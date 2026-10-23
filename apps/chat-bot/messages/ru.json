@@ -78,6 +78,7 @@
       "web_search": "Веб-поиск",
       "web_scraper": "Веб-страница прочитана",
       "retrieve_text_chunks": "Прочитаны релевантные фрагменты файла",
+      "retrieve_text_chunks_prefix": "Поисковые термины:",
       "retrieve_entire_file": "Файл полностью прочитан",
       "mundo_search": "Поиск в Mundo",
       "math_calculate": "Выполнено вычисление",
