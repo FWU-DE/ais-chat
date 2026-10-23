@@ -3,6 +3,7 @@ import { getConversation } from '@shared/conversation/conversation-service';
 import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
 import { LlmModelSelectModel } from '@shared/db/schema';
 import { ConversationModel } from '@shared/db/types';
+import { FederalStateModel } from '@shared/federal-states/types';
 import { constructNewMessageEvent, sendRabbitmqEvent } from '@shared/rabbitmq';
 import {
   runSpeechPipeline,
@@ -12,12 +13,14 @@ import { ChatSpeechStreamResult } from './types';
 
 export async function generateChatSpeechStream({
   user,
+  federalState,
   conversationId,
   text,
   voice,
   abortSignal,
 }: {
   user: UserModel;
+  federalState: FederalStateModel;
   conversationId: string;
   text: string;
   voice?: string;
@@ -26,6 +29,7 @@ export async function generateChatSpeechStream({
   return runSpeechPipeline<ConversationModel>(
     {
       user,
+      federalState,
       conversationId,
       input: text,
       voice,

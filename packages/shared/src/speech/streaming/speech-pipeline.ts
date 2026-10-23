@@ -2,6 +2,7 @@ import { TokenPointsExceededError } from '@ais-chat/ai-core';
 import { UserModel } from '@shared/auth/user-model';
 import { LlmModelSelectModel } from '@shared/db/schema';
 import { ForbiddenError, NotFoundError } from '@shared/error';
+import { FederalStateModel } from '@shared/federal-states/types';
 import { ChatSpeechStreamResult } from '../types';
 import { startStream } from './start-streaming';
 import {
@@ -13,6 +14,7 @@ import {
 
 export type SpeechStreamingPipelineParams = {
   user: UserModel;
+  federalState: FederalStateModel;
   conversationId?: string;
   input: string;
   voice?: string;
@@ -54,7 +56,7 @@ export async function runSpeechPipeline<TContext extends { userId: string }>(
     throw new ForbiddenError('Access denied');
   }
 
-  const hasEnoughBudget = await checkAvailableBudget(params.user);
+  const hasEnoughBudget = await checkAvailableBudget(params.user, params.federalState);
   if (!hasEnoughBudget) {
     await raiseBudgetExceededEvent(params.user);
     throw new TokenPointsExceededError();

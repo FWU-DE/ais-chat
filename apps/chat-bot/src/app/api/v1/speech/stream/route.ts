@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
 
     const { chunks, contentType, format } = await generateChatSpeechStream({
       user,
+      federalState: user.federalState,
       conversationId: parsed.conversationId,
       text: parsed.text,
       voice: parsed.voice,
