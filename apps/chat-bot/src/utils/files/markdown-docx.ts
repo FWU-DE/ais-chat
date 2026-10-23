@@ -1,4 +1,8 @@
+import { createBoard } from '@/components/chat/plot/jsxgraph-board';
+import { PLOT_LANGUAGE } from '@/utils/code-blocks';
+import { parsePlotSpec, type BoundingBox } from '@/utils/plot/plot-spec';
 import { AlignmentType, BorderStyle, Paragraph, Table, TableCell, TableRow, WidthType } from 'docx';
+import JXG from 'jsxgraph';
 import type { Root } from 'mdast';
 import type { DocxOptions, RemarkDocxPlugin } from 'remark-docx';
 import remarkDocx from 'remark-docx';
@@ -9,10 +13,16 @@ import remarkGfm from 'remark-gfm';
 import RemarkMathPlugin from 'remark-math-extended';
 import remarkParse from 'remark-parse';
 import { unified } from 'unified';
+import { visit } from 'unist-util-visit';
 
 const MAX_IMAGE_WIDTH = 200;
 const MAX_IMAGE_HEIGHT = 320;
 const PARAGRAPH_SPACER = '\u200B';
+const PLOT_IMAGE_WIDTH = 600;
+const PLOT_IMAGE_MIN_HEIGHT = 260;
+const PLOT_IMAGE_MAX_HEIGHT = 450;
+const DEFAULT_PLOT_BOUNDING_BOX: BoundingBox = [-5, 5, 5, -5];
+const plotCodeNodes = new WeakSet<object>();
 
 const styledBlocksPlugin: RemarkDocxPlugin = async () => ({
   thematicBreak: () =>
@@ -64,6 +74,126 @@ const styledBlocksPlugin: RemarkDocxPlugin = async () => ({
     });
   },
 });
+
+function getPlotImageDimensions(boundingBox: BoundingBox) {
+  const [xMin, yMax, xMax, yMin] = boundingBox;
+  const aspectRatio = (xMax - xMin) / (yMax - yMin);
+  return {
+    width: PLOT_IMAGE_WIDTH,
+    height: Math.round(
+      Math.min(
+        PLOT_IMAGE_MAX_HEIGHT,
+        Math.max(PLOT_IMAGE_MIN_HEIGHT, PLOT_IMAGE_WIDTH / aspectRatio),
+      ),
+    ),
+  };
+}
+
+async function svgToPng(svg: ArrayBuffer, width: number, height: number): Promise<ArrayBuffer> {
+  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+  try {
+    const image = new Image();
+    image.src = url;
+    await image.decode();
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d')?.drawImage(image, 0, 0, width, height);
+
+    const png = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) =>
+          blob === null ? reject(new Error('Failed to render plot PNG fallback')) : resolve(blob),
+        'image/png',
+      );
+    });
+    return png.arrayBuffer();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
+  const plotCodeBlocks: Array<{ value: string }> = [];
+  visit(root, 'code', (node) => {
+    if (plotCodeNodes.has(node)) {
+      plotCodeBlocks.push(node);
+    }
+  });
+
+  await Promise.all(
+    plotCodeBlocks.map(async ({ value }) => {
+      if (images.has(value)) {
+        return;
+      }
+
+      const parsed = parsePlotSpec(value);
+      if ('error' in parsed) {
+        return;
+      }
+
+      const { width, height } = getPlotImageDimensions(
+        parsed.spec.board.boundingBox ?? DEFAULT_PLOT_BOUNDING_BOX,
+      );
+      const container = document.createElement('div');
+      container.style.cssText = `position:fixed;left:-10000px;top:0;width:${width}px;height:${height}px;`;
+      document.body.append(container);
+
+      let board: JXG.Board | undefined;
+      try {
+        board = createBoard(container, parsed.spec, undefined, [], false).board;
+        const svg = container.querySelector('svg');
+        if (svg === null) {
+          return;
+        }
+
+        const exportSvg = svg.cloneNode(true) as SVGSVGElement;
+        // JSXGraph adds an empty, hidden foreignObject. It taints browser canvases during SVG
+        // rasterization even though it contains no plot content.
+        exportSvg
+          .querySelectorAll('foreignObject')
+          .forEach((foreignObject) => foreignObject.remove());
+        exportSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        exportSvg.setAttribute('width', String(width));
+        exportSvg.setAttribute('height', String(height));
+        const data = new TextEncoder().encode(
+          new XMLSerializer().serializeToString(exportSvg),
+        ).buffer;
+        images.set(value, {
+          type: 'svg',
+          width,
+          height,
+          data,
+          fallback: await svgToPng(data, width, height),
+        });
+      } finally {
+        if (board !== undefined) {
+          JXG.JSXGraph.freeBoard(board);
+        }
+        container.remove();
+      }
+    }),
+  );
+
+  return {
+    code: (node, context) =>
+      !plotCodeNodes.has(node) || context.images.get(node.value) === undefined
+        ? null
+        : new Paragraph({ children: context.render([{ type: 'image', url: node.value }]) }),
+  };
+};
+
+function preparePlotCodeBlocks(root: Root) {
+  visit(root, 'code', (node) => {
+    if (node.lang !== PLOT_LANGUAGE) {
+      return;
+    }
+
+    node.lang = 'json';
+    plotCodeNodes.add(node);
+  });
+}
 
 export type ConversationExportMessage = {
   role: string;
@@ -151,6 +281,7 @@ const docxOptions: DocxOptions = {
   plugins: [
     latexPlugin(),
     imagePlugin({ load: loadImageForDocx }),
+    plotPlugin,
     shikiPlugin({ theme: 'dark-plus' }),
     styledBlocksPlugin,
   ],
@@ -197,6 +328,7 @@ export async function markdownToDocxBlob(exportDocument: ConversationExport): Pr
   const roots = await Promise.all(
     exportDocument.markdownBlocks.map(async (markdownBlock) => {
       const parsedRoot = processor.parse(markdownBlock) as Root;
+      preparePlotCodeBlocks(parsedRoot);
       return (await processor.run(parsedRoot)) as Root;
     }),
   );
