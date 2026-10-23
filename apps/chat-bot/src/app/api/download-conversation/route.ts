@@ -1,13 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { generateConversationDocxFile, generateConversationMessageDocxFile } from './utils';
 import { getUser } from '@/auth/utils';
-import { type ConversationModel } from '@shared/db/types';
+import { handleErrorInRoute } from '@/error/handle-error-in-route';
 import {
   getConversationAndMessagesForExport,
   getConversationMessageForExport,
 } from '@shared/conversation/conversation-service';
+import { dbGetModelByName } from '@shared/db/functions/llm-model';
+import { type ConversationModel } from '@shared/db/types';
+import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
-import { handleErrorInRoute } from '@/error/handle-error-in-route';
+import { serializeMessages } from './serialize-messages';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,8 +21,7 @@ const downloadConversationParamsSchema = z.object({
 });
 
 /**
- * User wants to download a conversation or a single message as a .docx file.
- * We generate the file on the fly and return it as a response.
+ * Returns Markdown content and authorized image URLs for a conversation or single message export.
  * The user must be the owner of the conversation.
  *
  * enterpriseGptName contains the character name if a character was used.
@@ -38,55 +38,40 @@ export async function GET(req: NextRequest) {
     const user = await getUser();
     const gptName = enterpriseGptName || DEFAULT_GPT_NAME;
 
-    let document: ArrayBuffer | undefined;
-    let fileName: string;
-
     if (messageId === undefined) {
       const { conversation, messages, fileMapping } = await getConversationAndMessagesForExport({
         conversationId,
         userId: user.id,
       });
+      const modelName = messages.findLast((message) => message.role === 'assistant')?.modelName;
+      const model = modelName === undefined ? undefined : await dbGetModelByName(modelName);
 
-      document = await generateConversationDocxFile({
-        conversation,
-        messages,
-        fileMapping,
-        gptName,
+      return NextResponse.json({
+        fileName: generateFileName({ conversation, gptName }),
+        conversationTitle: conversation.name,
+        createdAt: conversation.createdAt.toISOString(),
+        modelName: model?.displayName ?? modelName ?? gptName,
+        messages: await serializeMessages({ messages, fileMapping }),
       });
+    }
 
-      fileName = generateFileName({ conversation, gptName });
-    } else {
-      const { conversation, message, fileMapping } = await getConversationMessageForExport({
-        conversationId,
-        messageId,
-        userId: user.id,
-      });
+    const { conversation, message, fileMapping } = await getConversationMessageForExport({
+      conversationId,
+      messageId,
+      userId: user.id,
+    });
+    const model =
+      message.modelName === undefined ? undefined : await dbGetModelByName(message.modelName);
 
-      document = await generateConversationMessageDocxFile({
-        message,
-        fileMapping,
-        gptName,
-      });
-
-      fileName = generateMessageFileName({
+    return NextResponse.json({
+      fileName: generateMessageFileName({
         conversationName: conversation.name,
         gptName,
         createdAt: message.createdAt,
-      });
-    }
-
-    if (document === undefined) {
-      return NextResponse.json({ error: 'Failed to generate the document' }, { status: 500 });
-    }
-
-    return new NextResponse(document, {
-      status: 200,
-      headers: {
-        'Content-Disposition': 'attachment',
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'Content-Length': document.byteLength.toString(),
-        'X-Filename': encodeURIComponent(fileName),
-      },
+      }),
+      createdAt: message.createdAt.toISOString(),
+      modelName: model?.displayName ?? message.modelName ?? gptName,
+      messages: await serializeMessages({ messages: [message], fileMapping }),
     });
   } catch (error) {
     return handleErrorInRoute(error);
