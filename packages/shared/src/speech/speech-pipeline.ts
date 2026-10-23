@@ -21,8 +21,17 @@ export type SpeechPipelineStrategy<TContext, TModel, TResult> = {
   raiseBudgetExceededEvent(request: SpeechPipelineRequest, context: TContext): Promise<void>;
   /** Get the speech model to be used for generating speech */
   getModel(request: SpeechPipelineRequest): Promise<TModel>;
-  /** Generate the speech stream for the given request and model */
-  generateSpeechStream(request: SpeechPipelineRequest, model: TModel): Promise<TResult>;
+  /**
+   * Generate the speech stream for the given request and model. Usage is only known once
+   * generation has actually finished (e.g. once a streamed result has been fully consumed or
+   * cancelled), so implementations must call `reportUsage` themselves at that point instead of
+   * it being invoked automatically as soon as this method resolves.
+   */
+  generateSpeechStream(
+    request: SpeechPipelineRequest,
+    model: TModel,
+    reportUsage: (result: TResult) => Promise<void>,
+  ): Promise<TResult>;
   /** Report the usage of the speech model for the given request and result */
   reportUsage(
     request: SpeechPipelineRequest,
@@ -35,7 +44,7 @@ export type SpeechPipelineStrategy<TContext, TModel, TResult> = {
 export async function runSpeechPipeline<TContext, TModel, TResult>(
   request: SpeechPipelineRequest,
   strategy: SpeechPipelineStrategy<TContext, TModel, TResult>,
-): Promise<void> {
+): Promise<TResult> {
   const context = await strategy.getContext(request);
   const hasAccess = await strategy.verifyAccess(request, context);
   if (!hasAccess) {
@@ -49,7 +58,7 @@ export async function runSpeechPipeline<TContext, TModel, TResult>(
   }
   const model = await strategy.getModel(request);
 
-  const speechResult = await strategy.generateSpeechStream(request, model);
-
-  await strategy.reportUsage(request, context, model, speechResult);
+  return strategy.generateSpeechStream(request, model, (result) =>
+    strategy.reportUsage(request, context, model, result),
+  );
 }
