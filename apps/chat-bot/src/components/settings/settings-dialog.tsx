@@ -74,7 +74,8 @@ export function SettingsDialog({
       // The server action rejects on transport failures, e.g. a lost connection.
       toast.error(t('toasts.save-error'));
     } finally {
-      setPendingSettings(null);
+      // A later save may already have replaced the pending settings.
+      setPendingSettings((current) => (current === draftSettings ? null : current));
     }
   }
 
