@@ -19,15 +19,15 @@
   },
   "dependencies": {
     "@ais-chat/api-database": "workspace:*",
-    "@anthropic-ai/sdk": "0.134.0",
+    "@anthropic-ai/sdk": "0.135.0",
     "@anthropic-ai/vertex-sdk": "0.21.0",
     "@google/genai": "2.30.0",
     "@opentelemetry/api": "1.9.1",
     "@sentry/core": "11.8.0",
     "@sentry/server-utils": "11.8.0",
-    "google-auth-library": "11.3.0",
+    "google-auth-library": "11.3.1",
     "js-tiktoken": "1.0.21",
-    "openai": "7.34.0",
+    "openai": "7.38.0",
     "openaiv4": "npm:openai@4.104.0",
     "zod": "4.6.7"
   },

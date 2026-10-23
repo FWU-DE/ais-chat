@@ -24,7 +24,7 @@
     "@ais-chat/ai-core": "workspace:*",
     "@ais-chat/api-database": "workspace:*",
     "@ais-chat/shared-core": "workspace:*",
-    "@dotenvx/dotenvx": "2.36.0",
+    "@dotenvx/dotenvx": "2.38.0",
     "@fastify/cors": "11.3.1",
     "@fastify/multipart": "10.1.4",
     "@fastify/swagger": "9.9.2",
@@ -39,7 +39,7 @@
     "@t3-oss/env-core": "0.13.11",
     "fastify": "5.12.7",
     "fastify-graceful-shutdown": "5.0.0",
-    "openai": "7.34.0",
+    "openai": "7.38.0",
     "pino": "10.4.0",
     "zod": "4.6.7"
   },
