@@ -1,13 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import JXG from 'jsxgraph';
+import type { PlotSpec } from '@/utils/plot/plot-spec';
 import { logError, logWarning } from '@shared/logging/logging';
+import JXG from 'jsxgraph';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createBoard, type ViewState } from './jsxgraph-board';
 import { registerLivePlot, releaseOverflow, type LivePlot } from './live-plots';
 import { PlotFrame } from './plot-frame';
+import { registerRenderedPlot } from './rendered-plots';
 import { getSliderDefinitions } from './slider-definitions';
-import type { PlotSpec } from '@/utils/plot/plot-spec';
 
 const ACTIVATE_DELAY_MS = 150;
 
@@ -90,6 +91,9 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
     setSliderRef.current = setSlider;
     boardRef.current = board;
     const unregister = registerLivePlot(livePlot);
+    const svg = boardDiv.querySelector('svg');
+    const unregisterRendered =
+      svg === null ? undefined : registerRenderedPlot(spec, svg as SVGSVGElement);
 
     const resizeObserver = new ResizeObserver(() => {
       if (boardDiv.clientWidth > 0 && boardDiv.clientHeight > 0) {
@@ -100,6 +104,7 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
 
     return () => {
       resizeObserver.disconnect();
+      unregisterRendered?.();
       setSliderRef.current = undefined;
       boardRef.current = undefined;
       if (frameRef.current !== null) {
