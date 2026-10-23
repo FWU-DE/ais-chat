@@ -35,9 +35,11 @@ import React from 'react';
 export function SettingsDialog({
   open,
   onOpenChange,
+  restoreFocusRef,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  restoreFocusRef?: React.RefObject<HTMLElement | null>;
 }) {
   const t = useTranslations('settings');
   const toast = useToast();
@@ -86,6 +88,7 @@ export function SettingsDialog({
           settings={draftSettings}
           speechVoices={speechVoices}
           onChange={setDraftSettings}
+          restoreFocusRef={restoreFocusRef}
         />
       )}
     </Dialog>
@@ -96,16 +99,26 @@ function SettingsDialogContent({
   settings,
   speechVoices,
   onChange,
+  restoreFocusRef,
 }: {
   settings: UserSettings;
   speechVoices: SpeechVoice[];
   onChange: (settings: UserSettings) => void;
+  restoreFocusRef?: React.RefObject<HTMLElement | null>;
 }) {
   const t = useTranslations('settings');
   const tCommon = useTranslations('common');
 
   return (
-    <DialogContent className="max-w-[min(42rem,calc(100%-2rem))]">
+    <DialogContent
+      className="max-w-[min(42rem,calc(100%-2rem))]"
+      // Opened programmatically, so Radix has no trigger to restore focus to.
+      onCloseAutoFocus={(event) => {
+        if (!restoreFocusRef?.current) return;
+        event.preventDefault();
+        restoreFocusRef.current.focus();
+      }}
+    >
       <DialogHeader>
         <DialogTitle>{t('title')}</DialogTitle>
         <DialogDescription className="sr-only">{t('title')}</DialogDescription>
