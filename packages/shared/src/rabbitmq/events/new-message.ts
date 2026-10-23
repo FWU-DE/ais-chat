@@ -1,8 +1,29 @@
-import { UserAndContext } from '@/auth/types';
-import { ConversationModel } from '@shared/db/types';
-import { CharacterSelectModel, LearningScenarioSelectModel } from '@shared/db/schema';
+import crypto from 'crypto';
 import { NewChatMessageEventType } from '../schema';
-import { hashWithoutSalt } from '@/utils/crypto';
+
+type UserAndContext = {
+  id: string;
+  userRole: string;
+  schoolIds?: string[];
+  federalState: { id: string };
+};
+
+type ConversationModel = {
+  id: string;
+  characterId: string | null;
+};
+
+type LearningScenarioSelectModel = {
+  id: string;
+};
+
+type CharacterSelectModel = {
+  id: string;
+};
+
+function hashWithoutSalt(data: string) {
+  return crypto.createHash('sha256').update(data).digest('hex');
+}
 
 type CommonProps = {
   user: UserAndContext;

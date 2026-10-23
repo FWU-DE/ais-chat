@@ -1,9 +1,9 @@
 import { getUser, userHasCompletedTraining } from '@/auth/utils';
 import { checkProductAccess } from '@/utils/vidis/access';
 import { dbGetFederalStateWithDecryptedApiKeyWithResult } from '@shared/db/functions/federal-state';
-import { sendRabbitmqEvent } from '@/rabbitmq/send';
-import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
-import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
+import { sendRabbitmqEvent } from '@shared/rabbitmq/send';
+import { constructTokenBudgetExceededEvent } from '@shared/rabbitmq/events/budget-exceeded';
+import { constructNewMessageEvent } from '@shared/rabbitmq/events/new-message';
 import {
   dbInsertChatContent,
   dbGetOrCreateConversation,

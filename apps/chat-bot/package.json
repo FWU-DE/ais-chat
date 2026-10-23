@@ -74,7 +74,6 @@
     "oauth4webapi": "3.8.8",
     "pg": "8.23.1",
     "qrcode.react": "4.2.0",
-    "rabbitmq-client": "5.1.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-hook-form": "7.90.0",

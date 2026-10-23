@@ -10,10 +10,12 @@ export const env = createEnv({
     apiKey: z.string(),
     apiUrl: z.string(),
     encryptionKey: z.string(),
+    rabbitmqUri: z.string().optional(),
   },
   runtimeEnv: {
     apiKey: process.env.API_KEY,
     apiUrl: process.env.API_URL,
     encryptionKey: process.env.ENCRYPTION_KEY,
+    rabbitmqUri: process.env.RABBITMQ_URI,
   },
 });

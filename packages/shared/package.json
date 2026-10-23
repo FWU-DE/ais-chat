@@ -39,6 +39,7 @@
     "nanoid": "6.0.2",
     "next": "16.4.2",
     "pg": "8.23.1",
+    "rabbitmq-client": "5.1.0",
     "unstorage": "1.17.6",
     "uuid": "14.0.3",
     "viem": "2.57.7",
