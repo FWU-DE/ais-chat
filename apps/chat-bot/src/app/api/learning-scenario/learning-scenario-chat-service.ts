@@ -1,7 +1,4 @@
 import { getUserAndContextByUserId } from '@/auth/utils';
-import { constructTokenBudgetExceededEvent } from '@shared/rabbitmq/events/budget-exceeded';
-import { constructNewMessageEvent } from '@shared/rabbitmq/events/new-message';
-import { sendRabbitmqEvent } from '@shared/rabbitmq/send';
 import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
 import { createTextStream } from '@/utils/streaming';
 import { checkProductAccess } from '@/utils/vidis/access';
@@ -20,6 +17,9 @@ import {
 } from '@shared/db/functions/learning-scenario';
 import { NotFoundError } from '@shared/error';
 import { logError } from '@shared/logging';
+import { constructTokenBudgetExceededEvent } from '@shared/rabbitmq/events/budget-exceeded';
+import { constructNewMessageEvent } from '@shared/rabbitmq/events/new-message';
+import { sendRabbitmqEvent } from '@shared/rabbitmq/send';
 import {
   sharedChatHasExpired,
   sharedLearningScenarioChatHasReachedTokenPointsLimit,
@@ -114,13 +114,7 @@ export async function sendLearningScenarioMessage({
   ]);
 
   if (tokenPointsLimitReached) {
-    await sendRabbitmqEvent(
-      constructTokenBudgetExceededEvent({
-        anonymous: true,
-        user: teacherUserAndContext,
-        sharedChat: learningScenario,
-      }),
-    );
+    await sendRabbitmqEvent(constructTokenBudgetExceededEvent({ user: teacherUserAndContext }));
   }
 
   if (sharedChatLimitReached || tokenPointsLimitReached) {

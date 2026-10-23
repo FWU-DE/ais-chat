@@ -6,15 +6,15 @@ import {
 } from '@/app/api/chat/speech-service';
 import { UserAndContext } from '@/auth/types';
 import { getUserAndContextByUserId } from '@/auth/utils';
-import { constructTokenBudgetExceededEvent } from '@shared/rabbitmq/events/budget-exceeded';
-import { constructNewMessageEvent } from '@shared/rabbitmq/events/new-message';
-import { sendRabbitmqEvent } from '@shared/rabbitmq/send';
 import { checkProductAccess } from '@/utils/vidis/access';
 import { TokenPointsExceededError } from '@ais-chat/ai-core';
 import { requireTeacherRole } from '@shared/auth/authorization-service';
 import { dbUpdateTokenUsageByCharacterChatId } from '@shared/db/functions/character';
 import { dbUpdateTokenUsageBySharedLearningScenarioId } from '@shared/db/functions/learning-scenario';
 import { ForbiddenError, NotFoundError } from '@shared/error';
+import { constructTokenBudgetExceededEvent } from '@shared/rabbitmq/events/budget-exceeded';
+import { constructNewMessageEvent } from '@shared/rabbitmq/events/new-message';
+import { sendRabbitmqEvent } from '@shared/rabbitmq/send';
 import {
   sharedCharacterChatHasReachedTokenPointsLimit,
   sharedChatHasExpired,
@@ -57,13 +57,7 @@ export async function generateSharedChatSpeech({
   ]);
 
   if (userLimitReached) {
-    await sendRabbitmqEvent(
-      constructTokenBudgetExceededEvent(
-        entityType === 'character'
-          ? { anonymous: true, user: teacher, character: entity as SharedChatCharacter }
-          : { anonymous: true, user: teacher, sharedChat: entity as SharedChatLearningScenario },
-      ),
-    );
+    await sendRabbitmqEvent(constructTokenBudgetExceededEvent({ user: teacher }));
   }
 
   if (sharedChatLimitReached || userLimitReached) {
@@ -196,13 +190,7 @@ export async function generateSharedChatSpeechStream({
   ]);
 
   if (userLimitReached) {
-    await sendRabbitmqEvent(
-      constructTokenBudgetExceededEvent(
-        entityType === 'character'
-          ? { anonymous: true, user: teacher, character: entity as SharedChatCharacter }
-          : { anonymous: true, user: teacher, sharedChat: entity as SharedChatLearningScenario },
-      ),
-    );
+    await sendRabbitmqEvent(constructTokenBudgetExceededEvent({ user: teacher }));
   }
 
   if (sharedChatLimitReached || userLimitReached) {

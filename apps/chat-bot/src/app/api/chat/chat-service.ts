@@ -1,7 +1,4 @@
 import { UserAndContext } from '@/auth/types';
-import { constructTokenBudgetExceededEvent } from '@shared/rabbitmq/events/budget-exceeded';
-import { constructNewMessageEvent } from '@shared/rabbitmq/events/new-message';
-import { sendRabbitmqEvent } from '@shared/rabbitmq/send';
 import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
 import { convertMessageModelToMessage } from '@/utils/chat/messages';
 import { deepEqual } from '@/utils/object';
@@ -49,6 +46,9 @@ import {
   getLearningScenarioForExistingConversation,
 } from '@shared/learning-scenarios/learning-scenario-service';
 import { logError } from '@shared/logging';
+import { constructTokenBudgetExceededEvent } from '@shared/rabbitmq/events/budget-exceeded';
+import { constructNewMessageEvent } from '@shared/rabbitmq/events/new-message';
+import { sendRabbitmqEvent } from '@shared/rabbitmq/send';
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
 import { ingestWebContent } from '../rag/ingestWebContent';
 import { resolveAgentNameForTracing } from '../utils/agent-name';
@@ -312,13 +312,7 @@ export async function sendChatMessage({
 
   // Check budget limit after we have the conversation for proper event tracking
   if (await userHasReachedTokenPointsLimit({ user })) {
-    await sendRabbitmqEvent(
-      constructTokenBudgetExceededEvent({
-        anonymous: false,
-        user,
-        conversation,
-      }),
-    );
+    await sendRabbitmqEvent(constructTokenBudgetExceededEvent({ user }));
     return createErrorResult(new TokenPointsExceededError());
   }
 
