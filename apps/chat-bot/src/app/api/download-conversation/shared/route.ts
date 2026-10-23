@@ -1,14 +1,13 @@
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
-import { isImageFile } from '@/utils/files/generic';
 import { checkInviteCodeForExport } from '@shared/conversation/conversation-service';
 import { dbGetFilesInIds } from '@shared/db/functions/files';
 import { type FileModel } from '@shared/db/schema';
 import { ForbiddenError } from '@shared/error';
-import { getReadOnlySignedUrl } from '@shared/s3';
 import { formatDateToDayMonthYear } from '@shared/utils/date';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { isSharedChatFileMetadata, verify } from '../../shared-chat';
+import { serializeMessages } from '../serialize-messages';
 
 const requestSchema = z.object({
   messages: z.array(
@@ -54,35 +53,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return handleErrorInRoute(error);
   }
-}
-
-async function serializeMessages({
-  messages,
-  fileMapping,
-}: {
-  messages: z.infer<typeof requestSchema>['messages'];
-  fileMapping: Map<string, FileModel[]>;
-}) {
-  return Promise.all(
-    messages.map(async ({ id, role, content }) => ({
-      role,
-      content,
-      images: await Promise.all(
-        (fileMapping.get(id) ?? [])
-          .filter((file) => isImageFile(file.name))
-          .map(async (file) => ({
-            alt: file.name,
-            url: await getReadOnlySignedUrl({
-              key: `message_attachments/${file.id}`,
-              filename: file.name,
-              contentType: file.type,
-              attachment: false,
-              options: { expiresIn: 300 },
-            }),
-          })),
-      ),
-    })),
-  );
 }
 
 async function getSharedChatFileMapping({

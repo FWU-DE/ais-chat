@@ -1,15 +1,14 @@
 import { getUser } from '@/auth/utils';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
-import { isImageFile } from '@/utils/files/generic';
 import {
   getConversationAndMessagesForExport,
   getConversationMessageForExport,
 } from '@shared/conversation/conversation-service';
 import { dbGetModelByName } from '@shared/db/functions/llm-model';
 import { type ConversationModel } from '@shared/db/types';
-import { getReadOnlySignedUrl } from '@shared/s3';
 import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
+import { serializeMessages } from './serialize-messages';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,35 +76,6 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     return handleErrorInRoute(error);
   }
-}
-
-async function serializeMessages({
-  messages,
-  fileMapping,
-}: {
-  messages: Array<{ id: string; role: string; content: string }>;
-  fileMapping: Map<string, Array<{ id: string; name: string; type: string }>>;
-}) {
-  return Promise.all(
-    messages.map(async ({ id, role, content }) => ({
-      role,
-      content,
-      images: await Promise.all(
-        (fileMapping.get(id) ?? [])
-          .filter((file) => isImageFile(file.name))
-          .map(async (file) => ({
-            alt: file.name,
-            url: await getReadOnlySignedUrl({
-              key: `message_attachments/${file.id}`,
-              filename: file.name,
-              contentType: file.type,
-              attachment: false,
-              options: { expiresIn: 300 },
-            }),
-          })),
-      ),
-    })),
-  );
 }
 
 function generateFileName({
