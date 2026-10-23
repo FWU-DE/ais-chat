@@ -45,26 +45,36 @@ export function SettingsDialog({
 
   const [draftSettings, setDraftSettings] = React.useState<UserSettings>(settings);
   const [wasOpen, setWasOpen] = React.useState(open);
+  // Settings of a save that is still in flight; the provider does not know them yet.
+  const [pendingSettings, setPendingSettings] = React.useState<UserSettings | null>(null);
 
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      setDraftSettings(settings);
+      setDraftSettings(pendingSettings ?? settings);
     }
   }
 
   async function handleOpenChange(nextOpen: boolean) {
     onOpenChange(nextOpen);
-    if (nextOpen || deepEqual(draftSettings, settings)) {
+    if (nextOpen || deepEqual(draftSettings, pendingSettings ?? settings)) {
       return;
     }
 
-    const result = await updateUserSettingsAction({ settings: draftSettings });
-    if (result.success) {
-      setSettings(result.value);
-      toast.success(t('toasts.save-success'));
-    } else {
+    setPendingSettings(draftSettings);
+    try {
+      const result = await updateUserSettingsAction({ settings: draftSettings });
+      if (result.success) {
+        setSettings(result.value);
+        toast.success(t('toasts.save-success'));
+      } else {
+        toast.error(t('toasts.save-error'));
+      }
+    } catch {
+      // The server action rejects on transport failures, e.g. a lost connection.
       toast.error(t('toasts.save-error'));
+    } finally {
+      setPendingSettings(null);
     }
   }
 

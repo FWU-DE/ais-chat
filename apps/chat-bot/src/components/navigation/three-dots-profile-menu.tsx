@@ -65,7 +65,10 @@ export function ThreeDotsProfileMenu({
           onOpenSettings={() => setIsSettingsOpen(true)}
         />
       </DropdownMenuContent>
-      <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+      {/* Public shared chats render this menu without a UserSettingsProvider. */}
+      {userAndContext !== undefined && (
+        <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+      )}
     </DropdownMenu>
   );
 }
