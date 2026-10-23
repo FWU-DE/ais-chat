@@ -1,4 +1,6 @@
 import { createBoard } from '@/components/chat/plot/jsxgraph-board';
+import { renderPlotPng } from '@/components/chat/plot/png-export';
+import { getRenderedPlot } from '@/components/chat/plot/rendered-plots';
 import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
 import { parsePlotSpec, type BoundingBox } from '@/utils/plot/plot-spec';
 import {
@@ -187,31 +189,6 @@ function getPlotImageDimensions(boundingBox: BoundingBox) {
   };
 }
 
-async function svgToPng(svg: ArrayBuffer, width: number, height: number): Promise<ArrayBuffer> {
-  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
-  try {
-    const image = new Image();
-    image.src = url;
-    await image.decode();
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    canvas.getContext('2d')?.drawImage(image, 0, 0, width, height);
-
-    const png = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (blob) =>
-          blob === null ? reject(new Error('Failed to render plot PNG fallback')) : resolve(blob),
-        'image/png',
-      );
-    });
-    return png.arrayBuffer();
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
 const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
   const plotCodeBlocks: Array<{ value: string }> = [];
   visit(root, 'code', (node) => {
@@ -231,6 +208,27 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
         return;
       }
 
+      const renderedPlot = getRenderedPlot(parsed.spec);
+      if (renderedPlot !== undefined) {
+        const { width: renderedWidth, height: renderedHeight } =
+          renderedPlot.getBoundingClientRect();
+        const width = PLOT_IMAGE_WIDTH;
+        const height = Math.round(
+          Math.min(
+            PLOT_IMAGE_MAX_HEIGHT,
+            Math.max(PLOT_IMAGE_MIN_HEIGHT, width * (renderedHeight / renderedWidth)),
+          ),
+        );
+        const png = await renderPlotPng(renderedPlot);
+        images.set(value, {
+          type: 'png',
+          width,
+          height,
+          data: await png.arrayBuffer(),
+        });
+        return;
+      }
+
       const { width, height } = getPlotImageDimensions(
         parsed.spec.board.boundingBox ?? DEFAULT_PLOT_BOUNDING_BOX,
       );
@@ -241,29 +239,21 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
       let board: JXG.Board | undefined;
       try {
         board = createBoard(container, parsed.spec, undefined, [], false).board;
+        // sync jsx graph rendering with the browser's rendering cycle
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        board.fullUpdate();
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
         const svg = container.querySelector('svg');
         if (svg === null) {
           return;
         }
 
-        const exportSvg = svg.cloneNode(true) as SVGSVGElement;
-        // JSXGraph adds an empty, hidden foreignObject. It taints browser canvases during SVG
-        // rasterization even though it contains no plot content.
-        exportSvg
-          .querySelectorAll('foreignObject')
-          .forEach((foreignObject) => foreignObject.remove());
-        exportSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-        exportSvg.setAttribute('width', String(width));
-        exportSvg.setAttribute('height', String(height));
-        const data = new TextEncoder().encode(
-          new XMLSerializer().serializeToString(exportSvg),
-        ).buffer;
+        const png = await renderPlotPng(svg);
         images.set(value, {
-          type: 'svg',
+          type: 'png',
           width,
           height,
-          data,
-          fallback: await svgToPng(data, width, height),
+          data: await png.arrayBuffer(),
         });
       } finally {
         if (board !== undefined) {
