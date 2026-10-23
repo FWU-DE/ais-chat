@@ -9,7 +9,9 @@ import deleteConversation, {
 } from '@shared/conversation/conversation-service';
 import { dbGetRelatedFiles } from '@shared/db/functions/files';
 import { dbUpdateUserTermsVersion } from '@shared/db/functions/user';
+import { userSettingsSchema } from '@shared/db/schema';
 import { trackInfoBannerView } from '@shared/info-banners/info-banner-service';
+import { updateUserSettings } from '@shared/users/user-settings-service';
 
 export async function deleteConversationAction({ conversationId }: { conversationId: string }) {
   const { user } = await requireAuth();
@@ -73,4 +75,13 @@ export async function trackInfoBannerViewAction(infoBannerId: string): Promise<v
     infoBannerId,
     userId: user.id,
   });
+}
+
+export async function updateUserSettingsAction({ settings }: { settings: unknown }) {
+  const { user } = await requireAuth();
+
+  return runServerAction('updateUserSettingsAction', async () => {
+    const parsedSettings = userSettingsSchema.parse(settings);
+    return updateUserSettings({ userId: user.id, settings: parsedSettings });
+  })();
 }

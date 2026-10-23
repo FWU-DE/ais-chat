@@ -76,6 +76,18 @@
   "errors": {
     "no-api-key": "Dem Bundesland wurde noch kein API-Schlüssel zugewiesen."
   },
+  "settings": {
+    "menu-label": "Einstellungen",
+    "title": "Einstellungen",
+    "default-voice-label": "Standardstimme der Sprachausgabe",
+    "voice-placeholder": "Stimme auswählen",
+    "speech-only-label": "Antworten im Chat primär als Audio",
+    "speech-only-tooltip": "Die Antworten von AIS.chat werden initial nur als Audio bereitgestellt. Über ein Text-Icon kann bei Bedarf der Text angezeigt werden.",
+    "toasts": {
+      "save-success": "Die Einstellungen wurden gespeichert.",
+      "save-error": "Die Einstellungen konnten nicht gespeichert werden."
+    }
+  },
   "info-banner": {
     "close": "Hinweis schließen"
   },

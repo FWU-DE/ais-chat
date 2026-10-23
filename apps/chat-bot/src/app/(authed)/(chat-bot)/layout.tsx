@@ -14,7 +14,10 @@ import { SidebarProvider } from '@ais-chat/ui/components/sidebar';
 import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
 import { getFederalStateById } from '@shared/federal-states/federal-state-service';
 import { getActiveBannersForUser } from '@shared/info-banners/info-banner-service';
-import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
+import {
+  getDefaultModelNameByFederalStateId,
+  getSpeechModelVoices,
+} from '@shared/llm-models/llm-model-service';
 import { logError } from '@shared/logging';
 import {
   getMaxBudgetInCentByUser,
@@ -40,6 +43,7 @@ export default async function ChatLayout({ children }: { children: React.ReactNo
     hasCompletedTraining,
     activeBanners,
     settings,
+    speechVoices,
   ] = await Promise.all([
     getFederalStateById(user.federalState.id),
     dbGetLlmModelsByFederalStateId({ federalStateId: user.federalState.id }),
@@ -54,6 +58,9 @@ export default async function ChatLayout({ children }: { children: React.ReactNo
       logError('Failed to load user settings', error);
       return undefined;
     }),
+    user.federalState.featureToggles.isSpeechModelEnabled === true
+      ? getSpeechModelVoices()
+      : Promise.resolve([]),
   ]);
 
   const productAccess = checkProductAccess({ ...user, hasCompletedTraining });
@@ -72,7 +79,7 @@ export default async function ChatLayout({ children }: { children: React.ReactNo
   return (
     <SessionWatcher redirectTo="/api/auth/logout-callback">
       <FederalStateProvider federalState={federalState}>
-        <UserSettingsProvider settings={settings ?? {}}>
+        <UserSettingsProvider settings={settings ?? {}} speechVoices={speechVoices}>
           <SidebarProvider className="min-h-0">
             <LlmModelsProvider
               models={models}
