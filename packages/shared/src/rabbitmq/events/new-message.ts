@@ -1,5 +1,5 @@
-import crypto from 'crypto';
 import { NewChatMessageEventType } from '../schema';
+import { hashWithoutSalt } from '../utils';
 
 type UserAndContext = {
   id: string;
@@ -20,10 +20,6 @@ type LearningScenarioSelectModel = {
 type CharacterSelectModel = {
   id: string;
 };
-
-function hashWithoutSalt(data: string) {
-  return crypto.createHash('sha256').update(data).digest('hex');
-}
 
 type CommonProps = {
   user: UserAndContext;
