@@ -1,6 +1,6 @@
 import { createBoard } from '@/components/chat/plot/jsxgraph-board';
 import { renderPlotPng } from '@/components/chat/plot/png-export';
-import { getRenderedPlot } from '@/components/chat/plot/rendered-plots';
+import { getRenderedPlot, getRenderedPlotId } from '@/components/chat/plot/rendered-plots';
 import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
 import { parsePlotSpec, type BoundingBox } from '@/utils/plot/plot-spec';
 import {
@@ -42,6 +42,7 @@ const CODE_BLOCK_BACKGROUND = '011627';
 const CODE_BLOCK_HEADER_BACKGROUND = 'F1F5F9';
 const CODE_BLOCK_HEADER_TEXT_COLOR = '000000';
 const plotCodeNodes = new WeakSet<object>();
+const plotExportMetadata = new WeakMap<object, { imageKey: string; plotId?: string }>();
 
 const paddedCodeBlockPlugin: RemarkDocxPlugin = (() => {
   const highlightCodeBlocks = shikiPlugin({ theme: 'night-owl' });
@@ -190,16 +191,21 @@ function getPlotImageDimensions(boundingBox: BoundingBox) {
 }
 
 const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
-  const plotCodeBlocks: Array<{ value: string }> = [];
+  const plotCodeBlocks: Array<{ value: string; imageKey: string; plotId?: string }> = [];
   visit(root, 'code', (node) => {
     if (plotCodeNodes.has(node)) {
-      plotCodeBlocks.push(node);
+      const metadata = plotExportMetadata.get(node);
+      plotCodeBlocks.push({
+        value: node.value,
+        imageKey: metadata?.imageKey ?? `plot:${node.value}`,
+        plotId: metadata?.plotId,
+      });
     }
   });
 
   await Promise.all(
-    plotCodeBlocks.map(async ({ value }) => {
-      if (images.has(value)) {
+    plotCodeBlocks.map(async ({ value, imageKey, plotId }) => {
+      if (images.has(imageKey)) {
         return;
       }
 
@@ -208,19 +214,18 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
         return;
       }
 
-      const renderedPlot = getRenderedPlot(parsed.spec);
+      const renderedPlot = getRenderedPlot(parsed.spec, plotId);
       if (renderedPlot !== undefined) {
         const { width: renderedWidth, height: renderedHeight } =
           renderedPlot.getBoundingClientRect();
-        const width = PLOT_IMAGE_WIDTH;
-        const height = Math.round(
-          Math.min(
-            PLOT_IMAGE_MAX_HEIGHT,
-            Math.max(PLOT_IMAGE_MIN_HEIGHT, width * (renderedHeight / renderedWidth)),
-          ),
+        const scale = Math.min(
+          PLOT_IMAGE_WIDTH / renderedWidth,
+          PLOT_IMAGE_MAX_HEIGHT / renderedHeight,
         );
+        const width = Math.round(renderedWidth * scale);
+        const height = Math.round(renderedHeight * scale);
         const png = await renderPlotPng(renderedPlot);
-        images.set(value, {
+        images.set(imageKey, {
           type: 'png',
           width,
           height,
@@ -249,7 +254,7 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
         }
 
         const png = await renderPlotPng(svg);
-        images.set(value, {
+        images.set(imageKey, {
           type: 'png',
           width,
           height,
@@ -265,32 +270,42 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
   );
 
   return {
-    code: (node, context) =>
-      !plotCodeNodes.has(node) || context.images.get(node.value) === undefined
+    code: (node, context) => {
+      const imageKey = plotExportMetadata.get(node)?.imageKey;
+      return !plotCodeNodes.has(node) || imageKey === undefined || !context.images.has(imageKey)
         ? null
-        : new Paragraph({ children: context.render([{ type: 'image', url: node.value }]) }),
+        : new Paragraph({ children: context.render([{ type: 'image', url: imageKey }]) });
+    },
   };
 };
 
-function preparePlotCodeBlocks(root: Root) {
+function preparePlotCodeBlocks(root: Root, messageId?: string) {
+  let plotIndex = 0;
   visit(root, 'code', (node) => {
     if (node.lang !== PLOT_LANGUAGE) {
       return;
     }
 
+    const plotId = messageId === undefined ? undefined : getRenderedPlotId(messageId, plotIndex);
+    plotIndex += 1;
     node.lang = 'json';
     plotCodeNodes.add(node);
+    plotExportMetadata.set(node, {
+      imageKey: plotId ?? `plot:${node.value}`,
+      plotId,
+    });
   });
 }
 
 export type ConversationExportMessage = {
+  id: string;
   role: string;
   content: string;
   images: Array<{ alt: string; url: string }>;
 };
 
 export type ConversationExport = {
-  markdownBlocks: string[];
+  markdownBlocks: Array<{ markdown: string; messageId?: string }>;
 };
 
 export function formatConversationExport({
@@ -309,24 +324,27 @@ export function formatConversationExport({
     timeStyle: 'short',
     timeZone: 'Europe/Berlin',
   }).format(new Date(createdAt));
-  const markdownBlocks: string[] = [];
+  const markdownBlocks: ConversationExport['markdownBlocks'] = [];
 
   if (conversationTitle !== undefined) {
-    markdownBlocks.push(`# Konversation: ${conversationTitle}`);
+    markdownBlocks.push({ markdown: `# Konversation: ${conversationTitle}` });
   }
-  markdownBlocks.push(`Erstellt am: ${formattedDate}`);
+  markdownBlocks.push({ markdown: `Erstellt am: ${formattedDate}` });
 
-  for (const { role, content, images } of messages) {
-    markdownBlocks.push(PARAGRAPH_SPACER);
+  for (const { id, role, content, images } of messages) {
+    markdownBlocks.push({ markdown: PARAGRAPH_SPACER });
     const messageHeading = role === 'user' ? 'Nutzer/in' : 'AIS.chat';
-    markdownBlocks.push(`### ${messageHeading}:`, content);
-    markdownBlocks.push(...images.map(({ alt, url }) => `![${alt}](${url})`));
+    markdownBlocks.push(
+      { markdown: `### ${messageHeading}:` },
+      { markdown: content, messageId: id },
+    );
+    markdownBlocks.push(...images.map(({ alt, url }) => ({ markdown: `![${alt}](${url})` })));
   }
 
   markdownBlocks.push(
-    PARAGRAPH_SPACER,
-    PARAGRAPH_SPACER,
-    `#### Generiert von AIS.chat unter Nutzung von ${modelName}`,
+    { markdown: PARAGRAPH_SPACER },
+    { markdown: PARAGRAPH_SPACER },
+    { markdown: `#### Generiert von AIS.chat unter Nutzung von ${modelName}` },
   );
 
   return { markdownBlocks };
@@ -414,9 +432,9 @@ const processor = unified()
 
 export async function markdownToDocxBlob(exportDocument: ConversationExport): Promise<Blob> {
   const roots = await Promise.all(
-    exportDocument.markdownBlocks.map(async (markdownBlock) => {
-      const parsedRoot = processor.parse(markdownBlock) as Root;
-      preparePlotCodeBlocks(parsedRoot);
+    exportDocument.markdownBlocks.map(async ({ markdown, messageId }) => {
+      const parsedRoot = processor.parse(markdown) as Root;
+      preparePlotCodeBlocks(parsedRoot, messageId);
       return (await processor.run(parsedRoot)) as Root;
     }),
   );
