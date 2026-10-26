@@ -288,6 +288,7 @@ jobs:
             --config=smart-report/merge.config.ts smart-report/blobs
 
       - name: Upload aggregated smart report
+        id: upload-smart-report
         uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -309,6 +310,7 @@ jobs:
         uses: qa-gary-parker/playwright-smart-reporter@v4.0.0
         with:
           data: apps/chat-bot/smart-report/smart-report-data.json
+          report-url: ${{ steps.upload-smart-report.outputs.artifact-url }}
 
       - name: Print ais-chat-api logs
         if: always()

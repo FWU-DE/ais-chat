@@ -77,6 +77,13 @@ Only copy the `blob-report/` dirs of the apps whose tests you actually ran — m
 command above just ignores a `cp` that finds nothing. This writes `smart-report/smart-report.html` with
 the combined results.
 
+**Known limitation — code coverage:** Turbopack (used for this app's production build) emits source maps
+as [index/sectioned maps](https://tc39.es/source-map/#index-map) (a top-level `sections` array instead of
+a flat `mappings` string). `playwright-smart-reporter`'s coverage loader (as of v4.0.0) only accepts flat
+maps and rejects these with `not a version 3 source map`, so coverage in the report is measured against
+the generated/minified chunks, not the original source — the Coverage view's numbers and file list are not
+meaningful until upstream adds index-map support.
+
 # Load Testing
 
 ## Run load tests locally
