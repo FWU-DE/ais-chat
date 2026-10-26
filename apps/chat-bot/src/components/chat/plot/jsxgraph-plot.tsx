@@ -12,15 +12,7 @@ import { getSliderDefinitions } from './slider-definitions';
 
 const ACTIVATE_DELAY_MS = 150;
 
-export default function JsxGraphPlot({
-  spec,
-  title,
-  plotId,
-}: {
-  spec: PlotSpec;
-  title?: string;
-  plotId?: string;
-}) {
+export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: string }) {
   // Callback ref: fullscreen moves the container between the inline figure and the dialog,
   // and the dialog's content mounts a render after it opens, so this reacts to the real node.
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
@@ -101,7 +93,7 @@ export default function JsxGraphPlot({
     const unregister = registerLivePlot(livePlot);
     const svg = boardDiv.querySelector('svg');
     const unregisterRendered =
-      svg === null ? undefined : registerRenderedPlot(spec, svg as SVGSVGElement, plotId);
+      svg === null ? undefined : registerRenderedPlot(spec, svg as SVGSVGElement);
 
     const resizeObserver = new ResizeObserver(() => {
       if (boardDiv.clientWidth > 0 && boardDiv.clientHeight > 0) {
@@ -131,7 +123,7 @@ export default function JsxGraphPlot({
       container.replaceChildren();
     };
     // Toggling fullscreen moves the board to a new container; view state survives via viewStateRef.
-  }, [spec, isActive, livePlot, resetCount, container, isFullscreen, plotId]);
+  }, [spec, isActive, livePlot, resetCount, container, isFullscreen]);
 
   // Rebuilds the board from the spec: view, slider values and dragged elements are reset.
   function handleReset() {

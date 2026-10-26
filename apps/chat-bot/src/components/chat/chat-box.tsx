@@ -203,7 +203,7 @@ export function ChatBox({
 
   const messageContent = (
     <PlotStreamingContext.Provider value={status === 'streaming' && isLastNonUser}>
-      <MarkdownDisplay messageId={message.id}>{message.content}</MarkdownDisplay>
+      <MarkdownDisplay>{message.content}</MarkdownDisplay>
     </PlotStreamingContext.Provider>
   );
 

@@ -12,7 +12,6 @@ import { JSXGRAPH_PLOT_HNAME, rehypeJsxGraphPlot } from './plot/rehype-jsxgraph-
 type MarkdownDisplayProps = {
   children: string;
   className?: string;
-  messageId?: string;
   /** Per-element Tailwind class overrides, merged over the default styles. */
   elementClassName?: { [Key in keyof Components]?: string };
 };
@@ -24,7 +23,6 @@ const KATEX_RENDER_OPTIONS = {
 export default function MarkdownDisplay({
   children,
   className,
-  messageId,
   elementClassName,
 }: MarkdownDisplayProps) {
   // remove the top-padding for the immediate sibling element following an hr to ensure the hr has symmetric top/bottom padding
@@ -40,10 +38,7 @@ export default function MarkdownDisplay({
     >
       <Markdown
         remarkPlugins={[RemarkMathPlugin, remarkGfm]}
-        rehypePlugins={[
-          [RehypeKatex, KATEX_RENDER_OPTIONS],
-          [rehypeJsxGraphPlot, { messageId }],
-        ]}
+        rehypePlugins={[[RehypeKatex, KATEX_RENDER_OPTIONS], rehypeJsxGraphPlot]}
         components={{
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           h1({ children, className, node, ...props }) {

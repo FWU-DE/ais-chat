@@ -1,6 +1,6 @@
 import { createBoard } from '@/components/chat/plot/jsxgraph-board';
 import { renderPlotPng } from '@/components/chat/plot/png-export';
-import { getRenderedPlot, getRenderedPlotId } from '@/components/chat/plot/rendered-plots';
+import { getRenderedPlot } from '@/components/chat/plot/rendered-plots';
 import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
 import { parsePlotSpec, type BoundingBox } from '@/utils/plot/plot-spec';
 import {
@@ -42,7 +42,7 @@ const CODE_BLOCK_BACKGROUND = '011627';
 const CODE_BLOCK_HEADER_BACKGROUND = 'F1F5F9';
 const CODE_BLOCK_HEADER_TEXT_COLOR = '000000';
 const plotCodeNodes = new WeakSet<object>();
-const plotExportMetadata = new WeakMap<object, { imageKey: string; plotId?: string }>();
+const plotExportMetadata = new WeakMap<object, { imageKey: string }>();
 
 const paddedCodeBlockPlugin: RemarkDocxPlugin = (() => {
   const highlightCodeBlocks = shikiPlugin({ theme: 'night-owl' });
@@ -191,20 +191,19 @@ function getPlotImageDimensions(boundingBox: BoundingBox) {
 }
 
 const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
-  const plotCodeBlocks: Array<{ value: string; imageKey: string; plotId?: string }> = [];
+  const plotCodeBlocks: Array<{ value: string; imageKey: string }> = [];
   visit(root, 'code', (node) => {
     if (plotCodeNodes.has(node)) {
       const metadata = plotExportMetadata.get(node);
       plotCodeBlocks.push({
         value: node.value,
         imageKey: metadata?.imageKey ?? `plot:${node.value}`,
-        plotId: metadata?.plotId,
       });
     }
   });
 
   await Promise.all(
-    plotCodeBlocks.map(async ({ value, imageKey, plotId }) => {
+    plotCodeBlocks.map(async ({ value, imageKey }) => {
       if (images.has(imageKey)) {
         return;
       }
@@ -214,7 +213,7 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
         return;
       }
 
-      const renderedPlot = getRenderedPlot(parsed.spec, plotId);
+      const renderedPlot = getRenderedPlot(parsed.spec);
       if (renderedPlot !== undefined) {
         const { width: renderedWidth, height: renderedHeight } =
           renderedPlot.getBoundingClientRect();
@@ -279,24 +278,18 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
   };
 };
 
-function preparePlotCodeBlocks(root: Root, messageId?: string) {
-  let plotIndex = 0;
+function preparePlotCodeBlocks(root: Root) {
   visit(root, 'code', (node) => {
     if (node.lang !== PLOT_LANGUAGE) {
       return;
     }
 
-    const plotId = messageId === undefined ? undefined : getRenderedPlotId(messageId, plotIndex);
-    plotIndex += 1;
-    // Set lang here to json so shikiPlugin renders the code blocks correctly
-    // as it only recognizes json but not jsxgraph-json
     // Set lang here to json so shikiPlugin renders the code blocks correctly
     // as it only recognizes json but not jsxgraph-json
     node.lang = 'json';
     plotCodeNodes.add(node);
     plotExportMetadata.set(node, {
-      imageKey: plotId ?? `plot:${node.value}`,
-      plotId,
+      imageKey: `plot:${node.value}`,
     });
   });
 }
@@ -309,7 +302,7 @@ export type ConversationExportMessage = {
 };
 
 export type ConversationExport = {
-  markdownBlocks: Array<{ markdown: string; messageId?: string }>;
+  markdownBlocks: Array<{ markdown: string }>;
 };
 
 export function formatConversationExport({
@@ -335,13 +328,10 @@ export function formatConversationExport({
   }
   markdownBlocks.push({ markdown: `Erstellt am: ${formattedDate}` });
 
-  for (const { id, role, content, images } of messages) {
+  for (const { role, content, images } of messages) {
     markdownBlocks.push({ markdown: PARAGRAPH_SPACER });
     const messageHeading = role === 'user' ? 'Nutzer/in' : 'AIS.chat';
-    markdownBlocks.push(
-      { markdown: `### ${messageHeading}:` },
-      { markdown: content, messageId: id },
-    );
+    markdownBlocks.push({ markdown: `### ${messageHeading}:` }, { markdown: content });
     markdownBlocks.push(...images.map(({ alt, url }) => ({ markdown: `![${alt}](${url})` })));
   }
 
@@ -436,9 +426,9 @@ const processor = unified()
 
 export async function markdownToDocxBlob(exportDocument: ConversationExport): Promise<Blob> {
   const roots = await Promise.all(
-    exportDocument.markdownBlocks.map(async ({ markdown, messageId }) => {
+    exportDocument.markdownBlocks.map(async ({ markdown }) => {
       const parsedRoot = processor.parse(markdown) as Root;
-      preparePlotCodeBlocks(parsedRoot, messageId);
+      preparePlotCodeBlocks(parsedRoot);
       return (await processor.run(parsedRoot)) as Root;
     }),
   );
