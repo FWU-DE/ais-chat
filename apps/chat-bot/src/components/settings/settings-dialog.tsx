@@ -166,12 +166,13 @@ function SpeechSettingsSection({
   onChange: (settings: UserSettings) => void;
 }) {
   const t = useTranslations('settings');
+  const tSpeech = useTranslations('custom-chat.speech');
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <span className="leading-none">{t('default-voice-label')}</span>
-        <div className="flex items-center gap-2 self-end sm:self-auto">
+        <div className="flex items-center gap-2">
           <Select
             value={settings.defaultSpeechVoice || undefined}
             onValueChange={(value) => onChange({ ...settings, defaultSpeechVoice: value })}
@@ -197,17 +198,19 @@ function SpeechSettingsSection({
         </div>
       </div>
       <Separator />
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2">
           <span className="leading-none">{t('speech-only-label')}</span>
-          <InfoTooltip tooltip={t('speech-only-tooltip')} ariaLabel={t('speech-only-label')} />
+          <InfoTooltip
+            tooltip={tSpeech('speech-only-tooltip')}
+            ariaLabel={t('speech-only-label')}
+          />
         </div>
         <Switch
           checked={settings.defaultIsSpeechOnly === true}
           onCheckedChange={(checked) => onChange({ ...settings, defaultIsSpeechOnly: checked })}
           aria-label={t('speech-only-label')}
           data-testid="settings-speech-only-switch"
-          className="self-end sm:self-auto"
         />
       </div>
     </div>
