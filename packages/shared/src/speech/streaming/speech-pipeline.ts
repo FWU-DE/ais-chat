@@ -30,6 +30,8 @@ export type SpeechStreamingPipelineParams = {
 export type SpeechStreamingPipelineStrategy<TContext extends { userId: string }> = {
   /** Load the relevant context like the conversation */
   loadContext(params: SpeechStreamingPipelineParams): Promise<TContext>;
+  checkAccess?: (params: SpeechStreamingPipelineParams, context: TContext) => Promise<boolean>;
+  checkBudget?: (params: SpeechStreamingPipelineParams, context: TContext) => Promise<boolean>;
   /** Store the usage of the speech model for the given params and context */
   storeUsage(
     params: SpeechStreamingPipelineParams,
@@ -51,12 +53,16 @@ export async function runSpeechPipeline<TContext extends { userId: string }>(
   strategy: SpeechStreamingPipelineStrategy<TContext>,
 ): Promise<ChatSpeechStreamResult> {
   const context = await strategy.loadContext(params);
-  const hasAccess = await checkAccess(params, context);
+  const hasAccess = strategy.checkAccess
+    ? await strategy.checkAccess(params, context)
+    : await checkAccess(params, context);
   if (!hasAccess) {
     throw new ForbiddenError('Access denied');
   }
 
-  const hasEnoughBudget = await checkAvailableBudget(params.user, params.federalState);
+  const hasEnoughBudget = strategy.checkBudget
+    ? await strategy.checkBudget(params, context)
+    : await checkAvailableBudget(params.user, params.federalState);
   if (!hasEnoughBudget) {
     await raiseBudgetExceededEvent(params.user);
     throw new TokenPointsExceededError();
