@@ -23,11 +23,16 @@ export const getSpeechModel = async (): Promise<LlmModelSelectModel> => {
   return model;
 };
 
-export const checkAvailableBudget = async (user: UserModel, federalState: FederalStateModel) => {
+export type TokenAvailability = 'sufficient' | 'userTokenLimitReached' | 'entityTokenLimitReached';
+
+export const checkAvailableBudget = async (
+  user: UserModel,
+  federalState: FederalStateModel,
+): Promise<TokenAvailability> => {
   const hasReachedLimit = await userHasReachedTokenPointsLimit({
     user: { ...user, federalState },
   });
-  return Promise.resolve(!hasReachedLimit);
+  return hasReachedLimit ? 'userTokenLimitReached' : 'sufficient';
 };
 
 export const raiseBudgetExceededEvent = (user: UserModel) => {

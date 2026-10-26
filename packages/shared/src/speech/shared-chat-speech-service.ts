@@ -101,13 +101,18 @@ function createSharedChatSpeechStrategy({
     checkAccess: async () => {
       requireTeacherRole(teacher.user.userRole);
 
+      if (entity.isDeleted) {
+        throw new ForbiddenError('Shared chat has been deleted');
+      }
+      if (entity.suspended) {
+        throw new ForbiddenError('Shared chat has been suspended');
+      }
       if (
         teacher.federalState.featureToggles.isSpeechModelEnabled !== true ||
         !entity.isSpeechEnabled
       ) {
         throw new ForbiddenError('Speech is not enabled for this shared chat');
       }
-
       if (sharedChatHasExpired(entity)) {
         throw new ForbiddenError('Shared chat has expired');
       }
@@ -129,11 +134,9 @@ function createSharedChatSpeechStrategy({
         userHasReachedTokenPointsLimit({ user: teacherWithFederalState }),
       ]);
 
-      if (sharedChatLimitReached || userLimitReached) {
-        return false;
-      }
-
-      return true;
+      if (userLimitReached) return 'userTokenLimitReached';
+      if (sharedChatLimitReached) return 'entityTokenLimitReached';
+      return 'sufficient';
     },
     storeUsage: async (_params, context, model, result) => {
       const costsInCent = await result.costsInCent;

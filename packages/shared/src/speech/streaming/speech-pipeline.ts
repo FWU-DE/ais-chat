@@ -10,6 +10,7 @@ import {
   checkAvailableBudget,
   getSpeechModel,
   raiseBudgetExceededEvent,
+  TokenAvailability,
 } from './utils';
 
 export type SpeechStreamingPipelineParams = {
@@ -31,7 +32,10 @@ export type SpeechStreamingPipelineStrategy<TContext extends { userId: string }>
   /** Load the relevant context like the conversation */
   loadContext(params: SpeechStreamingPipelineParams): Promise<TContext>;
   checkAccess?: (params: SpeechStreamingPipelineParams, context: TContext) => Promise<boolean>;
-  checkBudget?: (params: SpeechStreamingPipelineParams, context: TContext) => Promise<boolean>;
+  checkBudget?: (
+    params: SpeechStreamingPipelineParams,
+    context: TContext,
+  ) => Promise<TokenAvailability>;
   /** Store the usage of the speech model for the given params and context */
   storeUsage(
     params: SpeechStreamingPipelineParams,
@@ -60,13 +64,16 @@ export async function runSpeechPipeline<TContext extends { userId: string }>(
     throw new ForbiddenError('Access denied');
   }
 
-  const hasEnoughBudget = strategy.checkBudget
+  const budgetInfo = strategy.checkBudget
     ? await strategy.checkBudget(params, context)
     : await checkAvailableBudget(params.user, params.federalState);
-  if (!hasEnoughBudget) {
+  if (budgetInfo === 'userTokenLimitReached') {
     await raiseBudgetExceededEvent(params.user);
     throw new TokenPointsExceededError();
+  } else if (budgetInfo === 'entityTokenLimitReached') {
+    throw new TokenPointsExceededError();
   }
+
   const model = await getSpeechModel();
   if (!model) throw new NotFoundError('No speech model configured');
 
