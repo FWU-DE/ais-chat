@@ -15,6 +15,7 @@ import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
 import { getFederalStateById } from '@shared/federal-states/federal-state-service';
 import { getActiveBannersForUser } from '@shared/info-banners/info-banner-service';
 import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
+import { logError } from '@shared/logging';
 import {
   getMaxBudgetInCentByUser,
   getUsedBudgetInCentByUser,
@@ -49,7 +50,10 @@ export default async function ChatLayout({ children }: { children: React.ReactNo
       federalStateId: user.federalState.id,
       userId: user.id,
     }),
-    getUserSettings({ userId: user.id }),
+    getUserSettings({ userId: user.id }).catch((error: unknown) => {
+      logError('Failed to load user settings', error);
+      return undefined;
+    }),
   ]);
 
   const productAccess = checkProductAccess({ ...user, hasCompletedTraining });
