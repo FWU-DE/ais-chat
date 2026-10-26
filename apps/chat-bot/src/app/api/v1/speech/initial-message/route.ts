@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
     const { buffer, contentType } = await generateStaticMessageSpeech({
       text: character.initialMessage,
       voice: character.voice,
+      abortSignal: req.signal,
     });
 
     return new NextResponse(new Uint8Array(buffer), {

@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
       conversationId: parsed.conversationId,
       text: parsed.text,
       voice: parsed.voice,
+      abortSignal: req.signal,
     });
 
     return new NextResponse(new Uint8Array(buffer), {

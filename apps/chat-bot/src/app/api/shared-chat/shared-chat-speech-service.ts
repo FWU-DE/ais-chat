@@ -34,11 +34,13 @@ export async function generateSharedChatSpeech({
   entityType,
   entityId,
   text,
+  abortSignal,
 }: {
   inviteCode: string;
   entityType: 'character' | 'learningScenario';
   entityId: string;
   text: string;
+  abortSignal?: AbortSignal;
 }): Promise<{ buffer: Buffer; contentType: string }> {
   const { entity, teacher } = await verifySharedChatSpeechAccess({
     inviteCode,
@@ -70,7 +72,7 @@ export async function generateSharedChatSpeech({
     throw new TokenPointsExceededError();
   }
 
-  const speechResult = await generateSpeech({ text, voice: entity.voice });
+  const speechResult = await generateSpeech({ text, voice: entity.voice, abortSignal });
 
   if (entityType === 'character') {
     await dbUpdateTokenUsageByCharacterChatId({
@@ -280,9 +282,11 @@ export async function generateSharedChatSpeechStream({
 export async function generateSharedChatInitialMessageSpeech({
   inviteCode,
   characterId,
+  abortSignal,
 }: {
   inviteCode: string;
   characterId: string;
+  abortSignal?: AbortSignal;
 }): Promise<{ buffer: Buffer; contentType: string }> {
   const { entity } = await verifySharedChatSpeechAccess({
     inviteCode,
@@ -299,5 +303,6 @@ export async function generateSharedChatInitialMessageSpeech({
   return generateStaticMessageSpeech({
     text: character.initialMessage,
     voice: character.voice,
+    abortSignal,
   });
 }
