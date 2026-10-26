@@ -5,11 +5,14 @@ import { Connection } from 'rabbitmq-client';
 
 const tracer = trace.getTracer('rabbitmq-client');
 
-const rabbit = new Connection(env.rabbitmqUri ?? '');
+const rabbit = env.rabbitmqUri ? new Connection(env.rabbitmqUri) : undefined;
 
-const publisher = rabbit.createPublisher({ confirm: true });
+const publisher = rabbit?.createPublisher({ confirm: true });
 
 export async function sendRabbitmqEvent(event: object) {
+  if (!publisher) {
+    return;
+  }
   // Do not await published event for performance reasons
   void tracer.startActiveSpan('sendRabbitmqEvent', async (span) => {
     logDebug('Sending RabbitMq event...', { event });
@@ -23,6 +26,9 @@ export async function sendRabbitmqEvent(event: object) {
 }
 
 export async function shutdownRabbitMQ() {
+  if (!rabbit) {
+    return;
+  }
   console.log('[shutdown] Closing RabbitMQ connection...');
   await rabbit.close();
   console.log('[shutdown] RabbitMQ connection closed');
