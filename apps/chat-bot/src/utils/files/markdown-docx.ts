@@ -1,5 +1,5 @@
 import { createBoard } from '@/components/chat/plot/jsxgraph-board';
-import { PLOT_LANGUAGE } from '@/utils/code-blocks';
+import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
 import { parsePlotSpec, type BoundingBox } from '@/utils/plot/plot-spec';
 import {
   AlignmentType,
@@ -68,7 +68,7 @@ const paddedCodeBlockPlugin: RemarkDocxPlugin = (() => {
                       alignment: AlignmentType.CENTER,
                       children: [
                         new TextRun({
-                          text: node.lang ?? '',
+                          text: [node.lang, getCodeTitle(node.meta)].filter(Boolean).join(' – '),
                           color: CODE_BLOCK_HEADER_TEXT_COLOR,
                           size: 22,
                         }),
