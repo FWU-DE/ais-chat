@@ -280,6 +280,7 @@ jobs:
       - name: Merge app/admin/api blob reports into one aggregated smart report
         if: always()
         run: |
+          rm -rf apps/chat-bot/smart-report/blobs
           mkdir -p apps/chat-bot/smart-report/blobs
           cp apps/chat-bot/blob-report/*.zip apps/chat-bot/smart-report/blobs/ 2>/dev/null || true
           cp apps/admin/blob-report/*.zip apps/chat-bot/smart-report/blobs/ 2>/dev/null || true
@@ -296,6 +297,9 @@ jobs:
           path: |
             apps/chat-bot/smart-report/smart-report.html
             apps/chat-bot/smart-report/smart-report-data.json
+            apps/chat-bot/smart-report/smart-report-data.js
+            apps/chat-bot/smart-report/traces/
+            apps/chat-bot/smart-report/blobs/resources/
           retention-days: 30
 
       - name: Save smart-reporter test history

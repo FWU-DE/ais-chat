@@ -12,7 +12,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenvConfig({ path: path.resolve(__dirname, '.env.test') });
 
 export default defineConfig({
-  testDir: './e2e/tests/',
+  // The monorepo root, shared with the chat-bot/admin configs, so merged smart-reporter
+  // test locations resolve correctly across apps (see ../chat-bot/smart-report/merge.config.ts).
+  // The project below restores this app's own e2e/tests dir for test discovery.
+  testDir: '../..',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
@@ -21,7 +24,7 @@ export default defineConfig({
     ['html', { outputFolder: './playwright-report' }],
     ['list'],
     // For smart-reporter (see ../chat-bot/smart-report/merge.config.ts)
-    ['blob', { outputDir: 'blob-report' }],
+    ['blob', { outputDir: 'blob-report', fileName: 'api-report.zip' }],
   ],
   timeout: 60_000,
   use: {
@@ -30,6 +33,7 @@ export default defineConfig({
   projects: [
     {
       name: 'api',
+      testDir: './e2e/tests/',
       testMatch: /.*\.api\.test\.ts/,
     },
   ],

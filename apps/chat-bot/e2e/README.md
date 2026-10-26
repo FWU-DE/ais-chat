@@ -68,6 +68,7 @@ report — with accessibility results, coverage, flakiness history, etc. — mer
 
 ```sh
 cd apps/chat-bot
+rm -rf smart-report/blobs
 mkdir -p smart-report/blobs
 cp blob-report/*.zip ../admin/blob-report/*.zip ../api/blob-report/*.zip smart-report/blobs/ 2>/dev/null
 pnpm exec playwright merge-reports --config=smart-report/merge.config.ts smart-report/blobs
