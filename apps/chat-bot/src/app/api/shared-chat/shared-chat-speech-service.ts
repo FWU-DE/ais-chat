@@ -1,5 +1,5 @@
 import { generateSpeech, generateStaticMessageSpeech } from '@/app/api/chat/speech-service';
-import { UserAndContext } from '@/auth/types';
+import { type UserAndContext } from '@/auth/types';
 import { getUserAndContextByUserId } from '@/auth/utils';
 import { checkProductAccess } from '@/utils/vidis/access';
 import { TokenPointsExceededError } from '@ais-chat/ai-core';
@@ -25,8 +25,6 @@ import {
   SharedChatEntity,
   SharedChatLearningScenario,
 } from './shared-chat-types';
-
-export { generateSharedChatSpeechStream } from '@shared/speech/shared-chat-speech-service';
 
 export async function generateSharedChatSpeech({
   inviteCode,
