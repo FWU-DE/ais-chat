@@ -2,20 +2,26 @@
 
 import { type UserAndContext } from '@/auth/types';
 import { UserIcon } from '@/components/icons/user';
-import { SettingsDialog } from '@/components/settings/settings-dialog';
 import { Button } from '@ui/components/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@ui/components/dropdown-menu';
+import type { RefObject } from 'react';
 import React from 'react';
 import { ProfileMenuContent } from './profile-menu-content';
 
-export default function ProfileMenu({ userAndContext }: { userAndContext?: UserAndContext }) {
-  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+export default function ProfileMenu({
+  userAndContext,
+  onOpenSettings,
+  triggerRef,
+}: {
+  userAndContext?: UserAndContext;
+  onOpenSettings?: () => void;
+  triggerRef?: RefObject<HTMLButtonElement | null>;
+}) {
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
-  const triggerRef = React.useRef<HTMLButtonElement>(null);
 
   return (
     <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
@@ -36,19 +42,8 @@ export default function ProfileMenu({ userAndContext }: { userAndContext?: UserA
         sideOffset={10}
         className="z-300 flex flex-col gap-2 py-2 w-[256px] rounded-enterprise-md mb-4 bg-white shadow-dropdown"
       >
-        <ProfileMenuContent
-          userAndContext={userAndContext}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-        />
+        <ProfileMenuContent userAndContext={userAndContext} onOpenSettings={onOpenSettings} />
       </DropdownMenuContent>
-      {/* Public shared chats render this menu without a UserSettingsProvider. */}
-      {userAndContext !== undefined && (
-        <SettingsDialog
-          open={isSettingsOpen}
-          onOpenChange={setIsSettingsOpen}
-          restoreFocusRef={triggerRef}
-        />
-      )}
     </DropdownMenu>
   );
 }

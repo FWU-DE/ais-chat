@@ -1,15 +1,16 @@
 'use client';
 
 import type { UserAndContext } from '@/auth/types';
+import useBreakpoints from '@/components/hooks/use-breakpoints';
+import { useHeaderExtension } from '@/components/hooks/use-header-extension';
 import ProfileMenu from '@/components/navigation/profile-menu';
+import { ToggleSidebarButton } from '@/components/navigation/sidebar/collapsible-sidebar';
 import { ThemeToggleButton } from '@/components/navigation/theme-toggle-button';
 import { ThreeDotsProfileMenu } from '@/components/navigation/three-dots-profile-menu';
-import { ToggleSidebarButton } from '@/components/navigation/sidebar/collapsible-sidebar';
-import { Fragment, useEffect, ReactNode, useCallback, useMemo, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import useBreakpoints from '@/components/hooks/use-breakpoints';
+import { SettingsDialog } from '@/components/settings/settings-dialog';
 import { reductionBreakpoint } from '@/utils/tailwind/layout';
-import { useHeaderExtension } from '@/components/hooks/use-header-extension';
+import React, { Fragment, ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 export type ApplicationHeaderMenuItem = {
   id: string;
@@ -30,6 +31,8 @@ export function ApplicationHeader({ userAndContext }: { userAndContext?: UserAnd
   const { isBelow } = useBreakpoints();
   const isCompact = isBelow[reductionBreakpoint];
   const headerMountNodeRef = useRef<HTMLDivElement | null>(null);
+  const settingsTriggerRef = useRef<HTMLButtonElement>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
 
   const headerMountRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -52,9 +55,25 @@ export function ApplicationHeader({ userAndContext }: { userAndContext?: UserAnd
       ></div>
       <ThemeToggleButton />
       {isCompact && compactMenuItems.length > 0 ? (
-        <ThreeDotsProfileMenu customItems={compactMenuItems} userAndContext={userAndContext} />
+        <ThreeDotsProfileMenu
+          customItems={compactMenuItems}
+          userAndContext={userAndContext}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          triggerRef={settingsTriggerRef}
+        />
       ) : (
-        <ProfileMenu userAndContext={userAndContext} />
+        <ProfileMenu
+          userAndContext={userAndContext}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          triggerRef={settingsTriggerRef}
+        />
+      )}
+      {userAndContext !== undefined && (
+        <SettingsDialog
+          open={isSettingsOpen}
+          onOpenChange={setIsSettingsOpen}
+          restoreFocusRef={settingsTriggerRef}
+        />
       )}
     </header>
   );
