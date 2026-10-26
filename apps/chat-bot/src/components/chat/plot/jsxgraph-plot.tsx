@@ -1,13 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import JXG from 'jsxgraph';
+import type { PlotSpec } from '@/utils/plot/plot-spec';
 import { logError, logWarning } from '@shared/logging/logging';
+import JXG from 'jsxgraph';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createBoard, type ViewState } from './jsxgraph-board';
-import { registerLivePlot, releaseOverflow, type LivePlot } from './live-plots';
+import { registerLivePlot, releaseOverflow, retainLivePlot, type LivePlot } from './live-plots';
 import { PlotFrame } from './plot-frame';
 import { getSliderDefinitions } from './slider-definitions';
-import type { PlotSpec } from '@/utils/plot/plot-spec';
 
 const ACTIVATE_DELAY_MS = 150;
 
@@ -32,8 +32,11 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
   const [livePlot] = useState<LivePlot>(() => ({
     isVisible: false,
     lastSeen: 0,
+    activate: () => setIsActive(true),
     release: () => setIsActive(false),
   }));
+
+  useEffect(() => registerLivePlot(livePlot), [livePlot]);
 
   // Boards are expensive: build them shortly after the plot scrolls into view and drop
   // the least recently seen ones once more than a few are alive.
@@ -48,7 +51,10 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
         livePlot.lastSeen = Date.now();
         clearTimeout(timer);
         if (livePlot.isVisible) {
-          timer = setTimeout(() => setIsActive(true), ACTIVATE_DELAY_MS);
+          timer = setTimeout(() => {
+            retainLivePlot(livePlot);
+            setIsActive(true);
+          }, ACTIVATE_DELAY_MS);
         } else {
           releaseOverflow();
         }
@@ -89,7 +95,6 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
     );
     setSliderRef.current = setSlider;
     boardRef.current = board;
-    const unregister = registerLivePlot(livePlot);
 
     const resizeObserver = new ResizeObserver(() => {
       if (boardDiv.clientWidth > 0 && boardDiv.clientHeight > 0) {
@@ -113,7 +118,6 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
         viewStateRef.current = undefined;
       }
       discardViewRef.current = false;
-      unregister();
       JXG.JSXGraph.freeBoard(board);
       container.replaceChildren();
     };

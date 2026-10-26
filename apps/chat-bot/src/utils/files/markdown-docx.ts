@@ -1,4 +1,5 @@
 import { createBoard } from '@/components/chat/plot/jsxgraph-board';
+import { activateAllLivePlots } from '@/components/chat/plot/live-plots';
 import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
 import { parsePlotSpec, type BoundingBox } from '@/utils/plot/plot-spec';
 import {
@@ -422,21 +423,39 @@ const processor = unified()
   .use(remarkGfm)
   .use(remarkDocx, docxOptions);
 
-export async function markdownToDocxBlob(exportDocument: ConversationExport): Promise<Blob> {
-  const roots = await Promise.all(
-    exportDocument.markdownBlocks.map(async (markdownBlock) => {
-      const parsedRoot = processor.parse(markdownBlock) as Root;
-      preparePlotCodeBlocks(parsedRoot);
-      return (await processor.run(parsedRoot)) as Root;
-    }),
-  );
-  const combinedRoot: Root = {
-    type: 'root',
-    children: roots.flatMap((root) => root.children),
-  };
-  const arrayBuffer = await processor.stringify(combinedRoot);
+async function waitForPlotActivation() {
+  if (typeof requestAnimationFrame === 'undefined') {
+    return;
+  }
 
-  return new Blob([arrayBuffer], {
-    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
   });
+}
+
+export async function markdownToDocxBlob(exportDocument: ConversationExport): Promise<Blob> {
+  const restoreLivePlots = activateAllLivePlots();
+  try {
+    await waitForPlotActivation();
+    const roots = await Promise.all(
+      exportDocument.markdownBlocks.map(async ({ markdown }) => {
+        const parsedRoot = processor.parse(markdown) as Root;
+        preparePlotCodeBlocks(parsedRoot);
+        return (await processor.run(parsedRoot)) as Root;
+      }),
+    );
+    const combinedRoot: Root = {
+      type: 'root',
+      children: roots.flatMap((root) => root.children),
+    };
+    const arrayBuffer = await processor.stringify(combinedRoot);
+
+    return new Blob([arrayBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+  } finally {
+    restoreLivePlots();
+  }
 }
