@@ -1,13 +1,18 @@
 import { eq, sql } from 'drizzle-orm';
 import { db } from '..';
-import { userSettingsTable, type UserSettings } from '../schema';
+import {
+  userSettingsSchema,
+  userSettingsSelectSchema,
+  userSettingsTable,
+  type UserSettings,
+} from '../schema';
 
 export async function dbGetUserSettings({ userId }: { userId: string }) {
   const [userSettings] = await db
     .select()
     .from(userSettingsTable)
     .where(eq(userSettingsTable.userId, userId));
-  return userSettings;
+  return userSettings === undefined ? undefined : userSettingsSelectSchema.parse(userSettings);
 }
 
 export async function dbUpsertUserSettings({
@@ -17,9 +22,10 @@ export async function dbUpsertUserSettings({
   userId: string;
   settings: UserSettings;
 }) {
+  const parsedSettings = userSettingsSchema.parse(settings);
   const [userSettings] = await db
     .insert(userSettingsTable)
-    .values({ userId, settings })
+    .values({ userId, settings: parsedSettings })
     .onConflictDoUpdate({
       target: userSettingsTable.userId,
       // Merge with the stored JSON inside the statement so concurrent partial
@@ -30,5 +36,5 @@ export async function dbUpsertUserSettings({
       },
     })
     .returning();
-  return userSettings;
+  return userSettings === undefined ? undefined : userSettingsSelectSchema.parse(userSettings);
 }

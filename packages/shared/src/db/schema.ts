@@ -96,12 +96,6 @@ export const userSettingsTable = pgTable('user_settings', {
     .$onUpdateFn(() => new Date()),
 });
 
-export const userSettingsSelectSchema = createSelectSchema(userSettingsTable).extend({
-  updatedAt: z.coerce.date(),
-});
-
-export type UserSettingsSelectModel = z.infer<typeof userSettingsSelectSchema>;
-
 /**
  * Schema for table conversation
  */
@@ -748,6 +742,13 @@ export const userSettingsSchema = z.object({
 });
 
 export type UserSettings = z.infer<typeof userSettingsSchema>;
+
+export const userSettingsSelectSchema = createSelectSchema(userSettingsTable).extend({
+  settings: userSettingsSchema,
+  updatedAt: z.coerce.date(),
+});
+
+export type UserSettingsSelectModel = z.infer<typeof userSettingsSelectSchema>;
 
 export const llmModelTable = pgTable(
   'llm_model',
