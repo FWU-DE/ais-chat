@@ -8,6 +8,7 @@ import {
   verifyWriteAccess,
 } from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
+import { getUserSettings } from '@shared/users/user-settings-service';
 import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import { db } from '@shared/db';
 import {
@@ -770,6 +771,7 @@ export async function createNewLearningScenario({
   user: Pick<UserModel, 'id' | 'userRole'>;
 }) {
   requireTeacherRole(user.userRole);
+  const userSettings = await getUserSettings({ userId: user.id });
 
   const [insertedLearningScenario] = await db
     .insert(learningScenarioTable)
@@ -778,6 +780,8 @@ export async function createNewLearningScenario({
       pictureId: '',
       modelId,
       userId: user.id,
+      voice: userSettings?.defaultSpeechVoice,
+      speechOnly: userSettings?.defaultIsSpeechOnly,
     })
     .returning();
 
