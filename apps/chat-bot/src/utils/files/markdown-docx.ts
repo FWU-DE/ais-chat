@@ -288,6 +288,10 @@ function preparePlotCodeBlocks(root: Root, messageId?: string) {
 
     const plotId = messageId === undefined ? undefined : getRenderedPlotId(messageId, plotIndex);
     plotIndex += 1;
+    // Set lang here to json so shikiPlugin renders the code blocks correctly
+    // as it only recognizes json but not jsxgraph-json
+    // Set lang here to json so shikiPlugin renders the code blocks correctly
+    // as it only recognizes json but not jsxgraph-json
     node.lang = 'json';
     plotCodeNodes.add(node);
     plotExportMetadata.set(node, {
