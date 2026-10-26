@@ -17,9 +17,13 @@ export function useSpeechPlayback(text: string, generateSpeechFn: (text: string)
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = React.useRef<string | null>(null);
   const cachedTextRef = React.useRef<string | null>(null);
+  const isUnmountedRef = React.useRef(false);
 
   React.useEffect(() => {
+    isUnmountedRef.current = false;
+
     return () => {
+      isUnmountedRef.current = true;
       audioRef.current?.pause();
       audioRef.current = null;
       if (audioUrlRef.current !== null) {
@@ -37,6 +41,9 @@ export function useSpeechPlayback(text: string, generateSpeechFn: (text: string)
       await audio.play();
       setStatus('playing');
     } catch {
+      if (isUnmountedRef.current) {
+        return;
+      }
       toast.error(tCommon('read-aloud-error'));
       setStatus('idle');
     }
@@ -68,6 +75,9 @@ export function useSpeechPlayback(text: string, generateSpeechFn: (text: string)
     setStatus('loading');
     try {
       const blob = await generateSpeechFn(text);
+      if (isUnmountedRef.current) {
+        return;
+      }
 
       if (audioUrlRef.current !== null) {
         URL.revokeObjectURL(audioUrlRef.current);
@@ -85,6 +95,9 @@ export function useSpeechPlayback(text: string, generateSpeechFn: (text: string)
       cachedTextRef.current = text;
       await playAudio(audio, true);
     } catch {
+      if (isUnmountedRef.current) {
+        return;
+      }
       toast.error(tCommon('read-aloud-error'));
       setStatus('idle');
     }

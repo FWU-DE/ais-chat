@@ -25,6 +25,7 @@ interface MessagesProps {
   showActivityDialog?: boolean;
   generateSpeechFn: GenerateSpeechFn;
   generateSpeechStreamFn: GenerateSpeechStreamFn;
+  speechVoice?: string;
   isSpeechModelEnabled: boolean;
   speechOnly: boolean;
 }
@@ -44,6 +45,7 @@ export function Messages({
   showActivityDialog = false,
   generateSpeechFn,
   generateSpeechStreamFn,
+  speechVoice,
   isSpeechModelEnabled,
   speechOnly,
 }: MessagesProps): React.JSX.Element {
@@ -76,6 +78,7 @@ export function Messages({
             showActivityDialog={showActivityDialog}
             generateSpeechFn={generateSpeechFn}
             generateSpeechStreamFn={generateSpeechStreamFn}
+            speechVoice={speechVoice}
             isSpeechModelEnabled={isSpeechModelEnabled}
             speechOnly={speechOnly}
           />

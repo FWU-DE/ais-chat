@@ -38,6 +38,7 @@ export function ChatBox({
   showActivityDialog,
   generateSpeechFn,
   generateSpeechStreamFn,
+  speechVoice,
   isSpeechModelEnabled,
   speechOnly,
 }: {
@@ -57,6 +58,7 @@ export function ChatBox({
   showActivityDialog?: boolean;
   generateSpeechFn: GenerateSpeechFn;
   generateSpeechStreamFn: GenerateSpeechStreamFn;
+  speechVoice?: string;
   isSpeechModelEnabled: boolean;
   speechOnly: boolean;
 }) {
@@ -179,6 +181,7 @@ export function ChatBox({
       canRegenerateMessage={canRegenerateMessage}
       generateSpeechFn={messageSpeechFn}
       generateSpeechStreamFn={generateSpeechStreamFn}
+      speechVoice={speechVoice}
       isSpeechModelEnabled={isSpeechModelEnabled}
       showActivityDialog={showActivityDialog}
       activitySteps={activitySteps}
@@ -193,6 +196,7 @@ export function ChatBox({
   const maybeAudioButton =
     isAssistantSpeechOnly && (actionsVisible || isSpeechOnlyStreaming) ? (
       <SpeechAudioButton
+        key={speechVoice ?? ''}
         text={plainText}
         generateSpeechFn={messageSpeechFn}
         isStreaming={isSpeechOnlyStreaming}

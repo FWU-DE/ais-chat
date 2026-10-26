@@ -26,6 +26,7 @@ import { LocalFileState } from '../file-upload/upload-file';
 import RobotIcon from '../icons/robot';
 import { useFederalState } from '../providers/federal-state-provider';
 import { useLlmModels } from '../providers/llm-model-provider';
+import { useUserSettings } from '../providers/user-settings-provider';
 import { AssistantIcon } from './assistant-icon';
 import { ChatInputBox } from './chat-input-box';
 import { ErrorChatPlaceholder } from './error-chat-placeholder';
@@ -68,6 +69,13 @@ export default function Chat({
 
   const federalState = useFederalState();
   const { selectedModel, setDownloadConversationEnabled } = useLlmModels();
+  const { settings } = useUserSettings();
+  const entitySpeechEnabled =
+    assistant?.isSpeechEnabled ?? character?.isSpeechEnabled ?? learningScenario?.isSpeechEnabled;
+  const entitySpeechOnly =
+    assistant?.speechOnly ?? character?.speechOnly ?? learningScenario?.speechOnly;
+  const speechVoice =
+    assistant?.voice ?? character?.voice ?? learningScenario?.voice ?? settings.defaultSpeechVoice;
   const conversationPath = getConversationPath({
     customGptId: assistant?.id,
     characterId: character?.id,
@@ -268,7 +276,6 @@ export default function Chat({
 
   async function generateSpeech(text: string, isInitialMessage: boolean): Promise<Blob> {
     const useInitialMessage = isInitialMessage && character !== undefined;
-    const voice = assistant?.voice ?? character?.voice ?? learningScenario?.voice;
 
     const response = await fetch(
       useInitialMessage ? '/api/v1/speech/initial-message' : '/api/v1/speech',
@@ -276,7 +283,9 @@ export default function Chat({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
-          useInitialMessage ? { characterId: character.id } : { conversationId: id, text, voice },
+          useInitialMessage
+            ? { characterId: character.id }
+            : { conversationId: id, text, voice: speechVoice },
         ),
       },
     );
@@ -292,8 +301,11 @@ export default function Chat({
     text: string,
     { signal }: { signal: AbortSignal },
   ): Promise<ReadableStream<Uint8Array>> {
-    const voice = assistant?.voice ?? character?.voice ?? learningScenario?.voice;
-    return fetchSpeechStream('/api/v1/speech/stream', { conversationId: id, text, voice }, signal);
+    return fetchSpeechStream(
+      '/api/v1/speech/stream',
+      { conversationId: id, text, voice: speechVoice },
+      signal,
+    );
   }
 
   let placeholderElement: ReactNode;
@@ -387,19 +399,12 @@ export default function Chat({
               showActivityDialog={character !== undefined}
               generateSpeechFn={generateSpeech}
               generateSpeechStreamFn={generateSpeechStream}
+              speechVoice={speechVoice}
               isSpeechModelEnabled={
                 federalState?.featureToggles?.isSpeechModelEnabled === true &&
-                (assistant?.isSpeechEnabled ??
-                  character?.isSpeechEnabled ??
-                  learningScenario?.isSpeechEnabled ??
-                  false)
+                (entitySpeechEnabled ?? true)
               }
-              speechOnly={
-                assistant?.speechOnly ??
-                character?.speechOnly ??
-                learningScenario?.speechOnly ??
-                false
-              }
+              speechOnly={entitySpeechOnly ?? settings.defaultIsSpeechOnly ?? false}
             />
           )}
           {error && (
