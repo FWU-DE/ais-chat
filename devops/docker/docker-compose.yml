@@ -305,10 +305,6 @@ services:
 
       # Encryption key for sensitive data (IMPORTANT: Change in production!)
       ENCRYPTION_KEY: default-encryption-key-change-in-production
-
-      # Google Vertex AI (optional - for image generation)
-      GOOGLE_APPLICATION_CREDENTIALS: ''
-
       # Logging
       LOG_TO_STDOUT: true
       NEXT_PUBLIC_SENTRY_LOG_LEVEL: debug
