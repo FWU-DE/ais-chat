@@ -68,6 +68,8 @@ RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN \
 # Final image
 FROM base AS runner
 
+RUN apk add --no-cache chromium font-liberation
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nodejs
 USER nodejs
