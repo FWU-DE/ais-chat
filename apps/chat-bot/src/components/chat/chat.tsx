@@ -28,6 +28,7 @@ import { useFederalState } from '../providers/federal-state-provider';
 import { useLlmModels } from '../providers/llm-model-provider';
 import { AssistantIcon } from './assistant-icon';
 import { ChatInputBox } from './chat-input-box';
+import { useConversationDownload } from './conversation-download-context';
 import { ErrorChatPlaceholder } from './error-chat-placeholder';
 import { FloatingText } from './floating-text';
 import { InitialChatContentDisplay } from './initial-content-display';
@@ -68,6 +69,7 @@ export default function Chat({
 
   const federalState = useFederalState();
   const { selectedModel, setDownloadConversationEnabled } = useLlmModels();
+  const { setData: setConversationDownloadData } = useConversationDownload();
   const conversationPath = getConversationPath({
     customGptId: assistant?.id,
     characterId: character?.id,
@@ -174,6 +176,14 @@ export default function Chat({
   useEffect(() => {
     pendingFileMappingRef.current = pendingFileMapping;
   }, [pendingFileMapping]);
+
+  useEffect(() => {
+    const downloadFileMapping = new Map(fileMapping);
+    for (const [messageId, files] of pendingFileMapping) {
+      downloadFileMapping.set(messageId, files);
+    }
+    setConversationDownloadData({ messages, fileMapping: downloadFileMapping });
+  }, [fileMapping, messages, pendingFileMapping, setConversationDownloadData]);
 
   // Blob URLs stay usable for the whole session, so they are kept once the files are persisted
   // and only revoked on unmount.

@@ -15,20 +15,19 @@ import {
   AlertDialogTitle,
 } from '@ui/components/alert-dialog';
 import { ArrowClockwiseIcon } from '@phosphor-icons/react';
+import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
 
 type ExpiredChatModalProps = {
   conversationMessages: Message[];
   title: string;
-  inviteCode: string;
-  sharedSessionId: string;
+  fileMapping: Map<string, ConversationDownloadFile[]>;
   handleRetry: () => void;
 };
 
 export default function ExpiredChatModal({
   conversationMessages,
   title,
-  inviteCode,
-  sharedSessionId,
+  fileMapping,
   handleRetry,
 }: ExpiredChatModalProps) {
   const t = useTranslations('sharing');
@@ -55,8 +54,7 @@ export default function ExpiredChatModal({
                 characterName={title}
                 conversationMessages={conversationMessages}
                 disabled={false}
-                inviteCode={inviteCode}
-                sharedSessionId={sharedSessionId}
+                fileMapping={fileMapping}
               />
             )}
             <Button onClick={handleRetry}>

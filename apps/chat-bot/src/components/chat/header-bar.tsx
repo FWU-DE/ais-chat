@@ -15,7 +15,7 @@ import {
 import { BoxArrowDownIcon } from '@phosphor-icons/react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/common/toast';
-import { useCallback } from 'react';
+import { useConversationDownload } from './conversation-download-context';
 
 export type ChatHeaderBarProps = {
   userAndContext: UserAndContext;
@@ -28,29 +28,32 @@ export function ChatHeaderBar({
   userAndContext,
   title,
   downloadConversationEnabled: downloadConversationEnabledProp,
-  chatId,
 }: ChatHeaderBarProps) {
   const tCommon = useTranslations('common');
   const toast = useToast();
+  const { data } = useConversationDownload();
   const { downloadConversationEnabled: downloadConversationEnabledFromContext } = useLlmModels();
+  const { selectedModel } = useLlmModels();
   const downloadConversationEnabled =
     downloadConversationEnabledProp || downloadConversationEnabledFromContext;
 
-  const handleDownload = useCallback(async () => {
+  async function handleDownload() {
     if (!downloadConversationEnabled) {
       return;
     }
 
     try {
       const { blob, fileName } = await fetchConversationDownload({
-        conversationId: chatId,
+        messages: data?.messages ?? [],
+        fileMapping: data?.fileMapping ?? new Map(),
         characterName: title,
+        modelName: selectedModel?.displayName,
       });
       downloadFileFromBlob(blob, fileName);
     } catch {
       toast.error('Der Download der Konversation ist fehlgeschlagen.');
     }
-  }, [chatId, downloadConversationEnabled, title, toast]);
+  }
 
   const actions: HeaderActionConfig[] = [
     {
@@ -67,7 +70,6 @@ export function ChatHeaderBar({
             )}
             <div className="hidden sm:flex">
               <DownloadConversationButton
-                conversationId={chatId}
                 characterName={title}
                 disabled={!downloadConversationEnabled}
                 showText={false}

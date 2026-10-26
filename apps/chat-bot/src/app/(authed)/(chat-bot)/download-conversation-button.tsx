@@ -1,9 +1,15 @@
 'use client';
 
+import { useConversationDownload } from '@/components/chat/conversation-download-context';
 import { useToast } from '@/components/common/toast';
 import Spinner from '@/components/icons/spinner';
+import { useLlmModels } from '@/components/providers/llm-model-provider';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
-import { formatConversationExport, markdownToDocxBlob } from '@/utils/files/markdown-docx';
+import {
+  createConversationExportMessages,
+  formatConversationExport,
+  markdownToDocxBlob,
+} from '@/utils/files/markdown-docx';
 import { cn } from '@/utils/tailwind';
 import { BoxArrowDownIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
@@ -11,7 +17,6 @@ import { useTranslations } from 'next-intl';
 import React from 'react';
 
 type DownloadConversationButtonProps = {
-  conversationId: string;
   characterName?: string;
   disabled: boolean;
   showText?: boolean;
@@ -19,61 +24,43 @@ type DownloadConversationButtonProps = {
 };
 
 type DownloadConversationParams = {
-  conversationId: string;
+  messages: Parameters<typeof createConversationExportMessages>[0]['messages'];
+  fileMapping: Parameters<typeof createConversationExportMessages>[0]['fileMapping'];
   characterName?: string;
+  modelName?: string;
 };
 
 export async function fetchConversationDownload({
-  conversationId,
+  messages,
+  fileMapping,
   characterName,
+  modelName,
 }: DownloadConversationParams) {
-  const searchParams = new URLSearchParams({
-    conversationId,
-  });
-
-  if (characterName !== undefined) {
-    searchParams.append('enterpriseGptName', characterName);
-  }
-
-  const response = await fetch(`/api/download-conversation?${searchParams.toString()}`);
-
-  if (!response.ok) {
-    throw new Error('Failed to download the document');
-  }
-
-  const responseData = (await response.json()) as {
-    fileName: string;
-    conversationTitle: string | null;
-    createdAt: string;
-    modelName: string;
-    messages: Array<{
-      role: string;
-      content: string;
-      images: Array<{ alt: string; url: string }>;
-    }>;
-  };
-  const { fileName, conversationTitle, createdAt, modelName, messages } = responseData;
+  const exportMessages = createConversationExportMessages({ messages, fileMapping });
+  const createdAt = messages[0]?.createdAt?.toISOString() ?? new Date().toISOString();
+  const safeName = characterName ?? 'AIS.chat';
 
   return {
     blob: await markdownToDocxBlob(
       formatConversationExport({
-        messages,
+        messages: exportMessages,
         createdAt,
-        modelName,
-        conversationTitle: conversationTitle ?? undefined,
+        modelName: modelName ?? safeName,
+        conversationTitle: characterName,
       }),
     ),
-    fileName,
+    fileName: `${createdAt.slice(0, 10)} ${safeName} Gespräch.docx`,
   };
 }
 
 export default function DownloadConversationButton({
-  conversationId,
   characterName,
   disabled = true,
   showText = false,
   className,
 }: DownloadConversationButtonProps) {
+  const { data } = useConversationDownload();
+  const { selectedModel } = useLlmModels();
   const [isLoading, setIsLoading] = React.useState(false);
   const toast = useToast();
   const tCommon = useTranslations('common');
@@ -86,8 +73,10 @@ export default function DownloadConversationButton({
       setIsLoading(true);
 
       const { blob, fileName } = await fetchConversationDownload({
-        conversationId,
+        messages: data?.messages ?? [],
+        fileMapping: data?.fileMapping ?? new Map(),
         characterName,
+        modelName: selectedModel?.displayName,
       });
 
       downloadFileFromBlob(blob, fileName);

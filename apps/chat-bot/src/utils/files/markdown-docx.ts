@@ -1,3 +1,4 @@
+import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
 import { createBoard } from '@/components/chat/plot/jsxgraph-board';
 import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
 import { parsePlotSpec, type BoundingBox } from '@/utils/plot/plot-spec';
@@ -247,8 +248,6 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
         }
 
         const exportSvg = svg.cloneNode(true) as SVGSVGElement;
-        // JSXGraph adds an empty, hidden foreignObject. It taints browser canvases during SVG
-        // rasterization even though it contains no plot content.
         exportSvg
           .querySelectorAll('foreignObject')
           .forEach((foreignObject) => foreignObject.remove());
@@ -294,14 +293,39 @@ function preparePlotCodeBlocks(root: Root) {
 }
 
 export type ConversationExportMessage = {
+  id: string;
   role: string;
   content: string;
   images: Array<{ alt: string; url: string }>;
 };
 
 export type ConversationExport = {
-  markdownBlocks: string[];
+  markdownBlocks: Array<{ markdown: string; messageId?: string }>;
 };
+
+export function createConversationExportMessages({
+  messages,
+  fileMapping,
+  imageUrl = (file) => `/api/files/${file.id}/scaled-image?width=200&height=320`,
+}: {
+  messages: Array<
+    Pick<ConversationExportMessage, 'id' | 'role' | 'content'> & { createdAt?: Date }
+  >;
+  fileMapping: Map<string, ConversationDownloadFile[]>;
+  imageUrl?: (file: ConversationDownloadFile) => string;
+}): ConversationExportMessage[] {
+  return messages.map(({ id, role, content }) => ({
+    id,
+    role,
+    content,
+    images: (fileMapping.get(id) ?? [])
+      .filter((file) => /\.(?:apng|avif|gif|jpe?g|png|svg|webp)$/i.test(file.name))
+      .map((file) => ({
+        alt: file.name,
+        url: file.localUrl ?? imageUrl(file),
+      })),
+  }));
+}
 
 export function formatConversationExport({
   messages,
@@ -319,24 +343,27 @@ export function formatConversationExport({
     timeStyle: 'short',
     timeZone: 'Europe/Berlin',
   }).format(new Date(createdAt));
-  const markdownBlocks: string[] = [];
+  const markdownBlocks: ConversationExport['markdownBlocks'] = [];
 
   if (conversationTitle !== undefined) {
-    markdownBlocks.push(`# Konversation: ${conversationTitle}`);
+    markdownBlocks.push({ markdown: `# Konversation: ${conversationTitle}` });
   }
-  markdownBlocks.push(`Erstellt am: ${formattedDate}`);
+  markdownBlocks.push({ markdown: `Erstellt am: ${formattedDate}` });
 
-  for (const { role, content, images } of messages) {
-    markdownBlocks.push(PARAGRAPH_SPACER);
+  for (const { id, role, content, images } of messages) {
+    markdownBlocks.push({ markdown: PARAGRAPH_SPACER });
     const messageHeading = role === 'user' ? 'Nutzer/in' : 'AIS.chat';
-    markdownBlocks.push(`### ${messageHeading}:`, content);
-    markdownBlocks.push(...images.map(({ alt, url }) => `![${alt}](${url})`));
+    markdownBlocks.push(
+      { markdown: `### ${messageHeading}:` },
+      { markdown: content, messageId: id },
+    );
+    markdownBlocks.push(...images.map(({ alt, url }) => ({ markdown: `![${alt}](${url})` })));
   }
 
   markdownBlocks.push(
-    PARAGRAPH_SPACER,
-    PARAGRAPH_SPACER,
-    `#### Generiert von AIS.chat unter Nutzung von ${modelName}`,
+    { markdown: PARAGRAPH_SPACER },
+    { markdown: PARAGRAPH_SPACER },
+    { markdown: `#### Generiert von AIS.chat unter Nutzung von ${modelName}` },
   );
 
   return { markdownBlocks };
@@ -424,8 +451,8 @@ const processor = unified()
 
 export async function markdownToDocxBlob(exportDocument: ConversationExport): Promise<Blob> {
   const roots = await Promise.all(
-    exportDocument.markdownBlocks.map(async (markdownBlock) => {
-      const parsedRoot = processor.parse(markdownBlock) as Root;
+    exportDocument.markdownBlocks.map(async ({ markdown }) => {
+      const parsedRoot = processor.parse(markdown) as Root;
       preparePlotCodeBlocks(parsedRoot);
       return (await processor.run(parsedRoot)) as Root;
     }),
