@@ -1,11 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { registerLivePlot, releaseOverflow, type LivePlot } from './live-plots';
+import {
+  activateAllLivePlots,
+  registerLivePlot,
+  releaseOverflow,
+  type LivePlot,
+} from './live-plots';
 
-function makePlot(lastSeen: number, isVisible = false): LivePlot & { released: boolean } {
+function makePlot(
+  lastSeen: number,
+  isVisible = false,
+): LivePlot & { activated: boolean; released: boolean } {
   const plot = {
     isVisible,
     lastSeen,
+    activated: false,
     released: false,
+    activate() {
+      plot.activated = true;
+    },
     release() {
       plot.released = true;
     },
@@ -60,5 +72,21 @@ describe('registerLivePlot / releaseOverflow', () => {
     expect(plot.released).toBe(false);
     releaseOverflow();
     unregisters.forEach((u) => u());
+  });
+});
+
+describe('activateAllLivePlots', () => {
+  it('activates released plots and restores the previous live state', () => {
+    const plots = [makePlot(1), makePlot(2), makePlot(3), makePlot(4), makePlot(5)];
+    const unregisters = plots.map((plot) => registerLivePlot(plot));
+    const releasedPlot = plots[0]!;
+    releasedPlot.released = false;
+
+    const restore = activateAllLivePlots();
+    expect(releasedPlot.activated).toBe(true);
+    restore();
+    expect(releasedPlot.released).toBe(true);
+
+    unregisters.forEach((unregister) => unregister());
   });
 });
