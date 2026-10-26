@@ -164,7 +164,7 @@ export function ChatBox({
   const isInitialMessage = message.id === 'initial-message';
 
   const messageSpeechFn = useCallback(
-    (text: string) => generateSpeechFn(text, isInitialMessage),
+    (text: string, signal?: AbortSignal) => generateSpeechFn(text, isInitialMessage, signal),
     [generateSpeechFn, isInitialMessage],
   );
   const actionsVisible = message.role === 'assistant' && (!isLastNonUser || status !== 'streaming');

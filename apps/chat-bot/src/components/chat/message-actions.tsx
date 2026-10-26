@@ -41,7 +41,7 @@ export function MessageActions({
   characterName?: string;
   regenerateMessage: () => void;
   canRegenerateMessage: boolean;
-  generateSpeechFn: (text: string) => Promise<Blob>;
+  generateSpeechFn: (text: string, signal?: AbortSignal) => Promise<Blob>;
   generateSpeechStreamFn: GenerateSpeechStreamFn;
   speechVoice?: string;
   isSpeechModelEnabled: boolean;

@@ -274,7 +274,11 @@ export default function Chat({
     });
   }
 
-  async function generateSpeech(text: string, isInitialMessage: boolean): Promise<Blob> {
+  async function generateSpeech(
+    text: string,
+    isInitialMessage: boolean,
+    signal?: AbortSignal,
+  ): Promise<Blob> {
     const useInitialMessage = isInitialMessage && character !== undefined;
 
     const response = await fetch(
@@ -282,6 +286,7 @@ export default function Chat({
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal,
         body: JSON.stringify(
           useInitialMessage
             ? { characterId: character.id }
