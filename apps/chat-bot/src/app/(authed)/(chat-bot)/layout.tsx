@@ -45,21 +45,29 @@ export default async function ChatLayout({ children }: { children: React.ReactNo
     settings,
     speechVoices,
   ] = await Promise.all([
+    // These are required for the app to work -> if any of these fail, we show a generic error blocking UI
     getFederalStateById(user.federalState.id),
     dbGetLlmModelsByFederalStateId({ federalStateId: user.federalState.id }),
     getUsedBudgetInCentByUser({ user }),
     getMaxBudgetInCentByUser({ user, federalState: user.federalState }),
     userHasCompletedTraining(),
+    // These are optional -> if any of these fail, we log the error and continue with default values
     getActiveBannersForUser({
       federalStateId: user.federalState.id,
       userId: user.id,
+    }).catch((error: unknown) => {
+      logError('Failed to load active info banners', error);
+      return [];
     }),
     getUserSettings({ userId: user.id }).catch((error: unknown) => {
       logError('Failed to load user settings', error);
       return undefined;
     }),
     user.federalState.featureToggles.isSpeechModelEnabled === true
-      ? getSpeechModelVoices()
+      ? getSpeechModelVoices().catch((error: unknown) => {
+          logError('Failed to load speech model voices', error);
+          return [];
+        })
       : Promise.resolve([]),
   ]);
 

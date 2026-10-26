@@ -9,7 +9,7 @@ import deleteConversation, {
 } from '@shared/conversation/conversation-service';
 import { dbGetRelatedFiles } from '@shared/db/functions/files';
 import { dbUpdateUserTermsVersion } from '@shared/db/functions/user';
-import { userSettingsSchema } from '@shared/db/schema';
+import { UserSettings, userSettingsSchema } from '@shared/db/schema';
 import { trackInfoBannerView } from '@shared/info-banners/info-banner-service';
 import { updateUserSettings } from '@shared/users/user-settings-service';
 
@@ -77,7 +77,7 @@ export async function trackInfoBannerViewAction(infoBannerId: string): Promise<v
   });
 }
 
-export async function updateUserSettingsAction({ settings }: { settings: unknown }) {
+export async function updateUserSettingsAction({ settings }: { settings: UserSettings }) {
   const { user } = await requireAuth();
 
   return runServerAction('updateUserSettingsAction', async () => {
