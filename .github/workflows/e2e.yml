@@ -253,30 +253,6 @@ jobs:
           CI: true
           DE_TEST_API_KEY: ${{ env.DE_TEST_API_KEY }}
 
-      - name: Upload Playwright reports (app)
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: playwright-report-${{ env.E2E_SUITE }}
-          path: apps/chat-bot/playwright-report
-          retention-days: 30
-
-      - name: Upload Playwright reports (api)
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: api-playwright-report-${{ env.E2E_SUITE }}
-          path: apps/api/playwright-report
-          retention-days: 30
-
-      - name: Upload Playwright reports (admin)
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: admin-playwright-report-${{ env.E2E_SUITE }}
-          path: apps/admin/playwright-report
-          retention-days: 30
-
       - name: Merge app/admin/api blob reports into one aggregated smart report
         if: always()
         run: |
