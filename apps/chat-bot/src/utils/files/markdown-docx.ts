@@ -295,7 +295,6 @@ function preparePlotCodeBlocks(root: Root) {
 }
 
 export type ConversationExportMessage = {
-  id: string;
   role: string;
   content: string;
   images: Array<{ alt: string; url: string }>;

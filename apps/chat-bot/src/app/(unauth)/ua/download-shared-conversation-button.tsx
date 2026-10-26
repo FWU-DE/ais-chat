@@ -61,7 +61,6 @@ export async function fetchSharedConversationDownload({
   const { fileName, messages } = (await response.json()) as {
     fileName: string;
     messages: Array<{
-      id: string;
       role: string;
       content: string;
       images: Array<{ alt: string; url: string }>;

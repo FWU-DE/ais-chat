@@ -46,7 +46,6 @@ export async function fetchConversationMessageDownload({
     createdAt: string;
     modelName: string;
     messages: Array<{
-      id: string;
       role: string;
       content: string;
       images: Array<{ alt: string; url: string }>;
