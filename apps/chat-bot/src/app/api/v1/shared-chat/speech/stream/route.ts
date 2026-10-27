@@ -4,6 +4,7 @@ import { handleErrorInRoute } from '@/error/handle-error-in-route';
 import { logError } from '@shared/logging';
 import { generateSharedChatSpeechStream } from '@shared/speech/shared-chat-speech-service';
 import { NextRequest } from 'next/server';
+import { buildSpeechStreamResponse } from '../../../../utils/response-builder';
 
 /**
  * Streaming counterpart of /api/v1/shared-chat/speech.
@@ -41,14 +42,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return new Response(body, {
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'no-store',
-        'X-Audio-Encoding': format.encoding,
-        'X-Audio-Sample-Rate': String(format.sampleRate),
-        'X-Audio-Channels': String(format.channels),
-      },
+    return buildSpeechStreamResponse({
+      body,
+      contentType,
+      format,
     });
   } catch (error) {
     return handleErrorInRoute(error);

@@ -2,9 +2,10 @@ import { requireTeacherRole } from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
 import { dbUpdateTokenUsageByCharacterChatId } from '@shared/db/functions/character';
 import { dbUpdateTokenUsageBySharedLearningScenarioId } from '@shared/db/functions/learning-scenario';
-import { ForbiddenError } from '@shared/error';
+import { ForbiddenError, NotFoundError } from '@shared/error';
 import { FederalStateModel } from '@shared/federal-states/types';
 import { constructNewMessageEvent, sendRabbitmqEvent } from '@shared/rabbitmq';
+import { verify } from '@shared/shared-chat';
 import {
   sharedCharacterChatHasReachedTokenPointsLimit,
   sharedChatHasExpired,
@@ -38,6 +39,38 @@ export type SharedChatSpeechParams = {
   abortSignal?: AbortSignal;
 };
 
+export type SharedChatInitialMessageSpeechParams = Pick<
+  SharedChatSpeechParams,
+  'inviteCode' | 'entityType' | 'entityId' | 'abortSignal'
+>;
+
+export async function generateSharedChatSpeechStreamForInitialMessage({
+  inviteCode,
+  entityType,
+  entityId,
+  abortSignal,
+}: SharedChatInitialMessageSpeechParams): Promise<ChatSpeechStreamResult> {
+  const entity = await getSharedChatEntity({ inviteCode, entityType, entityId });
+
+  verify.sharedChatEntityIsAccessible(entity);
+
+  if (!('initialMessage' in entity) || !entity.initialMessage) {
+    throw new NotFoundError('Shared chat has no initial message');
+  }
+
+  return generateSharedChatSpeechStream({
+    inviteCode,
+    entityType,
+    entityId,
+    text: entity.initialMessage,
+    voice: entity.voice,
+    abortSignal,
+  });
+}
+
+/**
+ * Generates a speech stream for messages in a shared chat.
+ */
 export async function generateSharedChatSpeechStream({
   inviteCode,
   entityType,
