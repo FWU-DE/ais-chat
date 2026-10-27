@@ -60,6 +60,7 @@ export function MessageActions({
         key={speechVoice ?? ''}
         isSpeechModelEnabled={isSpeechModelEnabled}
         text={plainText}
+        isInitialMessage={isInitialMessage}
         generateSpeechStreamFn={generateSpeechStreamFn}
         hidden={!showAudioPlayer}
       />

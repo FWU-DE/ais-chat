@@ -13,7 +13,10 @@ export type AudioPlayerStatus = 'idle' | 'loading' | 'playing' | 'paused';
  * Starting or resuming playback pauses all other `AudioPlayer` instances registered with the
  * nearest `AudioPlaybackCoordinatorProvider`, keeping their state and position intact.
  */
-export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
+export function useAudioStream(
+  generateSpeechStreamFn: GenerateSpeechStreamFn,
+  isInitialMessage: boolean,
+) {
   const toast = useToast();
   const tCommon = useTranslations('common');
   const { register, notifyPlaying } = useAudioPlaybackCoordinator();
@@ -84,7 +87,9 @@ export function useAudioStream(generateSpeechStreamFn: GenerateSpeechStreamFn) {
       playerRef.current = player;
 
       try {
-        const body = await generateSpeechStreamFn(text, { signal: abortController.signal });
+        const body = await generateSpeechStreamFn(text, isInitialMessage, {
+          signal: abortController.signal,
+        });
         await player.start(readableStreamToAsyncIterable(body));
       } catch {
         if (abortController.signal.aborted) {

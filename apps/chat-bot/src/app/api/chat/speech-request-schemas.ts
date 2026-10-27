@@ -1,8 +1,8 @@
-import { z } from 'zod';
 import { requiredNonEmptyString } from '@shared/utils/zod';
+import { z } from 'zod';
 
 export const speechRequestSchema = z.object({
-  conversationId: requiredNonEmptyString('conversationId is required'),
+  conversationId: z.string().optional(),
   text: requiredNonEmptyString('text is required'),
   voice: z.string().optional(),
 });
