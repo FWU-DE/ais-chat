@@ -91,6 +91,8 @@ const mockSpeech: LlmInsertModel = {
   isDeleted: false,
 };
 
+const isRealEmbeddingModelAvailable = !!ionosApiKey && !!ionosBaseUrl;
+
 // All prices are rough estimates, probably outdated and just for mocking purposes
 // Static ids are used to ensure that the models are not created again
 // the ids are taken from the staging/production database for interoperability to be able to connect to local AIS.chat api or staging
@@ -140,6 +142,30 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     supportedImageFormats: ['jpg', 'jpeg', 'png'],
     safetyFilterEnabled: false,
   },
+  // Mock embedding model: only seeded when the real `BAAI/bge-m3` model below is unavailable
+  // (e.g. on forked PRs without LLM_IONOS_* secrets), so that `getEmbeddingModel()` in e2e tests
+  // always has a model to resolve. Returns a static 1024-entry vector regardless of input.
+  ...(isRealEmbeddingModelAvailable
+    ? []
+    : [
+        {
+          id: '2d6a6f8e-6a3f-4a2a-9c3d-7f1b2e8a4c5d',
+          organizationId: ORGANIZATION_ID,
+          provider: 'bifrost',
+          name: 'BAAI/bge-m3',
+          displayName: 'Mock Embedding Model',
+          description: 'Mock LLM for e2e testing — returns a static embedding vector',
+          setting: {
+            provider: 'openai',
+            apiKey: mockLlmApiKey,
+            baseUrl: mockLlmBaseUrl,
+          },
+          priceMetadata: {
+            type: 'embedding',
+            promptTokenPrice: 0,
+          },
+        } satisfies LlmInsertModel,
+      ]),
   // Realm LLMs
   {
     id: 'b870b74d-7458-4dcf-99f6-ace83ef514f4',

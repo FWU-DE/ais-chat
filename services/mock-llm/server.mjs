@@ -11,6 +11,10 @@
  *   Returns an OpenAI Images API-compatible response with a random solid-color PNG, sized to
  *   match the requested `size` (ignoring the prompt and, for edits, the uploaded image).
  *
+ * POST /v1/embeddings
+ *   Returns an OpenAI Embeddings API-compatible response with a static 1024-entry vector per
+ *   input (ignoring the input text).
+ *
  * GET /health
  *   Returns {"status":"healthy"} for readiness checks.
  */
@@ -371,6 +375,40 @@ async function handleImagesEdit(req, res) {
   respondWithMockImage(res, /name="size"\r\n\r\n([^\r\n]+)/.exec(body)?.[1]);
 }
 
+// --- Mock embeddings (OpenAI Embeddings API-compatible) ---
+
+const MOCK_EMBEDDING_DIMENSIONS = 1024;
+const MOCK_EMBEDDING = Array.from(
+  { length: MOCK_EMBEDDING_DIMENSIONS },
+  (_, i) => Math.sin(i) * 0.01,
+);
+
+async function handleEmbeddings(req, res) {
+  let data = {};
+  try {
+    data = JSON.parse(await readBody(req));
+  } catch {
+    data = {};
+  }
+
+  const input = Array.isArray(data.input) ? data.input : [data.input ?? ''];
+  const model = data.model ?? 'mock-embedding';
+
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(
+    JSON.stringify({
+      object: 'list',
+      data: input.map((_, index) => ({
+        object: 'embedding',
+        index,
+        embedding: MOCK_EMBEDDING,
+      })),
+      model,
+      usage: { prompt_tokens: estimateTokens(JSON.stringify(input)), total_tokens: 0 },
+    }),
+  );
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && req.url === '/health') {
@@ -396,6 +434,11 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && pathname === '/v1/images/edits') {
       await handleImagesEdit(req, res);
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/embeddings') {
+      await handleEmbeddings(req, res);
       return;
     }
 
