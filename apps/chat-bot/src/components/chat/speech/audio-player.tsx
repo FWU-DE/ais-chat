@@ -101,7 +101,7 @@ export default function AudioPlayer({
         >
           {status === 'loading' && <Spinner />}
           {status === 'idle' && <PlayIcon weight="fill" />}
-          {status === 'playing' && <PauseIcon />}
+          {status === 'playing' && <PauseIcon weight="fill" />}
           {status === 'paused' && <PlayIcon weight="fill" />}
         </Button>
         <AudioWaveform
@@ -152,7 +152,7 @@ export default function AudioPlayer({
         </DropdownMenu>
       </div>
 
-      <span className="text-xs text-muted-foreground tabular-nums">
+      <span className="text-sm text-muted-foreground tabular-nums">
         {formatTime(displayedTime)}
         {isStreamFullyLoaded && ` / ${formatTime(duration)}`}
       </span>
