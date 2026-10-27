@@ -9,9 +9,9 @@ import type { SpeechStreamingPipelineParams } from './speech-pipeline';
 
 export const checkAccess = (
   params: SpeechStreamingPipelineParams,
-  context: { userId: string },
+  context: { user: { id: string } },
 ): Promise<boolean> => {
-  if (context.userId !== params.user.id) {
+  if (context.user.id !== params.user.id) {
     return Promise.resolve(false);
   }
   return Promise.resolve(true);
@@ -23,11 +23,16 @@ export const getSpeechModel = async (): Promise<LlmModelSelectModel> => {
   return model;
 };
 
-export const checkAvailableBudget = async (user: UserModel, federalState: FederalStateModel) => {
+export type TokenAvailability = 'sufficient' | 'userTokenLimitReached' | 'entityTokenLimitReached';
+
+export const checkAvailableBudget = async (
+  user: UserModel,
+  federalState: FederalStateModel,
+): Promise<TokenAvailability> => {
   const hasReachedLimit = await userHasReachedTokenPointsLimit({
     user: { ...user, federalState },
   });
-  return Promise.resolve(!hasReachedLimit);
+  return hasReachedLimit ? 'userTokenLimitReached' : 'sufficient';
 };
 
 export const raiseBudgetExceededEvent = (user: UserModel) => {

@@ -1,8 +1,8 @@
 import { sharedChatSpeechRequestSchema } from '@/app/api/shared-chat/shared-chat-request-schemas';
-import { generateSharedChatSpeechStream } from '@/app/api/shared-chat/shared-chat-speech-service';
 import { requireValidInviteCode } from '@/auth/requireValidInviteCode';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
 import { logError } from '@shared/logging';
+import { generateSharedChatSpeechStream } from '@shared/speech/shared-chat-speech-service';
 import { NextRequest } from 'next/server';
 
 /**

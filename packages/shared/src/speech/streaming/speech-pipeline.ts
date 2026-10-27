@@ -10,6 +10,7 @@ import {
   checkAvailableBudget,
   getSpeechModel,
   raiseBudgetExceededEvent,
+  TokenAvailability,
 } from './utils';
 
 export type SpeechStreamingPipelineParams = {
@@ -27,9 +28,14 @@ export type SpeechStreamingPipelineParams = {
  * For example shared chats and normal chats need different contexts.
  * Normal chat messages are stored in database as conversation.
  */
-export type SpeechStreamingPipelineStrategy<TContext extends { userId: string }> = {
+export type SpeechStreamingPipelineStrategy<TContext extends { user: { id: string } }> = {
   /** Load the relevant context like the conversation */
   loadContext(params: SpeechStreamingPipelineParams): Promise<TContext>;
+  checkAccess?: (params: SpeechStreamingPipelineParams, context: TContext) => Promise<boolean>;
+  checkBudget?: (
+    params: SpeechStreamingPipelineParams,
+    context: TContext,
+  ) => Promise<TokenAvailability>;
   /** Store the usage of the speech model for the given params and context */
   storeUsage(
     params: SpeechStreamingPipelineParams,
@@ -46,21 +52,28 @@ export type SpeechStreamingPipelineStrategy<TContext extends { userId: string }>
   ): Promise<void>;
 };
 
-export async function runSpeechPipeline<TContext extends { userId: string }>(
+export async function runSpeechPipeline<TContext extends { user: { id: string } }>(
   params: SpeechStreamingPipelineParams,
   strategy: SpeechStreamingPipelineStrategy<TContext>,
 ): Promise<ChatSpeechStreamResult> {
   const context = await strategy.loadContext(params);
-  const hasAccess = await checkAccess(params, context);
+  const hasAccess = strategy.checkAccess
+    ? await strategy.checkAccess(params, context)
+    : await checkAccess(params, context);
   if (!hasAccess) {
     throw new ForbiddenError('Access denied');
   }
 
-  const hasEnoughBudget = await checkAvailableBudget(params.user, params.federalState);
-  if (!hasEnoughBudget) {
+  const budgetInfo = strategy.checkBudget
+    ? await strategy.checkBudget(params, context)
+    : await checkAvailableBudget(params.user, params.federalState);
+  if (budgetInfo === 'userTokenLimitReached') {
     await raiseBudgetExceededEvent(params.user);
     throw new TokenPointsExceededError();
+  } else if (budgetInfo === 'entityTokenLimitReached') {
+    throw new TokenPointsExceededError();
   }
+
   const model = await getSpeechModel();
   if (!model) throw new NotFoundError('No speech model configured');
 
