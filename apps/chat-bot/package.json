@@ -22,6 +22,7 @@
     "prek6:run:cloud": "pnpm k6:build",
     "k6:run:cloud": "k6 cloud run -e LOADTEST_USERNAME=$LOADTEST_USERNAME -e LOADTEST_PASSWORD=$LOADTEST_PASSWORD -e LOADTEST_IDP_HINT=$LOADTEST_IDP_HINT -e LOADTEST_BASE_URL=$LOADTEST_BASE_URL -e LOADTEST_CHARACTER_ID=$LOADTEST_CHARACTER_ID -e LOADTEST_VUS=$LOADTEST_VUS -e API_KEY=$API_KEY",
     "lint": "eslint . --max-warnings 0",
+    "smart-report:merge": "rm -rf smart-report/blobs && mkdir -p smart-report/blobs && cp ../*/blob-report/*.zip smart-report/blobs/ && pnpm exec playwright merge-reports --config=smart-report/merge.config.ts smart-report/blobs",
     "start": "next start",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
