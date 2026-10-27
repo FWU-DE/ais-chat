@@ -2,7 +2,6 @@ import {
   getCachedSpeechPreview,
   setCachedSpeechPreview,
 } from '@/app/api/utils/speech-preview-cache';
-import { calculateSpeechCostsInCent } from '@/app/api/utils/utils';
 import { UserAndContext } from '@/auth/types';
 import type { AudioFormat } from '@ais-chat/ai-core';
 import { generateSpeechById, streamSpeechById, TokenPointsExceededError } from '@ais-chat/ai-core';
@@ -15,6 +14,7 @@ import {
   constructTokenBudgetExceededEvent,
   sendRabbitmqEvent,
 } from '@shared/rabbitmq';
+import { calculateSpeechCostsInCent } from '@shared/speech/utils';
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
 /**
  * Public result of the chat-facing streaming speech functions.
