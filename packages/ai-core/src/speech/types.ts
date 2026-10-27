@@ -41,7 +41,7 @@ export type SpeechGenerationFn = (args: {
  */
 export type SpeechStreamResult = {
   chunks: AsyncGenerator<Buffer, void, unknown>;
-  usage: Promise<SpeechUsage | SpeechCosts>;
+  usage: Promise<SpeechUsage>;
   format: AudioFormat;
 };
 
