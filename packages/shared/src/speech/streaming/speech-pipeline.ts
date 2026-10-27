@@ -28,7 +28,7 @@ export type SpeechStreamingPipelineParams = {
  * For example shared chats and normal chats need different contexts.
  * Normal chat messages are stored in database as conversation.
  */
-export type SpeechStreamingPipelineStrategy<TContext extends { userId: string }> = {
+export type SpeechStreamingPipelineStrategy<TContext extends { user: { id: string } }> = {
   /** Load the relevant context like the conversation */
   loadContext(params: SpeechStreamingPipelineParams): Promise<TContext>;
   checkAccess?: (params: SpeechStreamingPipelineParams, context: TContext) => Promise<boolean>;
@@ -52,7 +52,7 @@ export type SpeechStreamingPipelineStrategy<TContext extends { userId: string }>
   ): Promise<void>;
 };
 
-export async function runSpeechPipeline<TContext extends { userId: string }>(
+export async function runSpeechPipeline<TContext extends { user: { id: string } }>(
   params: SpeechStreamingPipelineParams,
   strategy: SpeechStreamingPipelineStrategy<TContext>,
 ): Promise<ChatSpeechStreamResult> {

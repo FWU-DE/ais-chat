@@ -22,16 +22,11 @@ import {
 import { runSpeechPipeline, SpeechStreamingPipelineStrategy } from './streaming/speech-pipeline';
 import { ChatSpeechStreamResult } from './types';
 
-type SharedChatTeacherContext = {
+type SharedChatSpeechContext = {
   user: UserModel;
   federalState: FederalStateModel;
-};
-
-type SharedChatSpeechContext = {
-  userId: string;
   entity: SharedChatEntity;
   entityType: SharedChatEntityType;
-  teacher: SharedChatTeacherContext;
 };
 
 export type SharedChatSpeechParams = {
@@ -61,41 +56,38 @@ export async function generateSharedChatSpeechStream({
     userId: entity.startedBy,
   });
 
-  const teacherContext: SharedChatTeacherContext = {
-    user,
-    federalState,
-  };
-
   return runSpeechPipeline(
     {
-      user: teacherContext.user,
-      federalState: teacherContext.federalState,
+      user,
+      federalState,
       input: text,
       voice: voice ?? entity.voice,
       abortSignal,
     },
-    createSharedChatSpeechStrategy({ entity, entityType, teacher: teacherContext }),
+    createSharedChatSpeechStrategy({ entity, entityType, user, federalState }),
   );
 }
 
 function createSharedChatSpeechStrategy({
   entity,
   entityType,
-  teacher,
+  user,
+  federalState,
 }: {
   entity: SharedChatEntity;
   entityType: SharedChatEntityType;
-  teacher: SharedChatTeacherContext;
+  user: UserModel;
+  federalState: FederalStateModel;
 }): SpeechStreamingPipelineStrategy<SharedChatSpeechContext> {
   return {
     loadContext: async () => ({
-      userId: teacher.user.id,
+      user,
+      federalState,
       entity,
       entityType,
-      teacher,
     }),
     checkAccess: async () => {
-      requireTeacherRole(teacher.user.userRole);
+      requireTeacherRole(user.userRole);
 
       if (entity.isDeleted) {
         throw new ForbiddenError('Shared chat has been deleted');
@@ -103,10 +95,7 @@ function createSharedChatSpeechStrategy({
       if (entity.suspended) {
         throw new ForbiddenError('Shared chat has been suspended');
       }
-      if (
-        teacher.federalState.featureToggles.isSpeechModelEnabled !== true ||
-        !entity.isSpeechEnabled
-      ) {
+      if (federalState.featureToggles.isSpeechModelEnabled !== true || !entity.isSpeechEnabled) {
         throw new ForbiddenError('Speech is not enabled for this shared chat');
       }
       if (sharedChatHasExpired(entity)) {
@@ -116,7 +105,7 @@ function createSharedChatSpeechStrategy({
       return true;
     },
     checkBudget: async () => {
-      const teacherWithFederalState = { ...teacher.user, federalState: teacher.federalState };
+      const teacherWithFederalState = { ...user, federalState };
       const [sharedChatLimitReached, userLimitReached] = await Promise.all([
         entityType === 'character'
           ? sharedCharacterChatHasReachedTokenPointsLimit({
@@ -140,7 +129,7 @@ function createSharedChatSpeechStrategy({
       if (context.entityType === 'character') {
         await dbUpdateTokenUsageByCharacterChatId({
           characterId: context.entity.id,
-          userId: context.userId,
+          userId: context.user.id,
           modelId: model.id,
           completionTokens: 0,
           promptTokens: 0,
@@ -149,7 +138,7 @@ function createSharedChatSpeechStrategy({
       } else {
         await dbUpdateTokenUsageBySharedLearningScenarioId({
           learningScenarioId: context.entity.id,
-          userId: context.userId,
+          userId: context.user.id,
           modelId: model.id,
           completionTokens: 0,
           promptTokens: 0,
@@ -160,7 +149,7 @@ function createSharedChatSpeechStrategy({
     reportUsage: async (_params, context, model, result) => {
       const costsInCent = await result.costsInCent;
       const common = {
-        user: { ...context.teacher.user, federalState: { id: context.teacher.federalState.id } },
+        user: { ...context.user, federalState: { id: context.federalState.id } },
         anonymous: true,
         provider: model.provider,
         modelName: model.name,

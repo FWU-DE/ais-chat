@@ -9,9 +9,9 @@ import type { SpeechStreamingPipelineParams } from './speech-pipeline';
 
 export const checkAccess = (
   params: SpeechStreamingPipelineParams,
-  context: { userId: string },
+  context: { user: { id: string } },
 ): Promise<boolean> => {
-  if (context.userId !== params.user.id) {
+  if (context.user.id !== params.user.id) {
     return Promise.resolve(false);
   }
   return Promise.resolve(true);
