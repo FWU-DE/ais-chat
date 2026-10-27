@@ -8,6 +8,7 @@ import {
   verifyWriteAccess,
 } from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
+import { getUserSettings } from '@shared/users/user-settings-service';
 import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import { db } from '@shared/db';
 import {
@@ -120,6 +121,7 @@ export const createNewCharacter = async ({
 
   // Generate uuid beforehand to avoid two db transactions for create and immediate update
   const characterId = generateUUID();
+  const userSettings = await getUserSettings({ userId: user.id });
   const llmModels = await dbGetLlmModelsByFederalStateId({
     federalStateId: federalStateId,
   });
@@ -139,6 +141,8 @@ export const createNewCharacter = async ({
       name: '',
       userId: user.id,
       modelId: model.id,
+      voice: userSettings?.defaultSpeechVoice,
+      speechOnly: userSettings?.defaultIsSpeechOnly,
     })
     .returning();
 

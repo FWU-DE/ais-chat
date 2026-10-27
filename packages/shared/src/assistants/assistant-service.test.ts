@@ -1,26 +1,12 @@
-import { beforeEach, describe, expect, it, MockedFunction, vi } from 'vitest';
+import { UserModel } from '@shared/auth/user-model';
 import {
-  createNewAssistant,
-  deleteAssistant,
-  deleteFileMappingAndEntity,
-  getConversationWithMessagesAndAssistant,
-  getAssistantForNewChat,
-  getAssistantForExistingConversation,
-  getAssistantsByOverviewFilter,
-  getFileMappings,
-  linkFileToAssistant,
-  updateAssistant,
-  updateAssistantSchoolSharing,
-  getAssistantByUser,
-  uploadAvatarPictureForAssistant,
-  downloadFileFromAssistant,
-} from './assistant-service';
-import { ForbiddenError, NotFoundError, InvalidArgumentError } from '@shared/error';
-import { generateUUID } from '@shared/utils/uuid';
+  getConversation,
+  getConversationMessages,
+} from '@shared/conversation/conversation-service';
 import {
-  dbGetAssistantsByUserId,
   dbGetAssistantById,
   dbGetAssistantByIdForConversation,
+  dbGetAssistantsByUserId,
   dbGetCommunityGpts,
   dbGetGlobalGpts,
   dbGetGptsByAssociatedSchools,
@@ -28,14 +14,29 @@ import {
 } from '@shared/db/functions/assistants';
 import { dbGetRelatedAssistantFiles } from '@shared/db/functions/files';
 import { AssistantSelectModel } from '@shared/db/schema';
-import { UserModel } from '@shared/auth/user-model';
-import {
-  getConversation,
-  getConversationMessages,
-} from '@shared/conversation/conversation-service';
-import { uploadFileToS3 } from '../s3';
+import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/error';
+import { getUserSettings } from '@shared/users/user-settings-service';
+import { generateUUID } from '@shared/utils/uuid';
+import { beforeEach, describe, expect, it, MockedFunction, vi } from 'vitest';
 import { getAvatarPictureUrl } from '../files/fileService';
+import { uploadFileToS3 } from '../s3';
 import { copyAssistant, copyRelatedTemplateFiles } from '../templates/template-service';
+import {
+  createNewAssistant,
+  deleteAssistant,
+  deleteFileMappingAndEntity,
+  downloadFileFromAssistant,
+  getAssistantByUser,
+  getAssistantForExistingConversation,
+  getAssistantForNewChat,
+  getAssistantsByOverviewFilter,
+  getConversationWithMessagesAndAssistant,
+  getFileMappings,
+  linkFileToAssistant,
+  updateAssistant,
+  updateAssistantSchoolSharing,
+  uploadAvatarPictureForAssistant,
+} from './assistant-service';
 
 vi.mock('../db/functions/assistants', () => ({
   dbGetAssistantsByUserId: vi.fn(),
@@ -67,14 +68,21 @@ vi.mock('../templates/template-service', () => ({
   copyAssistant: vi.fn(),
   copyRelatedTemplateFiles: vi.fn(),
 }));
-const { mockDbReturning, mockDbSet, mockDbUpdate } = vi.hoisted(() => {
-  const mockDbReturning = vi.fn();
-  const mockDbWhere = vi.fn(() => ({ returning: mockDbReturning }));
-  const mockDbSet = vi.fn(() => ({ where: mockDbWhere }));
-  const mockDbUpdate = vi.fn(() => ({ set: mockDbSet }));
-  return { mockDbReturning, mockDbSet, mockDbUpdate };
-});
-vi.mock('@shared/db', () => ({ db: { update: mockDbUpdate } }));
+vi.mock('@shared/users/user-settings-service', () => ({
+  getUserSettings: vi.fn(),
+}));
+const { mockDbReturning, mockDbSet, mockDbUpdate, mockDbInsert, mockDbInsertValues } = vi.hoisted(
+  () => {
+    const mockDbReturning = vi.fn();
+    const mockDbInsertValues = vi.fn(() => ({ returning: mockDbReturning }));
+    const mockDbInsert = vi.fn(() => ({ values: mockDbInsertValues }));
+    const mockDbWhere = vi.fn(() => ({ returning: mockDbReturning }));
+    const mockDbSet = vi.fn(() => ({ where: mockDbWhere }));
+    const mockDbUpdate = vi.fn(() => ({ set: mockDbSet }));
+    return { mockDbReturning, mockDbSet, mockDbUpdate, mockDbInsert, mockDbInsertValues };
+  },
+);
+vi.mock('@shared/db', () => ({ db: { insert: mockDbInsert, update: mockDbUpdate } }));
 
 const mockUser = (userRole: 'student' | 'teacher' = 'teacher'): UserModel => ({
   id: generateUUID(),
@@ -522,6 +530,25 @@ describe('assistant-service', () => {
       ).mockResolvedValue(undefined as never);
       (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
         templateAssistant() as never,
+      );
+    });
+
+    it('applies user speech defaults when creating an empty assistant', async () => {
+      const user = mockUser('teacher');
+      const insertedAssistant = { id: generateUUID() } as AssistantSelectModel;
+      vi.mocked(getUserSettings).mockResolvedValue({
+        defaultSpeechVoice: 'voice-b',
+        defaultIsSpeechOnly: true,
+      });
+      mockDbReturning.mockResolvedValue([insertedAssistant]);
+
+      await createNewAssistant({ user });
+
+      expect(mockDbInsertValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          voice: 'voice-b',
+          speechOnly: true,
+        }),
       );
     });
 

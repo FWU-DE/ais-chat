@@ -7,6 +7,7 @@ import {
   verifyWriteAccess,
 } from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
+import { getUserSettings } from '@shared/users/user-settings-service';
 import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import {
   getConversation,
@@ -263,6 +264,7 @@ export async function createNewAssistant({
   }
 
   const assistantId = generateUUID();
+  const userSettings = await getUserSettings({ userId: user.id });
 
   const [insertedAssistant] = await db
     .insert(assistantTable)
@@ -274,6 +276,8 @@ export async function createNewAssistant({
       description: '',
       instructions: '',
       promptSuggestions: [],
+      voice: userSettings?.defaultSpeechVoice,
+      speechOnly: userSettings?.defaultIsSpeechOnly,
     })
     .returning();
 
