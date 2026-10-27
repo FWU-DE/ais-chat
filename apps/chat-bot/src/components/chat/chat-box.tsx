@@ -179,7 +179,6 @@ export function ChatBox({
       characterName={characterName}
       regenerateMessage={regenerateMessage}
       canRegenerateMessage={canRegenerateMessage}
-      generateSpeechFn={messageSpeechFn}
       generateSpeechStreamFn={generateSpeechStreamFn}
       speechVoice={speechVoice}
       isSpeechModelEnabled={isSpeechModelEnabled}
