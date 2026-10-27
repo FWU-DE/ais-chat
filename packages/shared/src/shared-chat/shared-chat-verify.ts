@@ -1,7 +1,10 @@
-import { ForbiddenError } from '@shared/error';
-import { SharedChatFileMetadata, SharedSessionId } from '.';
 import { FileMetadata } from '@shared/db/schema';
-import { isSharedChatFileMetadata } from './shared-chat-types';
+import { ForbiddenError } from '@shared/error';
+import {
+  isSharedChatFileMetadata,
+  SharedChatFileMetadata,
+  SharedSessionId,
+} from './shared-chat-types';
 
 function isSharedChatFileOwnedBySession({
   fileMetadata,
