@@ -27,16 +27,16 @@ const API_KEY_NAME = 'Test API Key';
 // LLM provider keys: real values from env (CI) or undefined (local dev, forked PRs). Models
 // without both an API key and a base URL are filtered out below instead of being seeded with
 // placeholder credentials, which Bifrost would reject.
-const ionosApiKey = process.env.LLM_IONOS_API_KEY;
-const ionosBaseUrl = process.env.LLM_IONOS_BASE_URL;
-const gpt4oMiniApiKey = process.env.LLM_GPT4OMINI_API_KEY;
-const gpt4oMiniBaseUrl = process.env.LLM_GPT4OMINI_BASE_URL;
-const gpt5nanoApiKey = process.env.LLM_GPT5NANO_API_KEY;
-const gpt5nanoBaseUrl = process.env.LLM_GPT5NANO_BASE_URL;
-const gptImageApiKey = process.env.LLM_GPT_IMAGE_API_KEY;
-const gptImageBaseUrl = process.env.LLM_GPT_IMAGE_BASE_URL;
-const gpt5miniApiKey = process.env.LLM_GPT5MINI_API_KEY;
-const gpt5miniBaseUrl = process.env.LLM_GPT5MINI_BASE_URL;
+const ionosApiKey = process.env.LLM_IONOS_API_KEY ?? '';
+const ionosBaseUrl = process.env.LLM_IONOS_BASE_URL ?? '';
+const gpt4oMiniApiKey = process.env.LLM_GPT4OMINI_API_KEY ?? '';
+const gpt4oMiniBaseUrl = process.env.LLM_GPT4OMINI_BASE_URL ?? '';
+const gpt5nanoApiKey = process.env.LLM_GPT5NANO_API_KEY ?? '';
+const gpt5nanoBaseUrl = process.env.LLM_GPT5NANO_BASE_URL ?? '';
+const gptImageApiKey = process.env.LLM_GPT_IMAGE_API_KEY ?? '';
+const gptImageBaseUrl = process.env.LLM_GPT_IMAGE_BASE_URL ?? '';
+const gpt5miniApiKey = process.env.LLM_GPT5MINI_API_KEY ?? '';
+const gpt5miniBaseUrl = process.env.LLM_GPT5MINI_BASE_URL ?? '';
 const mockLlmApiKey = process.env.LLM_MOCK_API_KEY ?? 'API_KEY_PLACEHOLDER';
 const mockLlmBaseUrl = process.env.LLM_MOCK_BASE_URL ?? 'http://mock-llm:6556';
 const seedEnv = process.env as Record<string, string | undefined>;
@@ -175,8 +175,8 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     displayName: 'Standard Embedding Model',
     setting: {
       provider: 'ionos',
-      apiKey: ionosApiKey ?? '',
-      baseUrl: ionosBaseUrl ?? '',
+      apiKey: ionosApiKey,
+      baseUrl: ionosBaseUrl,
     },
     priceMetadata: {
       type: 'embedding',
@@ -192,8 +192,8 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     description: 'Efficient for lighter tasks',
     setting: {
       provider: 'ionos',
-      apiKey: ionosApiKey ?? '',
-      baseUrl: ionosBaseUrl ?? '',
+      apiKey: ionosApiKey,
+      baseUrl: ionosBaseUrl,
     },
     priceMetadata: {
       type: 'text',
@@ -210,8 +210,8 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     description: 'Multilingual, open source and efficient',
     setting: {
       provider: 'ionos',
-      apiKey: ionosApiKey ?? '',
-      baseUrl: ionosBaseUrl ?? '',
+      apiKey: ionosApiKey,
+      baseUrl: ionosBaseUrl,
     },
     priceMetadata: {
       type: 'text',
@@ -228,8 +228,8 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     description: 'GPT-4o Mini model for testing',
     setting: {
       provider: 'azure',
-      apiKey: gpt4oMiniApiKey ?? '',
-      baseUrl: gpt4oMiniBaseUrl ?? '',
+      apiKey: gpt4oMiniApiKey,
+      baseUrl: gpt4oMiniBaseUrl,
     },
     priceMetadata: {
       type: 'text',
@@ -247,8 +247,8 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     description: 'GPT-5 nano model for testing',
     setting: {
       provider: 'azure',
-      apiKey: gpt5nanoApiKey ?? '',
-      baseUrl: gpt5nanoBaseUrl ?? '',
+      apiKey: gpt5nanoApiKey,
+      baseUrl: gpt5nanoBaseUrl,
     },
     priceMetadata: {
       type: 'text',
@@ -272,8 +272,8 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     description: 'GPT-Image model for testing',
     setting: {
       provider: 'azure',
-      apiKey: gptImageApiKey ?? '',
-      baseUrl: gptImageBaseUrl ?? '',
+      apiKey: gptImageApiKey,
+      baseUrl: gptImageBaseUrl,
     },
     priceMetadata: {
       type: 'image',
@@ -293,8 +293,8 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     description: 'GPT-5 mini model for testing',
     setting: {
       provider: 'azure',
-      apiKey: gpt5miniApiKey ?? '',
-      baseUrl: gpt5miniBaseUrl ?? '',
+      apiKey: gpt5miniApiKey,
+      baseUrl: gpt5miniBaseUrl,
     },
     priceMetadata: {
       type: 'text',
@@ -336,9 +336,7 @@ const llamaGuardModel: LlmInsertModel | undefined =
           provider: 'google',
           projectId: googleProjectId,
           location: googleLocation,
-          ...(googleAuthCredentials === undefined
-            ? {}
-            : { authCredentials: googleAuthCredentials }),
+          authCredentials: googleAuthCredentials,
         },
         priceMetadata: {
           type: 'safety',
