@@ -1,5 +1,6 @@
-import { createApiKeyRecord, db } from './index';
+import { and, eq, inArray, ne } from 'drizzle-orm';
 import { isDeepStrictEqual } from 'node:util';
+import { createApiKeyRecord, db } from './index';
 import {
   type ApiKeyInsertModel,
   apiKeyTable,
@@ -13,7 +14,6 @@ import {
   type ProjectInsertModel,
   projectTable,
 } from './schema';
-import { and, eq, inArray, ne } from 'drizzle-orm';
 import {
   normalizeSeedModelsForBifrost,
   seedProviderKeysForModels,
@@ -64,6 +64,29 @@ const mockLlm: LlmInsertModel = {
     completionTokenPrice: 0,
   },
   supportedImageFormats: ['jpeg', 'jpg', 'png', 'webp'],
+};
+
+const mockSpeech: LlmInsertModel = {
+  id: 'f53e4a77-1a3e-4d62-a3b6-6b74e7f4a1f0',
+  organizationId: ORGANIZATION_ID,
+  provider: 'google',
+  name: 'mock-speech',
+  displayName: 'Mock Speech',
+  description: 'Mock speech model for e2e settings tests',
+  setting: {
+    provider: 'google',
+    projectId: googleProjectId ?? 'e2e-test-project',
+    location: googleLocation ?? 'e2e-test-location',
+  },
+  priceMetadata: {
+    type: 'speech',
+    inputTextTokenPrice: 0,
+    outputAudioTokenPrice: 0,
+  },
+  modelConfig: {
+    voices: [{ name: 'alloy', displayName: 'Alloy' }],
+  },
+  isDeleted: false,
 };
 
 // All prices are rough estimates, probably outdated and just for mocking purposes
@@ -268,6 +291,7 @@ const llamaGuardModel: LlmInsertModel | undefined =
     : undefined;
 
 const DEFAULT_MODELS: LlmInsertModel[] = [...BIFROST_MODELS];
+const SPEECH_MODELS: LlmInsertModel[] = [mockSpeech];
 
 export async function seedDatabase() {
   console.log('Starting api database seeding...');
@@ -345,7 +369,7 @@ export async function seedDatabase() {
         eq(llmModelApiKeyMappingTable.apiKeyId, apiKey.id),
         inArray(
           llmModelApiKeyMappingTable.llmModelId,
-          DEFAULT_MODELS.map((model) => model.id!),
+          [...DEFAULT_MODELS, ...SPEECH_MODELS].map((model) => model.id!),
         ),
       ),
     );
@@ -375,6 +399,36 @@ export async function seedDatabase() {
             isDeleted: model.isDeleted,
             safetyFilterEnabled: model.safetyFilterEnabled,
             useBifrost: true,
+          },
+        });
+
+      await db
+        .insert(llmModelApiKeyMappingTable)
+        .values({
+          llmModelId: model.id!,
+          apiKeyId: apiKey.id,
+        })
+        .onConflictDoNothing();
+    }
+
+    for (const model of SPEECH_MODELS) {
+      await db
+        .insert(llmModelTable)
+        .values(model)
+        .onConflictDoUpdate({
+          target: llmModelTable.id,
+          set: {
+            provider: model.provider,
+            name: model.name,
+            displayName: model.displayName,
+            description: model.description,
+            setting: model.setting,
+            priceMetadata: model.priceMetadata,
+            modelConfig: model.modelConfig,
+            isNew: model.isNew,
+            isDeleted: model.isDeleted,
+            safetyFilterEnabled: model.safetyFilterEnabled,
+            useBifrost: false,
           },
         });
 
