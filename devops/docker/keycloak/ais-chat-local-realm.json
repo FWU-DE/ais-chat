@@ -2750,6 +2750,24 @@
       ]
     },
     {
+      "username": "teacherWithSettings",
+      "firstName": "Settings",
+      "lastName": "Teacher",
+      "email": "teacherWithSettings@example.com",
+      "attributes": {
+        "schulnummer": ["test_school1"],
+        "federal_state": ["DE-TEST"],
+        "role": ["LEHR"]
+      },
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ]
+    },
+    {
       "username": "teacher-bb",
       "firstName": "Teacher",
       "lastName": "Teacher",
