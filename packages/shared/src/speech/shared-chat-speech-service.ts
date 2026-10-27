@@ -2,7 +2,6 @@ import { requireTeacherRole } from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
 import { dbUpdateTokenUsageByCharacterChatId } from '@shared/db/functions/character';
 import { dbUpdateTokenUsageBySharedLearningScenarioId } from '@shared/db/functions/learning-scenario';
-import { dbGetUserAndFederalStateByUserId } from '@shared/db/functions/school';
 import { ForbiddenError } from '@shared/error';
 import { FederalStateModel } from '@shared/federal-states/types';
 import { constructNewMessageEvent, sendRabbitmqEvent } from '@shared/rabbitmq';
@@ -12,6 +11,7 @@ import {
   sharedLearningScenarioChatHasReachedTokenPointsLimit,
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
+import { getUserWithFederalState } from '@shared/users/user-service';
 import { getSharedChatEntity } from './shared-chat-get-entity';
 import {
   SharedChatCharacter,
@@ -57,17 +57,13 @@ export async function generateSharedChatSpeechStream({
     throw new ForbiddenError('Shared chat has no owner');
   }
 
-  const teacher = await dbGetUserAndFederalStateByUserId({ userId: entity.startedBy });
-  if (teacher === undefined || teacher.user.federalStateId === null) {
-    throw new ForbiddenError('Shared chat owner not found');
-  }
+  const { user, federalState } = await getUserWithFederalState({
+    userId: entity.startedBy,
+  });
 
   const teacherContext: SharedChatTeacherContext = {
-    user: { ...teacher.user, federalStateId: teacher.user.federalStateId },
-    federalState: {
-      ...teacher.federalState,
-      hasApiKeyAssigned: teacher.federalState.encryptedApiKey !== null,
-    },
+    user,
+    federalState,
   };
 
   return runSpeechPipeline(
