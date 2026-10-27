@@ -101,7 +101,7 @@ export function useAudioStream(
         setStatus('idle');
       }
     },
-    [generateSpeechStreamFn, status, toast, tCommon, notifyPlaying, id],
+    [generateSpeechStreamFn, status, toast, tCommon, notifyPlaying, id, isInitialMessage],
   );
 
   const pause = React.useCallback(() => {
