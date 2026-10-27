@@ -12,7 +12,7 @@ export default function SpeechButton({
   isSpeechModelEnabled,
 }: {
   text: string;
-  generateSpeechFn: (text: string) => Promise<Blob>;
+  generateSpeechFn: (text: string, signal?: AbortSignal) => Promise<Blob>;
   isSpeechModelEnabled: boolean;
 }) {
   const tCommon = useTranslations('common');

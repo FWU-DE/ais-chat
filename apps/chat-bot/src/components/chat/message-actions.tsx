@@ -24,6 +24,7 @@ export function MessageActions({
   canRegenerateMessage,
   generateSpeechFn,
   generateSpeechStreamFn,
+  speechVoice,
   isSpeechModelEnabled,
   showActivityDialog,
   activitySteps,
@@ -40,8 +41,9 @@ export function MessageActions({
   characterName?: string;
   regenerateMessage: () => void;
   canRegenerateMessage: boolean;
-  generateSpeechFn: (text: string) => Promise<Blob>;
+  generateSpeechFn: (text: string, signal?: AbortSignal) => Promise<Blob>;
   generateSpeechStreamFn: GenerateSpeechStreamFn;
+  speechVoice?: string;
   isSpeechModelEnabled: boolean;
   showActivityDialog?: boolean;
   activitySteps: AiActivityStep[];
@@ -58,6 +60,7 @@ export function MessageActions({
   return (
     <div className="flex flex-col gap-4 w-full">
       <AudioPlayer
+        key={speechVoice ?? ''}
         isSpeechModelEnabled={isSpeechModelEnabled}
         text={plainText}
         generateSpeechStreamFn={generateSpeechStreamFn}
@@ -121,6 +124,7 @@ export function MessageActions({
           </Button>
         ) : (
           <SpeechButton
+            key={speechVoice ?? ''}
             text={plainText}
             generateSpeechFn={generateSpeechFn}
             isSpeechModelEnabled={isSpeechModelEnabled}
