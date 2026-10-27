@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ROUTES } from '@/consts/routes';
+import { Search } from 'lucide-react';
 import { TrashSimpleIcon } from '@phosphor-icons/react';
 
 export type ProjectDetailViewProps = {
@@ -215,7 +216,7 @@ export default function ProjectDetailView(props: ProjectDetailViewProps) {
                           <Button>Sprachmodelle</Button>
                         </Link>
                         <Link href={ROUTES.api.apiKeyDetails(organizationId, projectId, apiKey.id)}>
-                          <Button variant="outline">Bearbeiten</Button>
+                          <Search className="text-primary" />
                         </Link>
                       </div>
                     </TableCell>
