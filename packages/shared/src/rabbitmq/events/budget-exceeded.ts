@@ -8,33 +8,9 @@ type UserAndContext = {
   federalState: { id: string };
 };
 
-type ConversationModel = {
-  id: string;
-};
-
-type LearningScenarioSelectModel = {
-  id: string;
-};
-
-type CharacterSelectModel = {
-  id: string;
-};
-
-type CommonProps = {
+type FunctionProps = {
   user: UserAndContext;
-  anonymous: boolean;
 };
-
-type FunctionProps =
-  | ({
-      conversation: ConversationModel;
-    } & CommonProps)
-  | ({
-      sharedChat: LearningScenarioSelectModel;
-    } & CommonProps)
-  | ({
-      character: CharacterSelectModel;
-    } & CommonProps);
 
 export function constructTokenBudgetExceededEvent(
   props: FunctionProps,

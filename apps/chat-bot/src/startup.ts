@@ -1,14 +1,14 @@
-import { runDatabaseMigration, shutdownDatabase } from '@shared/db';
-import { dbGetFederalStates, dbUpdateFederalState } from '@shared/db/functions/federal-state';
-import { decrypt } from '@shared/db/crypto';
-import { env } from '@shared/env';
-import { env as aiEnv } from '@ais-chat/ai-core/env';
 import { lookupApiKeys } from '@ais-chat/ai-core/api-keys/lookup';
+import { env as aiEnv } from '@ais-chat/ai-core/env';
+import { runDatabaseMigration, shutdownDatabase } from '@shared/db';
+import { decrypt } from '@shared/db/crypto';
+import { dbGetFederalStates, dbUpdateFederalState } from '@shared/db/functions/federal-state';
+import { env } from '@shared/env';
 import { logError, logInfo } from '@shared/logging';
+import { shutdownRabbitMQ } from '@shared/rabbitmq';
 import { listFilesFromS3 } from '@shared/s3';
 import { registerCleanupHandler } from '@shared/shutdown/cleanup';
 import { fixInvalidPictureIds } from '@shared/templates/fix-invalid-picture-ids';
-import { shutdownRabbitMQ } from '@shared/rabbitmq/send';
 
 /**
  * Custom code that will be executed on application startup.

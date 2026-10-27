@@ -21,7 +21,7 @@ vi.mock('@/app/api/utils/speech-preview-cache', () => ({
   getCachedSpeechPreview: mocks.getCachedSpeechPreview,
   setCachedSpeechPreview: mocks.setCachedSpeechPreview,
 }));
-vi.mock('@/app/api/utils/utils', () => ({
+vi.mock('@shared/speech/utils', () => ({
   calculateSpeechCostsInCent: mocks.calculateSpeechCostsInCent,
 }));
 vi.mock('@shared/rabbitmq/events/budget-exceeded', () => ({
