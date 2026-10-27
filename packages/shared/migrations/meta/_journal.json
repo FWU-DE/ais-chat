@@ -708,6 +708,13 @@
       "when": 1791375149615,
       "tag": "0100_daffy_vision",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1792677379276,
+      "tag": "0101_crazy_tarantula",
+      "breakpoints": true
     }
   ]
 }

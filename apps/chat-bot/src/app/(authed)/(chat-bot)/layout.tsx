@@ -1,26 +1,29 @@
+import SessionWatcher from '@/auth/SessionWatcher';
 import { getUser, userHasCompletedTraining } from '@/auth/utils';
-import React from 'react';
-import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
-import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
-import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
-import { checkProductAccess } from '@/utils/vidis/access';
+import { ApplicationLayout } from '@/components/layout/application-layout';
+import { federalStateDisclaimers, VERSION } from '@/components/modals/const';
 import ProductAccessModal from '@/components/modals/product-access';
 import TermsConditionsModal from '@/components/modals/terms-conditions-initial';
-import { federalStateDisclaimers, VERSION } from '@/components/modals/const';
-import { setUserAcceptConditions } from './actions';
-import { FederalStateId } from '@/utils/vidis/const';
-import { getTranslations } from 'next-intl/server';
-import { getFederalStateById } from '@shared/federal-states/federal-state-service';
-import { FederalStateProvider } from '@/components/providers/federal-state-provider';
 import AppSidebar from '@/components/navigation/sidebar/app-sidebar';
+import { FederalStateProvider } from '@/components/providers/federal-state-provider';
+import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
+import { UserSettingsProvider } from '@/components/providers/user-settings-provider';
+import { checkProductAccess } from '@/utils/vidis/access';
+import { FederalStateId } from '@/utils/vidis/const';
 import { SidebarProvider } from '@ais-chat/ui/components/sidebar';
-import SessionWatcher from '@/auth/SessionWatcher';
+import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
+import { getFederalStateById } from '@shared/federal-states/federal-state-service';
 import { getActiveBannersForUser } from '@shared/info-banners/info-banner-service';
-import { ApplicationLayout } from '@/components/layout/application-layout';
+import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
+import { logError } from '@shared/logging';
 import {
   getMaxBudgetInCentByUser,
   getUsedBudgetInCentByUser,
 } from '@shared/users/user-budget-service';
+import { getUserSettings } from '@shared/users/user-settings-service';
+import { getTranslations } from 'next-intl/server';
+import React from 'react';
+import { setUserAcceptConditions } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,18 +32,29 @@ export default async function ChatLayout({ children }: { children: React.ReactNo
   const user = await getUser();
   if (!user.federalState.hasApiKeyAssigned) throw new Error(t('no-api-key'));
 
-  const [federalState, models, usedBudget, maxBudget, hasCompletedTraining, activeBanners] =
-    await Promise.all([
-      getFederalStateById(user.federalState.id),
-      dbGetLlmModelsByFederalStateId({ federalStateId: user.federalState.id }),
-      getUsedBudgetInCentByUser({ user }),
-      getMaxBudgetInCentByUser({ user, federalState: user.federalState }),
-      userHasCompletedTraining(),
-      getActiveBannersForUser({
-        federalStateId: user.federalState.id,
-        userId: user.id,
-      }),
-    ]);
+  const [
+    federalState,
+    models,
+    usedBudget,
+    maxBudget,
+    hasCompletedTraining,
+    activeBanners,
+    settings,
+  ] = await Promise.all([
+    getFederalStateById(user.federalState.id),
+    dbGetLlmModelsByFederalStateId({ federalStateId: user.federalState.id }),
+    getUsedBudgetInCentByUser({ user }),
+    getMaxBudgetInCentByUser({ user, federalState: user.federalState }),
+    userHasCompletedTraining(),
+    getActiveBannersForUser({
+      federalStateId: user.federalState.id,
+      userId: user.id,
+    }),
+    getUserSettings({ userId: user.id }).catch((error: unknown) => {
+      logError('Failed to load user settings', error);
+      return undefined;
+    }),
+  ]);
 
   const productAccess = checkProductAccess({ ...user, hasCompletedTraining });
   const defaultModelName = await getDefaultModelNameByFederalStateId(user.federalState.id, models);
@@ -58,23 +72,25 @@ export default async function ChatLayout({ children }: { children: React.ReactNo
   return (
     <SessionWatcher redirectTo="/api/auth/logout-callback">
       <FederalStateProvider federalState={federalState}>
-        <SidebarProvider className="min-h-0">
-          <LlmModelsProvider
-            models={models}
-            initialModelName={user.lastUsedModel ?? defaultModelName}
-            defaultModelName={defaultModelName}
-          >
-            <AppSidebar
-              user={user}
-              federalState={federalState}
-              usedBudget={usedBudget ?? 0}
-              maxBudget={maxBudget ?? 500}
-            />
-            <ApplicationLayout userAndContext={userAndContext} infoBanners={activeBanners}>
-              {children}
-            </ApplicationLayout>
-          </LlmModelsProvider>
-        </SidebarProvider>
+        <UserSettingsProvider settings={settings ?? {}}>
+          <SidebarProvider className="min-h-0">
+            <LlmModelsProvider
+              models={models}
+              initialModelName={user.lastUsedModel ?? defaultModelName}
+              defaultModelName={defaultModelName}
+            >
+              <AppSidebar
+                user={user}
+                federalState={federalState}
+                usedBudget={usedBudget ?? 0}
+                maxBudget={maxBudget ?? 500}
+              />
+              <ApplicationLayout userAndContext={userAndContext} infoBanners={activeBanners}>
+                {children}
+              </ApplicationLayout>
+            </LlmModelsProvider>
+          </SidebarProvider>
+        </UserSettingsProvider>
         {!productAccess.hasAccess && (
           <ProductAccessModal modalTitle="Nutzung nicht möglich">
             {productAccess.errorMessage}
