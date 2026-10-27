@@ -11,6 +11,11 @@ import {
 } from '@shared/speech/streaming/speech-pipeline';
 import { ChatSpeechStreamResult } from './types';
 
+type SpeechContext = {
+  user: UserModel;
+  conversation: ConversationModel;
+};
+
 export async function generateChatSpeechStream({
   user,
   federalState,
@@ -26,7 +31,7 @@ export async function generateChatSpeechStream({
   voice?: string;
   abortSignal?: AbortSignal;
 }): Promise<ChatSpeechStreamResult> {
-  return runSpeechPipeline<ConversationModel>(
+  return runSpeechPipeline<SpeechContext>(
     {
       user,
       federalState,
@@ -36,20 +41,21 @@ export async function generateChatSpeechStream({
       abortSignal,
     },
     {
-      loadContext: (params: SpeechStreamingPipelineParams) => {
-        return getConversation({
+      loadContext: async (params: SpeechStreamingPipelineParams) => {
+        const conversation = await getConversation({
           conversationId: params.conversationId!,
           userId: params.user.id,
         });
+        return { user: params.user, conversation };
       },
       storeUsage: async (
         _params: SpeechStreamingPipelineParams,
-        context: ConversationModel,
+        context: SpeechContext,
         model: LlmModelSelectModel,
         result: ChatSpeechStreamResult,
       ) => {
         await dbInsertConversationUsage({
-          conversationId: context.id,
+          conversationId: context.conversation.id,
           userId: user.id,
           modelId: model.id,
           completionTokens: 0,
@@ -59,7 +65,7 @@ export async function generateChatSpeechStream({
       },
       reportUsage: async (
         _params: SpeechStreamingPipelineParams,
-        context: ConversationModel,
+        context: SpeechContext,
         model: LlmModelSelectModel,
         result: ChatSpeechStreamResult,
       ) => {
@@ -72,7 +78,7 @@ export async function generateChatSpeechStream({
             provider: model.provider,
             modelName: model.name,
             anonymous: false,
-            conversation: context,
+            conversation: context.conversation,
           }),
         );
       },
