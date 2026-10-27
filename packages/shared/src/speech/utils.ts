@@ -1,5 +1,4 @@
 import { SpeechUsage } from '@ais-chat/ai-core';
-import { SpeechCosts } from '@ais-chat/ai-core/speech/types';
 import { LlmModelSelectModel } from '@shared/db/schema';
 import { logError } from '@shared/logging';
 import { TOKEN_AMOUNT_PER_PRICE } from './types';
@@ -9,10 +8,7 @@ import { TOKEN_AMOUNT_PER_PRICE } from './types';
  *
  * `priceMetadata` values for the speech model are given in cent per 1 million tokens.
  */
-export function calculateSpeechCostsInCent(
-  model: LlmModelSelectModel,
-  usage: SpeechUsage | SpeechCosts,
-): number {
+export function calculateSpeechCostsInCent(model: LlmModelSelectModel, usage: SpeechUsage): number {
   if (model.priceMetadata.type !== 'speech') {
     logError(
       'Invalid model type, gracefully returning 0: ' + model.name,
@@ -20,10 +16,6 @@ export function calculateSpeechCostsInCent(
     );
 
     return 0;
-  }
-
-  if ('costsInCent' in usage) {
-    return usage.costsInCent;
   }
 
   const inputTextTokenPrice = usage.inputTextTokens * model.priceMetadata.inputTextTokenPrice;
