@@ -3,6 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { withAccessibility } from 'playwright-smart-reporter';
 
 const chatBotAppDir = fileURLToPath(new URL('.', import.meta.url));
 const adminAppDir = fileURLToPath(new URL('../admin', import.meta.url));
@@ -38,114 +39,126 @@ function withAppEnv(appDir: string): Record<string, string> {
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
-export default defineConfig({
-  globalSetup: './e2e/global-setup',
-  testDir: './e2e/tests/',
-  fullyParallel: false,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 3 : 1,
-  // Limit the number of failures on CI to save resources
-  maxFailures: process.env.CI ? 10 : undefined,
-  reporter: [
-    ['html', { outputFolder: './playwright-report' }],
-    ['json'],
-    ['github'],
-    ['list'],
-    ['./e2e/reporters/app-log-reporter.ts'],
-  ],
-  timeout: 90_000,
-  use: {
-    baseURL: 'http://localhost:3000',
-    trace: 'on-first-retry',
-    screenshot: 'on',
-    video: 'retain-on-failure',
-  },
-  /* Configure projects for major browsers */
-  projects: [
-    {
-      name: 'chromium',
-      testIgnore: ['**/isolated/**', '**/external-services/**', /.*api.test.ts/],
-      use: {
-        ...devices['Desktop Chrome'],
-        permissions: ['clipboard-read', 'clipboard-write'],
-      },
+export default withAccessibility(
+  defineConfig({
+    globalSetup: './e2e/global-setup',
+    // The monorepo root, shared with the admin/api configs, so merged smart-reporter
+    // test locations resolve correctly across apps (see smart-report/merge.config.ts).
+    // Each project below restores its own e2e/tests dir for test discovery.
+    testDir: '../..',
+    fullyParallel: false,
+    forbidOnly: !!process.env.CI,
+    retries: process.env.CI ? 1 : 0,
+    workers: process.env.CI ? 3 : 1,
+    // Limit the number of failures on CI to save resources
+    maxFailures: process.env.CI ? 10 : undefined,
+    reporter: [
+      ['html', { outputFolder: './playwright-report' }],
+      ['json'],
+      ['github'],
+      ['list'],
+      ['./e2e/reporters/app-log-reporter.ts'],
+      // For smart-reporter (see smart-report/merge.config.ts)
+      ['blob', { outputDir: 'blob-report', fileName: 'chat-bot-report.zip' }],
+    ],
+    timeout: 90_000,
+    use: {
+      baseURL: 'http://localhost:3000',
+      trace: 'on-first-retry',
+      screenshot: 'on',
+      video: 'retain-on-failure',
     },
-    {
-      name: 'firefox',
-      testIgnore: ['**/isolated/**', '**/external-services/**', /.*api.test.ts/],
-      use: {
-        ...devices['Desktop Firefox'],
-        // Firefox can be flaky in CI, so we slow it down and increase timeouts to improve stability
-        launchOptions: {
-          slowMo: 100,
+    /* Configure projects for major browsers */
+    projects: [
+      {
+        name: 'chromium',
+        testDir: './e2e/tests/',
+        testIgnore: ['**/isolated/**', '**/external-services/**', /.*api.test.ts/],
+        use: {
+          ...devices['Desktop Chrome'],
+          permissions: ['clipboard-read', 'clipboard-write'],
         },
       },
-    },
-    {
-      name: 'api test',
-      testMatch: /.*api.test.ts/,
-      fullyParallel: true,
-    },
-    {
-      name: 'external-services',
-      testMatch: '**/external-services/**/*.test.ts',
-      use: {
-        ...devices['Desktop Chrome'],
-        permissions: ['clipboard-read', 'clipboard-write'],
+      {
+        name: 'firefox',
+        testDir: './e2e/tests/',
+        testIgnore: ['**/isolated/**', '**/external-services/**', /.*api.test.ts/],
+        use: {
+          ...devices['Desktop Firefox'],
+          // Firefox can be flaky in CI, so we slow it down and increase timeouts to improve stability
+          launchOptions: {
+            slowMo: 100,
+          },
+        },
       },
-    },
-    {
-      name: 'isolated',
-      testMatch: '**/isolated/**/*.test.ts',
-      dependencies: ['chromium', 'firefox', 'api test'],
-      use: {
-        ...devices['Desktop Chrome'],
-        permissions: ['clipboard-read', 'clipboard-write'],
+      {
+        name: 'api test',
+        testDir: './e2e/tests/',
+        testMatch: /.*api.test.ts/,
+        fullyParallel: true,
       },
-    },
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
+      {
+        name: 'external-services',
+        testDir: './e2e/tests/',
+        testMatch: '**/external-services/**/*.test.ts',
+        use: {
+          ...devices['Desktop Chrome'],
+          permissions: ['clipboard-read', 'clipboard-write'],
+        },
+      },
+      {
+        name: 'isolated',
+        testDir: './e2e/tests/',
+        testMatch: '**/isolated/**/*.test.ts',
+        dependencies: ['chromium', 'firefox', 'api test'],
+        use: {
+          ...devices['Desktop Chrome'],
+          permissions: ['clipboard-read', 'clipboard-write'],
+        },
+      },
+      /* Test against mobile viewports. */
+      // {
+      //   name: 'Mobile Chrome',
+      //   use: { ...devices['Pixel 5'] },
+      // },
+      // {
+      //   name: 'Mobile Safari',
+      //   use: { ...devices['iPhone 12'] },
+      // },
 
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
-  ],
-  webServer: [
-    {
-      command: 'pnpm dev',
-      timeout: 60000, // wait 60 seconds for web server at url to be available
-      url: 'http://localhost:3000', // the server to be used for tests
-      reuseExistingServer: true,
-      stdout: 'pipe',
-      name: 'chat-bot',
-      env: withAppEnv(chatBotAppDir),
-    },
-    {
-      // Admin app is required for cross-app tests (e.g. community templates).
-      // Run from the admin directory with its own env so it doesn't inherit
-      // chat-bot's env when this config is started via chat-bot's dotenvx scripts.
-      command: 'pnpm dev',
-      cwd: adminAppDir,
-      timeout: 60000,
-      url: 'http://localhost:3001',
-      reuseExistingServer: true,
-      stdout: 'pipe',
-      name: 'admin',
-      env: withAppEnv(adminAppDir),
-    },
-  ],
-});
+      /* Test against branded browsers. */
+      // {
+      //   name: 'Microsoft Edge',
+      //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
+      // },
+      // {
+      //   name: 'Google Chrome',
+      //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+      // },
+    ],
+    webServer: [
+      {
+        command: 'pnpm dev',
+        timeout: 60000, // wait 60 seconds for web server at url to be available
+        url: 'http://localhost:3000', // the server to be used for tests
+        reuseExistingServer: true,
+        stdout: 'pipe',
+        name: 'chat-bot',
+        env: withAppEnv(chatBotAppDir),
+      },
+      {
+        // Admin app is required for cross-app tests (e.g. community templates).
+        // Run from the admin directory with its own env so it doesn't inherit
+        // chat-bot's env when this config is started via chat-bot's dotenvx scripts.
+        command: 'pnpm dev',
+        cwd: adminAppDir,
+        timeout: 60000,
+        url: 'http://localhost:3001',
+        reuseExistingServer: true,
+        stdout: 'pipe',
+        name: 'admin',
+        env: withAppEnv(adminAppDir),
+      },
+    ],
+  }),
+);

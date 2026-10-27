@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '../../fixtures/test';
+import type { Page } from '@playwright/test';
 import { nanoid } from 'nanoid';
 import { AUTH_FILES } from '../../utils/const';
 import { configureCharacter, createCharacter, deleteCharacter } from '../../utils/character';

@@ -60,6 +60,31 @@ In order to run tests directly in vscode, the extension `Playwright Test for VSC
 The extension provides a `Test Explorer` available through the `Testing` icon on the left menu bar.
 Run or debug a test directly from here.
 
+### Viewing a smart-reporter report locally
+
+Every e2e run (chat-bot, admin, api) writes a `blob-report/` in its own app folder. To turn those into
+one aggregated [playwright-smart-reporter](https://github.com/qa-gary-parker/playwright-smart-reporter)
+report — with accessibility results, coverage, flakiness history, etc. — merge them from `apps/chat-bot`:
+
+```sh
+cd apps/chat-bot
+rm -rf smart-report/blobs
+mkdir -p smart-report/blobs
+cp blob-report/*.zip ../admin/blob-report/*.zip ../api/blob-report/*.zip smart-report/blobs/ 2>/dev/null
+pnpm exec playwright merge-reports --config=smart-report/merge.config.ts smart-report/blobs
+```
+
+Only copy the `blob-report/` dirs of the apps whose tests you actually ran — missing ones are fine, the
+command above just ignores a `cp` that finds nothing. This writes `smart-report/smart-report.html` with
+the combined results.
+
+**Known limitation — code coverage:** Turbopack (used for this app's production build) emits source maps
+as [index/sectioned maps](https://tc39.es/source-map/#index-map) (a top-level `sections` array instead of
+a flat `mappings` string). `playwright-smart-reporter`'s coverage loader (as of v4.0.0) only accepts flat
+maps and rejects these with `not a version 3 source map`, so coverage in the report is measured against
+the generated/minified chunks, not the original source — the Coverage view's numbers and file list are not
+meaningful until upstream adds index-map support.
+
 # Load Testing
 
 ## Run load tests locally
