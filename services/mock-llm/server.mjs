@@ -6,11 +6,17 @@
  *   Returns OpenAI Responses API-compatible JSON or streaming SSE events. Commands
  *   can force deterministic function calls and then print function outputs.
  *
+ * POST /v1/images/generations
+ * POST /v1/images/edits
+ *   Returns an OpenAI Images API-compatible response with a random solid-color PNG, sized to
+ *   match the requested `size` (ignoring the prompt and, for edits, the uploaded image).
+ *
  * GET /health
  *   Returns {"status":"healthy"} for readiness checks.
  */
 
 import http from 'node:http';
+import zlib from 'node:zlib';
 
 const PORT = 6556;
 const CHUNK_INTERVAL_MS = 1;
@@ -292,6 +298,79 @@ function writeResponsesJson({ res, id, model, input, responseText }) {
   );
 }
 
+// --- Mock image generation (OpenAI Images API-compatible) ---
+
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+function pngChunk(type, data) {
+  const typed = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(zlib.crc32(typed));
+  return Buffer.concat([length, typed, crc]);
+}
+
+function parseImageSize(size) {
+  const [, w, h] = /^(\d+)x(\d+)$/.exec(size ?? '') ?? [];
+  const clamp = (n) => Math.min(Number(n) || 1024, 2048);
+  return { width: clamp(w), height: clamp(h) };
+}
+
+function createSolidColorPngBase64(width, height) {
+  const color = Buffer.from(Array.from({ length: 3 }, () => Math.floor(Math.random() * 256)));
+  const row = Buffer.concat([Buffer.from([0]), Buffer.concat(Array(width).fill(color))]);
+  const raw = Buffer.concat(Array(height).fill(row));
+
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 2; // color type: RGB
+
+  return Buffer.concat([
+    PNG_SIGNATURE,
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', zlib.deflateSync(raw)),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]).toString('base64');
+}
+
+function respondWithMockImage(res, size) {
+  const { width, height } = parseImageSize(size);
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(
+    JSON.stringify({
+      created: Math.floor(Date.now() / 1000),
+      data: [{ b64_json: createSolidColorPngBase64(width, height) }],
+      output_format: 'png',
+      // Zeroed out — only present so consumers expecting a usage shape (e.g. Bifrost) don't break.
+      usage: {
+        input_tokens: 0,
+        input_tokens_details: { text_tokens: 0, image_tokens: 0 },
+        output_tokens: 0,
+        output_tokens_details: { text_tokens: 0 },
+        total_tokens: 0,
+      },
+    }),
+  );
+}
+
+async function handleImagesGenerate(req, res) {
+  let size;
+  try {
+    size = JSON.parse(await readBody(req)).size;
+  } catch {
+    // ignore, use default size
+  }
+  respondWithMockImage(res, size);
+}
+
+async function handleImagesEdit(req, res) {
+  const body = await readBody(req);
+  respondWithMockImage(res, /name="size"\r\n\r\n([^\r\n]+)/.exec(body)?.[1]);
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && req.url === '/health') {
@@ -307,6 +386,16 @@ const server = http.createServer(async (req, res) => {
       (pathname === '/v1/responses' || pathname === '/openai/responses')
     ) {
       await handleResponses(req, res);
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/images/generations') {
+      await handleImagesGenerate(req, res);
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/images/edits') {
+      await handleImagesEdit(req, res);
       return;
     }
 

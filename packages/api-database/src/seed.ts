@@ -114,6 +114,32 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     displayName: process.env.E2E_TEXT_MODEL_2 ?? 'Mock LLM (2)',
     safetyFilterEnabled: false,
   },
+  // Mock image model: always available regardless of real credentials, so that
+  // `initializeStaticModelConfigurations` (packages/shared) can always resolve a `default-image`
+  // model — the mock LLM server generates a solid-color placeholder image for it.
+  {
+    id: 'd3f8a8e2-5c1a-4b7a-9f2e-3a6b8c4d9e1f',
+    organizationId: ORGANIZATION_ID,
+    provider: 'bifrost',
+    name: 'mock-image',
+    displayName: 'Mock LLM (Image)',
+    description: 'Mock LLM for e2e testing — returns a solid-color placeholder image',
+    setting: {
+      provider: 'openai',
+      apiKey: mockLlmApiKey,
+      baseUrl: mockLlmBaseUrl,
+    },
+    priceMetadata: {
+      type: 'image',
+      // The mock LLM always reports usage, so billing uses the token-based path (all zeroed).
+      inputTextTokenPrice: 0,
+      inputImageTokenPrice: 0,
+      outputTextTokenPrice: 0,
+      outputImageTokenPrice: 0,
+    },
+    supportedImageFormats: ['jpg', 'jpeg', 'png'],
+    safetyFilterEnabled: false,
+  },
   // Realm LLMs
   {
     id: 'b870b74d-7458-4dcf-99f6-ace83ef514f4',
