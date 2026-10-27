@@ -9,36 +9,16 @@ import {
   type SpeechUsage,
 } from '../types';
 
-// Gemini TTS generates 24 kHz mono signed 16-bit little-endian PCM:
-// https://ai.google.dev/gemini-api/docs/speech-generation
-const SAMPLE_RATE = 24000; // samples per second
-const CHANNELS = 1;
-const BITS_PER_SAMPLE = 16;
-const BYTES_PER_SAMPLE = BITS_PER_SAMPLE / 8;
-
-// Ramp the final few milliseconds to silence. Gemini's PCM often ends on a non-zero sample, so the
-// abrupt jump to silence when playback stops is heard as a click/crackle at the end of every clip.
-const FADE_OUT_MS = 10;
-
-function applyFadeOut(data: Buffer): void {
-  const totalSamples = data.byteLength / BYTES_PER_SAMPLE;
-  const fadeSamples = Math.min(totalSamples, Math.round((SAMPLE_RATE * FADE_OUT_MS) / 1000));
-  const firstFadedSample = totalSamples - fadeSamples;
-
-  for (let i = 0; i < fadeSamples; i++) {
-    const offset = (firstFadedSample + i) * BYTES_PER_SAMPLE;
-    const gain = 1 - (i + 1) / fadeSamples;
-    data.writeInt16LE(Math.round(data.readInt16LE(offset) * gain), offset);
-  }
-}
-
 function pcmToWav(pcm: Buffer): Buffer {
-  // Drop trailing odd byte to keep samples 16-bit aligned, then copy so the fade doesn't mutate the
-  // caller's decoded buffer.
-  const dataLength = Math.floor(pcm.byteLength / BYTES_PER_SAMPLE) * BYTES_PER_SAMPLE;
-  const data = Buffer.from(pcm.subarray(0, dataLength));
-  applyFadeOut(data);
+  // Gemini TTS generates 24 kHz mono signed 16-bit little-endian PCM:
+  // https://ai.google.dev/gemini-api/docs/speech-generation
+  const SAMPLE_RATE = 24000; // samples per second
+  const CHANNELS = 1;
+  const BITS_PER_SAMPLE = 16;
+  const BYTES_PER_SAMPLE = BITS_PER_SAMPLE / 8;
 
+  // Drop trailing odd byte to keep samples 16-bit aligned.
+  const dataLength = Math.floor(pcm.byteLength / BYTES_PER_SAMPLE) * BYTES_PER_SAMPLE;
   const byteRate = SAMPLE_RATE * CHANNELS * BYTES_PER_SAMPLE;
   const blockAlign = CHANNELS * BYTES_PER_SAMPLE;
 
@@ -58,7 +38,7 @@ function pcmToWav(pcm: Buffer): Buffer {
   header.write('data', 36, 'ascii');
   header.writeUInt32LE(dataLength, 40);
 
-  return Buffer.concat([header, data]);
+  return Buffer.concat([header, pcm.subarray(0, dataLength)]);
 }
 
 export function constructGoogleSpeechGenerationFn(model: AiModel): SpeechGenerationFn {
