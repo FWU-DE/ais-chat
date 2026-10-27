@@ -43,13 +43,22 @@ async function resolveSpeechModelAndVoice(voice?: string) {
   return { speechModel, selectedVoice };
 }
 
-export async function generateSpeech({ text, voice }: { text: string; voice?: string }) {
+export async function generateSpeech({
+  text,
+  voice,
+  abortSignal,
+}: {
+  text: string;
+  voice?: string;
+  abortSignal?: AbortSignal;
+}) {
   const { speechModel, selectedVoice } = await resolveSpeechModelAndVoice(voice);
 
   const { wavBuffer, usage } = await generateSpeechById({
     modelId: speechModel.id,
     text,
     voice: selectedVoice,
+    abortSignal,
   });
 
   const costsInCent = calculateSpeechCostsInCent(speechModel, usage);
@@ -123,11 +132,13 @@ export async function generateChatSpeech({
   conversationId,
   text,
   voice,
+  abortSignal,
 }: {
   user: UserAndContext;
   conversationId: string;
   text: string;
   voice?: string;
+  abortSignal?: AbortSignal;
 }): Promise<{ buffer: Buffer; contentType: string }> {
   const conversation = await getConversation({
     conversationId,
@@ -145,7 +156,7 @@ export async function generateChatSpeech({
     throw new TokenPointsExceededError();
   }
 
-  const speechResult = await generateSpeech({ text, voice });
+  const speechResult = await generateSpeech({ text, voice, abortSignal });
 
   await dbInsertConversationUsage({
     conversationId,
@@ -287,9 +298,11 @@ export async function generateSpeechPreview({ text, voice }: { text: string; voi
 export async function generateStaticMessageSpeech({
   text,
   voice,
+  abortSignal,
 }: {
   text: string;
   voice?: string;
+  abortSignal?: AbortSignal;
 }): Promise<{ buffer: Buffer; contentType: string }> {
   const { speechModel, selectedVoice } = await resolveSpeechModelAndVoice(voice);
 
@@ -305,6 +318,7 @@ export async function generateStaticMessageSpeech({
     modelId: speechModel.id,
     text,
     voice: selectedVoice,
+    abortSignal,
   });
 
   await setCachedSpeechPreview(speechModel.id, selectedVoice, text, wavBuffer);

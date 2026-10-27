@@ -13,6 +13,7 @@ export async function POST(req: NextRequest) {
     const { buffer, contentType } = await generateSharedChatInitialMessageSpeech({
       inviteCode: parsed.inviteCode,
       characterId: parsed.characterId,
+      abortSignal: req.signal,
     });
 
     return new NextResponse(new Uint8Array(buffer), {

@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
       entityType: parsed.entityType,
       entityId: parsed.entityId,
       text: parsed.text,
+      abortSignal: req.signal,
     });
 
     return new NextResponse(new Uint8Array(buffer), {
