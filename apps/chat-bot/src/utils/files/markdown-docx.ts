@@ -1,3 +1,4 @@
+import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
 import { createBoard } from '@/components/chat/plot/jsxgraph-board';
 import { renderPlotPng } from '@/components/chat/plot/png-export';
 import { getRenderedPlot } from '@/components/chat/plot/rendered-plots';
@@ -261,12 +262,22 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
           return;
         }
 
-        const png = await renderPlotPng(svg);
+        const exportSvg = svg.cloneNode(true) as SVGSVGElement;
+        exportSvg
+          .querySelectorAll('foreignObject')
+          .forEach((foreignObject) => foreignObject.remove());
+        exportSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        exportSvg.setAttribute('width', String(width));
+        exportSvg.setAttribute('height', String(height));
+        const data = new TextEncoder().encode(
+          new XMLSerializer().serializeToString(exportSvg),
+        ).buffer;
         images.set(imageKey, {
-          type: 'png',
+          type: 'svg',
           width,
           height,
-          data: await png.arrayBuffer(),
+          data,
+          fallback: await (await renderPlotPng(svg)).arrayBuffer(),
         });
       } finally {
         if (board !== undefined) {
@@ -315,14 +326,39 @@ function preparePlotCodeBlocks(root: Root) {
 }
 
 export type ConversationExportMessage = {
+  id: string;
   role: string;
   content: string;
   images: Array<{ alt: string; url: string }>;
 };
 
 export type ConversationExport = {
-  markdownBlocks: Array<{ markdown: string }>;
+  markdownBlocks: Array<{ markdown: string; messageId?: string }>;
 };
+
+export function createConversationExportMessages({
+  messages,
+  fileMapping,
+  imageUrl = (file) => `/api/files/${file.id}/scaled-image?width=200&height=320`,
+}: {
+  messages: Array<
+    Pick<ConversationExportMessage, 'id' | 'role' | 'content'> & { createdAt?: Date }
+  >;
+  fileMapping: Map<string, ConversationDownloadFile[]>;
+  imageUrl?: (file: ConversationDownloadFile) => string;
+}): ConversationExportMessage[] {
+  return messages.map(({ id, role, content }) => ({
+    id,
+    role,
+    content,
+    images: (fileMapping.get(id) ?? [])
+      .filter((file) => /\.(?:apng|avif|gif|jpe?g|png|svg|webp)$/i.test(file.name))
+      .map((file) => ({
+        alt: file.name,
+        url: file.localUrl ?? imageUrl(file),
+      })),
+  }));
+}
 
 export function formatConversationExport({
   messages,
@@ -347,10 +383,13 @@ export function formatConversationExport({
   }
   markdownBlocks.push({ markdown: `Erstellt am: ${formattedDate}` });
 
-  for (const { role, content, images } of messages) {
+  for (const { id, role, content, images } of messages) {
     markdownBlocks.push({ markdown: PARAGRAPH_SPACER });
     const messageHeading = role === 'user' ? 'Nutzer/in' : 'AIS.chat';
-    markdownBlocks.push({ markdown: `### ${messageHeading}:` }, { markdown: content });
+    markdownBlocks.push(
+      { markdown: `### ${messageHeading}:` },
+      { markdown: content, messageId: id },
+    );
     markdownBlocks.push(...images.map(({ alt, url }) => ({ markdown: `![${alt}](${url})` })));
   }
 

@@ -6,6 +6,7 @@ import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import CopyToClipboardButton from '../common/clipboard-button';
+import type { ConversationDownloadFile } from './conversation-download-context';
 import ReloadIcon from '../icons/reload';
 import { AiActivityDialog } from './activity/ai-activity';
 import DownloadConversationMessageButton from './download-conversation-message-button';
@@ -31,12 +32,14 @@ export function MessageActions({
   isInitialMessage,
   isTextVisible,
   onToggleText,
+  files,
 }: {
   message: UIMessage;
   plainText: string;
   status: ChatStatus;
   conversationId?: string;
   characterName?: string;
+  files: ConversationDownloadFile[];
   regenerateMessage: () => void;
   canRegenerateMessage: boolean;
   generateSpeechStreamFn: GenerateSpeechStreamFn;
@@ -84,8 +87,8 @@ export function MessageActions({
           !isInitialMessage &&
           (!isLastMessage || status === 'ready') && (
             <DownloadConversationMessageButton
-              conversationId={conversationId}
-              messageId={message.id}
+              message={message}
+              files={files}
               characterName={characterName}
             />
           )}
