@@ -36,6 +36,7 @@ export const chatMessageSchema = z.object({
   role: z.enum(CONVERSATION_ROLES),
   content: z.string(),
   createdAt: z.coerce.date().optional(),
+  modelName: z.string().optional(),
   attachments: z.array(z.any()).optional(),
   activitySteps: z.array(aiActivityStepSchema).optional(),
   toolCalls: z.array(z.any()).optional(),
@@ -51,6 +52,7 @@ export type ChatMessage = {
   role: ConversationRole;
   content: string;
   createdAt?: Date;
+  modelName?: string;
   attachments?: ChatAttachment[];
   activitySteps?: AiActivityStep[];
   toolCalls?: ToolCall[];

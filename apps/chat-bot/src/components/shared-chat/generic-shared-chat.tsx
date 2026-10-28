@@ -9,6 +9,7 @@ import { useAutoScroll } from '@/hooks/use-auto-scroll';
 import type { UseChatReturn } from '@/hooks/use-chat-hooks';
 import { getFileExtension, isImageFile } from '@/utils/files/generic';
 import { getSharedChatImageUrl } from '@/utils/shared-chat-files';
+import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
 import {
   clearSharedChat,
   loadSharedChat,
@@ -334,8 +335,7 @@ export default function GenericSharedChat({
         <ExpiredChatModal
           conversationMessages={uiMessages}
           title={entity.name}
-          inviteCode={inviteCode}
-          sharedSessionId={sharedSessionId}
+          fileMapping={pendingFileMapping as Map<string, ConversationDownloadFile[]>}
           handleRetry={handleRetry}
         />
       )}
@@ -349,8 +349,7 @@ export default function GenericSharedChat({
           messages={uiMessages}
           dialogStarted={dialogStarted}
           imageSource={avatarPictureUrl}
-          inviteCode={inviteCode}
-          sharedSessionId={sharedSessionId}
+          fileMapping={pendingFileMapping as Map<string, ConversationDownloadFile[]>}
         />
         <div ref={containerRef} className="relative flex min-h-0 flex-1 flex-col items-center">
           <div ref={scrollRef} className="min-h-0 w-full flex-1 max-w-5xl overflow-y-auto p-4">

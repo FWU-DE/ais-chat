@@ -2,65 +2,63 @@
 
 import { useToast } from '@/components/common/toast';
 import Spinner from '@/components/icons/spinner';
+import type { ChatMessage } from '@/types/chat';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
-import { formatConversationExport, markdownToDocxBlob } from '@/utils/files/markdown-docx';
+import {
+  createConversationExportMessages,
+  formatConversationExport,
+  markdownToDocxBlob,
+} from '@/utils/files/markdown-docx';
 import { DownloadSimpleIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import type { ConversationDownloadFile } from './conversation-download-context';
 
 type DownloadConversationMessageButtonProps = {
-  conversationId: string;
-  messageId: string;
+  message: ChatMessage;
+  files: ConversationDownloadFile[];
   characterName?: string;
 };
 
 type DownloadConversationMessageParams = {
-  conversationId: string;
-  messageId: string;
+  message: DownloadConversationMessageButtonProps['message'];
+  files: ConversationDownloadFile[];
   characterName?: string;
+  modelName?: string;
 };
 
 export async function fetchConversationMessageDownload({
-  conversationId,
-  messageId,
+  message,
+  files,
   characterName,
+  modelName,
 }: DownloadConversationMessageParams) {
-  const searchParams = new URLSearchParams({
-    conversationId,
-    messageId,
+  if (message.createdAt === undefined) {
+    throw new Error('Cannot export a message without a creation timestamp');
+  }
+  const createdAt = message.createdAt.toISOString();
+  const exportMessages = createConversationExportMessages({
+    messages: [message],
+    fileMapping: new Map([[message.id, files]]),
   });
-
-  if (characterName !== undefined) {
-    searchParams.append('enterpriseGptName', characterName);
-  }
-
-  const response = await fetch(`/api/download-conversation?${searchParams.toString()}`);
-
-  if (!response.ok) {
-    throw new Error('Failed to download the document');
-  }
-
-  const { fileName, createdAt, modelName, messages } = (await response.json()) as {
-    fileName: string;
-    createdAt: string;
-    modelName: string;
-    messages: Array<{
-      role: string;
-      content: string;
-      images: Array<{ alt: string; url: string }>;
-    }>;
-  };
+  const safeName = characterName ?? 'AIS.chat';
 
   return {
-    blob: await markdownToDocxBlob(formatConversationExport({ messages, createdAt, modelName })),
-    fileName,
+    blob: await markdownToDocxBlob(
+      formatConversationExport({
+        messages: exportMessages,
+        createdAt,
+        modelName: modelName ?? 'AIS.chat',
+      }),
+    ),
+    fileName: `${createdAt.slice(0, 10)} ${safeName} Antwort.docx`,
   };
 }
 
 export default function DownloadConversationMessageButton({
-  conversationId,
-  messageId,
+  message,
+  files,
   characterName,
 }: DownloadConversationMessageButtonProps) {
   const [isLoading, setIsLoading] = React.useState(false);
@@ -72,9 +70,10 @@ export default function DownloadConversationMessageButton({
       setIsLoading(true);
 
       const { blob, fileName } = await fetchConversationMessageDownload({
-        conversationId,
-        messageId,
+        message,
+        files,
         characterName,
+        modelName: message.modelName,
       });
 
       downloadFileFromBlob(blob, fileName);

@@ -1,20 +1,20 @@
-import Chat from '@/components/chat/chat';
-import { dbGetConversationAndMessages } from '@shared/db/functions/chat';
-import { convertMessageModelToMessage } from '@/utils/chat/messages';
-import { redirect } from 'next/navigation';
-import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
-import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
-import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
-import { dbGetRelatedFiles } from '@shared/db/functions/files';
-import Logo from '@/components/common/logo';
-import z from 'zod';
-import { parseSearchParams } from '@/utils/parse-search-params';
 import { requireAuth } from '@/auth/requireAuth';
-import { WebSource } from '@shared/db/types';
+import Chat from '@/components/chat/chat';
+import Logo from '@/components/common/logo';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
+import { convertMessageModelToMessage } from '@/utils/chat/messages';
+import { parseSearchParams } from '@/utils/parse-search-params';
+import { dbGetConversationAndMessages } from '@shared/db/functions/chat';
+import { dbGetRelatedFiles } from '@shared/db/functions/files';
+import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
+import { WebSource } from '@shared/db/types';
+import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
+import { utils } from '@shared/utils';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { utils } from '@shared/utils';
+import { redirect } from 'next/navigation';
+import z from 'zod';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,6 +96,8 @@ export default async function Page(props: PageProps<'/d/[conversationId]'>) {
         <Chat
           id={conversation.id}
           initialMessages={convertedMessages}
+          initialConversationCreatedAt={conversation.createdAt}
+          initialConversationTitle={conversation.name}
           initialFileMapping={fileMapping}
           enableFileUpload={true}
           webSourceMapping={webSourceMapping}

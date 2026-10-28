@@ -195,6 +195,7 @@ export function ChatBox({
       status={status}
       conversationId={conversationId}
       characterName={characterName}
+      files={allFiles ?? []}
       regenerateMessage={regenerateMessage}
       canRegenerateMessage={canRegenerateMessage}
       isSpeechModelEnabled={isSpeechModelEnabled}
