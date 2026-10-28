@@ -6,8 +6,7 @@ import type { ColumnDef, Column } from '@tanstack/react-table';
 import { Button } from '@ui/components/button';
 import { Checkbox } from '@ui/components/checkbox';
 import type { DataTableFeatures } from '@ui/components/data-table';
-import { ArrowUpDownIcon, Search } from 'lucide-react';
-import Link from 'next/link';
+import { ArrowUpDownIcon } from 'lucide-react';
 
 type Col = ColumnDef<DataTableFeatures, LargeLanguageModel>;
 
@@ -42,7 +41,7 @@ const booleanColumn = (key: 'useBifrost' | 'isNew' | 'isDeleted', label: string)
   sortFn: 'basic',
 });
 
-export function getColumns(organizationId: string, showDeleted: boolean): Col[] {
+export function getColumns(showDeleted: boolean): Col[] {
   return [
     {
       id: 'name',
@@ -76,14 +75,6 @@ export function getColumns(organizationId: string, showDeleted: boolean): Col[] 
       accessorKey: 'createdAt',
       header: sortableHeader('Erstellt am'),
       cell: ({ row }) => formatDateToGermanTimestamp(row.original.createdAt),
-    },
-    {
-      id: 'actions',
-      cell: ({ row }) => (
-        <Link href={`/organizations/${organizationId}/llms/${row.original.id}`}>
-          <Search className="text-primary" />
-        </Link>
-      ),
     },
   ];
 }

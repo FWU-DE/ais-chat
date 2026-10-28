@@ -20,8 +20,11 @@ import { TemplateModel } from '@shared/templates/template';
 import { Skeleton } from '@ui/components/skeleton';
 import { CreateTemplateModal } from './CreateTemplateModal';
 import { columns } from './columns';
+import { useRouter } from 'next/navigation';
+import { ROUTES } from '@/consts/routes';
 
 export default function TemplateListView() {
+  const router = useRouter();
   const [templates, setTemplates] = useState<TemplateModel[]>([]);
   const [isPending, startTransition] = useTransition();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -92,6 +95,9 @@ export default function TemplateListView() {
               <DataTable
                 columns={columns}
                 data={visibleTemplates}
+                rowClickHandler={(template) =>
+                  router.push(ROUTES.app.template(template.type, template.id))
+                }
                 columnFilters={columnFilters}
                 onColumnFiltersChange={setColumnFilters}
               />

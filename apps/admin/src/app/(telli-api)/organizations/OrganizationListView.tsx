@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { getOrganizations } from '../../../services/organization-service';
 import {
   Table,
@@ -8,6 +7,8 @@ import {
   TableHeader,
   TableRow,
 } from '@ui/components/table';
+import { ClickableTableRow } from '@/components/common/ClickableTableRow';
+import { ROUTES } from '@/consts/routes';
 
 export async function OrganizationListView() {
   const organizations = await getOrganizations();
@@ -19,20 +20,15 @@ export async function OrganizationListView() {
           <TableHead className="w-[300px]">Id</TableHead>
           <TableHead>Name</TableHead>
           <TableHead>Erstellt am</TableHead>
-          <TableHead />
         </TableRow>
       </TableHeader>
       <TableBody>
         {organizations.map((org) => (
-          <TableRow key={org.id}>
+          <ClickableTableRow key={org.id} href={ROUTES.api.organizationDetails(org.id)}>
             <TableCell>{org.id}</TableCell>
             <TableCell>{org.name}</TableCell>
             <TableCell>{JSON.stringify(org.createdAt)}</TableCell>
-            <TableCell className="flex flex-row gap-4">
-              <Link href={`/organizations/${org.id}/llms`}>Modelle</Link>
-              <Link href={`/organizations/${org.id}/projects`}>Projekte</Link>
-            </TableCell>
-          </TableRow>
+          </ClickableTableRow>
         ))}
       </TableBody>
     </Table>

@@ -15,6 +15,8 @@ import { DataTable } from '@ui/components/data-table';
 import { logError } from '@shared/logging';
 import { getLargeLanguageModelsAction } from './actions';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ROUTES } from '@/consts/routes';
 import { useMemo, useState } from 'react';
 import { getColumns } from './columns';
 import type { LargeLanguageModel } from '@/types/large-language-model';
@@ -28,14 +30,12 @@ export function LargeLanguageModelListView({
   organizationId,
   initialData,
 }: LargeLanguageModelListViewProps) {
+  const router = useRouter();
   const [languageModels, setLanguageModels] = useState<LargeLanguageModel[]>(initialData);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showDeletedModels, setShowDeletedModels] = useState(false);
 
-  const columns = useMemo(
-    () => getColumns(organizationId, showDeletedModels),
-    [organizationId, showDeletedModels],
-  );
+  const columns = useMemo(() => getColumns(showDeletedModels), [showDeletedModels]);
   const visibleModels = showDeletedModels
     ? languageModels
     : languageModels.filter((model) => !model.isDeleted);
@@ -78,7 +78,13 @@ export function LargeLanguageModelListView({
             />
             <FieldLabel htmlFor="show-deleted-models">gelöschte Modelle anzeigen</FieldLabel>
           </div>
-          <DataTable columns={columns} data={visibleModels} />
+          <DataTable
+            columns={columns}
+            data={visibleModels}
+            rowClickHandler={(model) =>
+              router.push(ROUTES.api.llmDetails(organizationId, model.id))
+            }
+          />
         </div>
       </CardContent>
     </Card>

@@ -2,6 +2,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { TrashSimpleIcon } from '@phosphor-icons/react';
 
 import {
   Table,
@@ -69,10 +70,20 @@ export default function VoucherList({ vouchers, onVoucherRevoked }: VoucherListP
             <TableCell>{new Date(voucher.createdAt).toLocaleDateString('de-DE')}</TableCell>
             <TableCell>{voucher.createdBy}</TableCell>
             <TableCell>
-              {voucher.status}{' '}
-              {voucher.status === 'created' && (
-                <Button onClick={() => handleRevoke(voucher)}>X</Button>
-              )}
+              <div className="flex items-center gap-2">
+                {voucher.status}
+                {voucher.status === 'created' && (
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="rounded-full"
+                    aria-label={`Gutschein ${voucher.code} widerrufen`}
+                    onClick={() => handleRevoke(voucher)}
+                  >
+                    <TrashSimpleIcon />
+                  </Button>
+                )}
+              </div>
             </TableCell>
           </TableRow>
         ))}
