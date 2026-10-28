@@ -127,6 +127,12 @@ export function toOpenAIResponsesInput(messages: Message[]): OpenAI.Responses.Re
       ];
     }
 
+    // A failed generation is persisted as an empty assistant message. Anthropic rejects empty
+    // text blocks, so one failed answer would otherwise break every later request in the chat.
+    if (message.role === 'assistant' && !message.content) {
+      return [];
+    }
+
     // Simple text message
     return [
       {
