@@ -24,17 +24,19 @@ const ORGANIZATION_ID = 'cfeb82c6-396a-4c2d-954b-53e77acbbe7e';
 const PROJECT_ID = 'DE-TEST';
 const API_KEY_NAME = 'Test API Key';
 
-// LLM provider keys: use real values from env (CI) or placeholders (local dev)
-const ionosApiKey = process.env.LLM_IONOS_API_KEY ?? 'API_KEY_PLACEHOLDER';
-const ionosBaseUrl = process.env.LLM_IONOS_BASE_URL ?? 'PLACEHOLDER_BASE_URL';
-const gpt4oMiniApiKey = process.env.LLM_GPT4OMINI_API_KEY ?? 'API_KEY_PLACEHOLDER';
-const gpt4oMiniBaseUrl = process.env.LLM_GPT4OMINI_BASE_URL ?? 'PLACEHOLDER_BASE_URL';
-const gpt5nanoApiKey = process.env.LLM_GPT5NANO_API_KEY ?? 'API_KEY_PLACEHOLDER';
-const gpt5nanoBaseUrl = process.env.LLM_GPT5NANO_BASE_URL ?? 'PLACEHOLDER_BASE_URL';
-const gptImageApiKey = process.env.LLM_GPT_IMAGE_API_KEY ?? 'API_KEY_PLACEHOLDER';
-const gptImageBaseUrl = process.env.LLM_GPT_IMAGE_BASE_URL ?? 'PLACEHOLDER_BASE_URL';
-const gpt5miniApiKey = process.env.LLM_GPT5MINI_API_KEY ?? 'API_KEY_PLACEHOLDER';
-const gpt5miniBaseUrl = process.env.LLM_GPT5MINI_BASE_URL ?? 'PLACEHOLDER_BASE_URL';
+// LLM provider keys: real values from env (CI) or undefined (local dev, forked PRs). Models
+// without both an API key and a base URL are filtered out below instead of being seeded with
+// placeholder credentials, which Bifrost would reject.
+const ionosApiKey = process.env.LLM_IONOS_API_KEY ?? '';
+const ionosBaseUrl = process.env.LLM_IONOS_BASE_URL ?? '';
+const gpt4oMiniApiKey = process.env.LLM_GPT4OMINI_API_KEY ?? '';
+const gpt4oMiniBaseUrl = process.env.LLM_GPT4OMINI_BASE_URL ?? '';
+const gpt5nanoApiKey = process.env.LLM_GPT5NANO_API_KEY ?? '';
+const gpt5nanoBaseUrl = process.env.LLM_GPT5NANO_BASE_URL ?? '';
+const gptImageApiKey = process.env.LLM_GPT_IMAGE_API_KEY ?? '';
+const gptImageBaseUrl = process.env.LLM_GPT_IMAGE_BASE_URL ?? '';
+const gpt5miniApiKey = process.env.LLM_GPT5MINI_API_KEY ?? '';
+const gpt5miniBaseUrl = process.env.LLM_GPT5MINI_BASE_URL ?? '';
 const mockLlmApiKey = process.env.LLM_MOCK_API_KEY ?? 'API_KEY_PLACEHOLDER';
 const mockLlmBaseUrl = process.env.LLM_MOCK_BASE_URL ?? 'http://mock-llm:6556';
 const seedEnv = process.env as Record<string, string | undefined>;
@@ -89,9 +91,15 @@ const mockSpeech: LlmInsertModel = {
   isDeleted: false,
 };
 
+const isRealEmbeddingModelAvailable = !!ionosApiKey && !!ionosBaseUrl;
+
 // All prices are rough estimates, probably outdated and just for mocking purposes
 // Static ids are used to ensure that the models are not created again
 // the ids are taken from the staging/production database for interoperability to be able to connect to local AIS.chat api or staging
+//
+// Only models with both an API key and a base URL configured are actually seeded — e.g. on
+// forked PRs the LLM_* secrets aren't available, so this keeps us to the mock LLM instead of
+// pushing empty credentials to Bifrost, which would reject them and fail the whole seed step.
 const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
   // Mock LLMs
   {
@@ -108,6 +116,56 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     displayName: process.env.E2E_TEXT_MODEL_2 ?? 'Mock LLM (2)',
     safetyFilterEnabled: false,
   },
+  // Mock image model: always available regardless of real credentials, so that
+  // `initializeStaticModelConfigurations` (packages/shared) can always resolve a `default-image`
+  // model — the mock LLM server generates a solid-color placeholder image for it.
+  {
+    id: 'd3f8a8e2-5c1a-4b7a-9f2e-3a6b8c4d9e1f',
+    organizationId: ORGANIZATION_ID,
+    provider: 'bifrost',
+    name: 'mock-image',
+    displayName: 'Mock LLM (Image)',
+    description: 'Mock LLM for e2e testing — returns a solid-color placeholder image',
+    setting: {
+      provider: 'openai',
+      apiKey: mockLlmApiKey,
+      baseUrl: mockLlmBaseUrl,
+    },
+    priceMetadata: {
+      type: 'image',
+      // The mock LLM always reports usage, so billing uses the token-based path (all zeroed).
+      inputTextTokenPrice: 0,
+      inputImageTokenPrice: 0,
+      outputTextTokenPrice: 0,
+      outputImageTokenPrice: 0,
+    },
+    supportedImageFormats: ['jpg', 'jpeg', 'png'],
+    safetyFilterEnabled: false,
+  },
+  // Mock embedding model: only seeded when the real `BAAI/bge-m3` model below is unavailable
+  // (e.g. on forked PRs without LLM_IONOS_* secrets), so that `getEmbeddingModel()` in e2e tests
+  // always has a model to resolve. Returns a static 1024-entry vector regardless of input.
+  ...(isRealEmbeddingModelAvailable
+    ? []
+    : [
+        {
+          id: '2d6a6f8e-6a3f-4a2a-9c3d-7f1b2e8a4c5d',
+          organizationId: ORGANIZATION_ID,
+          provider: 'bifrost',
+          name: 'BAAI/bge-m3',
+          displayName: 'Mock Embedding Model',
+          description: 'Mock LLM for e2e testing — returns a static embedding vector',
+          setting: {
+            provider: 'openai',
+            apiKey: mockLlmApiKey,
+            baseUrl: mockLlmBaseUrl,
+          },
+          priceMetadata: {
+            type: 'embedding',
+            promptTokenPrice: 0,
+          },
+        } satisfies LlmInsertModel,
+      ]),
   // Realm LLMs
   {
     id: 'b870b74d-7458-4dcf-99f6-ace83ef514f4',
@@ -251,7 +309,10 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     },
     supportedImageFormats: ['jpg', 'jpeg', 'png', 'webp'],
   },
-]);
+]).filter(
+  (model) =>
+    'apiKey' in model.setting && model.setting.apiKey !== '' && model.setting.baseUrl !== '',
+);
 
 const llamaGuardModel: LlmInsertModel | undefined =
   googleProjectId !== undefined &&
@@ -275,9 +336,7 @@ const llamaGuardModel: LlmInsertModel | undefined =
           provider: 'google',
           projectId: googleProjectId,
           location: googleLocation,
-          ...(googleAuthCredentials === undefined
-            ? {}
-            : { authCredentials: googleAuthCredentials }),
+          authCredentials: googleAuthCredentials,
         },
         priceMetadata: {
           type: 'safety',
