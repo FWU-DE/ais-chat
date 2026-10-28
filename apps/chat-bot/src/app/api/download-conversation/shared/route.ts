@@ -3,10 +3,10 @@ import { checkInviteCodeForExport } from '@shared/conversation/conversation-serv
 import { dbGetFilesInIds } from '@shared/db/functions/files';
 import { type FileModel } from '@shared/db/schema';
 import { ForbiddenError } from '@shared/error';
+import { isSharedChatFileMetadata, verify } from '@shared/shared-chat';
 import { formatDateToDayMonthYear } from '@shared/utils/date';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { isSharedChatFileMetadata, verify } from '../../shared-chat';
 import { serializeMessages } from '../serialize-messages';
 
 const requestSchema = z.object({

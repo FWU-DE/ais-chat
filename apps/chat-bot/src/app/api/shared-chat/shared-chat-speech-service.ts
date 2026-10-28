@@ -13,18 +13,18 @@ import {
   sendRabbitmqEvent,
 } from '@shared/rabbitmq';
 import {
+  SharedChatCharacter,
+  SharedChatEntity,
+  SharedChatLearningScenario,
+  verify,
+} from '@shared/shared-chat';
+import {
   sharedCharacterChatHasReachedTokenPointsLimit,
   sharedChatHasExpired,
   sharedLearningScenarioChatHasReachedTokenPointsLimit,
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
-import { verify } from '.';
 import { getSharedChatEntity } from './shared-chat-get-entity';
-import {
-  SharedChatCharacter,
-  SharedChatEntity,
-  SharedChatLearningScenario,
-} from './shared-chat-types';
 
 export async function generateSharedChatSpeech({
   inviteCode,

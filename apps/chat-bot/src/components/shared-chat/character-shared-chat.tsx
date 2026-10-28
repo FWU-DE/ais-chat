@@ -109,6 +109,7 @@ export default function CharacterSharedChat({
 
   async function generateSharedCharacterSpeechStream(
     text: string,
+    _isInitialMessage: boolean,
     { signal }: { signal: AbortSignal },
   ): Promise<ReadableStream<Uint8Array>> {
     return fetchSpeechStream(
