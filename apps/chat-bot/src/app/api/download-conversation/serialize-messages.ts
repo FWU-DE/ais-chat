@@ -1,5 +1,4 @@
 import { isImageFile } from '@/utils/files/generic';
-import { getReadOnlySignedUrl } from '@shared/s3';
 
 type SerializableMessage = {
   id: string;
@@ -13,12 +12,14 @@ type SerializableFile = {
   type: string;
 };
 
-export async function serializeMessages({
+export async function serializeMessages<TFile extends SerializableFile>({
   messages,
   fileMapping,
+  imageUrl,
 }: {
   messages: SerializableMessage[];
-  fileMapping: Map<string, SerializableFile[]>;
+  fileMapping: Map<string, TFile[]>;
+  imageUrl?: (file: TFile) => string;
 }) {
   return Promise.all(
     messages.map(async ({ id, role, content }) => ({
@@ -27,15 +28,9 @@ export async function serializeMessages({
       images: await Promise.all(
         (fileMapping.get(id) ?? [])
           .filter((file) => isImageFile(file.name))
-          .map(async (file) => ({
+          .map((file) => ({
             alt: file.name,
-            url: await getReadOnlySignedUrl({
-              key: `message_attachments/${file.id}`,
-              filename: file.name,
-              contentType: file.type,
-              attachment: false,
-              options: { expiresIn: 300 },
-            }),
+            url: imageUrl?.(file) ?? `/api/files/${file.id}/scaled-image?width=200&height=320`,
           })),
       ),
     })),
