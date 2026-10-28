@@ -2,8 +2,16 @@
  * @description Service functions for handling global templates of characters, assistants, and learning scenarios.
  * Only for admin use, does not check for user authorization.
  */
-import { and, eq, inArray } from 'drizzle-orm';
+import { UserModel } from '@shared/auth/user-model';
 import { db } from '@shared/db';
+import { dbGetAssistantById, dbUpsertAssistant } from '@shared/db/functions/assistants';
+import { dbCreateCharacter, dbGetCharacterById } from '@shared/db/functions/character';
+import {
+  dbGetFilesForLearningScenario,
+  dbGetRelatedAssistantFiles,
+  dbGetRelatedCharacterFiles,
+} from '@shared/db/functions/files';
+import { dbGetLearningScenarioById } from '@shared/db/functions/learning-scenario';
 import {
   assistantTable,
   assistantTemplateMappingTable,
@@ -15,37 +23,29 @@ import {
   learningScenarioTable,
   learningScenarioTemplateMappingTable,
 } from '@shared/db/schema';
-import {
-  TemplateModel,
-  TemplateToFederalStateMapping,
-  TemplateTypes,
-} from '@shared/templates/template';
-import { dbCreateCharacter, dbGetCharacterById } from '@shared/db/functions/character';
-import { dbGetAssistantById, dbUpsertAssistant } from '@shared/db/functions/assistants';
-import {
-  dbGetFilesForLearningScenario,
-  dbGetRelatedAssistantFiles,
-  dbGetRelatedCharacterFiles,
-} from '@shared/db/functions/files';
-import { DUMMY_USER_ID } from '@shared/db/seed/user-entity';
-import { logError } from '@shared/logging';
+import { PLACEHOLDER_USER_ID } from '@shared/db/seed/user-entity';
+import { NotFoundError } from '@shared/error';
 import {
   duplicateFileWithEmbeddings,
   linkFileToAssistant,
   linkFileToCharacter,
   linkFileToLearningScenario,
 } from '@shared/files/fileService';
+import { logError } from '@shared/logging';
+import { copyFileInS3 } from '@shared/s3';
+import {
+  TemplateModel,
+  TemplateToFederalStateMapping,
+  TemplateTypes,
+} from '@shared/templates/template';
 import {
   buildAssistantPictureKey,
   buildCharacterPictureKey,
   buildLearningScenarioPictureKey,
 } from '@shared/utils/picture-key';
-import { dbGetLearningScenarioById } from '@shared/db/functions/learning-scenario';
-import { NotFoundError } from '@shared/error';
-import { copyFileInS3 } from '@shared/s3';
 import { generateUUID } from '@shared/utils/uuid';
+import { and, eq, inArray } from 'drizzle-orm';
 import path from 'node:path';
-import { UserModel } from '@shared/auth/user-model';
 
 const templateTypeMap: Record<string, TemplateTypes> = {
   assistants: 'assistant',
@@ -475,7 +475,7 @@ export async function createTemplateFromUrl(url: string): Promise<string> {
     }
 
     // Copy associated files
-    await copyRelatedTemplateFiles(templateType, originalId, newTemplate.id);
+    await copyRelatedTemplateFiles(templateType, originalId, newTemplate.id, PLACEHOLDER_USER_ID);
 
     return newTemplate.id;
   } catch (error) {
@@ -497,6 +497,7 @@ export async function copyRelatedTemplateFiles(
   templateType: TemplateTypes,
   templateId: string,
   resultId: string,
+  targetUserId: string,
 ) {
   try {
     let relatedFiles: FileModel[];
@@ -514,7 +515,7 @@ export async function copyRelatedTemplateFiles(
     await Promise.all(
       relatedFiles.map(async (file) => {
         try {
-          const newFileId = await duplicateFileWithEmbeddings(file.id);
+          const newFileId = await duplicateFileWithEmbeddings(file.id, targetUserId);
           if (templateType === 'character') {
             await linkFileToCharacter(newFileId, resultId);
           } else if (templateType === 'assistant') {
@@ -597,7 +598,7 @@ export async function copyAssistant(
  * @throws Error if source assistant is not found or template creation fails
  */
 async function createAssistantTemplate(originalId: string) {
-  return copyAssistant(originalId, true, { id: DUMMY_USER_ID });
+  return copyAssistant(originalId, true, { id: PLACEHOLDER_USER_ID });
 }
 
 /**
@@ -661,7 +662,7 @@ export async function copyCharacter(
  * @throws Error if source character is not found or template creation fails
  */
 async function createCharacterTemplate(originalId: string) {
-  return copyCharacter(originalId, true, { id: DUMMY_USER_ID });
+  return copyCharacter(originalId, true, { id: PLACEHOLDER_USER_ID });
 }
 
 /**
@@ -669,7 +670,7 @@ async function createCharacterTemplate(originalId: string) {
  * @param originalId - The id of the source learning scenario to create a template from.
  */
 async function createLearningScenarioTemplate(originalId: string) {
-  return copyLearningScenario(originalId, true, { id: DUMMY_USER_ID });
+  return copyLearningScenario(originalId, true, { id: PLACEHOLDER_USER_ID });
 }
 
 /**

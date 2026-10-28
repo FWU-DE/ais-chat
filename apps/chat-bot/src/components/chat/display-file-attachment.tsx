@@ -1,5 +1,4 @@
 import { getFileIconByFileExtension } from '../icons/file-upload-icons/file-icons-dict';
-import CrossIcon from '../icons/cross';
 import DeattachFileIcon from '../icons/file-upload-icons/deattach-file-icon';
 import Spinner from '../icons/spinner';
 import { getFileNameAndFileExtension } from '@/utils/files/generic';
@@ -7,7 +6,7 @@ import { cn } from '@/utils/tailwind';
 
 type DisplayFileAttachmentProps = {
   fileName: string;
-  status?: 'success' | 'processed' | 'uploading' | 'failed';
+  status?: 'success' | 'processed' | 'uploading';
   onDeattachFile?: () => void;
   height?: 'default' | 'large';
   width?: 'default' | 'small';
@@ -49,7 +48,6 @@ export default function DisplayFileAttachment({
           <FileIcon className="h-5 w-5 shrink-0" color={backgroundColor} />
         )}
         {status === 'uploading' && <Spinner className="h-5 w-5 shrink-0" />}
-        {status === 'failed' && <CrossIcon className="h-5 w-5 shrink-0" />}
         <div className={cn('flex min-w-0 flex-col', width === 'small' ? 'max-w-24' : 'max-w-80')}>
           <p className="truncate overflow-hidden text-sm" title={fileName}>
             {fileStem}

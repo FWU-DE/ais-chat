@@ -1,6 +1,6 @@
+import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
 import type { Element, Root } from 'hast';
 import { visit } from 'unist-util-visit';
-import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
 
 export const JSXGRAPH_PLOT_HNAME = 'jsxgraph-plot';
 

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../fixtures/test';
 import { nanoid } from 'nanoid';
 import {
   configureCharacter,

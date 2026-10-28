@@ -7,6 +7,7 @@ import ExpiredChatModal from '@/components/common/expired-chat-modal';
 import { getErrorMessageByType } from '@/error/get-error-message-by-type';
 import { useAutoScroll } from '@/hooks/use-auto-scroll';
 import type { UseChatReturn } from '@/hooks/use-chat-hooks';
+import type { GenerateSpeechFn } from '@/types/chat';
 import { getFileExtension, isImageFile } from '@/utils/files/generic';
 import { getSharedChatImageUrl } from '@/utils/shared-chat-files';
 import {
@@ -27,8 +28,9 @@ import { ReactNode, RefObject, SyntheticEvent, useEffect, useRef, useState } fro
 import { ErrorChatPlaceholder } from '../chat/error-chat-placeholder';
 import { FloatingText } from '../chat/floating-text';
 import { Messages, PendingFileModel } from '../chat/messages';
-import { LocalFileState } from '../chat/send-message-form';
+import { GenerateSpeechStreamFn } from '../chat/speech/types';
 import StreamingFinishedMarker from '../chat/streaming-finished-marker';
+import { LocalFileState } from '../file-upload/upload-file';
 
 type ShareSessionInput = Parameters<typeof calculateShareSessionState>[0];
 type Translator = ReturnType<typeof useTranslations>;
@@ -90,7 +92,9 @@ export type SharedChatViewProps = {
   assistantIcon?: ReactNode;
   uploadFileFn?: (file: File, sharedSessionId: string) => Promise<{ fileId: string }>;
   isSpeechModelEnabled: boolean;
-  generateSpeechFn: (text: string) => Promise<Blob>;
+  generateSpeechFn: GenerateSpeechFn;
+  speechOnly: boolean;
+  generateSpeechStreamFn: GenerateSpeechStreamFn;
 };
 
 /**
@@ -116,6 +120,8 @@ export default function GenericSharedChat({
   uploadFileFn,
   isSpeechModelEnabled,
   generateSpeechFn,
+  speechOnly,
+  generateSpeechStreamFn,
 }: SharedChatViewProps) {
   const tCommon = useTranslations('common');
   const tCustomChat = useTranslations('custom-chat.shared');
@@ -299,6 +305,7 @@ export default function GenericSharedChat({
   }
 
   const isLoading = status === 'submitted';
+  const isGenerating = status === 'submitted' || status === 'streaming';
   const hasExerciseDescription =
     enableFloatingText && exerciseDescription !== undefined && exerciseDescription.trim() !== '';
   const showInitialContent =
@@ -386,7 +393,9 @@ export default function GenericSharedChat({
                 activitySteps={chat.activitySteps}
                 showActivityDialog={showActivityDialog}
                 generateSpeechFn={generateSpeechFn}
+                generateSpeechStreamFn={generateSpeechStreamFn}
                 isSpeechModelEnabled={isSpeechModelEnabled}
+                speechOnly={speechOnly}
               />
             )}
             {/* If there is a TokenPointsExceededError or SharedChatExpiredError we show a dialog instead */}
@@ -406,7 +415,7 @@ export default function GenericSharedChat({
                   customHandleSubmit={customHandleSubmit}
                   handleStopGeneration={stop}
                   input={input}
-                  isLoading={isLoading}
+                  isGenerating={isGenerating}
                   handleInputChange={handleInputChange}
                   enableFileUpload
                   fileUploadFn={

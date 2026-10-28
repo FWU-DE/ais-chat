@@ -3,6 +3,11 @@ import { defineConfig, devices } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type SmartReporter from 'playwright-smart-reporter';
+
+type AccessibilityConfig = NonNullable<
+  NonNullable<ConstructorParameters<typeof SmartReporter>[0]>['accessibility']
+>;
 
 const chatBotAppDir = fileURLToPath(new URL('.', import.meta.url));
 const adminAppDir = fileURLToPath(new URL('../admin', import.meta.url));
@@ -38,9 +43,12 @@ function withAppEnv(appDir: string): Record<string, string> {
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
-export default defineConfig({
+export default defineConfig<{ smartReporterA11y: AccessibilityConfig }>({
   globalSetup: './e2e/global-setup',
-  testDir: './e2e/tests/',
+  // The monorepo root, shared with the admin/api configs, so merged smart-reporter
+  // test locations resolve correctly across apps (see smart-report/merge.config.ts).
+  // Each project below restores its own e2e/tests dir for test discovery.
+  testDir: '../..',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
@@ -53,6 +61,8 @@ export default defineConfig({
     ['github'],
     ['list'],
     ['./e2e/reporters/app-log-reporter.ts'],
+    // For smart-reporter (see smart-report/merge.config.ts)
+    ['blob', { outputDir: 'blob-report', fileName: 'chat-bot-report.zip' }],
   ],
   timeout: 90_000,
   use: {
@@ -60,11 +70,19 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'on',
     video: 'retain-on-failure',
+    smartReporterA11y: {
+      enabled: true,
+      standard: 'WCAG2AA',
+      // Entity cards intentionally violate WCAG 2.5.3 (see e2e/tests/accessibility.test.ts);
+      // exclude can't be scoped to a selector, so it's disabled globally here.
+      exclude: ['label-content-name-mismatch'],
+    },
   },
   /* Configure projects for major browsers */
   projects: [
     {
       name: 'chromium',
+      testDir: './e2e/tests/',
       testIgnore: ['**/isolated/**', '**/external-services/**', /.*api.test.ts/],
       use: {
         ...devices['Desktop Chrome'],
@@ -73,6 +91,7 @@ export default defineConfig({
     },
     {
       name: 'firefox',
+      testDir: './e2e/tests/',
       testIgnore: ['**/isolated/**', '**/external-services/**', /.*api.test.ts/],
       use: {
         ...devices['Desktop Firefox'],
@@ -84,11 +103,13 @@ export default defineConfig({
     },
     {
       name: 'api test',
+      testDir: './e2e/tests/',
       testMatch: /.*api.test.ts/,
       fullyParallel: true,
     },
     {
       name: 'external-services',
+      testDir: './e2e/tests/',
       testMatch: '**/external-services/**/*.test.ts',
       use: {
         ...devices['Desktop Chrome'],
@@ -97,6 +118,7 @@ export default defineConfig({
     },
     {
       name: 'isolated',
+      testDir: './e2e/tests/',
       testMatch: '**/isolated/**/*.test.ts',
       dependencies: ['chromium', 'firefox', 'api test'],
       use: {

@@ -79,6 +79,24 @@ export type UserInsertModel = z.infer<typeof userInsertSchema>;
 export type UserUpdateModel = z.infer<typeof userUpdateSchema>;
 
 /**
+ * Schema for table user_settings
+ *
+ * Stores user-specific default settings as a JSON bag so that adding new
+ * settings does not require a database migration. The row is created lazily
+ * on first write.
+ */
+export const userSettingsTable = pgTable('user_settings', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => userTable.id, { onDelete: 'cascade' }),
+  settings: jsonb('settings').$type<UserSettings>().notNull().default({}),
+  updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdateFn(() => new Date()),
+});
+
+/**
  * Schema for table conversation
  */
 export const conversationTypeEnum = pgEnum('conversation_type', conversationTypeSchema.enum);
@@ -717,6 +735,20 @@ export const speechConfigSchema = z.object({
 
 export type SpeechVoice = z.infer<typeof speechVoiceSchema>;
 export type SpeechConfig = z.infer<typeof speechConfigSchema>;
+
+export const userSettingsSchema = z.object({
+  defaultSpeechVoice: z.string().trim().min(1).optional(),
+  defaultIsSpeechOnly: z.boolean().optional(),
+});
+
+export type UserSettings = z.infer<typeof userSettingsSchema>;
+
+export const userSettingsSelectSchema = createSelectSchema(userSettingsTable).extend({
+  settings: userSettingsSchema,
+  updatedAt: z.coerce.date(),
+});
+
+export type UserSettingsSelectModel = z.infer<typeof userSettingsSelectSchema>;
 
 export const llmModelTable = pgTable(
   'llm_model',

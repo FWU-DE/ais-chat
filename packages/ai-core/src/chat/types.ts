@@ -1,4 +1,5 @@
 import type { LlmModel } from '@ais-chat/api-database';
+import { z } from 'zod';
 
 export const CONVERSATION_ROLES = ['system', 'user', 'assistant', 'tool'] as const;
 export type ConversationRole = (typeof CONVERSATION_ROLES)[number];
@@ -43,22 +44,40 @@ export type ToolDefinition = {
   parameters: Record<string, unknown>;
 };
 
-/** Reports the cost of an LLM call a tool makes internally, so it is billed to the user like any other model usage. */
-export type ReportToolUsage = (modelId: string, usage: TokenUsage, priceInCents: number) => void;
+/** Standard shape for a failed tool call, used both by tool handlers and the agent loop's catch-all. */
+export const toolErrorResultSchema = z.object({
+  error: z.string(),
+});
+
+export type ToolErrorResult = z.infer<typeof toolErrorResultSchema>;
 
 export type ToolHandlerOptions = {
   abortSignal?: AbortSignal;
-  reportUsage?: ReportToolUsage;
+  /** Reports the cost of an LLM call a tool makes internally, so it is billed to the user like any other model usage. */
+  reportUsage?: (usage: ModelUsage) => void;
 };
 
-export type ToolHandler = (
+/**
+ * A successful tool result. The `error` prop is the discriminator between success and error
+ * results, so a success result must never carry one.
+ */
+export type ToolResult = object & {
+  error?: never;
+};
+
+export type ToolOutcome<
+  TResult extends ToolResult = ToolResult,
+  TError extends object = object,
+> = Promise<TResult | (ToolErrorResult & TError)>;
+
+export type ToolHandler<TResult extends ToolResult = ToolResult, TError extends object = object> = (
   args: Record<string, unknown>,
   options?: ToolHandlerOptions,
-) => Promise<unknown>;
+) => ToolOutcome<TResult, TError>;
 
-export type ToolRegistryEntry = {
+export type ToolRegistryEntry<TResult extends ToolResult = ToolResult> = {
   definition: ToolDefinition;
-  handler: ToolHandler;
+  handler: ToolHandler<TResult>;
 };
 
 export type ToolRegistry = Record<string, ToolRegistryEntry>;
@@ -103,10 +122,23 @@ export type ModelSelection = {
   onModelUsed?: (modelId: string) => void | Promise<void>;
 };
 
+/** Usage billed to a single model during an agentic turn, including the real upstream provider/model that served it. */
+export type ModelUsage = {
+  modelId: string;
+  usage: TokenUsage;
+  priceInCents: number;
+  provider: string;
+  modelName: string;
+};
+
 export type TextResponse = {
   text: string;
   usage: TokenUsage;
   modelId?: string;
+  /** The real upstream provider that served the request (e.g. as reported by Bifrost). */
+  provider?: string;
+  /** The real upstream model name that served the request (e.g. as reported by Bifrost). */
+  modelName?: string;
 };
 
 /**
@@ -114,9 +146,17 @@ export type TextResponse = {
  */
 export type StreamEvent =
   | { type: 'text'; delta: string }
-  | { type: 'reasoning_summary'; delta: string }
+  | { type: 'reasoning_summary'; delta: string; part?: { itemId: string; summaryIndex: number } }
   | { type: 'tool_call'; call: ToolCall }
-  | { type: 'finish'; usage: TokenUsage; modelId?: string };
+  | {
+      type: 'finish';
+      usage: TokenUsage;
+      modelId?: string;
+      /** The real upstream provider that served the request (e.g. as reported by Bifrost). */
+      provider?: string;
+      /** The real upstream model name that served the request (e.g. as reported by Bifrost). */
+      modelName?: string;
+    };
 
 export type TextGenerationFn = (args: TextGenerationArgs) => Promise<TextResponse>;
 

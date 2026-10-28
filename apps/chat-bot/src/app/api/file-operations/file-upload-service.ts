@@ -1,4 +1,5 @@
-import { getFileExtension, isImageFile } from '@/utils/files/generic';
+import { isSupportedImageExtension } from '@/const';
+import { getFileExtension } from '@/utils/files/generic';
 import { FileMetadata } from '@shared/db/schema';
 import { cnanoid } from '@shared/random/randomService';
 import { preprocessImage } from './preprocess-image';
@@ -32,7 +33,7 @@ export async function uploadFile({
   const buffer = Buffer.from(bytes);
   const fileExtension = getFileExtension(file.name);
 
-  if (isImageFile(fileExtension)) {
+  if (isSupportedImageExtension(fileExtension)) {
     return uploadImageFile({
       fileId,
       file,

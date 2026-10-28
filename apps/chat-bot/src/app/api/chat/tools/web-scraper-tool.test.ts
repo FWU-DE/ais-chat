@@ -55,7 +55,6 @@ describe('buildWebScraperTool', () => {
         title: 'Beispielseite',
         url: 'https://example.com/article',
         content: 'Das ist der extrahierte Inhalt.',
-        error: null,
       },
     ]);
   });
@@ -90,9 +89,7 @@ describe('buildWebScraperTool', () => {
 
     expect(result).toEqual([
       {
-        title: null,
         url: 'http://localhost:3000/test',
-        content: null,
         error: 'Error: Only domain hosts are allowed.',
       },
     ]);
@@ -115,9 +112,7 @@ describe('buildWebScraperTool', () => {
 
     expect(result).toEqual([
       {
-        title: null,
         url: 'http://192.168.1.1/test',
-        content: null,
         error: 'Error: Only domain hosts are allowed.',
       },
     ]);
@@ -155,13 +150,11 @@ describe('buildWebScraperTool', () => {
         title: 'Page 1',
         url: 'https://example.com/page1',
         content: 'Content 1',
-        error: null,
       },
       {
         title: 'Page 2',
         url: 'https://example.com/page2',
         content: 'Content 2',
-        error: null,
       },
     ]);
     expect(mocks.webScraperMock).toHaveBeenCalledTimes(2);
@@ -181,7 +174,7 @@ describe('buildWebScraperTool', () => {
       urls: Array.from({ length: 10 }, (_, i) => `https://example.com/page${i}`),
     });
 
-    expect(result).toContain('Maximum 5 URLs allowed');
+    expect(result).toEqual({ error: expect.stringContaining('Maximum 5 URLs allowed') });
     expect(mocks.webScraperMock).not.toHaveBeenCalled();
   });
 
@@ -216,13 +209,11 @@ describe('buildWebScraperTool', () => {
         title: 'Erste Seite',
         url: 'https://example.com/page1',
         content: 'Inhalt der ersten Seite.',
-        error: null,
       },
       {
         title: 'Zweite Seite',
         url: 'https://example.com/page2',
         content: 'Inhalt der zweiten Seite.',
-        error: null,
       },
     ]);
   });
@@ -257,12 +248,9 @@ describe('buildWebScraperTool', () => {
         title: 'Erfolgreiche Seite',
         url: 'https://example.com/success',
         content: 'Erfolgreicher Inhalt.',
-        error: null,
       },
       {
-        title: null,
         url: 'https://example.com/failure',
-        content: null,
         error: 'Failed to fetch the page.',
       },
     ]);
@@ -282,6 +270,144 @@ describe('buildWebScraperTool', () => {
       urls: Array(6).fill('https://example.com'),
     });
 
-    expect(result).toBe('Error: Maximum 5 URLs allowed per call.');
+    expect(result).toEqual({ error: 'Maximum 5 URLs allowed per call.' });
+  });
+
+  it('returns an empty URL error for a whitespace-only entry, without failing the whole call', async () => {
+    mocks.webScraperMock.mockResolvedValueOnce({
+      name: 'Example Page',
+      link: 'https://example.com',
+      content: 'This is the extracted content.',
+    });
+
+    const { buildWebScraperTool } = await import('./web-scraper-tool');
+
+    const tool = buildWebScraperTool({
+      characterId: undefined,
+      learningScenarioId: undefined,
+      sourceUrls: [],
+      attachedLinks: [],
+    });
+
+    const result = await tool!.handler({
+      urls: ['https://example.com', '   '],
+    });
+
+    expect(result).toEqual([
+      {
+        title: 'Example Page',
+        url: 'https://example.com',
+        content: 'This is the extracted content.',
+      },
+      {
+        error: 'Empty URL.',
+      },
+    ]);
+  });
+
+  it('returns an error for an empty urls array without calling webScraper', async () => {
+    const { buildWebScraperTool } = await import('./web-scraper-tool');
+
+    const tool = buildWebScraperTool({
+      characterId: undefined,
+      learningScenarioId: undefined,
+      sourceUrls: [],
+      attachedLinks: [],
+    });
+
+    const result = await tool!.handler({ urls: [] });
+
+    expect(result).toEqual({ error: 'Missing URLs.' });
+    expect(mocks.webScraperMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('webScraperActivity', () => {
+  it('createStep sets links to the parsed URLs for valid arguments', async () => {
+    const { webScraperActivity } = await import('./web-scraper-tool');
+
+    const step = webScraperActivity.createStep({
+      id: 'call-1',
+      name: 'web_scraper',
+      arguments: JSON.stringify({ urls: ['https://example.com/article'] }),
+    });
+
+    expect(step).toEqual({
+      kind: 'tool',
+      id: 'call-1',
+      tool: 'web_scraper',
+      links: [{ title: 'https://example.com/article', url: 'https://example.com/article' }],
+    });
+  });
+
+  it('createStep leaves links undefined for invalid arguments', async () => {
+    const { webScraperActivity } = await import('./web-scraper-tool');
+
+    const step = webScraperActivity.createStep({
+      id: 'call-1',
+      name: 'web_scraper',
+      arguments: JSON.stringify({ urls: [] }),
+    });
+
+    expect(step.links).toBeUndefined();
+  });
+
+  it('applyResult adds links derived from the results', async () => {
+    const { webScraperActivity } = await import('./web-scraper-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'web_scraper' } as const;
+    const result = webScraperActivity.applyResult!(step, [
+      { title: 'Beispielseite', url: 'https://example.com/article', content: 'Inhalt.' },
+    ]);
+
+    expect(result.links).toEqual([{ title: 'Beispielseite', url: 'https://example.com/article' }]);
+  });
+
+  it('applyResult leaves the step unchanged when no links can be derived', async () => {
+    const { webScraperActivity } = await import('./web-scraper-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'web_scraper' } as const;
+    const result = webScraperActivity.applyResult!(step, []);
+
+    expect(result).toEqual(step);
+  });
+
+  it('applyResult sets failed when every result has an error', async () => {
+    const { webScraperActivity } = await import('./web-scraper-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'web_scraper' } as const;
+    const result = webScraperActivity.applyResult!(step, [
+      { url: 'https://example.com/a', error: 'Failed to fetch the page.' },
+      { url: 'https://example.com/b', error: 'Failed to fetch the page.' },
+    ]);
+
+    expect(result.failed).toBe(true);
+    expect(result.links).toEqual([
+      { title: 'https://example.com/a', url: 'https://example.com/a', failed: true },
+      { title: 'https://example.com/b', url: 'https://example.com/b', failed: true },
+    ]);
+  });
+
+  it('applyResult does not set failed for mixed success and failure results', async () => {
+    const { webScraperActivity } = await import('./web-scraper-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'web_scraper' } as const;
+    const result = webScraperActivity.applyResult!(step, [
+      { title: 'Erfolgreiche Seite', url: 'https://example.com/success', content: 'Inhalt.' },
+      { url: 'https://example.com/failure', error: 'Failed to fetch the page.' },
+    ]);
+
+    expect(result.failed).toBeUndefined();
+    expect(result.links).toEqual([
+      { title: 'Erfolgreiche Seite', url: 'https://example.com/success' },
+      { title: 'https://example.com/failure', url: 'https://example.com/failure', failed: true },
+    ]);
+  });
+
+  it('parsePersistedResult passes a persisted bare array through unchanged', async () => {
+    const { webScraperActivity } = await import('./web-scraper-tool');
+
+    const raw = [{ title: 'Beispielseite', url: 'https://example.com', content: 'Inhalt.' }];
+    expect(webScraperActivity.parsePersistedResult(raw)).toEqual(raw);
   });
 });

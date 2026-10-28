@@ -1,6 +1,6 @@
 import type OpenAI from 'openai';
-import type { Message, StreamEvent, TokenUsage, ToolCall, ToolDefinition } from '../types';
 import { AiGenerationError } from '../../errors';
+import type { Message, StreamEvent, TokenUsage, ToolCall, ToolDefinition } from '../types';
 import { estimateTokenUsage, isAbortError, toOpenAIResponsesInput, toOpenAITools } from '../utils';
 
 type OpenAICompatibleAgenticStreamArgs = {
@@ -16,7 +16,15 @@ type OpenAICompatibleAgenticStreamArgs = {
   providerName: string;
   createOptions?: Parameters<OpenAI['responses']['create']>[1];
   additionalParameters?: Record<string, unknown>;
-  getModelId?: (extraFields: unknown) => string | undefined | Promise<string | undefined>;
+  getUsageInfo?: (headers: Headers) => UsageInfo | Promise<UsageInfo>;
+};
+
+type UsageInfo = {
+  modelId?: string;
+  /** The real upstream provider that served the request, when the provider reports it. */
+  provider?: string;
+  /** The real upstream model name that served the request, when the provider reports it. */
+  modelName?: string;
 };
 
 type ToolCallAccumulator = {
@@ -39,25 +47,27 @@ export async function* streamOpenAICompatibleAgenticResponse({
   providerName,
   createOptions,
   additionalParameters,
-  getModelId,
+  getUsageInfo,
 }: OpenAICompatibleAgenticStreamArgs): AsyncGenerator<StreamEvent> {
-  const stream = await client.responses.create(
-    {
-      model: modelName,
-      input: toOpenAIResponsesInput(messages),
-      stream: true,
-      max_output_tokens: maxTokens,
-      ...(temperature !== undefined ? { temperature } : {}),
-      tools: toOpenAITools(tools),
-      tool_choice: toolChoice,
-      ...additionalParameters,
-    },
-    { ...createOptions, ...(abortSignal ? { signal: abortSignal } : {}) },
-  );
+  const { data: stream, response: httpResponse } = await client.responses
+    .create(
+      {
+        model: modelName,
+        input: toOpenAIResponsesInput(messages),
+        stream: true,
+        max_output_tokens: maxTokens,
+        ...(temperature !== undefined ? { temperature } : {}),
+        tools: toOpenAITools(tools),
+        tool_choice: toolChoice,
+        ...additionalParameters,
+      },
+      { ...createOptions, ...(abortSignal ? { signal: abortSignal } : {}) },
+    )
+    .withResponse();
+  const usageInfo = (await getUsageInfo?.(httpResponse.headers)) ?? {};
 
   let content = '';
   let usage: TokenUsage | undefined;
-  let modelId: string | undefined;
   const toolCalls = new Map<number, ToolCallAccumulator>();
 
   try {
@@ -66,7 +76,11 @@ export async function* streamOpenAICompatibleAgenticResponse({
         content += chunk.delta;
         yield { type: 'text', delta: chunk.delta };
       } else if (chunk.type === 'response.reasoning_summary_text.delta') {
-        yield { type: 'reasoning_summary', delta: chunk.delta };
+        yield {
+          type: 'reasoning_summary',
+          delta: chunk.delta,
+          part: { itemId: chunk.item_id, summaryIndex: chunk.summary_index },
+        };
       } else if (chunk.type === 'response.function_call_arguments.delta') {
         const existingToolCall = toolCalls.get(chunk.output_index) ?? {
           id: '',
@@ -114,9 +128,6 @@ export async function* streamOpenAICompatibleAgenticResponse({
           promptTokens: chunk.response.usage.input_tokens,
           totalTokens: chunk.response.usage.total_tokens,
         };
-        modelId = await getModelId?.(
-          (chunk.response as typeof chunk.response & { extra_fields?: unknown }).extra_fields,
-        );
       }
     }
   } catch (error) {
@@ -125,7 +136,13 @@ export async function* streamOpenAICompatibleAgenticResponse({
     }
 
     // Partial tool calls are unusable, but the prompt was consumed upstream and still costs money.
-    yield { type: 'finish', usage: usage ?? estimateTokenUsage({ messages, text: content }) };
+    yield {
+      type: 'finish',
+      usage: usage ?? estimateTokenUsage({ messages, text: content }),
+      ...(usageInfo.modelId ? { modelId: usageInfo.modelId } : {}),
+      ...(usageInfo.provider ? { provider: usageInfo.provider } : {}),
+      ...(usageInfo.modelName ? { modelName: usageInfo.modelName } : {}),
+    };
     return;
   }
 
@@ -157,5 +174,11 @@ export async function* streamOpenAICompatibleAgenticResponse({
     };
   }
 
-  yield { type: 'finish', usage, ...(modelId ? { modelId } : {}) };
+  yield {
+    type: 'finish',
+    usage,
+    ...(usageInfo.modelId ? { modelId: usageInfo.modelId } : {}),
+    ...(usageInfo.provider ? { provider: usageInfo.provider } : {}),
+    ...(usageInfo.modelName ? { modelName: usageInfo.modelName } : {}),
+  };
 }

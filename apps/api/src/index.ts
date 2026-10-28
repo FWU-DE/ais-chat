@@ -1,12 +1,12 @@
 // this import has to be at the top of the file for fastify to be instrumented properly
-import { flushSentry, shutdownTracing } from '@/instrumentation';
+import { flushSentry, shutdownMetrics } from '@/instrumentation';
 import cors from '@fastify/cors';
 
+import { db, migrateWithLock, shutdownDatabase } from '@ais-chat/api-database';
 import * as Sentry from '@sentry/node';
+import path from 'node:path';
 import buildApp from './app';
 import { env } from './env';
-import path from 'node:path';
-import { db, migrateWithLock, shutdownDatabase } from '@ais-chat/api-database';
 import { logger } from './logger';
 
 async function runDatabaseMigration() {
@@ -39,7 +39,7 @@ async function main() {
 
   fastify.after(() => {
     fastify.gracefulShutdown(async () => {
-      await shutdownTracing();
+      await shutdownMetrics();
       await flushSentry();
       await shutdownDatabase();
     });
