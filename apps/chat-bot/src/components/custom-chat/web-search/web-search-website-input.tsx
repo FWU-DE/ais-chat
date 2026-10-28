@@ -1,10 +1,10 @@
 'use client';
 
-import { PlusIcon } from '@phosphor-icons/react';
-import { useTranslations } from 'next-intl';
-import { Input } from '@ui/components/input';
-import { Button } from '@ui/components/button';
 import { TEXT_INPUT_FIELDS_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
+import { PlusIcon } from '@phosphor-icons/react';
+import { Button } from '@ui/components/button';
+import { Input } from '@ui/components/input';
+import { useTranslations } from 'next-intl';
 
 type WebSearchWebsiteInputProps = {
   currentWebsite: string;
@@ -22,7 +22,7 @@ export function WebSearchWebsiteInput({
   const t = useTranslations('custom-chat.web-search');
 
   return (
-    <div className="flex gap-4">
+    <div className="flex flex-col sm:flex-row gap-4">
       <Input
         wrapperClassName="flex-1"
         type="text"

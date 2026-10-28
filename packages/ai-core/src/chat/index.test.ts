@@ -88,6 +88,9 @@ describe('generateTextWithBilling', () => {
       ...mockTextResponse,
       modelId: 'model-123',
       priceInCents: 50,
+      // Falls back to the billing model's own provider/name since the provider response omitted them.
+      provider: 'ionos',
+      modelName: 'test-model',
     });
   });
 

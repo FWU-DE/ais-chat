@@ -26,3 +26,8 @@ export const sharedChatSpeechRequestSchema = z.object({
   entityId: requiredNonEmptyString('entityId is required'),
   text: requiredNonEmptyString('text is required'),
 });
+
+export const sharedChatInitialMessageSpeechRequestSchema = z.object({
+  inviteCode: requiredNonEmptyString('inviteCode is required'),
+  characterId: requiredNonEmptyString('characterId is required'),
+});

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../fixtures/test';
 import { nanoid } from 'nanoid';
 import { ADMIN_BASE_URL, AUTH_FILES, EDITOR_AUTH_FILE } from '../../utils/const';
 import { configureCharacter, createCharacter, deleteCharacter } from '../../utils/character';

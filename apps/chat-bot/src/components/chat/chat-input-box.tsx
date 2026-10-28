@@ -1,35 +1,34 @@
-import { useTranslations } from 'next-intl';
-import AutoResizeTextarea from '../common/auto-resize-textarea';
-import ChatInputAttachmentPreview from './chat-input-attachment-preview';
-import { LocalFileState } from './send-message-form';
 import {
   CHAT_MESSAGE_LENGTH_LIMIT,
   NUMBER_OF_FILES_LIMIT,
   NUMBER_OF_IMAGES_LIMIT,
 } from '@/configuration-text-inputs/const';
-import StopIcon from '../icons/stop';
-import ArrowRightIcon from '../icons/arrow-right';
-import UploadFileButton from './upload-file-button';
-import type { FileUploadResponse } from './upload-file-button';
-import { useToast } from '../common/toast';
+import { isImageFile } from '@/utils/files/generic';
+import { cn } from '@/utils/tailwind';
+import { iconClassName } from '@/utils/tailwind/icon';
+import { useTranslations } from 'next-intl';
 import {
   ChangeEvent,
   Dispatch,
   KeyboardEvent,
   SetStateAction,
   startTransition,
-  useEffect,
-  useState,
   SyntheticEvent,
+  useEffect,
 } from 'react';
-import { iconClassName } from '@/utils/tailwind/icon';
-import { cn } from '@/utils/tailwind';
-import { isImageFile } from '@/utils/files/generic';
+import AutoResizeTextarea from '../common/auto-resize-textarea';
+import { useToast } from '../common/toast';
+import type { FileUploadResponse, LocalFileState } from '../file-upload/upload-file';
+import { useFileUpload } from '../file-upload/use-file-upload';
+import ArrowRightIcon from '../icons/arrow-right';
+import StopIcon from '../icons/stop';
+import ChatInputAttachmentPreview from './chat-input-attachment-preview';
+import UploadFileButton from './upload-file-button';
 
 export function ChatInputBox({
   files,
   setFiles,
-  isLoading,
+  isGenerating,
   handleDeattachFile,
   handleInputChange,
   handleStopGeneration,
@@ -41,7 +40,7 @@ export function ChatInputBox({
 }: {
   files?: Map<string, LocalFileState>;
   setFiles?: Dispatch<SetStateAction<Map<string, LocalFileState>>>;
-  isLoading: boolean;
+  isGenerating: boolean;
   handleDeattachFile?: (localId: string) => void;
   handleInputChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
   handleStopGeneration: () => void;
@@ -54,7 +53,11 @@ export function ChatInputBox({
   const tCommon = useTranslations('common');
   const tFileInteraction = useTranslations('file-interaction');
   const toast = useToast();
-  const [fileUploading, setFileUploading] = useState(false);
+  const { allowedFileExtensions, handlePaste, hasUploadingFiles, uploadFiles } = useFileUpload({
+    files,
+    setFiles,
+    fileUploadFn,
+  });
 
   useEffect(() => {
     if (files && setFiles && files.size > NUMBER_OF_FILES_LIMIT) {
@@ -67,7 +70,6 @@ export function ChatInputBox({
       const trimmedFiles = new Map(Array.from(files.entries()).slice(0, NUMBER_OF_FILES_LIMIT));
       startTransition(() => {
         setFiles(trimmedFiles);
-        setFileUploading(false);
       });
     }
     const imageEntries = Array.from(files?.entries() ?? []).filter(([, file]) =>
@@ -90,24 +92,25 @@ export function ChatInputBox({
       });
       startTransition(() => {
         setFiles(newFiles);
-        setFileUploading(false);
       });
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files]);
 
+  const canSubmit = input.trim().length > 0 && !hasUploadingFiles;
+
   async function handleSubmitOnEnter(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !isLoading && !e.shiftKey) {
+    if (e.key === 'Enter' && !isGenerating && !e.shiftKey) {
       e.preventDefault();
-      if (e.currentTarget.value.trim().length > 0) {
+      if (canSubmit) {
         await customHandleSubmit(e);
       }
     }
   }
 
   /** Either Send or StopGeneration */
-  const userActionButton = isLoading ? (
+  const userActionButton = isGenerating ? (
     <button
       type="button"
       title="Stop generating"
@@ -124,7 +127,7 @@ export function ChatInputBox({
     <button
       type="submit"
       title="Nachricht abschicken"
-      disabled={input.trim().length === 0 || fileUploading}
+      disabled={!canSubmit}
       className={cn(
         iconClassName,
         'my-2 mx-2 flex items-center self-end justify-center group disabled:cursor-not-allowed text-dark-gray',
@@ -164,6 +167,7 @@ export function ChatInputBox({
             onChange={handleInputChange}
             value={input}
             onKeyDown={handleSubmitOnEnter}
+            onPaste={enableFileUpload ? handlePaste : undefined}
             maxLength={CHAT_MESSAGE_LENGTH_LIMIT}
             data-testid="chat-input"
           />
@@ -171,10 +175,9 @@ export function ChatInputBox({
             <div className="flex flex-row gap-x-3 rounded-enterprise-sm">
               <UploadFileButton
                 className={iconClassName}
-                setFiles={setFiles}
                 files={files}
-                setFileUploading={setFileUploading}
-                fileUploadFn={fileUploadFn}
+                allowedFileExtensions={allowedFileExtensions}
+                onFilesSelected={uploadFiles}
               />
             </div>
           )}

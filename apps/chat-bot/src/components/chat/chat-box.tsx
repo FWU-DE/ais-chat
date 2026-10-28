@@ -1,10 +1,12 @@
-import { type ChatStatus, type UIMessage } from '@/types/chat';
+import { type ChatStatus, type GenerateSpeechFn, type UIMessage } from '@/types/chat';
+import { replacePlotBlocks } from '@/utils/code-blocks';
 import { isImageFile } from '@/utils/files/generic';
 import { cn } from '@/utils/tailwind';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import { utils } from '@shared/utils';
-import { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
+import { ReactNode, useCallback, useMemo, useState } from 'react';
 import useBreakpoints from '../hooks/use-breakpoints';
 import { AiActivityPanel } from './activity/ai-activity';
 import DisplayFileAttachment from './display-file-attachment';
@@ -13,6 +15,8 @@ import { MessageActions } from './message-actions';
 import MessageImageAttachment, { type PendingFileModel } from './message-image-attachment';
 import { PlotStreamingContext } from './plot/plot-block';
 import Citation from './sources/citation';
+import SpeechAudioButton from './speech-audio-button';
+import { GenerateSpeechStreamFn } from './speech/types';
 
 // Re-export for consumers
 export type { PendingFileModel };
@@ -33,7 +37,10 @@ export function ChatBox({
   status,
   showActivityDialog,
   generateSpeechFn,
+  generateSpeechStreamFn,
+  speechVoice,
   isSpeechModelEnabled,
+  speechOnly,
 }: {
   assistantIcon?: ReactNode;
   message: UIMessage;
@@ -49,10 +56,15 @@ export function ChatBox({
   characterName?: string;
   status: ChatStatus;
   showActivityDialog?: boolean;
-  generateSpeechFn: (text: string) => Promise<Blob>;
+  generateSpeechFn: GenerateSpeechFn;
+  generateSpeechStreamFn: GenerateSpeechStreamFn;
+  speechVoice?: string;
   isSpeechModelEnabled: boolean;
+  speechOnly: boolean;
 }) {
   const { isAtLeast } = useBreakpoints();
+  const tCommon = useTranslations('common');
+  const [isTextVisible, setIsTextVisible] = useState(false);
 
   const userClassName =
     message.role === 'user'
@@ -132,29 +144,66 @@ export function ChatBox({
     ) : null;
 
   const AiActivity =
-    activitySteps.length > 0 && !showActivityDialog && !(isLoading && isLastNonUser) ? (
+    activitySteps.length > 0 && !showActivityDialog ? (
       <AiActivityPanel steps={activitySteps} panelId={`assistant-ai-activity-${message.id}`} />
     ) : null;
 
   const margin =
     allFiles !== undefined || userWebSources.length > 0 || AiActivity !== null ? 'm-0 mt-4' : 'm-4';
 
-  const maybeShowMessageIcons =
-    message.role === 'assistant' && (!isLastNonUser || status !== 'streaming') ? (
-      <MessageActions
-        message={message}
-        status={status}
-        conversationId={conversationId}
-        characterName={characterName}
-        regenerateMessage={regenerateMessage}
-        canRegenerateMessage={canRegenerateMessage}
-        generateSpeechFn={generateSpeechFn}
-        isSpeechModelEnabled={isSpeechModelEnabled}
-        showActivityDialog={showActivityDialog}
-        activitySteps={activitySteps}
-        isLastMessage={isLastNonUser}
+  // Short description instead of the raw plot JSON for copy, read-aloud and audio.
+  const plainText = useMemo(
+    () =>
+      replacePlotBlocks(message.content, (title) =>
+        title ? tCommon('plot.description', { title }) : tCommon('plot.label'),
+      ),
+    [message.content, tCommon],
+  );
+
+  const isAssistantSpeechOnly = message.role === 'assistant' && speechOnly && isSpeechModelEnabled;
+  const isInitialMessage = message.id === 'initial-message';
+
+  const messageSpeechFn = useCallback(
+    (text: string, signal?: AbortSignal) => generateSpeechFn(text, isInitialMessage, signal),
+    [generateSpeechFn, isInitialMessage],
+  );
+  const actionsVisible = message.role === 'assistant' && (!isLastNonUser || status !== 'streaming');
+  const isSpeechOnlyStreaming = isAssistantSpeechOnly && isLastNonUser && status === 'streaming';
+
+  const maybeShowMessageIcons = actionsVisible ? (
+    <MessageActions
+      message={message}
+      plainText={plainText}
+      status={status}
+      conversationId={conversationId}
+      characterName={characterName}
+      regenerateMessage={regenerateMessage}
+      canRegenerateMessage={canRegenerateMessage}
+      generateSpeechFn={messageSpeechFn}
+      generateSpeechStreamFn={generateSpeechStreamFn}
+      speechVoice={speechVoice}
+      isSpeechModelEnabled={isSpeechModelEnabled}
+      showActivityDialog={showActivityDialog}
+      activitySteps={activitySteps}
+      isLastMessage={isLastNonUser}
+      speechOnly={isAssistantSpeechOnly}
+      isInitialMessage={isInitialMessage}
+      isTextVisible={isTextVisible}
+      onToggleText={() => setIsTextVisible((visible) => !visible)}
+    />
+  ) : null;
+
+  const maybeAudioButton =
+    isAssistantSpeechOnly && (actionsVisible || isSpeechOnlyStreaming) ? (
+      <SpeechAudioButton
+        key={speechVoice ?? ''}
+        text={plainText}
+        generateSpeechFn={messageSpeechFn}
+        isStreaming={isSpeechOnlyStreaming}
       />
     ) : null;
+
+  const showMessageText = !isAssistantSpeechOnly || isTextVisible;
 
   const messageContent = (
     <PlotStreamingContext.Provider value={status === 'streaming' && isLastNonUser}>
@@ -176,7 +225,8 @@ export function ChatBox({
                 message.role === 'assistant' && 'w-full min-w-0',
               )}
             >
-              {messageContent}
+              {showMessageText && messageContent}
+              {maybeAudioButton}
               {maybeShowMessageIcons}
             </div>
           </div>

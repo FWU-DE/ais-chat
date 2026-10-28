@@ -3,6 +3,8 @@
     "delete": "Supprimer",
     "cancel": "Annuler",
     "information-disclaimer": "AIS.chat peut faire des erreurs. Fais preuve d'esprit critique et vérifie toutes les informations.",
+    "message-copy": "Copier le message",
+    "regenerate-message-button": "Régénérer la réponse",
     "plot": {
       "label": "Graphique",
       "download-png": "Télécharger le graphique",
@@ -12,7 +14,14 @@
       "fullscreen": "Afficher en plein écran",
       "description": "Graphique : {title}",
       "error": "Le graphique n'a pas pu être affiché."
-    }
+    },
+    "read-aloud": "Lire le message à voix haute",
+    "pause-message": "Mettre la lecture en pause",
+    "read-aloud-error": "La synthèse vocale a échoué.",
+    "listen-to-answer": "Écouter la réponse",
+    "pause-audio": "Pause",
+    "show-message-text": "Afficher le texte",
+    "hide-message-text": "Masquer le texte"
   },
   "characters": {
     "shared": {
@@ -61,13 +70,15 @@
     "title": "Activité IA",
     "toggle": "Afficher/masquer l’activité IA",
     "open-source": "Ouvrir la source: {source}",
+    "failed": "Échec",
     "steps": {
       "analysis": "Analyse",
       "analysis-summary": "Résumé de l’analyse",
       "done": "Terminé",
       "web_search": "Recherche web",
       "web_scraper": "Page web lue",
-      "retrieve_text_chunks": "Fichier lu",
+      "retrieve_text_chunks": "Extraits pertinents du fichier lus",
+      "retrieve_text_chunks_prefix": "Termes de recherche :",
       "retrieve_entire_file": "Fichier entièrement lu",
       "mundo_search": "Recherche dans Mundo",
       "math_calculate": "Calcul effectué",

@@ -10,3 +10,7 @@ export const speechRequestSchema = z.object({
 export const speechPreviewRequestSchema = z.object({
   voice: requiredNonEmptyString('voice is required'),
 });
+
+export const initialMessageSpeechRequestSchema = z.object({
+  characterId: requiredNonEmptyString('characterId is required'),
+});

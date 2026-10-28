@@ -1,5 +1,4 @@
-import { PRICE_AND_CENT_MULTIPLIER, TOKEN_AMOUNT_PER_PRICE } from '@/db/const';
-import type { SpeechUsage } from '@ais-chat/ai-core';
+import { PRICE_AND_CENT_MULTIPLIER } from '@/db/const';
 import { dbGetFederalStateWithDecryptedApiKeyWithResult } from '@shared/db/functions/federal-state';
 import {
   dbGetLlmModelsByFederalStateId,
@@ -124,27 +123,6 @@ function calculateCostsInCentForEmbeddingModel(
   const promptTokenPrice = usage.promptTokens * model.priceMetadata.promptTokenPrice;
 
   return promptTokenPrice / PRICE_AND_CENT_MULTIPLIER;
-}
-
-/**
- * Calculates the cost of a speech generation in cent.
- *
- * `priceMetadata` values for the speech model are given in cent per 1 million tokens.
- */
-export function calculateSpeechCostsInCent(model: LlmModelSelectModel, usage: SpeechUsage): number {
-  if (model.priceMetadata.type !== 'speech') {
-    logError(
-      'Invalid model type, gracefully returning 0: ' + model.name,
-      new TypeError('Invalid model type'),
-    );
-
-    return 0;
-  }
-
-  const inputTextTokenPrice = usage.inputTextTokens * model.priceMetadata.inputTextTokenPrice;
-  const outputAudioTokenPrice = usage.outputAudioTokens * model.priceMetadata.outputAudioTokenPrice;
-
-  return (inputTextTokenPrice + outputAudioTokenPrice) / TOKEN_AMOUNT_PER_PRICE;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  createNewLearningScenario,
   createNewLearningScenarioFromTemplate,
   deleteLearningScenario,
   downloadFileFromLearningScenario,
@@ -50,6 +51,7 @@ import { getReadOnlySignedUrl, uploadFileToS3 } from '../s3';
 import { duplicateLearningScenario } from './learning-scenario-admin-service';
 import { getMaxBudgetInCentByUser, getUsedBudgetInCentByUser } from '../users/user-budget-service';
 import { dbGetLearningScenarioChatUsageInCentByLearningScenarioId } from '@shared/db/functions/token-points';
+import { getUserSettings } from '@shared/users/user-settings-service';
 
 vi.mock('../db/functions/learning-scenario', () => ({
   dbGetAllAccessibleLearningScenarios: vi.fn(),
@@ -68,6 +70,9 @@ vi.mock('../db/functions/learning-scenario', () => ({
   dbStopLearningScenarioShare: vi.fn(),
   dbUpdateLearningScenarioShareTokenPointsLimit: vi.fn(),
 }));
+vi.mock('@shared/users/user-settings-service', () => ({
+  getUserSettings: vi.fn(),
+}));
 vi.mock('./learning-scenario-admin-service', () => ({
   duplicateLearningScenario: vi.fn(),
 }));
@@ -85,19 +90,25 @@ vi.mock('../s3', () => ({
   uploadFileToS3: vi.fn(),
   deleteFileFromS3: vi.fn(),
 }));
-const { mockDbReturning, mockDbSet, mockDbUpdate } = vi.hoisted(() => {
-  const mockDbReturning = vi.fn();
-  const mockDbUpdateWhere = vi.fn(() => ({ returning: mockDbReturning }));
-  const mockDbSet = vi.fn(() => ({ where: mockDbUpdateWhere }));
-  const mockDbUpdate = vi.fn(() => ({ set: mockDbSet }));
+const { mockDbReturning, mockDbSet, mockDbUpdate, mockDbInsert, mockDbInsertValues } = vi.hoisted(
+  () => {
+    const mockDbReturning = vi.fn();
+    const mockDbInsertValues = vi.fn(() => ({ returning: mockDbReturning }));
+    const mockDbInsert = vi.fn(() => ({ values: mockDbInsertValues }));
+    const mockDbUpdateWhere = vi.fn(() => ({ returning: mockDbReturning }));
+    const mockDbSet = vi.fn(() => ({ where: mockDbUpdateWhere }));
+    const mockDbUpdate = vi.fn(() => ({ set: mockDbSet }));
 
-  return {
-    mockDbReturning,
-    mockDbSet,
-    mockDbUpdate,
-  };
-});
-vi.mock('@shared/db', () => ({ db: { update: mockDbUpdate } }));
+    return {
+      mockDbReturning,
+      mockDbSet,
+      mockDbUpdate,
+      mockDbInsert,
+      mockDbInsertValues,
+    };
+  },
+);
+vi.mock('@shared/db', () => ({ db: { insert: mockDbInsert, update: mockDbUpdate } }));
 vi.mock('../users/user-budget-service', () => ({
   getMaxBudgetInCentByUser: vi.fn(),
   getUsedBudgetInCentByUser: vi.fn(),
@@ -269,6 +280,26 @@ describe('learning-scenario-service', () => {
     // Set default mock return values for budget functions
     vi.mocked(getMaxBudgetInCentByUser).mockResolvedValue(500);
     vi.mocked(getUsedBudgetInCentByUser).mockResolvedValue(0);
+  });
+
+  describe('createNewLearningScenario', () => {
+    it('applies user speech defaults when creating an empty learning scenario', async () => {
+      const user = mockUser('teacher');
+      vi.mocked(getUserSettings).mockResolvedValue({
+        defaultSpeechVoice: 'voice-b',
+        defaultIsSpeechOnly: true,
+      });
+      mockDbReturning.mockResolvedValue([{ id: generateUUID() }]);
+
+      await createNewLearningScenario({ modelId: generateUUID(), user });
+
+      expect(mockDbInsertValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          voice: 'voice-b',
+          speechOnly: true,
+        }),
+      );
+    });
   });
 
   describe('NotFoundError scenarios', () => {

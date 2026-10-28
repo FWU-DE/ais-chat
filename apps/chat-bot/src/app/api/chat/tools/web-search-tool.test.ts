@@ -54,7 +54,7 @@ describe('buildWebSearchTool', () => {
     mocks.resolveWebSearchConfigMock.mockReturnValue(disabledConfig);
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const result = await buildWebSearchTool({
+    const result = buildWebSearchTool({
       user,
       conversationId: 'conversation-1',
     });
@@ -74,7 +74,7 @@ describe('buildWebSearchTool', () => {
 
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const tool = await buildWebSearchTool({
+    const tool = buildWebSearchTool({
       user,
       conversationId: 'conversation-1',
     });
@@ -106,7 +106,6 @@ describe('buildWebSearchTool', () => {
           content: 'Kurzer Auszug aus dem Suchergebnis.',
         },
       ],
-      error: null,
     });
   });
 
@@ -119,7 +118,7 @@ describe('buildWebSearchTool', () => {
 
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const tool = await buildWebSearchTool({
+    const tool = buildWebSearchTool({
       user,
       characterId: 'character-uuid',
       conversationId: 'conversation-1',
@@ -143,7 +142,7 @@ describe('buildWebSearchTool', () => {
 
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const tool = await buildWebSearchTool({
+    const tool = buildWebSearchTool({
       user,
       learningScenarioId: 'learning-scenario-uuid',
       conversationId: 'conversation-1',
@@ -167,7 +166,7 @@ describe('buildWebSearchTool', () => {
 
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const tool = await buildWebSearchTool({
+    const tool = buildWebSearchTool({
       user,
       assistantId: 'assistant-uuid',
       conversationId: 'conversation-1',
@@ -187,7 +186,7 @@ describe('buildWebSearchTool', () => {
 
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const tool = await buildWebSearchTool({
+    const tool = buildWebSearchTool({
       user,
       conversationId: 'conversation-1',
     });
@@ -198,5 +197,101 @@ describe('buildWebSearchTool', () => {
     expect(mocks.searchWebMock.mock.calls[0]![0]).toMatchObject({
       includedDomains: undefined,
     });
+  });
+
+  it('returns a generic error without leaking internal details when searchWeb throws', async () => {
+    mocks.resolveWebSearchConfigMock.mockReturnValue(allWebConfig);
+    mocks.searchWebMock.mockRejectedValue(new Error('Linkup is down'));
+
+    const { buildWebSearchTool } = await import('./web-search-tool');
+
+    const tool = await buildWebSearchTool({
+      user,
+      conversationId: 'conversation-1',
+    });
+
+    const result = await tool!.handler({ query: 'current information' });
+
+    expect(result).toEqual({ error: 'Web search failed.' });
+  });
+
+  it('returns an error for an empty query without calling searchWeb', async () => {
+    mocks.resolveWebSearchConfigMock.mockReturnValue(allWebConfig);
+
+    const { buildWebSearchTool } = await import('./web-search-tool');
+
+    const tool = await buildWebSearchTool({
+      user,
+      conversationId: 'conversation-1',
+    });
+
+    const result = await tool!.handler({ query: '   ' });
+
+    expect(result).toEqual({ error: 'Missing search query.' });
+    expect(mocks.searchWebMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('webSearchActivity', () => {
+  it('createStep sets detail to the parsed query for valid arguments', async () => {
+    const { webSearchActivity } = await import('./web-search-tool');
+
+    const step = webSearchActivity.createStep({
+      id: 'call-1',
+      name: 'web_search',
+      arguments: JSON.stringify({ query: 'aktuelle information' }),
+    });
+
+    expect(step).toEqual({
+      kind: 'tool',
+      id: 'call-1',
+      tool: 'web_search',
+      detail: 'aktuelle information',
+    });
+  });
+
+  it('createStep leaves detail undefined for invalid arguments', async () => {
+    const { webSearchActivity } = await import('./web-search-tool');
+
+    const step = webSearchActivity.createStep({
+      id: 'call-1',
+      name: 'web_search',
+      arguments: JSON.stringify({ query: '' }),
+    });
+
+    expect(step.detail).toBeUndefined();
+  });
+
+  it('applyResult adds links derived from the results', async () => {
+    const { webSearchActivity } = await import('./web-search-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'web_search' } as const;
+    const result = webSearchActivity.applyResult!(step, {
+      results: [
+        { title: 'Beispielartikel', url: 'https://example.com/search-result', content: null },
+      ],
+    });
+
+    expect(result.links).toEqual([
+      { title: 'Beispielartikel', url: 'https://example.com/search-result' },
+    ]);
+  });
+
+  it('applyResult leaves the step unchanged when no links can be derived', async () => {
+    const { webSearchActivity } = await import('./web-search-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'web_search' } as const;
+    const result = webSearchActivity.applyResult!(step, { results: [] });
+
+    expect(result).toEqual(step);
+  });
+
+  it('parsePersistedResult passes a persisted success result through unchanged', async () => {
+    const { webSearchActivity } = await import('./web-search-tool');
+
+    const raw = {
+      results: [{ title: 'Beispielartikel', url: 'https://example.com', content: null }],
+    };
+    expect(webSearchActivity.parsePersistedResult(raw)).toEqual(raw);
   });
 });
