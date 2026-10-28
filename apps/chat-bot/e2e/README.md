@@ -64,19 +64,14 @@ Run or debug a test directly from here.
 
 Every e2e run (chat-bot, admin, api) writes a `blob-report/` in its own app folder. To turn those into
 one aggregated [playwright-smart-reporter](https://github.com/qa-gary-parker/playwright-smart-reporter)
-report — with accessibility results, coverage, flakiness history, etc. — merge them from `apps/chat-bot`:
+report — with accessibility results, coverage, flakiness history, etc. — merge them:
 
 ```sh
-cd apps/chat-bot
-rm -rf smart-report/blobs
-mkdir -p smart-report/blobs
-cp blob-report/*.zip ../admin/blob-report/*.zip ../api/blob-report/*.zip smart-report/blobs/ 2>/dev/null
-pnpm exec playwright merge-reports --config=smart-report/merge.config.ts smart-report/blobs
+pnpm --filter ais-chat-app smart-report:merge
 ```
 
-Only copy the `blob-report/` dirs of the apps whose tests you actually ran — missing ones are fine, the
-command above just ignores a `cp` that finds nothing. This writes `smart-report/smart-report.html` with
-the combined results.
+It's fine if you only ran tests for some of the apps; the command fails only if none of them produced a
+`blob-report/`. This writes `apps/chat-bot/smart-report/smart-report.html` with the combined results.
 
 **Known limitation — code coverage:** Turbopack (used for this app's production build) emits source maps
 as [index/sectioned maps](https://tc39.es/source-map/#index-map) (a top-level `sections` array instead of
