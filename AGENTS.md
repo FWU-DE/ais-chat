@@ -10,6 +10,7 @@ Help coding agents ship safe changes quickly in the `ais-chat` monorepo (TypeScr
 
 - **[README.md](README.md)** — Setup instructions, quick start, local development, Docker usage
 - **[docs/structure.md](docs/structure.md)** — Detailed project structure and directory purpose
+- **[docs/concepts/README.md](docs/concepts/README.md)** — Index of topic-specific concept and best-practice docs; check this list for a relevant doc before implementing related features
 - **[apps/chat-bot/e2e/README.md](apps/chat-bot/e2e/README.md)** — E2E and load testing guide
 - **[SECURITY.md](SECURITY.md)** — Security issue reporting
 - **[packages/ui/README.md](packages/ui/README.md)** — shadcn/ui component library usage

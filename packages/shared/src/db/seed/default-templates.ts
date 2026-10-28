@@ -1,19 +1,19 @@
-import {
-  CharacterInsertModel,
-  AssistantInsertModel,
-  LearningScenarioInsertModel,
-  learningScenarioTable,
-} from '../schema';
+import { db } from '@shared/db';
+import { findStaticModelByRole } from '@shared/llm-models/llm-model-service';
+import { updateTemplateMappings } from '@shared/templates/template-service';
 import * as fs from 'fs';
 import * as path from 'path';
 import { uploadFileToS3 } from '../../s3';
-import { dbCreateCharacter } from '../functions/character';
-import { DUMMY_USER_ID } from './user-entity';
 import { dbUpsertAssistant } from '../functions/assistants';
-import { updateTemplateMappings } from '@shared/templates/template-service';
+import { dbCreateCharacter } from '../functions/character';
+import {
+  AssistantInsertModel,
+  CharacterInsertModel,
+  LearningScenarioInsertModel,
+  learningScenarioTable,
+} from '../schema';
 import { FEDERAL_STATES } from './federal-state';
-import { findStaticModelByRole } from '@shared/llm-models/llm-model-service';
-import { db } from '@shared/db';
+import { PLACEHOLDER_USER_ID } from './user-entity';
 
 export async function insertTemplateCharacters() {
   await processStaticJpegFiles(
@@ -160,7 +160,7 @@ async function processStaticJpegFiles(rootFolder: string, rootRemoteDir: string)
  */
 export const defaultTemplates: Omit<CharacterInsertModel, 'modelId'>[] = [
   {
-    userId: DUMMY_USER_ID,
+    userId: PLACEHOLDER_USER_ID,
     name: 'Johann Wolfgang von Goethe',
     description: 'Dichter der Klassik und des Sturm und Drang, Verfasser des "Faust" ',
     competence: 'Die Schüler lesen den Faust und versuchen Bezüge zu unserer Zeit herzustellen.',
@@ -179,7 +179,7 @@ export type AssistantInsertModelWithId = AssistantInsertModel & { id: string };
 export const defaultAssistant: AssistantInsertModelWithId[] = [
   {
     id: 'edb34bca-9868-4948-af68-7e80810806ac',
-    userId: DUMMY_USER_ID,
+    userId: PLACEHOLDER_USER_ID,
     name: 'Schulorganisationsassistent',
     description: 'Planer für organisatorische Aufgaben innerhalb der Schule',
     instructions:
@@ -200,7 +200,7 @@ export const defaultAssistant: AssistantInsertModelWithId[] = [
 export const defaultLearningScenario: Omit<LearningScenarioInsertModel, 'modelId'>[] = [
   {
     id: 'bd84c3e7-7789-4284-9125-196d321c3715',
-    userId: DUMMY_USER_ID,
+    userId: PLACEHOLDER_USER_ID,
     name: 'Lern was über KI',
     description: 'Die Schüler sollen lernen wie KI funktioniert',
     studentExercise: `1. Was kann KI?

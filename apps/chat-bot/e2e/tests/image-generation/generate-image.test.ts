@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../fixtures/test';
 import { AUTH_FILES } from '../../utils/const';
 import { waitForToast } from '../../utils/utils';
 
@@ -9,21 +9,10 @@ test('can generate an image and use image actions', async ({ page }) => {
   await page.goto('/image-generation');
   await page.waitForURL('/image-generation**');
 
-  // get selected model
+  // get selected model (use whatever image model is selected, don't switch it)
   const selectedModelLocator = page.getByTestId('main-menu-item-image-model-selected');
   const currentSelectedText = await selectedModelLocator.textContent();
   expect(currentSelectedText).toBeTruthy();
-
-  // Assert that gpt-image model is selected
-  if (!currentSelectedText?.includes('GPT-Image')) {
-    const dropdownLocator = page.getByTestId('main-menu-item-image-model-dropdown');
-    await dropdownLocator.waitFor();
-    await dropdownLocator.click();
-    await page.locator('div[data-radix-popper-content-wrapper]').waitFor();
-    const modelLocator = page.getByTestId(/menu-item-gpt-image/i);
-    await modelLocator.waitFor();
-    await modelLocator.click();
-  }
 
   // send message
   const prompt = 'A duck with a hat';

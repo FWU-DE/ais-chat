@@ -5,8 +5,8 @@ import {
   dbGetSharedChatFileCandidates,
 } from '@shared/db/functions/shared-chat-files';
 import { deleteMessageAttachments } from '@shared/files/fileService';
+import { isSharedChatFileMetadata, SharedChatFileMetadata } from '@shared/shared-chat';
 import { addDays } from '@shared/utils/date';
-import { isSharedChatFileMetadata, SharedChatFileMetadata } from '.';
 
 const EXPIRATION_OFFSET_IN_DAYS = -1;
 

@@ -6,9 +6,12 @@ import { generateAgenticStreamWithBilling } from './agentic-stream';
 import type {
   Message as AiCoreMessage,
   ModelSelection,
+  ModelUsage,
   TokenUsage,
   ToolCall,
+  ToolErrorResult,
   ToolRegistry,
+  ToolResult,
 } from './types';
 
 export const MAX_AGENTIC_ITERATIONS = env.maxAgenticIterations;
@@ -24,8 +27,6 @@ const toolCallDuration = metrics
 function logError(message: string, error: unknown) {
   console.error(message, error);
 }
-
-type ModelUsage = { modelId: string; usage: TokenUsage; priceInCents: number };
 
 /** Derives the running totals from the recorded per-model usages, so they can never drift apart. */
 function sumModelUsages(modelUsages: ModelUsage[]): { usage: TokenUsage; priceInCents: number } {
@@ -51,9 +52,13 @@ type RunAgentLoopParams = {
   /** Tears down the upstream provider stream when the client goes away or the generation times out. */
   abortSignal?: AbortSignal;
   onTextChunk: (delta: string) => void;
-  onReasoningSummary?: (delta: string) => void;
+  onReasoningSummary?: (delta: string, part?: { itemId: string; summaryIndex: number }) => void;
   onToolCalls?: (calls: ToolCall[]) => void;
-  onToolResult?: (result: { toolCallId: string; name: string; result: unknown }) => void;
+  onToolResult?: (result: {
+    toolCallId: string;
+    name: string;
+    result: ToolResult | ToolErrorResult;
+  }) => void;
   onComplete: (result: {
     fullText: string;
     usage: TokenUsage;
@@ -145,10 +150,16 @@ export function runAgentLoop({
               modelSelection,
               loopMessages,
               apiKeyId,
-              async ({ usage, priceInCents, modelId: usedModelId }) => {
+              async ({ usage, priceInCents, modelId: usedModelId, provider, modelName }) => {
                 await modelSelection.onModelUsed?.(usedModelId);
                 lastModelId = usedModelId;
-                modelUsages.push({ modelId: usedModelId, usage, priceInCents });
+                modelUsages.push({
+                  modelId: usedModelId,
+                  usage,
+                  priceInCents,
+                  provider,
+                  modelName,
+                });
                 if (usage.estimated) {
                   agentSpan.setAttribute('gen_ai.usage.estimated', true);
                 }
@@ -166,7 +177,7 @@ export function runAgentLoop({
                   iterationText += event.delta;
                   onTextChunk(event.delta);
                 } else if (event.type === 'reasoning_summary') {
-                  onReasoningSummary?.(event.delta);
+                  onReasoningSummary?.(event.delta, event.part);
                 } else if (event.type === 'tool_call') {
                   if (pendingToolCalls.length < MAX_TOOL_CALLS_PER_ITERATION) {
                     // On last iteration, tools are disabled but model might still emit tool calls
@@ -228,7 +239,7 @@ export function runAgentLoop({
                     const registryEntry = toolRegistry?.[toolCall.name];
                     const startedAt = performance.now();
                     let status = registryEntry ? 'success' : 'unknown_tool';
-                    let result: unknown;
+                    let result: ToolResult | ToolErrorResult;
                     let serializedResult: string;
 
                     try {
@@ -236,33 +247,32 @@ export function runAgentLoop({
                         const args = JSON.parse(toolCall.arguments) as Record<string, unknown>;
                         result = await registryEntry.handler(args, {
                           abortSignal,
-                          reportUsage: (usedModelId, usage, priceInCents) => {
-                            modelUsages.push({ modelId: usedModelId, usage, priceInCents });
+                          reportUsage: (modelUsage) => {
+                            modelUsages.push(modelUsage);
                           },
                         });
                       } else {
                         const message = `Unknown tool "${toolCall.name}"`;
                         toolSpan.setStatus({ code: 2, message });
-                        result = `Error: ${message}`;
+                        result = { error: message };
                       }
 
-                      if (typeof result === 'string') {
-                        serializedResult = result;
-                      } else {
-                        const serialized = JSON.stringify(result);
-                        if (serialized === undefined) {
-                          throw new Error('Tool result could not be serialized as JSON');
-                        }
-                        serializedResult = serialized;
+                      // JSON.stringify can throw (e.g. circular references) or return undefined
+                      // (e.g. a result with a toJSON that returns undefined); both go through the
+                      // catch block below so a bad tool result becomes a structured tool error.
+                      const serialized = JSON.stringify(result);
+                      if (serialized === undefined) {
+                        throw new Error('Tool result could not be serialized as JSON');
                       }
+                      serializedResult = serialized;
                     } catch (error) {
                       status = 'error';
-                      // TODO: see tech debt (refactoring of tool calls for error handling). Standardize tool errors so handlers throw instead of returning error values.
                       const message =
                         error instanceof Error ? error.message : 'Tool execution failed';
                       toolSpan.setStatus({ code: 2, message });
                       logError(`Error executing tool ${toolCall.name}:`, error);
-                      serializedResult = `Error: ${message}`;
+                      result = { error: message };
+                      serializedResult = JSON.stringify(result);
                     } finally {
                       toolCallDuration.record(performance.now() - startedAt, {
                         'gen_ai.tool.name': registryEntry ? toolCall.name : 'unknown',
@@ -281,7 +291,9 @@ export function runAgentLoop({
               ),
               ...overBudgetToolCalls.map(async (toolCall) => ({
                 toolCallId: toolCall.id,
-                result: `Error: Tool call budget exceeded. Maximum ${MAX_TOOL_CALLS_PER_ITERATION} tool calls per iteration. Do not mention this error to the user. Continue answering with the information you already have.`,
+                result: JSON.stringify({
+                  error: `Tool call budget exceeded. Maximum ${MAX_TOOL_CALLS_PER_ITERATION} tool calls per iteration. Do not mention this error to the user. Continue answering with the information you already have.`,
+                } satisfies ToolErrorResult),
               })),
             ]);
 

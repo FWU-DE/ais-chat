@@ -1,5 +1,3 @@
-import JXG from 'jsxgraph';
-import { logWarning } from '@shared/logging/logging';
 import {
   getSliderRange,
   type BoundingBox,
@@ -7,6 +5,8 @@ import {
   type PlotParent,
   type PlotSpec,
 } from '@/utils/plot/plot-spec';
+import { logWarning } from '@shared/logging/logging';
+import JXG from 'jsxgraph';
 
 const DEFAULT_BOUNDING_BOX: BoundingBox = [-5, 5, 5, -5];
 
@@ -269,6 +269,7 @@ export function createBoard(
 
   const board = JXG.JSXGraph.initBoard(container, {
     boundingBox: viewState?.boundingBox ?? spec.board.boundingBox ?? DEFAULT_BOUNDING_BOX,
+    renderer: 'svg',
     axis: spec.board.axis ?? true,
     grid: spec.board.grid ?? false,
     showCopyright: false,

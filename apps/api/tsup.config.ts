@@ -1,5 +1,5 @@
-import { defineConfig } from 'tsup';
 import { sentryEsbuildPlugin } from '@sentry/esbuild-plugin';
+import { defineConfig } from 'tsup';
 
 const isDevBuild = process.env.NODE_ENV !== 'production';
 
@@ -8,10 +8,11 @@ export default defineConfig({
   sourcemap: true,
   splitting: false,
   clean: true,
-  // externalize all imports at runtime so OTel can patch them.
+  // externalize all imports at runtime so Sentry can instrument them on require.
   external: [/.*/],
   // Important:
   // We bundle all workspace packages (e.g. @ais-chat/*) into the API bundle.
+  // This includes the OpenTelemetry metrics dependencies imported from shared-core.
   // Any third‑party modules imported from those packages must therefore be
   // resolvable from the API's runtime node_modules (not from packages/*/node_modules),
   // otherwise Node will fail at runtime.

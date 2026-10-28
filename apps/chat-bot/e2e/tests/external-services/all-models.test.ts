@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../fixtures/test';
 import { AUTH_FILES, LLM_MODELS_FILE } from '../../utils/const';
 import { selectDifferentModel, sendMessage } from '../../utils/chat';
 

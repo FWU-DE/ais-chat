@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../fixtures/test';
 import { AUTH_FILES } from '../../utils/const';
 import { deleteChat, selectDifferentModel, sendMessage, uploadFile } from '../../utils/chat';
 import { LLM_MODELS } from '../../utils/llm-models';

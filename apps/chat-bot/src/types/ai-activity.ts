@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { TOOL_NAMES } from './tool-names';
 
 /**
- * Tools whose calls are surfaced to the user in the "KI-Aktivität" section.
+ * Tools whose calls are surfaced to the user in the "AI Activity" section.
  * Calls of any other tool are not displayed.
  */
 export const AI_ACTIVITY_TOOL_NAMES = [
@@ -20,6 +20,7 @@ export type AiActivityToolName = (typeof AI_ACTIVITY_TOOL_NAMES)[number];
 const aiActivityLinkSchema = z.object({
   title: z.string(),
   url: z.string(),
+  failed: z.boolean().optional(),
 });
 
 export const aiActivityStepSchema = z.discriminatedUnion('kind', [
@@ -31,8 +32,10 @@ export const aiActivityStepSchema = z.discriminatedUnion('kind', [
     id: z.string(),
     tool: z.enum(AI_ACTIVITY_TOOL_NAMES),
     detail: z.string().optional(),
+    detailPlacement: z.enum(['inline', 'below']).optional(),
     result: z.string().optional(),
     links: z.array(aiActivityLinkSchema).optional(),
+    failed: z.boolean().optional(),
   }),
 ]);
 

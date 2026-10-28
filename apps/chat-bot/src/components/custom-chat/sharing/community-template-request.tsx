@@ -52,25 +52,30 @@ export function CommunityTemplateRequest({
       <Card className="mt-3" data-testid="community-template-request">
         <CardRow className="flex flex-col gap-4">
           <CollapsibleTrigger>
-            <div className="flex flex-row gap-2 items-center">
+            <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center">
               <span className="text-base font-medium">{t('title')}</span>
-              <Chip
-                data-testid="community-template-request-status"
-                className={
-                  requestWithEvents.state === 'rejected'
-                    ? 'bg-warning/30 text-warning-foreground'
-                    : ''
-                }
+              <div className="order-2 basis-full sm:contents">
+                <Chip
+                  data-testid="community-template-request-status"
+                  className={
+                    requestWithEvents.state === 'rejected'
+                      ? 'bg-warning/30 text-warning-foreground'
+                      : ''
+                  }
+                >
+                  {t(`status.${requestWithEvents.state}`)}
+                </Chip>
+              </div>
+              <span
+                className="order-1 sm:order-0 ml-auto"
+                data-testid="community-template-request-toggle"
               >
-                {t(`status.${requestWithEvents.state}`)}
-              </Chip>
-              <span className="ml-auto" data-testid="community-template-request-toggle">
                 {isOpen ? <CaretUpIcon /> : <CaretDownIcon />}
               </span>
             </div>
           </CollapsibleTrigger>
           <CollapsibleContent className="flex flex-col gap-4">
-            <div className="flex flex-row gap-4">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-4">
               {canResubmit && (
                 <Button
                   type="button"

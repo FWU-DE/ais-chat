@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../fixtures/test';
 import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
 import { deleteChat, sendMessage, uploadFile } from '../../utils/chat';
 import { SUPPORTED_FILE_EXTENSIONS } from '@/const';

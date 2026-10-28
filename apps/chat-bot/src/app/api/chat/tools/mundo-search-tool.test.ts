@@ -52,7 +52,6 @@ describe('buildMundoSearchTool', () => {
     expect(raw).toEqual({
       results: [sampleResult],
       retriedWithoutFilters: false,
-      error: null,
     });
   });
 
@@ -92,7 +91,6 @@ describe('buildMundoSearchTool', () => {
     expect(raw).toEqual({
       results: [],
       retriedWithoutFilters: false,
-      error: 'No MUNDO results found.',
     });
   });
 
@@ -117,7 +115,6 @@ describe('buildMundoSearchTool', () => {
     expect(raw).toEqual({
       results: [],
       retriedWithoutFilters: false,
-      error: 'No MUNDO results found.',
     });
   });
 
@@ -143,7 +140,6 @@ describe('buildMundoSearchTool', () => {
     expect(raw).toEqual({
       results: [sampleResult],
       retriedWithoutFilters: true,
-      error: null,
     });
   });
 
@@ -163,7 +159,6 @@ describe('buildMundoSearchTool', () => {
     expect(raw).toEqual({
       results: [],
       retriedWithoutFilters: true,
-      error: 'No MUNDO results found.',
     });
   });
 
@@ -174,11 +169,7 @@ describe('buildMundoSearchTool', () => {
     const raw = await tool.handler({ query: '   ' });
 
     expect(mocks.mundoSearchMock).not.toHaveBeenCalled();
-    expect(raw).toEqual({
-      results: [],
-      retriedWithoutFilters: false,
-      error: 'Error: Missing search query.',
-    });
+    expect(raw).toEqual({ error: 'Invalid search query or filters.' });
   });
 
   it('truncates the query to MUNDO_SEARCH_QUERY_LENGTH_LIMIT before calling mundoSearch', async () => {
@@ -195,5 +186,78 @@ describe('buildMundoSearchTool', () => {
       classLevel: undefined,
       subject: undefined,
     });
+  });
+
+  it('returns a generic error without leaking internal details when mundoSearch throws', async () => {
+    mocks.mundoSearchMock.mockRejectedValueOnce(new Error('MUNDO is down'));
+
+    const { buildMundoSearchTool } = await import('./mundo-search-tool');
+    const tool = buildMundoSearchTool();
+
+    const raw = await tool.handler({ query: 'Photosynthese' });
+
+    expect(raw).toEqual({ error: 'MUNDO search failed.' });
+  });
+});
+
+describe('mundoSearchActivity', () => {
+  it('createStep sets detail to the parsed query for valid arguments', async () => {
+    const { mundoSearchActivity } = await import('./mundo-search-tool');
+
+    const step = mundoSearchActivity.createStep({
+      id: 'call-1',
+      name: 'mundo_search',
+      arguments: JSON.stringify({ query: 'Photosynthese' }),
+    });
+
+    expect(step).toEqual({
+      kind: 'tool',
+      id: 'call-1',
+      tool: 'mundo_search',
+      detail: 'Photosynthese',
+    });
+  });
+
+  it('createStep leaves detail undefined for invalid arguments', async () => {
+    const { mundoSearchActivity } = await import('./mundo-search-tool');
+
+    const step = mundoSearchActivity.createStep({
+      id: 'call-1',
+      name: 'mundo_search',
+      arguments: JSON.stringify({ query: '' }),
+    });
+
+    expect(step.detail).toBeUndefined();
+  });
+
+  it('applyResult adds links derived from the results', async () => {
+    const { mundoSearchActivity } = await import('./mundo-search-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'mundo_search' } as const;
+    const result = mundoSearchActivity.applyResult!(step, {
+      results: [sampleResult],
+      retriedWithoutFilters: false,
+    });
+
+    expect(result.links).toEqual([{ title: sampleResult.title, url: sampleResult.url }]);
+  });
+
+  it('applyResult leaves the step unchanged when no links can be derived', async () => {
+    const { mundoSearchActivity } = await import('./mundo-search-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'mundo_search' } as const;
+    const result = mundoSearchActivity.applyResult!(step, {
+      results: [],
+      retriedWithoutFilters: false,
+    });
+
+    expect(result).toEqual(step);
+  });
+
+  it('parsePersistedResult passes a persisted success result through unchanged', async () => {
+    const { mundoSearchActivity } = await import('./mundo-search-tool');
+
+    const raw = { results: [sampleResult], retriedWithoutFilters: false };
+    expect(mundoSearchActivity.parsePersistedResult(raw)).toEqual(raw);
   });
 });
