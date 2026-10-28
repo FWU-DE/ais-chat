@@ -110,7 +110,7 @@ export default function AudioPlayer({
           duration={duration}
           currentTime={displayedTime}
           getWaveformPeaks={getWaveformPeaks}
-          isLoading={status === 'loading'}
+          isLoading={status === 'loading' || (status === 'playing' && !isStreamFullyLoaded)}
           onSeekPreview={setDragValue}
           onSeekCommit={(time) => {
             seek(time);
