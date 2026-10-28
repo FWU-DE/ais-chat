@@ -19,6 +19,7 @@ export const AUTH_FILES = {
   teacher: path.resolve(process.cwd(), '.playwright-auth/teacher.json'),
   teacher2: path.resolve(process.cwd(), '.playwright-auth/teacher2.json'),
   teacher3: path.resolve(process.cwd(), '.playwright-auth/teacher3.json'),
+  teacherWithSettings: path.resolve(process.cwd(), '.playwright-auth/teacher-with-settings.json'),
 };
 
 /**

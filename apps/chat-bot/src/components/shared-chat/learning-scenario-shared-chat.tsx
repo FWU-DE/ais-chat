@@ -1,11 +1,12 @@
 'use client';
 
 import { useLearningScenarioChat } from '@/hooks/use-chat-hooks';
-import { useTranslations } from 'next-intl';
-import { LearningScenarioWithShareDataModel } from '@shared/db/schema';
-import GenericSharedChat from './generic-shared-chat';
+import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
 import { loadSharedChat } from '@/utils/shared-chat-storage';
+import { LearningScenarioWithShareDataModel } from '@shared/db/schema';
+import { useTranslations } from 'next-intl';
 import { z } from 'zod';
+import GenericSharedChat from './generic-shared-chat';
 
 export default function LearningScenarioSharedChat({
   avatarPictureUrl,
@@ -62,10 +63,15 @@ export default function LearningScenarioSharedChat({
     };
   }
 
-  async function generateSharedLearningScenarioSpeech(text: string): Promise<Blob> {
+  async function generateSharedLearningScenarioSpeech(
+    text: string,
+    _isInitialMessage: boolean,
+    signal?: AbortSignal,
+  ): Promise<Blob> {
     const response = await fetch('/api/v1/shared-chat/speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal,
       body: JSON.stringify({ text, inviteCode, entityType: 'learningScenario', entityId: id }),
     });
 
@@ -74,6 +80,18 @@ export default function LearningScenarioSharedChat({
     }
 
     return response.blob();
+  }
+
+  async function generateSharedLearningScenarioSpeechStream(
+    text: string,
+    _isInitialMessage: boolean,
+    { signal }: { signal: AbortSignal },
+  ): Promise<ReadableStream<Uint8Array>> {
+    return fetchSpeechStream(
+      '/api/v1/shared-chat/speech/stream',
+      { text, inviteCode, entityType: 'learningScenario', entityId: id },
+      signal,
+    );
   }
 
   return (
@@ -91,6 +109,8 @@ export default function LearningScenarioSharedChat({
       uploadFileFn={uploadSharedLearningScenarioFile}
       isSpeechModelEnabled={isSpeechModelEnabled}
       generateSpeechFn={generateSharedLearningScenarioSpeech}
+      speechOnly={sharedSchoolChat.speechOnly}
+      generateSpeechStreamFn={generateSharedLearningScenarioSpeechStream}
     />
   );
 }

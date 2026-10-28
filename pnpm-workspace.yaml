@@ -23,3 +23,5 @@ overrides:
   postcss@<8.5.25: 8.5.25
   brace-expansion@<1.1.21: 1.1.21
   brace-expansion@>=4.0.0 <5.0.12: 5.0.12
+  #remark-docx uses currentyl 9.7.1 for docx, otherwise we get errors with the custom styles
+  'remark-docx>docx': 9.7.1

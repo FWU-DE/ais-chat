@@ -138,6 +138,8 @@ describe('buildJsxgraphTool', () => {
       modelId: 'model-1',
       usage,
       priceInCents: 3,
+      provider: 'bifrost-anthropic',
+      modelName: 'claude-x',
     });
     const { buildJsxgraphTool } = await import('./jsxgraph-tool');
     const tool = buildJsxgraphTool({ modelSelection, apiKeyId: 'api-key-1' });
@@ -145,6 +147,47 @@ describe('buildJsxgraphTool', () => {
 
     await tool.handler({ description: 'a point' }, { reportUsage });
 
-    expect(reportUsage).toHaveBeenCalledWith('model-1', usage, 3);
+    expect(reportUsage).toHaveBeenCalledWith({
+      modelId: 'model-1',
+      usage,
+      priceInCents: 3,
+      provider: 'bifrost-anthropic',
+      modelName: 'claude-x',
+    });
+  });
+});
+
+describe('createPlotActivity', () => {
+  it('createStep sets the description as detail, rendered below the title', async () => {
+    const { createPlotActivity } = await import('./jsxgraph-tool');
+
+    const step = createPlotActivity.createStep({
+      id: 'call-1',
+      name: 'create_plot',
+      arguments: JSON.stringify({ description: 'a point at the origin' }),
+    });
+
+    expect(step).toEqual({
+      kind: 'tool',
+      id: 'call-1',
+      tool: 'create_plot',
+      detail: 'a point at the origin',
+      detailPlacement: 'below',
+    });
+  });
+
+  it('parsePersistedResult passes a persisted plot spec through unchanged', async () => {
+    const { createPlotActivity } = await import('./jsxgraph-tool');
+
+    const raw = { board: { boundingBox: [-5, 5, 5, -5] }, elements: [['point', [0, 0]]] };
+    expect(createPlotActivity.parsePersistedResult(raw)).toEqual(raw);
+  });
+
+  it('parsePersistedResult passes a persisted error result through unchanged', async () => {
+    const { createPlotActivity } = await import('./jsxgraph-tool');
+
+    expect(createPlotActivity.parsePersistedResult({ error: 'Invalid description.' })).toEqual({
+      error: 'Invalid description.',
+    });
   });
 });

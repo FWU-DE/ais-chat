@@ -12,8 +12,11 @@ import {
   parsePlotSpec,
   type PlotSpec,
 } from '@/utils/plot/plot-spec';
-import type { ToolDefinition, ToolRegistration } from './types';
+import type { ToolActivity, ToolDefinition, ToolRegistration } from './types';
 import { TOOL_NAMES } from '@/types/tool-names';
+import type { ToolOutcome } from '@ais-chat/ai-core/chat/types';
+import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
+import { parseJsonRecord } from '@/utils/chat/tool-result-parsing';
 
 export const createPlotArgsSchema = z.object({
   description: z.string().trim().min(1),
@@ -22,8 +25,6 @@ export const createPlotArgsSchema = z.object({
   previousAttempt: z.string().trim().min(1).nullable().optional(),
   previousError: z.string().trim().min(1).nullable().optional(),
 });
-
-export type CreatePlotToolResponse = PlotSpec | { error: string; invalidJson?: string };
 
 const ALLOWED_ELEMENT_TYPES_LIST = [...ALLOWED_ELEMENT_TYPES].sort().join(', ');
 // Generated from the sanitizer's allowlist so the prompt cannot drift from what passes validation.
@@ -84,10 +85,24 @@ function isPresent(value: string | null | undefined): value is string {
   return value !== undefined && value !== null;
 }
 
+export const createPlotActivity: ToolActivity<PlotSpec> = {
+  createStep: (toolCall: ToolCall) => {
+    const parsed = createPlotArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.createPlot,
+      detail: parsed.success ? parsed.data.description : undefined,
+      detailPlacement: 'below',
+    };
+  },
+  parsePersistedResult: (raw) => parseGenericPersistedToolResult<PlotSpec>(raw),
+};
+
 export function buildJsxgraphTool({
   modelSelection,
   apiKeyId,
-}: BuildJsxgraphToolParams): ToolRegistration {
+}: BuildJsxgraphToolParams): ToolRegistration<PlotSpec> {
   const definition: ToolDefinition = {
     name: TOOL_NAMES.createPlot,
     description:
@@ -120,7 +135,7 @@ export function buildJsxgraphTool({
   const handler = async (
     args: Record<string, unknown>,
     options?: ToolHandlerOptions,
-  ): Promise<CreatePlotToolResponse> => {
+  ): ToolOutcome<PlotSpec, { invalidJson?: string }> => {
     const parsedArgs = createPlotArgsSchema.safeParse(args);
     if (!parsedArgs.success) {
       return { error: 'Invalid description.' };
@@ -143,13 +158,11 @@ export function buildJsxgraphTool({
     }
 
     try {
-      const { text, modelId, usage, priceInCents } = await generateTextWithBilling(
-        modelSelection,
-        messages,
-        apiKeyId,
-        { abortSignal: options?.abortSignal },
-      );
-      options?.reportUsage?.(modelId, usage, priceInCents);
+      const { text, modelId, usage, priceInCents, provider, modelName } =
+        await generateTextWithBilling(modelSelection, messages, apiKeyId, {
+          abortSignal: options?.abortSignal,
+        });
+      options?.reportUsage?.({ modelId, usage, priceInCents, provider, modelName });
       const result = parsePlotSpec(text);
       if ('spec' in result) {
         return result.spec;
@@ -165,12 +178,6 @@ export function buildJsxgraphTool({
   return {
     definition,
     handler,
-    activity: {
-      createStep: (toolCall: ToolCall) => ({
-        kind: 'tool',
-        id: toolCall.id,
-        tool: TOOL_NAMES.createPlot,
-      }),
-    },
+    activity: createPlotActivity,
   };
 }

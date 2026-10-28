@@ -1,14 +1,15 @@
 'use client';
 
 import { useCharacterChat, type ChatMessage } from '@/hooks/use-chat-hooks';
-import { useTranslations } from 'next-intl';
-import { CharacterWithShareDataModel } from '@shared/db/schema';
-import useBreakpoints from '../hooks/use-breakpoints';
-import { AssistantIcon } from '../chat/assistant-icon';
-import GenericSharedChat from './generic-shared-chat';
-import { reductionBreakpoint } from '@/utils/tailwind/layout';
+import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
 import { loadSharedChat } from '@/utils/shared-chat-storage';
+import { reductionBreakpoint } from '@/utils/tailwind/layout';
+import { CharacterWithShareDataModel } from '@shared/db/schema';
+import { useTranslations } from 'next-intl';
 import { z } from 'zod';
+import { AssistantIcon } from '../chat/assistant-icon';
+import useBreakpoints from '../hooks/use-breakpoints';
+import GenericSharedChat from './generic-shared-chat';
 
 /**
  * This component is used if a character is shared via invite code.
@@ -78,18 +79,44 @@ export default function CharacterSharedChat({
     };
   }
 
-  async function generateSharedCharacterSpeech(text: string): Promise<Blob> {
-    const response = await fetch('/api/v1/shared-chat/speech', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, inviteCode, entityType: 'character', entityId: id }),
-    });
+  async function generateSharedCharacterSpeech(
+    text: string,
+    isInitialMessage: boolean,
+    signal?: AbortSignal,
+  ): Promise<Blob> {
+    const response = await fetch(
+      isInitialMessage
+        ? '/api/v1/shared-chat/speech/initial-message'
+        : '/api/v1/shared-chat/speech',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal,
+        body: JSON.stringify(
+          isInitialMessage
+            ? { inviteCode, characterId: id }
+            : { text, inviteCode, entityType: 'character', entityId: id },
+        ),
+      },
+    );
 
     if (!response.ok) {
       throw new Error('Could not generate speech');
     }
 
     return response.blob();
+  }
+
+  async function generateSharedCharacterSpeechStream(
+    text: string,
+    _isInitialMessage: boolean,
+    { signal }: { signal: AbortSignal },
+  ): Promise<ReadableStream<Uint8Array>> {
+    return fetchSpeechStream(
+      '/api/v1/shared-chat/speech/stream',
+      { text, inviteCode, entityType: 'character', entityId: id },
+      signal,
+    );
   }
 
   return (
@@ -106,6 +133,8 @@ export default function CharacterSharedChat({
       uploadFileFn={uploadSharedCharacterFile}
       isSpeechModelEnabled={isSpeechModelEnabled}
       generateSpeechFn={generateSharedCharacterSpeech}
+      speechOnly={character.speechOnly}
+      generateSpeechStreamFn={generateSharedCharacterSpeechStream}
     />
   );
 }

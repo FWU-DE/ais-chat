@@ -1,3 +1,6 @@
+import { UserModel } from '@shared/auth/user-model';
+import { NotFoundError } from '@shared/error';
+import { SHARE_EXTENSION_WINDOW_MS } from '@shared/sharing/const';
 import {
   and,
   arrayOverlaps,
@@ -10,16 +13,13 @@ import {
   or,
   sql,
 } from 'drizzle-orm';
-import { NotFoundError } from '@shared/error';
 import { db } from '..';
-import { SHARE_EXTENSION_WINDOW_MS } from '@shared/sharing/const';
 import {
-  fileTable,
+  conversationTable,
   FilterGroup,
   LearningScenarioFileMapping,
   LearningScenarioOptionalShareDataModel,
   LearningScenarioSelectModel,
-  conversationTable,
   learningScenarioTable,
   learningScenarioTemplateMappingTable,
   LearningScenarioWithShareDataModel,
@@ -28,8 +28,8 @@ import {
   SharedLearningScenarioUsageTrackingInsertModel,
   userTable,
 } from '../schema';
-import { UserModel } from '@shared/auth/user-model';
 import { PgTransactionObject } from '../types';
+import { dbDeleteFileIfUnreferenced } from './files';
 
 type IncludeDeletedOption = {
   includeDeleted?: boolean;
@@ -500,12 +500,12 @@ export async function dbDeleteLearningScenarioByIdAndUser({
     await tx
       .delete(LearningScenarioFileMapping)
       .where(eq(LearningScenarioFileMapping.learningScenarioId, learningScenario.id));
-    await tx.delete(fileTable).where(
-      inArray(
-        fileTable.id,
-        relatedFiles.map((f) => f.id),
-      ),
-    );
+    const deletedFileIds: string[] = [];
+    for (const { id } of relatedFiles) {
+      if (await dbDeleteFileIfUnreferenced(tx, id)) {
+        deletedFileIds.push(id);
+      }
+    }
     const [deletedLearningScenario] = await tx
       .delete(learningScenarioTable)
       .where(
@@ -519,7 +519,7 @@ export async function dbDeleteLearningScenarioByIdAndUser({
     if (deletedLearningScenario === undefined) {
       throw new Error('Could not delete learning scenario');
     }
-    return deletedLearningScenario;
+    return { deletedLearningScenario, deletedFileIds };
   });
 
   return deletedLearningScenario;

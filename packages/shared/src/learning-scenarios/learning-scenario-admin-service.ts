@@ -77,6 +77,7 @@ export async function duplicateLearningScenario({
     'learning-scenario',
     originalLearningScenarioId,
     learningScenarioId,
+    user.id,
   );
 
   return insertedLearningScenario;

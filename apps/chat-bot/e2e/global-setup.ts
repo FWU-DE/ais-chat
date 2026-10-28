@@ -1,11 +1,11 @@
+import { chromium, FullConfig, Page } from '@playwright/test';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { chromium, FullConfig, Page } from '@playwright/test';
-import { login } from './utils/login';
 import { adminLogin } from './utils/admin-login';
-import { ADMIN_BASE_URL, AUTH_FILES, EDITOR_AUTH_FILE, LLM_MODELS_FILE } from './utils/const';
 import { selectDifferentModel } from './utils/chat';
+import { ADMIN_BASE_URL, AUTH_FILES, EDITOR_AUTH_FILE, LLM_MODELS_FILE } from './utils/const';
 import { LLM_MODELS } from './utils/llm-models';
+import { login } from './utils/login';
 
 /**
  * Display names of models that exist only for e2e testing purposes and must

@@ -1,13 +1,14 @@
 'use client';
 
-import React from 'react';
-import Spinner from '@/components/icons/spinner';
 import { useToast } from '@/components/common/toast';
-import { useTranslations } from 'next-intl';
-import { Button } from '@ui/components/button';
+import Spinner from '@/components/icons/spinner';
+import { downloadFileFromBlob } from '@/utils/files/blob-download';
+import { formatConversationExport, markdownToDocxBlob } from '@/utils/files/markdown-docx';
 import { cn } from '@/utils/tailwind';
 import { BoxArrowDownIcon } from '@phosphor-icons/react';
-import { downloadFileFromBlob, extractFilenameFromResponse } from '@/utils/files/blob-download';
+import { Button } from '@ui/components/button';
+import { useTranslations } from 'next-intl';
+import React from 'react';
 
 type DownloadConversationButtonProps = {
   conversationId: string;
@@ -35,14 +36,33 @@ export async function fetchConversationDownload({
   }
 
   const response = await fetch(`/api/download-conversation?${searchParams.toString()}`);
-  const fileName = extractFilenameFromResponse(response, `Konversation_${conversationId}.docx`);
 
   if (!response.ok) {
     throw new Error('Failed to download the document');
   }
 
+  const responseData = (await response.json()) as {
+    fileName: string;
+    conversationTitle: string | null;
+    createdAt: string;
+    modelName: string;
+    messages: Array<{
+      role: string;
+      content: string;
+      images: Array<{ alt: string; url: string }>;
+    }>;
+  };
+  const { fileName, conversationTitle, createdAt, modelName, messages } = responseData;
+
   return {
-    blob: await response.blob(),
+    blob: await markdownToDocxBlob(
+      formatConversationExport({
+        messages,
+        createdAt,
+        modelName,
+        conversationTitle: conversationTitle ?? undefined,
+      }),
+    ),
     fileName,
   };
 }

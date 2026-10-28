@@ -1,6 +1,6 @@
 import { getUserAndContextByUserId } from '@/auth/utils';
 import { InvalidArgumentError } from '@shared/error';
-import { SharedChatFileMetadata, SharedSessionId, verify } from '.';
+import { SharedChatFileMetadata, SharedSessionId, verify } from '@shared/shared-chat';
 import { uploadFile } from '../file-operations/file-upload-service';
 import { getSharedChatEntity } from './shared-chat-get-entity';
 

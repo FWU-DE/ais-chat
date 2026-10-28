@@ -58,7 +58,7 @@ export async function sendMessage(
 export async function uploadFile(page: Page, filePath: string) {
   const fileInput = page.locator('input[type="file"]');
 
-  const uploadPromise = page.waitForResponse('/api/v1/files');
+  const uploadPromise = page.waitForResponse('/api/v1/files', { timeout: 15_000 });
   await fileInput.setInputFiles(filePath);
 
   // Wait for the upload to complete
@@ -78,7 +78,7 @@ export async function selectDifferentModel(page: Page, modelName?: string) {
   const isDisabled = await dropdown.evaluate((el) => (el as HTMLButtonElement).disabled);
   if (isDisabled) return;
 
-  const selectedModel = await dropdown.innerText();
+  const selectedModel = await page.getByTestId('main-menu-item-text-model-selected').innerText();
   if (modelName && selectedModel === modelName) {
     // requested model is already selected
     return;

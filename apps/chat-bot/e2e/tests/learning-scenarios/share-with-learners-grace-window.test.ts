@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../fixtures/test';
 import { AUTH_FILES } from '../../utils/const';
 import { configureLearningScenario, createLearningScenario } from '../../utils/learning-scenario';
 import { startShare, stopShare, waitForAutosave } from '../../utils/utils';

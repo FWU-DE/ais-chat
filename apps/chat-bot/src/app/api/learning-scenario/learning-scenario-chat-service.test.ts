@@ -89,15 +89,15 @@ vi.mock('@shared/db/functions/files', () => ({
   dbGetRelatedLearningScenarioFiles: mocks.dbGetRelatedLearningScenarioFilesMock,
 }));
 
-vi.mock('@/rabbitmq/send', () => ({
+vi.mock('@shared/rabbitmq/send', () => ({
   sendRabbitmqEvent: mocks.sendRabbitmqEventMock,
 }));
 
-vi.mock('@/rabbitmq/events/new-message', () => ({
+vi.mock('@shared/rabbitmq/events/new-message', () => ({
   constructNewMessageEvent: mocks.constructNewMessageEventMock,
 }));
 
-vi.mock('@/rabbitmq/events/budget-exceeded', () => ({
+vi.mock('@shared/rabbitmq/events/budget-exceeded', () => ({
   constructTokenBudgetExceededEvent: mocks.constructTokenBudgetExceededEventMock,
 }));
 
@@ -120,6 +120,7 @@ vi.mock('@shared/logging', () => ({
 
 vi.mock('../chat/build-tools', () => ({
   buildTools: mocks.buildToolsMock,
+  toolActivityRegistry: {},
 }));
 
 vi.mock('../file-operations/preprocess-image', () => ({
@@ -218,7 +219,7 @@ beforeEach(() => {
   mocks.combineSharedRelatedFilesMock.mockResolvedValue([]);
   mocks.ingestWebContentMock.mockResolvedValue({ processedUrls: [], errorUrls: [] });
   mocks.isWebSearchEnabledForEntityMock.mockReturnValue(true);
-  mocks.buildToolsMock.mockResolvedValue({ toolRegistry: {} });
+  mocks.buildToolsMock.mockReturnValue({ toolRegistry: {} });
   mocks.constructLearningScenarioSystemPromptMock.mockReturnValue('system-prompt');
   mocks.limitChatHistoryMock.mockImplementation(
     (incomingMessages: ChatMessage[]) => incomingMessages,
@@ -252,6 +253,8 @@ beforeEach(() => {
             modelId: model.id,
             usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
             priceInCents: 4,
+            provider: model.provider,
+            modelName: model.name,
           },
         ],
         agentLoopMessages: [],
@@ -320,7 +323,7 @@ describe('sendLearningScenarioMessage', () => {
       },
     });
     mocks.isWebSearchEnabledForEntityMock.mockReturnValue(false);
-    mocks.buildToolsMock.mockResolvedValue({ toolRegistry: {} });
+    mocks.buildToolsMock.mockReturnValue({ toolRegistry: {} });
 
     await sendLearningScenarioMessage({
       learningScenarioId: learningScenario.id,

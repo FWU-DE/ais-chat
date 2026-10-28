@@ -10,7 +10,7 @@ const requiredModelNames: Record<Exclude<StaticModelRole, 'safety'>, string> = {
   auxiliary: 'gpt-4o-mini',
   'strong-auxiliary': 'gpt-5.5',
   'auxiliary-fallback': 'meta-llama/Llama-3.3-70B-Instruct',
-  'default-image': 'imagen-4.0-generate-001',
+  'default-image': 'gpt-image-1.5',
 };
 
 export async function initializeStaticModelConfigurations() {

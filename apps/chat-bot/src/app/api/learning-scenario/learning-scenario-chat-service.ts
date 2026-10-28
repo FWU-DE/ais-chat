@@ -1,7 +1,4 @@
 import { getUserAndContextByUserId } from '@/auth/utils';
-import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
-import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
-import { sendRabbitmqEvent } from '@/rabbitmq/send';
 import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
 import { createTextStream } from '@/utils/streaming';
 import { checkProductAccess } from '@/utils/vidis/access';
@@ -10,6 +7,7 @@ import {
   SharedChatExpiredError,
   TokenPointsExceededError,
   runAgentLoop,
+  type ModelUsage,
   type TokenUsage,
 } from '@ais-chat/ai-core';
 import { dbGetRelatedLearningScenarioFiles } from '@shared/db/functions/files';
@@ -19,6 +17,11 @@ import {
 } from '@shared/db/functions/learning-scenario';
 import { NotFoundError } from '@shared/error';
 import { logError } from '@shared/logging';
+import {
+  constructNewMessageEvent,
+  constructTokenBudgetExceededEvent,
+  sendRabbitmqEvent,
+} from '@shared/rabbitmq';
 import {
   sharedChatHasExpired,
   sharedLearningScenarioChatHasReachedTokenPointsLimit,
@@ -113,13 +116,7 @@ export async function sendLearningScenarioMessage({
   ]);
 
   if (tokenPointsLimitReached) {
-    await sendRabbitmqEvent(
-      constructTokenBudgetExceededEvent({
-        anonymous: true,
-        user: teacherUserAndContext,
-        sharedChat: learningScenario,
-      }),
-    );
+    await sendRabbitmqEvent(constructTokenBudgetExceededEvent({ user: teacherUserAndContext }));
   }
 
   if (sharedChatLimitReached || tokenPointsLimitReached) {
@@ -174,7 +171,7 @@ export async function sendLearningScenarioMessage({
   const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
   const assistantMessageId = crypto.randomUUID();
 
-  const tools = await buildTools({
+  const tools = buildTools({
     user: teacherUserAndContext,
     learningScenarioId: learningScenario.id,
     webSearchSettings: learningScenario,
@@ -187,9 +184,7 @@ export async function sendLearningScenarioMessage({
     apiKeyId,
   });
 
-  const aiActivity = createAiActivityStream(update, tools.toolRegistry, {
-    hideSensitiveDetails: true,
-  });
+  const aiActivity = createAiActivityStream(update, { hideSensitiveDetails: true });
 
   // Build system prompt
   const systemPrompt = constructLearningScenarioSystemPrompt({
@@ -204,7 +199,7 @@ export async function sendLearningScenarioMessage({
   }: {
     usage: TokenUsage;
     priceInCents: number;
-    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+    modelUsages: ModelUsage[];
   }) => {
     if (modelUsages.length === 0) {
       return;
@@ -223,10 +218,19 @@ export async function sendLearningScenarioMessage({
       });
     }
 
+    // Report the real provider/model that generated the first response, i.e. the one that
+    // served the first agentic iteration.
+    const firstModelUsage = modelUsages.at(0);
+    if (!firstModelUsage) {
+      return;
+    }
+    const { provider, modelName } = firstModelUsage;
+
     await sendRabbitmqEvent(
       constructNewMessageEvent({
         user: teacherUserAndContext,
-        provider: definedModel.provider,
+        provider,
+        modelName,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
         costsInCent: priceInCents,

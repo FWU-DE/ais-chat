@@ -1,16 +1,29 @@
+import { computeBlobHash } from '@ais-chat/shared-core/crypto/blob-hash';
+import {
+  filterCommunitySharedByAssociatedSchool,
+  filterReadableCustomChats,
+  requireTeacherRole,
+  verifyReadAccess,
+  verifySuspensionState,
+  verifyWriteAccess,
+} from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
+import { getUserSettings } from '@shared/users/user-settings-service';
+import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import { db } from '@shared/db';
 import {
+  dbDeleteFileIfUnreferenced,
   dbGetFileForLearningScenario,
   dbGetFilesForLearningScenario,
+  dbVerifyFileOwner,
 } from '@shared/db/functions/files';
 import {
   dbCreateLearningScenarioShare,
   dbDeleteLearningScenarioByIdAndUser,
   dbExtendSharedLearningScenarioExpiration,
   dbGetAllAccessibleLearningScenarios,
-  dbGetCommunityLearningScenarios,
   dbGetAllLearningScenariosByUser,
+  dbGetCommunityLearningScenarios,
   dbGetGlobalLearningScenarios,
   dbGetLatestManageableLearningScenarioShare,
   dbGetLearningScenarioById,
@@ -22,9 +35,9 @@ import {
   dbStopLearningScenarioShare,
   dbUpdateLearningScenarioShareTokenPointsLimit,
 } from '@shared/db/functions/learning-scenario';
+import { dbGetLearningScenarioChatUsageInCentByLearningScenarioId } from '@shared/db/functions/token-points';
 import {
   FileModel,
-  fileTable,
   LearningScenarioFileMapping,
   LearningScenarioOptionalShareDataModel,
   LearningScenarioSelectModel,
@@ -32,47 +45,41 @@ import {
   learningScenarioUpdateSchema,
   LearningScenarioWithShareDataModel,
 } from '@shared/db/schema';
-import { checkParameterUUID, InvalidArgumentError, NotFoundError } from '@shared/error';
+import {
+  checkParameterUUID,
+  ForbiddenError,
+  InvalidArgumentError,
+  NotFoundError,
+} from '@shared/error';
+import { FederalStateModel } from '@shared/federal-states/types';
 import {
   deleteAvatarPicture,
   deleteMessageAttachments,
   getAvatarPictureUrl,
 } from '@shared/files/fileService';
-import { buildLearningScenarioPictureKey } from '@shared/utils/picture-key';
-import { uniqueById } from '@shared/utils/arrays';
+import { duplicateLearningScenario } from '@shared/learning-scenarios/learning-scenario-admin-service';
+import { OverviewFilter } from '@shared/overview-filter';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
-import { and, eq } from 'drizzle-orm';
-import { OverviewFilter } from '@shared/overview-filter';
-import z from 'zod';
-import { duplicateLearningScenario } from '@shared/learning-scenarios/learning-scenario-admin-service';
-import {
-  requireTeacherRole,
-  verifySuspensionState,
-  verifyReadAccess,
-  verifyWriteAccess,
-  filterCommunitySharedByAssociatedSchool,
-  filterReadableCustomChats,
-} from '@shared/auth/authorization-service';
-import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
-import { computeBlobHash } from '@ais-chat/shared-core/crypto/blob-hash';
-import { generateInviteCode } from '@shared/sharing/generate-invite-code';
 import {
   MAX_SHARE_USAGE_TIME_LIMIT_IN_MINUTES,
   SHARE_EXTENSION_WINDOW_MS,
 } from '@shared/sharing/const';
-import {
-  getChangedKeys,
-  getPreservedUpdatedAtForExemptedKeys,
-} from '@shared/utils/preserve-updated-at';
+import { generateInviteCode } from '@shared/sharing/generate-invite-code';
+import { isShareWithinGraceWindow } from '@shared/sharing/is-share-within-grace-window';
+import { sharedLearningScenarioChatHasReachedTokenPointsLimit } from '@shared/users/usage';
 import {
   getMaxBudgetInCentByUser,
   getUsedBudgetInCentByUser,
 } from '@shared/users/user-budget-service';
-import { sharedLearningScenarioChatHasReachedTokenPointsLimit } from '@shared/users/usage';
-import { FederalStateModel } from '@shared/federal-states/types';
-import { dbGetLearningScenarioChatUsageInCentByLearningScenarioId } from '@shared/db/functions/token-points';
-import { isShareWithinGraceWindow } from '@shared/sharing/is-share-within-grace-window';
+import { uniqueById } from '@shared/utils/arrays';
+import { buildLearningScenarioPictureKey } from '@shared/utils/picture-key';
+import {
+  getChangedKeys,
+  getPreservedUpdatedAtForExemptedKeys,
+} from '@shared/utils/preserve-updated-at';
+import { and, eq } from 'drizzle-orm';
+import z from 'zod';
 
 export type LearningScenarioWithImage = LearningScenarioOptionalShareDataModel & {
   maybeSignedPictureUrl: string | undefined;
@@ -764,6 +771,7 @@ export async function createNewLearningScenario({
   user: Pick<UserModel, 'id' | 'userRole'>;
 }) {
   requireTeacherRole(user.userRole);
+  const userSettings = await getUserSettings({ userId: user.id });
 
   const [insertedLearningScenario] = await db
     .insert(learningScenarioTable)
@@ -772,6 +780,8 @@ export async function createNewLearningScenario({
       pictureId: '',
       modelId,
       userId: user.id,
+      voice: userSettings?.defaultSpeechVoice,
+      speechOnly: userSettings?.defaultIsSpeechOnly,
     })
     .returning();
 
@@ -799,10 +809,8 @@ export async function deleteLearningScenario({
   const { learningScenario } = await getLearningScenarioInfo(learningScenarioId, user);
   verifyWriteAccess({ item: learningScenario, user });
 
-  const relatedFiles = await dbGetFilesForLearningScenario(learningScenarioId);
-
   // delete learning scenario from db
-  const deletedLearningScenario = await dbDeleteLearningScenarioByIdAndUser({
+  const { deletedLearningScenario, deletedFileIds } = await dbDeleteLearningScenarioByIdAndUser({
     learningScenarioId,
     user,
   });
@@ -811,7 +819,7 @@ export async function deleteLearningScenario({
   await deleteAvatarPicture(learningScenario.pictureId);
 
   // delete all related files from s3
-  await deleteMessageAttachments(relatedFiles.map((file) => file.id));
+  await deleteMessageAttachments(deletedFileIds);
 
   return deletedLearningScenario;
 }
@@ -833,6 +841,10 @@ export async function linkFileToLearningScenario({
   requireTeacherRole(user.userRole);
   const { learningScenario } = await getLearningScenarioInfo(learningScenarioId, user);
   verifyWriteAccess({ item: learningScenario, user });
+
+  if (!(await dbVerifyFileOwner({ fileId, userId: user.id }))) {
+    throw new ForbiddenError('Not authorized to link this file');
+  }
 
   const [insertedFileMapping] = await db
     .insert(LearningScenarioFileMapping)
@@ -864,8 +876,15 @@ export async function removeFileFromLearningScenario({
   const { learningScenario } = await getLearningScenarioInfo(learningScenarioId, user);
   verifyWriteAccess({ item: learningScenario, user });
 
-  // delete mapping and file entry in db
-  await db.transaction(async (tx) => {
+  if (
+    (await dbGetFileForLearningScenario({ learningScenarioId, fileId })) === undefined ||
+    !(await dbVerifyFileOwner({ fileId, userId: user.id }))
+  ) {
+    throw new ForbiddenError('Not authorized to delete this file');
+  }
+
+  // Delete the mapping and remove the file only when it has no other references.
+  const fileWasDeleted = await db.transaction(async (tx) => {
     await tx
       .delete(LearningScenarioFileMapping)
       .where(
@@ -874,11 +893,12 @@ export async function removeFileFromLearningScenario({
           eq(LearningScenarioFileMapping.fileId, fileId),
         ),
       );
-    await tx.delete(fileTable).where(eq(fileTable.id, fileId));
+    return dbDeleteFileIfUnreferenced(tx, fileId);
   });
 
-  // Delete the file from S3
-  await deleteMessageAttachments([fileId]);
+  if (fileWasDeleted) {
+    await deleteMessageAttachments([fileId]);
+  }
 }
 
 export async function enrichLearningScenarioWithPictureUrl({

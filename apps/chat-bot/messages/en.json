@@ -3,6 +3,8 @@
     "delete": "Delete",
     "cancel": "Cancel",
     "information-disclaimer": "AIS.chat can make mistakes. Think critically and check all information.",
+    "message-copy": "Copy message",
+    "regenerate-message-button": "Regenerate response",
     "plot": {
       "label": "Figure",
       "download-png": "Download figure",
@@ -12,7 +14,14 @@
       "fullscreen": "Show in fullscreen",
       "description": "Figure: {title}",
       "error": "The figure could not be displayed."
-    }
+    },
+    "read-aloud": "Read message aloud",
+    "pause-message": "Pause reading",
+    "read-aloud-error": "Text-to-speech failed.",
+    "listen-to-answer": "Listen to answer",
+    "pause-audio": "Pause",
+    "show-message-text": "Show text",
+    "hide-message-text": "Hide text"
   },
   "characters": {
     "shared": {
@@ -61,13 +70,15 @@
     "title": "AI activity",
     "toggle": "Show/hide AI activity",
     "open-source": "Open source: {source}",
+    "failed": "Failed",
     "steps": {
       "analysis": "Analysis",
       "analysis-summary": "Analysis summary",
       "done": "Done",
       "web_search": "Web search",
       "web_scraper": "Web page read",
-      "retrieve_text_chunks": "File read",
+      "retrieve_text_chunks": "Relevant file excerpts read",
+      "retrieve_text_chunks_prefix": "Search terms:",
       "retrieve_entire_file": "File fully read",
       "mundo_search": "Searched Mundo",
       "math_calculate": "Calculation performed",

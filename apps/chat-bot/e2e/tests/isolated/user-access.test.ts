@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../fixtures/test';
 import { login } from '../../utils/login';
 import { db } from '@shared/db';
 import { federalStateTable } from '@shared/db/schema';

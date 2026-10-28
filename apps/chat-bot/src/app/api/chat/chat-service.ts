@@ -1,66 +1,73 @@
+import { UserAndContext } from '@/auth/types';
+import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
+import { convertMessageModelToMessage } from '@/utils/chat/messages';
+import { deepEqual } from '@/utils/object';
+import { createTextStream } from '@/utils/streaming';
 import {
   type Message as AiCoreMessage,
+  type ModelUsage,
   type TokenUsage,
-  TokenPointsExceededError,
   ResponsibleAIError,
+  TokenPointsExceededError,
   runAgentLoop,
 } from '@ais-chat/ai-core';
-import { createTextStream } from '@/utils/streaming';
-import { getModelAndApiKeyWithResult, getAuxiliaryModel, getSafetyModel } from '../utils/utils';
-import { createAiActivityStream } from './ai-activity-stream';
-import { getChatModelSelection } from '../utils/model-circuit-breaker';
 import {
+  getAssistantForExistingConversation,
+  getAssistantForNewChat,
+} from '@shared/assistants/assistant-service';
+import {
+  getCharacterForChatSession,
+  getCharacterForExistingConversation,
+} from '@shared/characters/character-service';
+import {
+  dbDeleteRegeneratedConversationMessage,
   dbGetConversationAndMessages,
   dbGetOrCreateConversation,
-  dbUpdateConversationTitle,
-  dbDeleteRegeneratedConversationMessage,
   dbInsertChatContent,
   dbInsertChatContentBatch,
+  dbUpdateConversationTitle,
 } from '@shared/db/functions/chat';
+import {
+  dbGetAttachedFileByEntityId,
+  dbVerifyFileOwner,
+  linkFilesToConversation,
+} from '@shared/db/functions/files';
 import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
 import { dbUpdateLastUsedModelByUserId } from '@shared/db/functions/user';
-import { dbGetAttachedFileByEntityId, linkFilesToConversation } from '@shared/db/functions/files';
-import { sendRabbitmqEvent } from '@/rabbitmq/send';
-import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
-import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
-import { constructChatSystemPrompt } from './system-prompt';
-import {
-  convertToAiCoreMessages,
-  annotateMessageAttachmentNames,
-  getChatTitle,
-  limitChatHistory,
-} from './utils';
-import { prepareAgentMessages } from './prepare-agent-messages';
-import { convertMessageModelToMessage } from '@/utils/chat/messages';
-import { logError } from '@shared/logging';
-import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
-import { extractUrls } from '../utils/extract-urls';
-import { UserAndContext } from '@/auth/types';
-import { ingestWebContent } from '../rag/ingestWebContent';
-import { buildTools } from './build-tools';
-import { isWebSearchEnabledForEntity } from './websearch';
 import type {
   AssistantSelectModel,
   CharacterSelectModel,
   LearningScenarioSelectModel,
 } from '@shared/db/schema';
 import type { ConversationMessageModel } from '@shared/db/types';
-import { NotFoundError } from '@shared/error';
-import {
-  getCharacterForChatSession,
-  getCharacterForExistingConversation,
-} from '@shared/characters/character-service';
+import { ForbiddenError, NotFoundError } from '@shared/error';
 import {
   getLearningScenarioForChatSession,
   getLearningScenarioForExistingConversation,
 } from '@shared/learning-scenarios/learning-scenario-service';
+import { logError } from '@shared/logging';
 import {
-  getAssistantForNewChat,
-  getAssistantForExistingConversation,
-} from '@shared/assistants/assistant-service';
-import { deepEqual } from '@/utils/object';
-import { resolveAgentNameForTracing } from '../utils/agent-name';
+  constructNewMessageEvent,
+  constructTokenBudgetExceededEvent,
+  sendRabbitmqEvent,
+} from '@shared/rabbitmq';
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
+import { ingestWebContent } from '../rag/ingestWebContent';
+import { resolveAgentNameForTracing } from '../utils/agent-name';
+import { extractUrls } from '../utils/extract-urls';
+import { getChatModelSelection } from '../utils/model-circuit-breaker';
+import { getAuxiliaryModel, getModelAndApiKeyWithResult, getSafetyModel } from '../utils/utils';
+import { createAiActivityStream } from './ai-activity-stream';
+import { buildTools } from './build-tools';
+import { prepareAgentMessages } from './prepare-agent-messages';
+import { constructChatSystemPrompt } from './system-prompt';
+import {
+  annotateMessageAttachmentNames,
+  convertToAiCoreMessages,
+  getChatTitle,
+  limitChatHistory,
+} from './utils';
+import { isWebSearchEnabledForEntity } from './websearch';
 
 // Exports for testing
 export { handleRegenerationProcessing, prepareMessageForProcessing };
@@ -171,6 +178,15 @@ export async function sendChatMessage({
   fileIds?: string[];
   user: UserAndContext;
 }): Promise<SendMessageResult> {
+  if (fileIds && fileIds.length > 0) {
+    const ownsAllFiles = await Promise.all(
+      fileIds.map((fileId) => dbVerifyFileOwner({ fileId, userId: user.id })),
+    );
+    if (ownsAllFiles.some((isOwner) => !isOwner)) {
+      throw new ForbiddenError('Not authorized to attach this file');
+    }
+  }
+
   // Get model and API key
   const [error, modelAndApiKey] = await getModelAndApiKeyWithResult({
     modelId,
@@ -298,13 +314,7 @@ export async function sendChatMessage({
 
   // Check budget limit after we have the conversation for proper event tracking
   if (await userHasReachedTokenPointsLimit({ user })) {
-    await sendRabbitmqEvent(
-      constructTokenBudgetExceededEvent({
-        anonymous: false,
-        user,
-        conversation,
-      }),
-    );
+    await sendRabbitmqEvent(constructTokenBudgetExceededEvent({ user }));
     return createErrorResult(new TokenPointsExceededError());
   }
 
@@ -411,7 +421,7 @@ export async function sendChatMessage({
 
   const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
 
-  const tools = await buildTools({
+  const tools = buildTools({
     user,
     characterId,
     learningScenarioId,
@@ -426,7 +436,7 @@ export async function sendChatMessage({
     modelSelection,
     apiKeyId,
   });
-  const aiActivity = createAiActivityStream(update, tools.toolRegistry);
+  const aiActivity = createAiActivityStream(update);
 
   // Build system prompt
   const systemPrompt = constructChatSystemPrompt({
@@ -448,7 +458,7 @@ export async function sendChatMessage({
   }: {
     usage: TokenUsage;
     priceInCents: number;
-    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+    modelUsages: ModelUsage[];
   }) {
     if (modelUsages.length === 0) {
       return;
@@ -469,13 +479,22 @@ export async function sendChatMessage({
       ),
     );
 
+    // Report the real provider/model that generated the first response, i.e. the one that
+    // served the first agentic iteration.
+    const firstModelUsage = modelUsages.at(0);
+    if (!firstModelUsage) {
+      return;
+    }
+    const { provider, modelName } = firstModelUsage;
+
     await sendRabbitmqEvent(
       constructNewMessageEvent({
         user,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
         costsInCent: priceInCents,
-        provider: definedModel.provider,
+        provider,
+        modelName,
         anonymous: false,
         conversation: activeConversation,
       }),
@@ -494,7 +513,7 @@ export async function sendChatMessage({
     usage: TokenUsage;
     priceInCents: number;
     agentLoopMessages: AiCoreMessage[];
-    modelUsages: Array<{ modelId: string; usage: TokenUsage; priceInCents: number }>;
+    modelUsages: ModelUsage[];
     reasoningSummary?: string;
   }) {
     // Persist intermediate tool call/result messages and the final assistant message in one query
