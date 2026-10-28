@@ -12,6 +12,8 @@ export type ConversationDownloadFile = {
 export type ConversationDownloadData = {
   messages: ChatMessage[];
   fileMapping: Map<string, ConversationDownloadFile[]>;
+  createdAt: Date;
+  conversationTitle?: string;
 };
 
 type ConversationDownloadContextValue = {

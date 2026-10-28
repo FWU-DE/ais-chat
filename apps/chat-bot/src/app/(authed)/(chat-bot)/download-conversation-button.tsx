@@ -1,9 +1,11 @@
 'use client';
 
-import { useConversationDownload } from '@/components/chat/conversation-download-context';
+import {
+  type ConversationDownloadData,
+  useConversationDownload,
+} from '@/components/chat/conversation-download-context';
 import { useToast } from '@/components/common/toast';
 import Spinner from '@/components/icons/spinner';
-import { useLlmModels } from '@/components/providers/llm-model-provider';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
 import {
   createConversationExportMessages,
@@ -26,6 +28,8 @@ type DownloadConversationButtonProps = {
 type DownloadConversationParams = {
   messages: Parameters<typeof createConversationExportMessages>[0]['messages'];
   fileMapping: Parameters<typeof createConversationExportMessages>[0]['fileMapping'];
+  createdAt: Date;
+  conversationTitle?: string;
   characterName?: string;
   modelName?: string;
 };
@@ -33,24 +37,35 @@ type DownloadConversationParams = {
 export async function fetchConversationDownload({
   messages,
   fileMapping,
+  createdAt,
+  conversationTitle,
   characterName,
   modelName,
 }: DownloadConversationParams) {
   const exportMessages = createConversationExportMessages({ messages, fileMapping });
-  const createdAt = messages[0]?.createdAt?.toISOString() ?? new Date().toISOString();
-  const safeName = characterName ?? 'AIS.chat';
+  const createdAtISOString = createdAt.toISOString();
+  const safeName = conversationTitle ?? characterName ?? 'AIS.chat';
 
   return {
     blob: await markdownToDocxBlob(
       formatConversationExport({
         messages: exportMessages,
-        createdAt,
-        modelName: modelName ?? safeName,
-        conversationTitle: characterName,
+        createdAt: createdAtISOString,
+        modelName: modelName ?? 'AIS.chat',
+        conversationTitle,
       }),
     ),
-    fileName: `${createdAt.slice(0, 10)} ${safeName} Gespräch.docx`,
+    fileName: `${createdAtISOString.slice(0, 10)} ${safeName} Gespräch.docx`,
   };
+}
+
+export function getLastAssistantModelName(messages: ConversationDownloadData['messages']) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message?.role === 'assistant' && message.modelName !== undefined) {
+      return message.modelName;
+    }
+  }
 }
 
 export default function DownloadConversationButton({
@@ -60,23 +75,25 @@ export default function DownloadConversationButton({
   className,
 }: DownloadConversationButtonProps) {
   const { data } = useConversationDownload();
-  const { selectedModel } = useLlmModels();
   const [isLoading, setIsLoading] = React.useState(false);
   const toast = useToast();
   const tCommon = useTranslations('common');
+  const isDisabled = disabled || data === undefined;
 
   async function handleDownload() {
-    if (disabled) {
+    if (isDisabled) {
       return;
     }
     try {
       setIsLoading(true);
 
       const { blob, fileName } = await fetchConversationDownload({
-        messages: data?.messages ?? [],
-        fileMapping: data?.fileMapping ?? new Map(),
+        messages: data.messages,
+        fileMapping: data.fileMapping,
+        createdAt: data.createdAt,
+        conversationTitle: data.conversationTitle,
         characterName,
-        modelName: selectedModel?.displayName,
+        modelName: getLastAssistantModelName(data.messages),
       });
 
       downloadFileFromBlob(blob, fileName);
@@ -96,7 +113,7 @@ export default function DownloadConversationButton({
       className={cn('text-primary', className)}
       title={t('conversation-download')}
       onClick={handleDownload}
-      disabled={disabled}
+      disabled={isDisabled}
     >
       {isLoading ? (
         <Spinner className="p-2 size-8" />

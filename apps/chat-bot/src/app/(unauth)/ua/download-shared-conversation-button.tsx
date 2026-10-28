@@ -10,6 +10,7 @@ import {
   formatConversationExport,
   markdownToDocxBlob,
 } from '@/utils/files/markdown-docx';
+import { getSharedChatExportImageUrl } from '@/utils/shared-chat-files';
 import { BoxArrowDownIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
@@ -39,9 +40,21 @@ export async function fetchSharedConversationDownload({
   characterName,
   fileMapping,
 }: DownloadSharedConversationParams) {
+  const exportFileMapping = new Map(
+    Array.from(fileMapping, ([messageId, files]) => [
+      messageId,
+      files.map((file) => ({
+        ...file,
+        localUrl:
+          file.localUrl?.startsWith('/api/v1/shared-chat/files/') === true
+            ? getSharedChatExportImageUrl(file.localUrl)
+            : file.localUrl,
+      })),
+    ]),
+  );
   const messages = createConversationExportMessages({
     messages: conversationMessages,
-    fileMapping,
+    fileMapping: exportFileMapping,
   });
   const fileName = `${new Date().toISOString().slice(0, 10)}-AIS.chat-Konversation.docx`;
 

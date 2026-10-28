@@ -25,14 +25,19 @@ type DownloadConversationMessageParams = {
   message: DownloadConversationMessageButtonProps['message'];
   files: ConversationDownloadFile[];
   characterName?: string;
+  modelName?: string;
 };
 
 export async function fetchConversationMessageDownload({
   message,
   files,
   characterName,
+  modelName,
 }: DownloadConversationMessageParams) {
-  const createdAt = message.createdAt?.toISOString() ?? new Date().toISOString();
+  if (message.createdAt === undefined) {
+    throw new Error('Cannot export a message without a creation timestamp');
+  }
+  const createdAt = message.createdAt.toISOString();
   const exportMessages = createConversationExportMessages({
     messages: [message],
     fileMapping: new Map([[message.id, files]]),
@@ -44,7 +49,7 @@ export async function fetchConversationMessageDownload({
       formatConversationExport({
         messages: exportMessages,
         createdAt,
-        modelName: safeName,
+        modelName: modelName ?? 'AIS.chat',
       }),
     ),
     fileName: `${createdAt.slice(0, 10)} ${safeName} Antwort.docx`,
@@ -68,6 +73,7 @@ export default function DownloadConversationMessageButton({
         message,
         files,
         characterName,
+        modelName: message.modelName,
       });
 
       downloadFileFromBlob(blob, fileName);

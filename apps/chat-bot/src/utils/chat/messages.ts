@@ -1,19 +1,19 @@
-import { ConversationMessageModel } from '@shared/db/types';
-import { type ChatMessage } from '@/types/chat';
+import { toolActivityRegistry } from '@/app/api/chat/build-tools';
+import {
+  parseGenericPersistedToolResult,
+  parsePersistedToolResultContent,
+} from '@/app/api/chat/tools/parse-persisted-tool-result';
+import type { ToolActivity } from '@/app/api/chat/tools/types';
 import {
   type AiActivityStep,
   type AiActivityToolName,
   isAiActivityToolName,
 } from '@/types/ai-activity';
+import { type ChatMessage } from '@/types/chat';
 import type { ToolErrorResult, ToolResult } from '@ais-chat/ai-core/chat/types';
+import { ConversationMessageModel } from '@shared/db/types';
 import { logError } from '@shared/logging/logging';
 import { createAiActivityCollector } from './ai-activity';
-import { toolActivityRegistry } from '@/app/api/chat/build-tools';
-import type { ToolActivity } from '@/app/api/chat/tools/types';
-import {
-  parseGenericPersistedToolResult,
-  parsePersistedToolResultContent,
-} from '@/app/api/chat/tools/parse-persisted-tool-result';
 
 // A tool's own `parsePersistedResult` isn't trusted to handle malformed/legacy persisted data
 // defensively, so a throw here is treated like a parsed `ToolErrorResult`: the step still gets
@@ -101,6 +101,7 @@ export function convertMessageModelToMessage(
       role: message.role,
       content: message.content,
       createdAt: message.createdAt,
+      modelName: message.modelName,
       activitySteps: activityByMessageId.get(message.id),
       toolCalls: message.toolCalls ?? undefined,
       toolCallId: message.toolCallId ?? undefined,

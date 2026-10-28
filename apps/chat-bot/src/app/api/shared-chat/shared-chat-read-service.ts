@@ -9,12 +9,14 @@ export async function verifySharedChatImageAccess({
   entityId,
   fileId,
   sharedSessionId,
+  allowEnded = false,
 }: {
   inviteCode: string;
   entityType: 'character' | 'learningScenario';
   entityId: string;
   fileId: string;
   sharedSessionId: string;
+  allowEnded?: boolean;
 }): Promise<void> {
   if (sharedSessionId.trim() === '') {
     throw new ForbiddenError('Not authorized to access this file');
@@ -26,7 +28,11 @@ export async function verifySharedChatImageAccess({
     entityId,
   });
 
-  verify.sharedChatEntityIsAccessible(entity);
+  if (allowEnded) {
+    verify.sharedChatIsNotDeleted(entity);
+  } else {
+    verify.sharedChatEntityIsAccessible(entity);
+  }
 
   const files = await dbGetFilesInIds([fileId]);
   const file = files[0];

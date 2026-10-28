@@ -1,20 +1,21 @@
 'use client';
 
-import { UserAndContext } from '@/auth/types';
-import SelectLlmModel from '../conversation/select-llm-model';
-import { NewChatButton } from '../navigation/sidebar/collapsible-sidebar';
 import DownloadConversationButton, {
   fetchConversationDownload,
+  getLastAssistantModelName,
 } from '@/app/(authed)/(chat-bot)/download-conversation-button';
-import { downloadFileFromBlob } from '@/utils/files/blob-download';
-import { useLlmModels } from '../providers/llm-model-provider';
+import { UserAndContext } from '@/auth/types';
+import { useToast } from '@/components/common/toast';
 import {
   ApplicationHeaderActions,
   type HeaderActionConfig,
 } from '@/components/layout/application-header';
+import { downloadFileFromBlob } from '@/utils/files/blob-download';
 import { BoxArrowDownIcon } from '@phosphor-icons/react';
 import { useTranslations } from 'next-intl';
-import { useToast } from '@/components/common/toast';
+import SelectLlmModel from '../conversation/select-llm-model';
+import { NewChatButton } from '../navigation/sidebar/collapsible-sidebar';
+import { useLlmModels } from '../providers/llm-model-provider';
 import { useConversationDownload } from './conversation-download-context';
 
 export type ChatHeaderBarProps = {
@@ -33,9 +34,9 @@ export function ChatHeaderBar({
   const toast = useToast();
   const { data } = useConversationDownload();
   const { downloadConversationEnabled: downloadConversationEnabledFromContext } = useLlmModels();
-  const { selectedModel } = useLlmModels();
   const downloadConversationEnabled =
-    downloadConversationEnabledProp || downloadConversationEnabledFromContext;
+    (downloadConversationEnabledProp || downloadConversationEnabledFromContext) &&
+    data !== undefined;
 
   async function handleDownload() {
     if (!downloadConversationEnabled) {
@@ -44,10 +45,12 @@ export function ChatHeaderBar({
 
     try {
       const { blob, fileName } = await fetchConversationDownload({
-        messages: data?.messages ?? [],
-        fileMapping: data?.fileMapping ?? new Map(),
+        messages: data.messages,
+        fileMapping: data.fileMapping,
+        createdAt: data.createdAt,
+        conversationTitle: data.conversationTitle,
         characterName: title,
-        modelName: selectedModel?.displayName,
+        modelName: getLastAssistantModelName(data.messages),
       });
       downloadFileFromBlob(blob, fileName);
     } catch {
