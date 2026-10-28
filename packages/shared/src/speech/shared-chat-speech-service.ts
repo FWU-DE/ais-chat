@@ -8,7 +8,6 @@ import { constructNewMessageEvent, sendRabbitmqEvent } from '@shared/rabbitmq';
 import { verify } from '@shared/shared-chat';
 import {
   sharedCharacterChatHasReachedTokenPointsLimit,
-  sharedChatHasExpired,
   sharedLearningScenarioChatHasReachedTokenPointsLimit,
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
@@ -81,10 +80,6 @@ export async function generateSharedChatSpeechStream({
 }: SharedChatSpeechParams): Promise<ChatSpeechStreamResult> {
   const entity = await getSharedChatEntity({ inviteCode, entityType, entityId });
 
-  if (entity.startedBy === null) {
-    throw new ForbiddenError('Shared chat has no owner');
-  }
-
   const { user, federalState } = await getUserWithFederalState({
     userId: entity.startedBy,
   });
@@ -122,17 +117,10 @@ function createSharedChatSpeechStrategy({
     checkAccess: async () => {
       requireTeacherRole(user.userRole);
 
-      if (entity.isDeleted) {
-        throw new ForbiddenError('Shared chat has been deleted');
-      }
-      if (entity.suspended) {
-        throw new ForbiddenError('Shared chat has been suspended');
-      }
+      verify.sharedChatEntityIsAccessible(entity);
+
       if (federalState.featureToggles.isSpeechModelEnabled !== true || !entity.isSpeechEnabled) {
         throw new ForbiddenError('Speech is not enabled for this shared chat');
-      }
-      if (sharedChatHasExpired(entity)) {
-        throw new ForbiddenError('Shared chat has expired');
       }
 
       return true;
