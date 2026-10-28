@@ -123,7 +123,6 @@ async function verifySharedChatSpeechAccess({
   entityId: string;
 }): Promise<{ entity: SharedChatEntity; teacher: UserAndContext }> {
   const entity = await getSharedChatEntity({ inviteCode, entityType, entityId });
-  console.log('Robin', entity);
 
   verify.sharedChatEntityIsAccessible(entity);
 
