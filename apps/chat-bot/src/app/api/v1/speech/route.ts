@@ -1,14 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { speechWithConversationIdRequestSchema } from '@/app/api/chat/speech-request-schemas';
+import { generateChatSpeech } from '@/app/api/chat/speech-service';
 import { getUser } from '@/auth/utils';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
-import { generateChatSpeech } from '@/app/api/chat/speech-service';
-import { speechRequestSchema } from '@/app/api/chat/speech-request-schemas';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
     const user = await getUser();
 
-    const parsed = speechRequestSchema.parse(await req.json());
+    const parsed = speechWithConversationIdRequestSchema.parse(await req.json());
 
     const { buffer, contentType } = await generateChatSpeech({
       user,

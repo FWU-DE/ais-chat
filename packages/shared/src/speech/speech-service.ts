@@ -13,7 +13,8 @@ import { ChatSpeechStreamResult } from './types';
 
 type SpeechContext = {
   user: UserModel;
-  conversation: ConversationModel;
+  // conversation is null for initial message
+  conversation: ConversationModel | null;
 };
 
 export async function generateChatSpeechStream({
@@ -26,7 +27,7 @@ export async function generateChatSpeechStream({
 }: {
   user: UserModel;
   federalState: FederalStateModel;
-  conversationId: string;
+  conversationId?: string;
   text: string;
   voice?: string;
   abortSignal?: AbortSignal;
@@ -42,10 +43,13 @@ export async function generateChatSpeechStream({
     },
     {
       loadContext: async (params: SpeechStreamingPipelineParams) => {
-        const conversation = await getConversation({
-          conversationId: params.conversationId!,
-          userId: params.user.id,
-        });
+        let conversation: ConversationModel | null = null;
+        if (params.conversationId) {
+          conversation = await getConversation({
+            conversationId: params.conversationId,
+            userId: params.user.id,
+          });
+        }
         return { user: params.user, conversation };
       },
       storeUsage: async (
@@ -54,14 +58,18 @@ export async function generateChatSpeechStream({
         model: LlmModelSelectModel,
         result: ChatSpeechStreamResult,
       ) => {
-        await dbInsertConversationUsage({
-          conversationId: context.conversation.id,
-          userId: user.id,
-          modelId: model.id,
-          completionTokens: 0,
-          promptTokens: 0,
-          costsInCent: await result.costsInCent,
-        });
+        // we only store usage if there is an associated conversation
+        // not true for initial messages
+        if (context.conversation) {
+          await dbInsertConversationUsage({
+            conversationId: context.conversation.id,
+            userId: user.id,
+            modelId: model.id,
+            completionTokens: 0,
+            promptTokens: 0,
+            costsInCent: await result.costsInCent,
+          });
+        }
       },
       reportUsage: async (
         _params: SpeechStreamingPipelineParams,
@@ -69,18 +77,20 @@ export async function generateChatSpeechStream({
         model: LlmModelSelectModel,
         result: ChatSpeechStreamResult,
       ) => {
-        await sendRabbitmqEvent(
-          constructNewMessageEvent({
-            user: { ...user, federalState: { id: user.federalStateId } },
-            promptTokens: 0,
-            completionTokens: 0,
-            costsInCent: await result.costsInCent,
-            provider: model.provider,
-            modelName: model.name,
-            anonymous: false,
-            conversation: context.conversation,
-          }),
-        );
+        if (context.conversation) {
+          await sendRabbitmqEvent(
+            constructNewMessageEvent({
+              user: { ...user, federalState: { id: user.federalStateId } },
+              promptTokens: 0,
+              completionTokens: 0,
+              costsInCent: await result.costsInCent,
+              provider: model.provider,
+              modelName: model.name,
+              anonymous: false,
+              conversation: context.conversation,
+            }),
+          );
+        }
       },
     },
   );

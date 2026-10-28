@@ -84,6 +84,7 @@ export default function LearningScenarioSharedChat({
 
   async function generateSharedLearningScenarioSpeechStream(
     text: string,
+    _isInitialMessage: boolean,
     { signal }: { signal: AbortSignal },
   ): Promise<ReadableStream<Uint8Array>> {
     return fetchSpeechStream(

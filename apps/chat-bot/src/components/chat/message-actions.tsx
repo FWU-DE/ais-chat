@@ -11,7 +11,6 @@ import { AiActivityDialog } from './activity/ai-activity';
 import DownloadConversationMessageButton from './download-conversation-message-button';
 import AudioPlayer from './speech/audio-player';
 import ShowAudioPlayerButton from './speech/show-audio-player-button';
-import SpeechButton from './speech/speech-button';
 import { GenerateSpeechStreamFn } from './speech/types';
 
 export function MessageActions({
@@ -22,7 +21,6 @@ export function MessageActions({
   characterName,
   regenerateMessage,
   canRegenerateMessage,
-  generateSpeechFn,
   generateSpeechStreamFn,
   speechVoice,
   isSpeechModelEnabled,
@@ -41,7 +39,6 @@ export function MessageActions({
   characterName?: string;
   regenerateMessage: () => void;
   canRegenerateMessage: boolean;
-  generateSpeechFn: (text: string, signal?: AbortSignal) => Promise<Blob>;
   generateSpeechStreamFn: GenerateSpeechStreamFn;
   speechVoice?: string;
   isSpeechModelEnabled: boolean;
@@ -63,6 +60,7 @@ export function MessageActions({
         key={speechVoice ?? ''}
         isSpeechModelEnabled={isSpeechModelEnabled}
         text={plainText}
+        isInitialMessage={isInitialMessage}
         generateSpeechStreamFn={generateSpeechStreamFn}
         hidden={!showAudioPlayer}
       />
@@ -104,7 +102,7 @@ export function MessageActions({
             <ReloadIcon className="size-5 text-primary" />
           </Button>
         )}
-        {speechOnly ? (
+        {speechOnly && (
           <Button
             variant="ghost"
             size="icon-sm"
@@ -122,13 +120,6 @@ export function MessageActions({
               <TextTIcon className="size-4 text-primary" />
             )}
           </Button>
-        ) : (
-          <SpeechButton
-            key={speechVoice ?? ''}
-            text={plainText}
-            generateSpeechFn={generateSpeechFn}
-            isSpeechModelEnabled={isSpeechModelEnabled}
-          />
         )}
         <ShowAudioPlayerButton
           isSpeechModelEnabled={isSpeechModelEnabled}

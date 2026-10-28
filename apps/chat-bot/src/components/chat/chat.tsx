@@ -304,12 +304,13 @@ export default function Chat({
 
   async function generateSpeechStream(
     text: string,
-    { signal }: { signal: AbortSignal },
+    isInitialMessage: boolean,
+    options: { signal: AbortSignal },
   ): Promise<ReadableStream<Uint8Array>> {
     return fetchSpeechStream(
       '/api/v1/speech/stream',
-      { conversationId: id, text, voice: speechVoice },
-      signal,
+      { conversationId: isInitialMessage ? undefined : id, text, voice: speechVoice },
+      options.signal,
     );
   }
 

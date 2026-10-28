@@ -72,6 +72,7 @@ const characterEntity = {
   voice: 'nova',
   isSpeechEnabled: true,
   initialMessage: 'Hello class',
+  manuallyStoppedAt: null,
 };
 
 const learningScenarioEntity = {
@@ -79,6 +80,7 @@ const learningScenarioEntity = {
   startedBy: 'teacher-1',
   voice: 'alloy',
   isSpeechEnabled: true,
+  manuallyStoppedAt: null,
 };
 
 const speechResult = {

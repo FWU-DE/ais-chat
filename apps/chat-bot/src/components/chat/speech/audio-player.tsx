@@ -28,6 +28,7 @@ type AudioPlayerProps = {
   text: string;
   generateSpeechStreamFn: GenerateSpeechStreamFn;
   isSpeechModelEnabled: boolean;
+  isInitialMessage: boolean;
   /**
    * Visually hides the player without unmounting it, so the buffered audio, playback position,
    * and underlying `AudioContext` survive toggling the player closed and back open. Active
@@ -40,6 +41,7 @@ export default function AudioPlayer({
   text,
   generateSpeechStreamFn,
   isSpeechModelEnabled,
+  isInitialMessage,
   hidden = false,
 }: AudioPlayerProps) {
   const t = useTranslations('common');
@@ -55,7 +57,7 @@ export default function AudioPlayer({
     getWaveformPeaks,
     playbackRate,
     setPlaybackRate,
-  } = useAudioStream(generateSpeechStreamFn);
+  } = useAudioStream(generateSpeechStreamFn, isInitialMessage);
 
   const [dragValue, setDragValue] = React.useState<number | null>(null);
   const displayedTime = dragValue ?? currentTime;
@@ -101,7 +103,7 @@ export default function AudioPlayer({
         >
           {status === 'loading' && <Spinner />}
           {status === 'idle' && <PlayIcon weight="fill" />}
-          {status === 'playing' && <PauseIcon />}
+          {status === 'playing' && <PauseIcon weight="fill" />}
           {status === 'paused' && <PlayIcon weight="fill" />}
         </Button>
         <AudioWaveform
@@ -152,7 +154,7 @@ export default function AudioPlayer({
         </DropdownMenu>
       </div>
 
-      <span className="text-xs text-muted-foreground tabular-nums">
+      <span className="text-sm text-muted-foreground tabular-nums">
         {formatTime(displayedTime)}
         {isStreamFullyLoaded && ` / ${formatTime(duration)}`}
       </span>

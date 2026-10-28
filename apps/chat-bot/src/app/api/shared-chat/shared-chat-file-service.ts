@@ -1,7 +1,6 @@
 import { dbGetFilesInIds } from '@shared/db/functions/files';
-import { SharedSessionId, verify } from '.';
-import { verifySharedSessionIdIsNotEmpty } from './shared-chat-verify';
 import { FileModel } from '@shared/db/schema';
+import { SharedSessionId, verify } from '@shared/shared-chat';
 
 type SharedRelatedFile = FileModel & { conversationMessageId?: string };
 
@@ -31,7 +30,7 @@ export async function combineSharedRelatedFiles({
     return relatedFileEntities;
   }
 
-  verifySharedSessionIdIsNotEmpty(sharedSessionId);
+  verify.sharedSessionIdIsNotEmpty(sharedSessionId);
 
   const uploadedFiles = await dbGetFilesInIds(fileIds);
   verify.filesDoNotBelongToAnyUser(uploadedFiles);
