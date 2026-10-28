@@ -19,4 +19,5 @@ export const sharedChatImageRequestSchema = sharedChatCommonRequestSchema.extend
   fileId: requiredNonEmptyString('fileId is required'),
   width: z.coerce.number().int().positive().max(MAX_SCALED_IMAGE_DIMENSION),
   height: z.coerce.number().int().positive().max(MAX_SCALED_IMAGE_DIMENSION),
+  export: z.literal('true').optional(),
 });

@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { handleErrorInRoute } from '@/error/handle-error-in-route';
 import { createScaledImage } from '@/app/api/file-operations/scaled-image-service';
 import { verifySharedChatImageAccess } from '@/app/api/shared-chat/shared-chat-read-service';
 import { sharedChatImageRequestSchema } from '@/app/api/shared-chat/shared-chat-request-schemas';
+import { handleErrorInRoute } from '@/error/handle-error-in-route';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
@@ -19,7 +19,10 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid request parameters' }, { status: 400 });
     }
 
-    await verifySharedChatImageAccess(parsed.data);
+    const { export: exportRequest, ...imageRequest } = parsed.data;
+    await verifySharedChatImageAccess(
+      exportRequest === 'true' ? { ...imageRequest, allowEnded: true } : imageRequest,
+    );
 
     const scaledImage = await createScaledImage({
       fileId: parsed.data.fileId,
