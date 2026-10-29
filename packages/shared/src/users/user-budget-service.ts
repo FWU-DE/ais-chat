@@ -3,9 +3,13 @@ import {
   dbGetChatsUsageInCentByUserId,
   dbGetLearningScenarioUsageInCentByUserId,
 } from '@shared/db/functions/token-points';
-import { dbGetCreditIncreaseForCurrentMonth } from '@shared/db/functions/voucher';
+import {
+  dbGetCreditIncreaseForCurrentMonth,
+  dbGetTransferredBudgetForCurrentMonth,
+} from '@shared/db/functions/voucher';
 import { FederalStateModel } from '@shared/federal-states/types';
 import { UserModel } from '@shared/auth/user-model';
+import { getBudgetTransferCreatedByTag } from '@shared/vouchers/voucher';
 
 export async function getMaxBudgetInCentByUser({
   user,
@@ -23,7 +27,11 @@ export async function getMaxBudgetInCentByUser({
   }
 
   if (user.userRole === 'teacher') {
-    return federalState.teacherPriceLimit + codeBonus;
+    // Budget passed on to colleagues this month is no longer available to the donor.
+    const transferred = await dbGetTransferredBudgetForCurrentMonth(
+      getBudgetTransferCreatedByTag(user.id),
+    );
+    return federalState.teacherPriceLimit + codeBonus - transferred;
   }
 
   return 500;
