@@ -49,15 +49,15 @@
       "invalid-code-toast": "Le code saisi est soit expiré, soit invalide."
     },
     "share-page": {
-      "go-to": "Aller à",
+      "go-to": "Va à",
       "enter-code": "Saisis le code.",
       "open-chat": "Ouvrir le chat",
-      "use-qr": "Scanne le code QR.",
+      "use-qr": "Ou utilise le code QR",
       "copy-link": "Copier le lien de démarrage",
       "learning-scenario": {
-        "sub-header": "Scénario d’apprentissage",
+        "sub-header": "Scénario pédagogique",
         "back-button": "Vers le scénario d’apprentissage",
-        "join": "Lancer le scénario d'apprentissage"
+        "join": "Lancer le scénario pédagogique"
       },
       "character": {
         "sub-header": "Interlocuteur",
