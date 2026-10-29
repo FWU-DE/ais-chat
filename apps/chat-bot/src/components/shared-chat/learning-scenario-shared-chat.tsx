@@ -63,10 +63,15 @@ export default function LearningScenarioSharedChat({
     };
   }
 
-  async function generateSharedLearningScenarioSpeech(text: string): Promise<Blob> {
+  async function generateSharedLearningScenarioSpeech(
+    text: string,
+    _isInitialMessage: boolean,
+    signal?: AbortSignal,
+  ): Promise<Blob> {
     const response = await fetch('/api/v1/shared-chat/speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal,
       body: JSON.stringify({ text, inviteCode, entityType: 'learningScenario', entityId: id }),
     });
 
@@ -79,6 +84,7 @@ export default function LearningScenarioSharedChat({
 
   async function generateSharedLearningScenarioSpeechStream(
     text: string,
+    _isInitialMessage: boolean,
     { signal }: { signal: AbortSignal },
   ): Promise<ReadableStream<Uint8Array>> {
     return fetchSpeechStream(

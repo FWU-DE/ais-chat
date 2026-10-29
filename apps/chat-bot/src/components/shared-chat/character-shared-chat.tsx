@@ -82,6 +82,7 @@ export default function CharacterSharedChat({
   async function generateSharedCharacterSpeech(
     text: string,
     isInitialMessage: boolean,
+    signal?: AbortSignal,
   ): Promise<Blob> {
     const response = await fetch(
       isInitialMessage
@@ -90,6 +91,7 @@ export default function CharacterSharedChat({
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal,
         body: JSON.stringify(
           isInitialMessage
             ? { inviteCode, characterId: id }
@@ -107,6 +109,7 @@ export default function CharacterSharedChat({
 
   async function generateSharedCharacterSpeechStream(
     text: string,
+    _isInitialMessage: boolean,
     { signal }: { signal: AbortSignal },
   ): Promise<ReadableStream<Uint8Array>> {
     return fetchSpeechStream(

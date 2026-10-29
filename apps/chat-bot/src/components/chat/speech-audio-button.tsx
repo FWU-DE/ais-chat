@@ -15,7 +15,7 @@ export default function SpeechAudioButton({
   isStreaming = false,
 }: {
   text: string;
-  generateSpeechFn: (text: string) => Promise<Blob>;
+  generateSpeechFn: (text: string, signal?: AbortSignal) => Promise<Blob>;
   isStreaming?: boolean;
 }) {
   const tCommon = useTranslations('common');

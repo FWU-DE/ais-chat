@@ -1,8 +1,25 @@
-import { UserAndContext } from '@/auth/types';
-import { ConversationModel } from '@shared/db/types';
-import { CharacterSelectModel, LearningScenarioSelectModel } from '@shared/db/schema';
 import { NewChatMessageEventType } from '../schema';
-import { hashWithoutSalt } from '@/utils/crypto';
+import { hashWithoutSalt } from '../utils';
+
+type UserAndContext = {
+  id: string;
+  userRole: string;
+  schoolIds?: string[];
+  federalState: { id: string };
+};
+
+type ConversationModel = {
+  id: string;
+  characterId: string | null;
+};
+
+type LearningScenarioSelectModel = {
+  id: string;
+};
+
+type CharacterSelectModel = {
+  id: string;
+};
 
 type CommonProps = {
   user: UserAndContext;

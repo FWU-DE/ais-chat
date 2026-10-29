@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TokenPointsExceededError } from '@ais-chat/ai-core/errors';
 import type { LlmModelSelectModel } from '@shared/db/schema';
 import { NotFoundError } from '@shared/error';
 
@@ -48,7 +49,13 @@ vi.mock('@shared/s3', () => ({
   getReadOnlySignedUrl: mocks.getReadOnlySignedUrl,
   uploadFileToS3: mocks.uploadFileToS3,
 }));
-vi.mock('@ais-chat/ai-core', () => ({ generateImageWithBilling: mocks.generateImageWithBilling }));
+vi.mock('@ais-chat/ai-core', async () => {
+  const { TokenPointsExceededError } = await import('@ais-chat/ai-core/errors');
+  return {
+    generateImageWithBilling: mocks.generateImageWithBilling,
+    TokenPointsExceededError,
+  };
+});
 vi.mock('./image-generation-input-files', () => ({
   fetchInputImages: mocks.fetchInputImages,
   validateInputFiles: vi.fn(),
@@ -74,11 +81,11 @@ vi.mock('@shared/image-generation/image-generation-service', () => ({
 vi.mock('@shared/users/usage', () => ({
   userHasReachedTokenPointsLimit: mocks.userHasReachedTokenPointsLimit,
 }));
-vi.mock('@/rabbitmq/send', () => ({ sendRabbitmqEvent: mocks.sendRabbitmqEvent }));
-vi.mock('@/rabbitmq/events/new-message', () => ({
+vi.mock('@shared/rabbitmq/send', () => ({ sendRabbitmqEvent: mocks.sendRabbitmqEvent }));
+vi.mock('@shared/rabbitmq/events/new-message', () => ({
   constructNewMessageEvent: mocks.constructNewMessageEvent,
 }));
-vi.mock('@/rabbitmq/events/budget-exceeded', () => ({
+vi.mock('@shared/rabbitmq/events/budget-exceeded', () => ({
   constructTokenBudgetExceededEvent: vi.fn(),
 }));
 
@@ -221,6 +228,23 @@ describe('handleImageGeneration', () => {
         conversationId: 'conversation-id',
       }),
     ).rejects.toBeInstanceOf(NotFoundError);
+
+    expect(mocks.generateImageWithBilling).not.toHaveBeenCalled();
+  });
+
+  it('throws TokenPointsExceededError when the monthly budget is exhausted', async () => {
+    mocks.userHasReachedTokenPointsLimit.mockResolvedValue(true);
+
+    await expect(
+      handleImageGeneration({
+        prompt: 'Make it blue',
+        modelId: imageModel.id,
+        userId: 'user-id',
+        federalStateId: 'DE-TEST',
+        options: { aspectRatio: 'quadratic' },
+        conversationId: 'conversation-id',
+      }),
+    ).rejects.toBeInstanceOf(TokenPointsExceededError);
 
     expect(mocks.generateImageWithBilling).not.toHaveBeenCalled();
   });

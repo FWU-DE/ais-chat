@@ -26,9 +26,9 @@
   "dependencies": {
     "@ais-chat/ai-core": "workspace:*",
     "@ais-chat/shared-core": "workspace:*",
-    "@aws-sdk/client-s3": "3.1152.0",
-    "@aws-sdk/s3-request-presigner": "3.1152.0",
-    "@opentelemetry/api": "1.9.1",
+    "@aws-sdk/client-s3": "3.1154.0",
+    "@aws-sdk/s3-request-presigner": "3.1154.0",
+    "@opentelemetry/api": "1.10.0",
     "@sentry/nextjs": "11.8.0",
     "@t3-oss/env-core": "0.13.11",
     "drizzle-kit": "0.31.11",
@@ -37,8 +37,9 @@
     "ioredis": "6.0.0",
     "linkup-sdk": "3.7.1",
     "nanoid": "6.0.2",
-    "next": "16.4.1",
+    "next": "16.4.2",
     "pg": "8.23.1",
+    "rabbitmq-client": "5.1.0",
     "unstorage": "1.17.6",
     "uuid": "14.0.3",
     "viem": "2.57.7",
@@ -47,15 +48,15 @@
   "devDependencies": {
     "@ais-chat/eslint-config": "workspace:*",
     "@ais-chat/typescript-config": "workspace:*",
-    "@dotenvx/dotenvx": "2.36.0",
+    "@dotenvx/dotenvx": "2.38.2",
     "@types/node": "24.19.2",
     "@types/pg": "8.23.1",
-    "@vitest/coverage-v8": "5.0.4",
+    "@vitest/coverage-v8": "5.0.5",
     "eslint": "10.8.1",
     "prettier": "3.9.10",
     "prettier-eslint": "17.1.2",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "vitest": "5.0.4"
+    "vitest": "5.0.5"
   }
 }

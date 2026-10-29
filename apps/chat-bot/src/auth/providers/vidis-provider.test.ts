@@ -1,6 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Account, Profile } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
 import type { VidisProfile } from './vidis-schema';
 import { validateAndSyncVidisUser } from './validate-and-sync-vidis-user';
+import { handleVidisJWTCallback } from './vidis-provider';
+
+vi.mock('@/env', () => ({
+  env: {
+    vidisClientId: 'chat-client',
+    vidisClientSecret: 'client-secret',
+    vidisIssuerUri: 'http://localhost:8080/realms/ais-chat-local',
+    vidisAllowInsecureDiscovery: false,
+  },
+}));
+
+vi.mock('next-auth', () => ({
+  customFetch: Symbol('customFetch'),
+}));
 
 const { mockDbGetFederalStateById, mockDbGetUserById, mockDbCreateUser, mockDbUpdateUserById } =
   vi.hoisted(() => {
@@ -34,6 +50,31 @@ const buildValidProfile = (overrides: Partial<VidisProfile> = {}): VidisProfile 
 describe('vidis provider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('handleVidisJWTCallback', () => {
+    const account = {
+      token_type: 'bearer',
+      id_token: 'id-token',
+      provider: 'vidis',
+      type: 'oidc',
+    } as unknown as Account;
+
+    it.each([
+      { claim: true, expected: true },
+      { claim: false, expected: false },
+      { claim: undefined, expected: false },
+    ])('should set hasCompletedTraining=$expected for is_ai_chat_eligible=$claim', async (c) => {
+      mockDbGetUserById.mockResolvedValue({ id: 'user-123' });
+
+      const token = await handleVidisJWTCallback({
+        profile: buildValidProfile({ is_ai_chat_eligible: c.claim }) as Profile,
+        token: {} as JWT,
+        account,
+      });
+
+      expect(token.hasCompletedTraining).toBe(c.expected);
+    });
   });
 
   describe('validateAndSyncVidisUser', () => {

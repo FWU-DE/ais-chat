@@ -49,15 +49,15 @@
       "invalid-code-toast": "Le code saisi est soit expiré, soit invalide."
     },
     "share-page": {
-      "go-to": "Aller à",
+      "go-to": "Va à",
       "enter-code": "Saisis le code.",
       "open-chat": "Ouvrir le chat",
-      "use-qr": "Scanne le code QR.",
+      "use-qr": "Ou utilise le code QR",
       "copy-link": "Copier le lien de démarrage",
       "learning-scenario": {
-        "sub-header": "Scénario d’apprentissage",
+        "sub-header": "Scénario pédagogique",
         "back-button": "Vers le scénario d’apprentissage",
-        "join": "Lancer le scénario d'apprentissage"
+        "join": "Lancer le scénario pédagogique"
       },
       "character": {
         "sub-header": "Interlocuteur",
@@ -78,6 +78,7 @@
       "web_search": "Recherche web",
       "web_scraper": "Page web lue",
       "retrieve_text_chunks": "Extraits pertinents du fichier lus",
+      "retrieve_text_chunks_prefix": "Termes de recherche :",
       "retrieve_entire_file": "Fichier entièrement lu",
       "mundo_search": "Recherche dans Mundo",
       "math_calculate": "Calcul effectué",

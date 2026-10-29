@@ -19,6 +19,10 @@ export type SpeechUsage = {
   outputAudioTokens: number;
 };
 
+export type SpeechCosts = {
+  costsInCent: number;
+};
+
 export type SpeechResponse = {
   wavBuffer: Buffer;
   usage: SpeechUsage;

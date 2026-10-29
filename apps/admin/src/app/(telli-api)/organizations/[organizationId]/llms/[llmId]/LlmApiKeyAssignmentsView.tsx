@@ -126,7 +126,7 @@ export function LlmApiKeyAssignmentsView({
         cell: ({ row }) => (
           <Checkbox
             checked={assignedApiKeyIds.has(row.original.id)}
-            onCheckedChange={(checked) => handleToggle(row.original.id, checked as boolean)}
+            aria-label={`${row.original.name} zugeordnet`}
           />
         ),
       },
@@ -212,7 +212,14 @@ export function LlmApiKeyAssignmentsView({
                 Keine API-Schlüssel in dieser Organisation vorhanden.
               </p>
             ) : (
-              <DataTable columns={columns} data={apiKeys} />
+              <DataTable
+                columns={columns}
+                data={apiKeys}
+                focusableRows={false}
+                rowClickHandler={(apiKey) =>
+                  handleToggle(apiKey.id, !assignedApiKeyIds.has(apiKey.id))
+                }
+              />
             )}
           </>
         )}

@@ -133,7 +133,7 @@ services:
 
   # RustFS - S3-compatible object storage
   rustfs:
-    image: rustfs/rustfs:1.0.2
+    image: rustfs/rustfs:1.0.3
     restart: unless-stopped
     environment:
       RUSTFS_ADDRESS: 0.0.0.0:9000
@@ -165,7 +165,7 @@ services:
         condition: service_healthy
 
   bifrost:
-    image: ghcr.io/maximhq/bifrost:v2.3.1
+    image: ghcr.io/maximhq/bifrost:v2.3.2
     restart: unless-stopped
     environment:
       BIFROST_ADMIN_USERNAME: admin

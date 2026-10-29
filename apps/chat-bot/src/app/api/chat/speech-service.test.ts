@@ -21,16 +21,16 @@ vi.mock('@/app/api/utils/speech-preview-cache', () => ({
   getCachedSpeechPreview: mocks.getCachedSpeechPreview,
   setCachedSpeechPreview: mocks.setCachedSpeechPreview,
 }));
-vi.mock('@/app/api/utils/utils', () => ({
+vi.mock('@shared/speech/utils', () => ({
   calculateSpeechCostsInCent: mocks.calculateSpeechCostsInCent,
 }));
-vi.mock('@/rabbitmq/events/budget-exceeded', () => ({
+vi.mock('@shared/rabbitmq/events/budget-exceeded', () => ({
   constructTokenBudgetExceededEvent: mocks.constructTokenBudgetExceededEvent,
 }));
-vi.mock('@/rabbitmq/events/new-message', () => ({
+vi.mock('@shared/rabbitmq/events/new-message', () => ({
   constructNewMessageEvent: mocks.constructNewMessageEvent,
 }));
-vi.mock('@/rabbitmq/send', () => ({ sendRabbitmqEvent: mocks.sendRabbitmqEvent }));
+vi.mock('@shared/rabbitmq/send', () => ({ sendRabbitmqEvent: mocks.sendRabbitmqEvent }));
 vi.mock('@ais-chat/ai-core', () => {
   class TokenPointsExceededError extends Error {}
   return {

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../fixtures/test';
 import { login } from '../../utils/login';
 import { db } from '@shared/db';
 import { federalStateTable } from '@shared/db/schema';
@@ -38,6 +38,7 @@ test('login as student with students enabled', async ({ page }) => {
 
   await login(page, 'student');
 
+  await expect(page.getByTestId('chat-input')).toBeVisible();
   await expect(page.getByText('Nutzung nicht möglich')).not.toBeVisible();
 });
 
@@ -47,9 +48,26 @@ test('login as teacher with certification required', async ({ page }) => {
     .set({ mandatoryCertificationTeacher: true })
     .where(eq(federalStateTable.id, E2E_FEDERAL_STATE));
 
-  await login(page, 'teacher');
+  await login(page, 'teacher2');
 
   await expect(page.getByText('Nutzung nicht möglich')).toBeVisible();
+
+  await db
+    .update(federalStateTable)
+    .set({ mandatoryCertificationTeacher: null })
+    .where(eq(federalStateTable.id, E2E_FEDERAL_STATE));
+});
+
+test('login as certified teacher with certification required', async ({ page }) => {
+  await db
+    .update(federalStateTable)
+    .set({ mandatoryCertificationTeacher: true })
+    .where(eq(federalStateTable.id, E2E_FEDERAL_STATE));
+
+  await login(page, 'teacher');
+
+  await expect(page.getByTestId('chat-input')).toBeVisible();
+  await expect(page.getByText('Nutzung nicht möglich')).not.toBeVisible();
 
   await db
     .update(federalStateTable)
@@ -65,5 +83,6 @@ test('login as teacher with certification not required', async ({ page }) => {
 
   await login(page, 'teacher');
 
+  await expect(page.getByTestId('chat-input')).toBeVisible();
   await expect(page.getByText('Nutzung nicht möglich')).not.toBeVisible();
 });

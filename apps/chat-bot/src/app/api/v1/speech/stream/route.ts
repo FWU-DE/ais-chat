@@ -1,9 +1,10 @@
 import { speechRequestSchema } from '@/app/api/chat/speech-request-schemas';
-import { generateChatSpeechStream } from '@/app/api/chat/speech-service';
 import { getUser } from '@/auth/utils';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
 import { logError } from '@shared/logging';
+import { generateChatSpeechStream } from '@shared/speech/speech-service';
 import { NextRequest } from 'next/server';
+import { buildSpeechStreamResponse } from '../../../utils/response-builder';
 
 /**
  * Streaming endpoint for speech.
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest) {
 
     const { chunks, contentType, format } = await generateChatSpeechStream({
       user,
+      federalState: user.federalState,
       conversationId: parsed.conversationId,
       text: parsed.text,
       voice: parsed.voice,
@@ -49,14 +51,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return new Response(body, {
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'no-store',
-        'X-Audio-Encoding': format.encoding,
-        'X-Audio-Sample-Rate': String(format.sampleRate),
-        'X-Audio-Channels': String(format.channels),
-      },
+    return buildSpeechStreamResponse({
+      body,
+      contentType,
+      format,
     });
   } catch (error) {
     return handleErrorInRoute(error);

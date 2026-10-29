@@ -19,10 +19,9 @@ import {
 } from '@ui/components/card';
 import { Button } from '@ui/components/button';
 import { getProjectsAction } from './actions';
-import Link from 'next/link';
 import { ROUTES } from '../../../../../consts/routes';
 import { Project } from '../../../../../types/project';
-import { Search } from 'lucide-react';
+import { ClickableTableRow } from '@/components/common/ClickableTableRow';
 import { CreateProjectModal } from './CreateProjectModal';
 import { toast } from 'sonner';
 
@@ -93,21 +92,18 @@ export function ProjectListView({ organizationId }: ProjectListViewProps) {
                 <TableHead className="w-[300px]">Id</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Erstellt am</TableHead>
-                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {projects.map((project) => (
-                <TableRow key={project.id}>
+                <ClickableTableRow
+                  key={project.id}
+                  href={ROUTES.api.projectDetails(organizationId, project.id)}
+                >
                   <TableCell>{project.id}</TableCell>
                   <TableCell>{project.name}</TableCell>
                   <TableCell>{new Date(project.createdAt).toLocaleString()}</TableCell>
-                  <TableCell className="flex flex-row gap-4">
-                    <Link href={ROUTES.api.projectDetails(organizationId, project.id)}>
-                      <Search className="text-primary" />
-                    </Link>
-                  </TableCell>
-                </TableRow>
+                </ClickableTableRow>
               ))}
             </TableBody>
           </Table>

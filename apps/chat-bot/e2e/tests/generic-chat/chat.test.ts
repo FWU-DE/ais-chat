@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../fixtures/test';
 import path from 'path';
 import { deleteChat, enterMessage, regenerateMessage, sendMessage } from '../../utils/chat';
 import { AUTH_FILES } from '../../utils/const';

@@ -47,6 +47,8 @@ import { FederalStateModel } from '@shared/federal-states/types';
 import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/error';
 import { dbGetSharedCharacterChatUsageInCentByCharacterId } from '@shared/db/functions/token-points';
 import { copyCharacter, copyRelatedTemplateFiles } from '../templates/template-service';
+import { getUserSettings } from '@shared/users/user-settings-service';
+import { dbGetLlmModelsByFederalStateId } from '../db/functions/llm-model';
 
 vi.mock('../db/functions/character', () => ({
   dbGetAllAccessibleCharacters: vi.fn(),
@@ -88,22 +90,34 @@ vi.mock('../templates/template-service', () => ({
   copyCharacter: vi.fn(),
   copyRelatedTemplateFiles: vi.fn(),
 }));
+vi.mock('@shared/users/user-settings-service', () => ({
+  getUserSettings: vi.fn(),
+}));
+vi.mock('../db/functions/llm-model', () => ({
+  dbGetLlmModelsByFederalStateId: vi.fn(),
+}));
 vi.mock('@shared/db/functions/token-points', () => ({
   dbGetSharedCharacterChatUsageInCentByCharacterId: vi.fn(),
 }));
-const { mockDbReturning, mockDbSet, mockDbUpdate } = vi.hoisted(() => {
-  const mockDbReturning = vi.fn();
-  const mockDbWhere = vi.fn(() => ({ returning: mockDbReturning }));
-  const mockDbSet = vi.fn(() => ({ where: mockDbWhere }));
-  const mockDbUpdate = vi.fn(() => ({ set: mockDbSet }));
+const { mockDbReturning, mockDbSet, mockDbUpdate, mockDbInsert, mockDbInsertValues } = vi.hoisted(
+  () => {
+    const mockDbReturning = vi.fn();
+    const mockDbInsertValues = vi.fn(() => ({ returning: mockDbReturning }));
+    const mockDbInsert = vi.fn(() => ({ values: mockDbInsertValues }));
+    const mockDbWhere = vi.fn(() => ({ returning: mockDbReturning }));
+    const mockDbSet = vi.fn(() => ({ where: mockDbWhere }));
+    const mockDbUpdate = vi.fn(() => ({ set: mockDbSet }));
 
-  return {
-    mockDbReturning,
-    mockDbSet,
-    mockDbUpdate,
-  };
-});
-vi.mock('@shared/db', () => ({ db: { update: mockDbUpdate } }));
+    return {
+      mockDbReturning,
+      mockDbSet,
+      mockDbUpdate,
+      mockDbInsert,
+      mockDbInsertValues,
+    };
+  },
+);
+vi.mock('@shared/db', () => ({ db: { insert: mockDbInsert, update: mockDbUpdate } }));
 
 const mockUser = (userRole: 'student' | 'teacher' = 'teacher') => ({
   id: generateUUID(),
@@ -805,6 +819,26 @@ describe('character-service', () => {
     beforeEach(() => {
       vi.mocked(copyRelatedTemplateFiles).mockResolvedValue(undefined as never);
       vi.mocked(dbGetCharacterById).mockResolvedValue(templateCharacter() as never);
+    });
+
+    it('applies user speech defaults when creating an empty character', async () => {
+      const user = mockUser('teacher');
+      const modelId = generateUUID();
+      vi.mocked(getUserSettings).mockResolvedValue({
+        defaultSpeechVoice: 'voice-b',
+        defaultIsSpeechOnly: true,
+      });
+      vi.mocked(dbGetLlmModelsByFederalStateId).mockResolvedValue([{ id: modelId }] as never);
+      mockDbReturning.mockResolvedValue([{ id: generateUUID() }]);
+
+      await createNewCharacter({ federalStateId, user });
+
+      expect(mockDbInsertValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          voice: 'voice-b',
+          speechOnly: true,
+        }),
+      );
     });
 
     it('should pass duplicateCharacterName to copyCharacter when creating from template', async () => {

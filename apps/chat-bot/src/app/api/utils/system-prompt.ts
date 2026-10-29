@@ -21,50 +21,54 @@ export function constructToolGuidelines(activeTools: ToolDefinition[]) {
   const sections = ['\n## Fähigkeiten und Einschränkungen'];
 
   if (hasTool(activeTools, TOOL_NAMES.retrieveTextChunks)) {
-    const supportedExtensions = [...SUPPORTED_DOCUMENTS_EXTENSIONS, ...SUPPORTED_IMAGE_EXTENSIONS]
-      .map((ext) => ext.toUpperCase())
-      .join(', ');
+    const supportedExtensions = SUPPORTED_DOCUMENTS_EXTENSIONS.map((ext) => ext.toUpperCase()).join(
+      ', ',
+    );
 
     sections.push(
-      '- **Bei der ersten Nachricht:** Wenn Dateien oder Links vorhanden sind, rufe möglichst zuerst `retrieve_text_chunks` auf, bevor du antwortest.',
-      `- Du kannst **Dateien lesen**, die die Nutzerin oder der Nutzer hochgeladen hat. Unterstützt sind nur: ${supportedExtensions}. Biete niemals an, andere Formate zu verarbeiten.`,
+      `- **Bei der ersten Nachricht:** Wenn Textdateien oder Links vorhanden sind, rufe möglichst zuerst \`${TOOL_NAMES.retrieveTextChunks}\` auf, bevor du antwortest.`,
+      `- Du kannst **Dateien lesen**, die die Nutzerin oder der Nutzer hochgeladen hat. Unterstützt sind nur: ${supportedExtensions}. Biete niemals an, andere Formate zu verarbeiten. Der Inhalt dieser Dateien liegt dir nicht automatisch im Kontext vor. Fordere die benötigten Passagen über \`${TOOL_NAMES.retrieveTextChunks}\` an.`,
     );
   }
 
   if (hasTool(activeTools, TOOL_NAMES.retrieveEntireFile)) {
     sections.push(
-      '- Du kannst den **vollständigen Inhalt einer hochgeladenen Datei** abrufen, wenn du den exakten Dateinamen kennst. Beachte, dass dies eine große Menge Tokens verbraucht. Nutze diese Funktion nur, wenn du den ganzen Text brauchst, zum Beispiel für Zusammenfassungen; für gezielte Passagen verwende lieber `retrieve_text_chunks`.',
+      `- Du kannst den **vollständigen Inhalt einer hochgeladenen Datei** über \`${TOOL_NAMES.retrieveEntireFile}\` abrufen, wenn du den exakten Dateinamen kennst. Beachte, dass dies eine große Menge Tokens verbraucht. Nutze dieses Tool nur, wenn du den ganzen Text brauchst, zum Beispiel für Zusammenfassungen; für gezielte Passagen verwende lieber \`${TOOL_NAMES.retrieveTextChunks}\`.`,
     );
   }
 
+  sections.push(
+    `- Du kannst **hochgeladene Bilder** (${SUPPORTED_IMAGE_EXTENSIONS.map((ext) => ext.toUpperCase()).join(', ')}) direkt ansehen, sie liegen dir bereits als Anhang vor.`,
+  );
+
   if (hasTool(activeTools, TOOL_NAMES.webScraper)) {
     sections.push(
-      '- Du kannst **Links und URLs lesen**, die die Nutzerin oder der Nutzer dir schickt. Wenn eine konkrete URL im Chatkontext vorliegt, kannst du den Inhalt der Webseite bei Bedarf anfordern; er liegt nicht automatisch im Kontext vor.',
+      `- Du kannst **Links und URLs lesen**, die die Nutzerin oder der Nutzer dir schickt. Der Inhalt der Webseite liegt dir nicht automatisch im Kontext vor. Fordere ihn über \`${TOOL_NAMES.webScraper}\` an, wenn eine konkrete URL im Chatkontext vorliegt.`,
       '- Sage NIEMALS, dass du generell keine Webseiten aufrufen oder keine Live-Inhalte abrufen kannst.',
     );
   }
 
   if (hasTool(activeTools, TOOL_NAMES.webSearch)) {
     sections.push(
-      '- Du kannst eine **Websuche** durchführen. Bei Fragen, die aktuelle Informationen erfordern, nutze `web_search`.',
+      `- Du kannst eine **Websuche** durchführen. Bei Fragen, die aktuelle Informationen erfordern, nutze \`${TOOL_NAMES.webSearch}\`.`,
     );
   }
 
   if (hasTool(activeTools, TOOL_NAMES.mundoSearch)) {
     sections.push(
-      '- Du kannst die **MUNDO-Mediathek** (mundo.schule) nach passenden Bildungsmedien, z.B. Videos oder Arbeitsblättern durchsuchen. Wenn nach Unterrichtsmaterialien oder Medienvorschlägen zu einem Thema gefragt wird, nutze `mundo_search`. Wähle höchstens 5 passende Quellen aus und liste deren Titel, Kurzbeschreibung, Medientyp, Anbieter (Feld `source`) und Link (Feld `url`) auf, damit die Lehrkraft die Medien direkt öffnen kann. Die Kurzbeschreibung kannst du sprachlich anpassen, sodass der Kerninhalt der Quelle verständlich wird.',
+      `- Du kannst die **MUNDO-Mediathek** (mundo.schule) nach passenden Bildungsmedien, z.B. Videos oder Arbeitsblättern durchsuchen. Wenn nach Unterrichtsmaterialien oder Medienvorschlägen zu einem Thema gefragt wird, nutze \`${TOOL_NAMES.mundoSearch}\`. Wähle höchstens 5 passende Quellen aus und liste deren Titel, Kurzbeschreibung, Medientyp, Anbieter (Feld \`source\`) und Link (Feld \`url\`) auf, damit die Lehrkraft die Medien direkt öffnen kann. Die Kurzbeschreibung kannst du sprachlich anpassen, sodass der Kerninhalt der Quelle verständlich wird.`,
     );
   }
 
   if (hasTool(activeTools, TOOL_NAMES.mathCalculate)) {
     sections.push(
-      '- Verwende `math_calculate` für jede numerische, algebraische, statistische, geometrische, Differential-, Integral-, Matrix-, Vektor- oder zahlentheoretische Berechnung. Berechne numerische Ergebnisse niemals mental oder direkt selbst, besonders nicht bei mehrteiligen Anfragen. Führe bei Bedarf einen oder mehrere Tool-Aufrufe aus. Wenn ein Aufruf fehlschlägt, berichte den Fehler kurz und bitte um eine Umformulierung oder die fehlenden Werte; erkläre keine qalc-Interna und erfinde keine Ergebnisse.',
+      `- Verwende \`${TOOL_NAMES.mathCalculate}\` für jede numerische, algebraische, statistische, geometrische, Differential-, Integral-, Matrix-, Vektor- oder zahlentheoretische Berechnung. Berechne numerische Ergebnisse niemals mental oder direkt selbst, besonders nicht bei mehrteiligen Anfragen. Führe bei Bedarf einen oder mehrere Tool-Aufrufe aus. Wenn ein Aufruf fehlschlägt, berichte den Fehler kurz und bitte um eine Umformulierung oder die fehlenden Werte; erkläre keine qalc-Interna und erfinde keine Ergebnisse.`,
     );
   }
 
   if (hasTool(activeTools, TOOL_NAMES.createPlot)) {
     sections.push(
-      '- Für Zeichnungen (Funktionsgraph, Diagramm, Geometrie, 3D-Fläche) rufe `create_plot` mit einer präzisen Beschreibung auf statt das JSON selbst zu erzeugen. Ein Aufruf erzeugt genau ein Koordinatensystem; bei mehreren eigenständigen Zeichnungen rufe das Tool einzeln pro Zeichnung auf, nie mit einem Mehrpanel-Layout. Ergebnis ist entweder das fertige JSON oder `{error}` bzw. bei reparierbaren Fehlern `{error, invalidJson}`; ist `invalidJson` vorhanden, erneut aufrufen mit derselben Beschreibung plus `previousAttempt`/`previousError` aus dem Fehler, um die Zeichnung zu reparieren. Erfolgreiche Ergebnisse unverändert in einen Codeblock ```jsxgraph-json title="Kurzer Titel" ... ``` einfügen und kurz erklären, was zu sehen ist. Erwähne die Technik dahinter niemals. Gelingt die Zeichnung auch nach mehreren Versuchen nicht, kurz sagen, dass es nicht geht, und eine Alternative anbieten.',
+      `- Für Zeichnungen (Funktionsgraph, Diagramm, Geometrie, 3D-Fläche) rufe \`${TOOL_NAMES.createPlot}\` mit einer präzisen Beschreibung auf statt das JSON selbst zu erzeugen. Ein Aufruf erzeugt genau ein Koordinatensystem; bei mehreren eigenständigen Zeichnungen rufe das Tool einzeln pro Zeichnung auf, nie mit einem Mehrpanel-Layout. Ergebnis ist entweder das fertige JSON oder \`{error}\` bzw. bei reparierbaren Fehlern \`{error, invalidJson}\`; ist \`invalidJson\` vorhanden, erneut aufrufen mit derselben Beschreibung plus \`previousAttempt\`/\`previousError\` aus dem Fehler, um die Zeichnung zu reparieren. Erfolgreiche Ergebnisse unverändert in einen Codeblock \`\`\`jsxgraph-json title="Kurzer Titel" ... \`\`\` einfügen und kurz erklären, was zu sehen ist. Erwähne die Technik dahinter niemals. Gelingt die Zeichnung auch nach mehreren Versuchen nicht, kurz sagen, dass es nicht geht, und eine Alternative anbieten.`,
     );
   }
 

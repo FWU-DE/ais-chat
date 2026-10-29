@@ -9,6 +9,7 @@ type AudioWaveformProps = {
   /** Position to render the progress fill at; the caller decides between live playback position
    *  and a drag-preview value, mirroring the `Slider`'s controlled `value` prop. */
   currentTime: number;
+  isLoading: boolean;
   getWaveformPeaks: (barCount: number) => number[] | null;
   /** Fired continuously while clicking/dragging, for live preview (no actual seek yet). */
   onSeekPreview: (time: number) => void;
@@ -62,6 +63,7 @@ export function AudioWaveform({
   onSeekPreview,
   onSeekCommit,
   onSeekCancel,
+  isLoading,
   className,
 }: AudioWaveformProps) {
   const t = useTranslations('common');
@@ -178,7 +180,7 @@ export function AudioWaveform({
           peaks={new Array(barCount).fill(PLACEHOLDER_BAR_HEIGHT) as number[]}
           className={cn(
             'text-muted-foreground/50',
-            !isInteractive && 'animate-pulse [animation-duration:1.2s]',
+            isLoading && 'animate-pulse [animation-duration:1.2s]',
           )}
         />
       ) : (

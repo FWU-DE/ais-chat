@@ -26,7 +26,7 @@
   "characters": {
     "shared": {
       "delete-chat-modal-title": "Delete current chat?",
-      "delete-chat-modal-description": "A new chat will be started. The current chat will be deleted permanently.",
+      "delete-chat-modal-description": "A new chat will be started. The current chat will be permanently deleted.",
       "delete-chat-modal-confirm-button": "Delete"
     }
   },
@@ -34,7 +34,7 @@
     "shared": {
       "exercise-title": "Your task",
       "delete-chat-modal-title": "Delete current chat?",
-      "delete-chat-modal-description": "A new chat will be started. The current chat will be deleted permanently.",
+      "delete-chat-modal-description": "A new chat will be started. The current chat will be permanently deleted.",
       "delete-chat-modal-confirm-button": "Delete"
     }
   },
@@ -52,17 +52,17 @@
       "go-to": "Go to",
       "enter-code": "Enter the code.",
       "open-chat": "Open chat",
-      "use-qr": "Scan the QR code.",
+      "use-qr": "Or use the QR code",
       "copy-link": "Copy start link",
       "learning-scenario": {
         "sub-header": "Learning scenario",
         "back-button": "Back to learning scenario",
-        "join": "Start learning scenario"
+        "join": "Start the learning scenario"
       },
       "character": {
         "sub-header": "Dialog partner",
         "back-button": "Back to dialog partner",
-        "join": "Join dialog"
+        "join": "Join the dialog"
       }
     }
   },
@@ -78,6 +78,7 @@
       "web_search": "Web search",
       "web_scraper": "Web page read",
       "retrieve_text_chunks": "Relevant file excerpts read",
+      "retrieve_text_chunks_prefix": "Search terms:",
       "retrieve_entire_file": "File fully read",
       "mundo_search": "Searched Mundo",
       "math_calculate": "Calculation performed",

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import Link from 'next/link';
 import { getFederalStatesAction } from './actions';
 import { CreateFederalStateModal } from './CreateFederalStateModal';
 import {
@@ -21,7 +20,7 @@ import {
   CardTitle,
 } from '@ui/components/card';
 import { Button } from '@ui/components/button';
-import { Search } from 'lucide-react';
+import { ClickableTableRow } from '@/components/common/ClickableTableRow';
 import { toast } from 'sonner';
 import { ROUTES } from '@/consts/routes';
 import { FederalStateModel } from '@shared/federal-states/types';
@@ -82,21 +81,18 @@ export default function FederalStateListView() {
                 <TableHead className="w-[300px]">Id</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Erstellt am</TableHead>
-                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {federalStates.map((federalState) => (
-                <TableRow key={federalState.id}>
+                <ClickableTableRow
+                  key={federalState.id}
+                  href={ROUTES.app.federalStateDetails(federalState.id)}
+                >
                   <TableCell>{federalState.id}</TableCell>
                   <TableCell>{federalState.appName}</TableCell>
                   <TableCell>{federalState.createdAt.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Link href={ROUTES.app.federalStateDetails(federalState.id)}>
-                      <Search className="text-primary" />
-                    </Link>
-                  </TableCell>
-                </TableRow>
+                </ClickableTableRow>
               ))}
             </TableBody>
           </Table>

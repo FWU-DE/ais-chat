@@ -51,18 +51,18 @@
     "share-page": {
       "go-to": "Vai su",
       "enter-code": "Inserisci il codice.",
-      "open-chat": "Apri la chat",
-      "use-qr": "Scansiona il codice QR.",
+      "open-chat": "Apri chat",
+      "use-qr": "Oppure usa il codice QR",
       "copy-link": "Copia link di avvio",
       "learning-scenario": {
         "sub-header": "Scenario di apprendimento",
         "back-button": "Vai allo scenario di apprendimento",
-        "join": "Avvia lo scenario di apprendimento"
+        "join": "Iniziare lo scenario di apprendimento"
       },
       "character": {
         "sub-header": "Interlocutore",
         "back-button": "Vai all’interlocutore",
-        "join": "Partecipa al dialogo"
+        "join": "Partecipare al dialogo"
       }
     }
   },
@@ -78,6 +78,7 @@
       "web_search": "Ricerca web",
       "web_scraper": "Pagina web letta",
       "retrieve_text_chunks": "Estratti rilevanti del file letti",
+      "retrieve_text_chunks_prefix": "Termini di ricerca:",
       "retrieve_entire_file": "File letto per intero",
       "mundo_search": "Ricerca in Mundo",
       "math_calculate": "Calcolo eseguito",

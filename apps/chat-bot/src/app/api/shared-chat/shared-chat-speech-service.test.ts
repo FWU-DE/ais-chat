@@ -24,13 +24,13 @@ vi.mock('@/app/api/chat/speech-service', () => ({
   generateStaticMessageSpeech: mocks.generateStaticMessageSpeech,
 }));
 vi.mock('@/auth/utils', () => ({ getUserAndContextByUserId: mocks.getUserAndContextByUserId }));
-vi.mock('@/rabbitmq/events/budget-exceeded', () => ({
+vi.mock('@shared/rabbitmq/events/budget-exceeded', () => ({
   constructTokenBudgetExceededEvent: mocks.constructTokenBudgetExceededEvent,
 }));
-vi.mock('@/rabbitmq/events/new-message', () => ({
+vi.mock('@shared/rabbitmq/events/new-message', () => ({
   constructNewMessageEvent: mocks.constructNewMessageEvent,
 }));
-vi.mock('@/rabbitmq/send', () => ({ sendRabbitmqEvent: mocks.sendRabbitmqEvent }));
+vi.mock('@shared/rabbitmq/send', () => ({ sendRabbitmqEvent: mocks.sendRabbitmqEvent }));
 vi.mock('@/utils/vidis/access', () => ({ checkProductAccess: mocks.checkProductAccess }));
 vi.mock('@ais-chat/ai-core', () => {
   class TokenPointsExceededError extends Error {}
@@ -72,6 +72,7 @@ const characterEntity = {
   voice: 'nova',
   isSpeechEnabled: true,
   initialMessage: 'Hello class',
+  manuallyStoppedAt: null,
 };
 
 const learningScenarioEntity = {
@@ -79,6 +80,7 @@ const learningScenarioEntity = {
   startedBy: 'teacher-1',
   voice: 'alloy',
   isSpeechEnabled: true,
+  manuallyStoppedAt: null,
 };
 
 const speechResult = {

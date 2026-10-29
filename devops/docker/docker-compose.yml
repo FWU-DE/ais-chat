@@ -73,22 +73,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # RabbitMQ for async messaging and reporting
-  rabbitmq:
-    image: rabbitmq:4-management
-    restart: unless-stopped
-    environment:
-      RABBITMQ_DEFAULT_USER: user
-      RABBITMQ_DEFAULT_PASS: password
-    ports:
-      - '5672:5672'
-      - '15672:15672'
-    healthcheck:
-      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
   # Crawl4AI for web scraping capabilities
   crawl4ai:
     image: unclecode/crawl4ai:0.9.5
@@ -135,7 +119,7 @@ services:
   # Shares keycloak's netns so presigned URLs signed for http://localhost:9000 are
   # reachable both from the app containers and from the browser on the host.
   rustfs:
-    image: rustfs/rustfs:1.0.2
+    image: rustfs/rustfs:1.0.3
     restart: unless-stopped
     environment:
       RUSTFS_ADDRESS: 0.0.0.0:9000
@@ -159,7 +143,7 @@ services:
         condition: service_started
 
   bifrost:
-    image: ghcr.io/maximhq/bifrost:v2.3.1
+    image: ghcr.io/maximhq/bifrost:v2.3.2
     restart: unless-stopped
     environment:
       BIFROST_ADMIN_USERNAME: admin
@@ -271,9 +255,6 @@ services:
       # Valkey (Redis) for sessions
       VALKEY_URL: redis://valkey:6379/0
 
-      # RabbitMQ for reporting
-      RABBITMQ_URI: amqp://user:password@rabbitmq:5672
-
       # AIS.chat API connection
       API_URL: http://localhost:3002
 
@@ -305,10 +286,6 @@ services:
 
       # Encryption key for sensitive data (IMPORTANT: Change in production!)
       ENCRYPTION_KEY: default-encryption-key-change-in-production
-
-      # Google Vertex AI (optional - for image generation)
-      GOOGLE_APPLICATION_CREDENTIALS: ''
-
       # Logging
       LOG_TO_STDOUT: true
       NEXT_PUBLIC_SENTRY_LOG_LEVEL: debug
@@ -317,8 +294,6 @@ services:
       postgres:
         condition: service_healthy
       valkey:
-        condition: service_healthy
-      rabbitmq:
         condition: service_healthy
       crawl4ai:
         condition: service_healthy

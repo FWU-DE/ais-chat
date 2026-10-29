@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { Search } from 'lucide-react';
 import { Button } from '@ui/components/button';
 import {
   Card,
@@ -19,6 +18,7 @@ import {
   TableRow,
 } from '@ui/components/table';
 import { ROUTES } from '@/consts/routes';
+import { ClickableTableRow } from '@/components/common/ClickableTableRow';
 import type { ProviderKey } from '@/types/provider-key';
 
 export function ProviderKeyListView({
@@ -49,12 +49,14 @@ export function ProviderKeyListView({
               <TableHead>Aktiv</TableHead>
               <TableHead>Modelle</TableHead>
               <TableHead>Erstellt am</TableHead>
-              <TableHead className="w-12">Aktionen</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {providerKeys.map((providerKey) => (
-              <TableRow key={providerKey.id}>
+              <ClickableTableRow
+                key={providerKey.id}
+                href={ROUTES.api.providerKeyDetails(organizationId, providerKey.id)}
+              >
                 <TableCell className="font-medium">{providerKey.name}</TableCell>
                 <TableCell>{providerKey.provider}</TableCell>
                 <TableCell>{providerKey.weight}</TableCell>
@@ -63,12 +65,7 @@ export function ProviderKeyListView({
                 </TableCell>
                 <TableCell>{providerKey.models.length}</TableCell>
                 <TableCell>{new Date(providerKey.createdAt).toLocaleString()}</TableCell>
-                <TableCell>
-                  <Link href={ROUTES.api.providerKeyDetails(organizationId, providerKey.id)}>
-                    <Search className="text-primary" />
-                  </Link>
-                </TableCell>
-              </TableRow>
+              </ClickableTableRow>
             ))}
           </TableBody>
         </Table>

@@ -88,15 +88,15 @@ vi.mock('@shared/db/functions/files', () => ({
   dbGetRelatedCharacterFiles: mocks.dbGetRelatedCharacterFilesMock,
 }));
 
-vi.mock('@/rabbitmq/send', () => ({
+vi.mock('@shared/rabbitmq/send', () => ({
   sendRabbitmqEvent: mocks.sendRabbitmqEventMock,
 }));
 
-vi.mock('@/rabbitmq/events/new-message', () => ({
+vi.mock('@shared/rabbitmq/events/new-message', () => ({
   constructNewMessageEvent: mocks.constructNewMessageEventMock,
 }));
 
-vi.mock('@/rabbitmq/events/budget-exceeded', () => ({
+vi.mock('@shared/rabbitmq/events/budget-exceeded', () => ({
   constructTokenBudgetExceededEvent: mocks.constructTokenBudgetExceededEventMock,
 }));
 
