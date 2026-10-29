@@ -2,7 +2,7 @@ import { getSafetyModel } from '@/app/api/utils/utils';
 import { getUser, userHasCompletedTraining } from '@/auth/utils';
 import { ImageGenerationOptions } from '@/components/image-generation/image-generation-types';
 import { checkProductAccess } from '@/utils/vidis/access';
-import { generateImageWithBilling } from '@ais-chat/ai-core';
+import { generateImageWithBilling, TokenPointsExceededError } from '@ais-chat/ai-core';
 import { ImageGenerationRequestOptions } from '@ais-chat/ai-core/images/types';
 import {
   dbDeleteRegeneratedConversationMessage,
@@ -324,7 +324,7 @@ export async function generateImage({
       await sendRabbitmqEvent(constructTokenBudgetExceededEvent({ user }));
     }
 
-    throw new Error('User has reached token points limit.');
+    throw new TokenPointsExceededError();
   }
 
   try {
