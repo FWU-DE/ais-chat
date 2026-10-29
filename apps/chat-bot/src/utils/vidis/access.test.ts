@@ -3,6 +3,14 @@ import { checkProductAccess } from './access';
 import { UserAndContext } from '@/auth/types';
 import { UserSelectModel, UserRole } from '@shared/db/schema';
 import { ObscuredFederalState } from '@/auth/utils';
+import { getFederalStateNameById } from './const';
+import { createElement, Fragment } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+
+function renderErrorMessage(result: ReturnType<typeof checkProductAccess>) {
+  if (result.hasAccess) throw new Error('Expected access to be denied');
+  return renderToStaticMarkup(createElement(Fragment, null, result.errorMessage));
+}
 
 describe('checkProductAccess', () => {
   // Base test data
@@ -70,11 +78,7 @@ describe('checkProductAccess', () => {
     };
 
     const result = checkProductAccess({ ...context, hasCompletedTraining: true });
-    expect(result.hasAccess).toBe(false);
-    if (!result.hasAccess) {
-      expect(result.errorType).toBe('RESTRICTED_ROLE');
-      // expect(result.errorMessage).toContain('Schüler oder Schülerin');
-    }
+    expect(result).toMatchObject({ hasAccess: false, errorType: 'RESTRICTED_ROLE' });
   });
 
   it('should allow access to students when studentAccess is true', () => {
@@ -104,12 +108,10 @@ describe('checkProductAccess', () => {
     };
 
     const result = checkProductAccess({ ...context, hasCompletedTraining: false });
-    expect(result.hasAccess).toBe(false);
-    if (!result.hasAccess) {
-      expect(result.errorType).toBe('TRAINING_NEEDED');
-      // expect(result.errorMessage).toContain('vorgeschriebene Schulung');
-      // expect(result.errorMessage).toContain('DE-BY');
-    }
+    expect(result).toMatchObject({ hasAccess: false, errorType: 'TRAINING_NEEDED' });
+    const html = renderErrorMessage(result);
+    expect(html).toContain(getFederalStateNameById('DE-BY'));
+    expect(html).not.toContain('href=');
   });
 
   it('should include training link in error message when available', () => {
@@ -123,12 +125,57 @@ describe('checkProductAccess', () => {
       },
     };
 
+    const result = checkProductAccess({ ...context, hasCompletedTraining: false });
+    expect(result).toMatchObject({ hasAccess: false, errorType: 'TRAINING_NEEDED' });
+    const html = renderErrorMessage(result);
+    expect(html).toContain(trainingLink);
+  });
+
+  it('should use the federal state specific disclaimer instead of the training link', () => {
+    const trainingLink = 'https://training.example.com';
+    const context: UserAndContext = {
+      ...baseUser,
+      federalState: {
+        ...baseFederalState,
+        id: 'DE-SL',
+        mandatoryCertificationTeacher: true,
+        trainingLink,
+      },
+    };
+
+    const result = checkProductAccess({ ...context, hasCompletedTraining: false });
+    expect(result).toMatchObject({ hasAccess: false, errorType: 'TRAINING_NEEDED' });
+    const html = renderErrorMessage(result);
+    expect(html).not.toContain(trainingLink);
+  });
+
+  it('should allow access when training is required and completed', () => {
+    const context: UserAndContext = {
+      ...baseUser,
+      federalState: { ...baseFederalState, mandatoryCertificationTeacher: true },
+    };
+
     const result = checkProductAccess({ ...context, hasCompletedTraining: true });
-    if (!result.hasAccess) {
-      expect(result.hasAccess).toBe(false);
-      expect(result.errorType).toBe('TRAINING_NEEDED');
-      // expect(result.errorMessage).toContain(trainingLink);
-    }
+    expect(result.hasAccess).toBe(true);
+  });
+
+  it('should default hasCompletedTraining to true', () => {
+    const context: UserAndContext = {
+      ...baseUser,
+      federalState: { ...baseFederalState, mandatoryCertificationTeacher: true },
+    };
+
+    expect(checkProductAccess(context).hasAccess).toBe(true);
+  });
+
+  it('should allow access without training when training is not required', () => {
+    const context: UserAndContext = {
+      ...baseUser,
+      federalState: baseFederalState,
+    };
+
+    const result = checkProductAccess({ ...context, hasCompletedTraining: false });
+    expect(result.hasAccess).toBe(true);
   });
 
   it('should prioritize role-based restrictions over training requirements', () => {
