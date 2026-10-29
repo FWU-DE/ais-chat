@@ -1,4 +1,4 @@
-import { type ChatStatus, type GenerateSpeechFn, type UIMessage } from '@/types/chat';
+import { type ChatStatus, type UIMessage } from '@/types/chat';
 import { replacePlotBlocks } from '@/utils/code-blocks';
 import { isImageFile } from '@/utils/files/generic';
 import { cn } from '@/utils/tailwind';
@@ -6,7 +6,7 @@ import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import { utils } from '@shared/utils';
 import { useTranslations } from 'next-intl';
-import { ReactNode, useCallback, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import useBreakpoints from '../hooks/use-breakpoints';
 import { AiActivityPanel } from './activity/ai-activity';
 import DisplayFileAttachment from './display-file-attachment';
@@ -15,7 +15,7 @@ import { MessageActions } from './message-actions';
 import MessageImageAttachment, { type PendingFileModel } from './message-image-attachment';
 import { PlotStreamingContext } from './plot/plot-block';
 import Citation from './sources/citation';
-import SpeechAudioButton from './speech-audio-button';
+import AudioPlayer from './speech/audio-player';
 import { GenerateSpeechStreamFn } from './speech/types';
 
 // Re-export for consumers
@@ -36,7 +36,6 @@ export function ChatBox({
   characterName,
   status,
   showActivityDialog,
-  generateSpeechFn,
   generateSpeechStreamFn,
   speechVoice,
   isSpeechModelEnabled,
@@ -56,7 +55,6 @@ export function ChatBox({
   characterName?: string;
   status: ChatStatus;
   showActivityDialog?: boolean;
-  generateSpeechFn: GenerateSpeechFn;
   generateSpeechStreamFn: GenerateSpeechStreamFn;
   speechVoice?: string;
   isSpeechModelEnabled: boolean;
@@ -162,13 +160,29 @@ export function ChatBox({
 
   const isAssistantSpeechOnly = message.role === 'assistant' && speechOnly && isSpeechModelEnabled;
   const isInitialMessage = message.id === 'initial-message';
-
-  const messageSpeechFn = useCallback(
-    (text: string, signal?: AbortSignal) => generateSpeechFn(text, isInitialMessage, signal),
-    [generateSpeechFn, isInitialMessage],
-  );
   const actionsVisible = message.role === 'assistant' && (!isLastNonUser || status !== 'streaming');
-  const isSpeechOnlyStreaming = isAssistantSpeechOnly && isLastNonUser && status === 'streaming';
+
+  // The player is shown immediately in speech-only mode; otherwise it stays hidden until the user
+  // reveals it via `ShowAudioPlayerButton`.
+  const [showAudioPlayer, setShowAudioPlayer] = useState(isAssistantSpeechOnly);
+
+  // Starts playback automatically once the current (last) assistant message has just finished
+  // streaming. Uses a counter bumped exactly once per streaming-to-ready transition, so historical
+  // messages that are already complete when the page loads never auto-play.
+  const [autoPlayTrigger, setAutoPlayTrigger] = useState(0);
+  const previousStatusRef = useRef(status);
+  useEffect(() => {
+    const previousStatus = previousStatusRef.current;
+    previousStatusRef.current = status;
+    if (
+      isAssistantSpeechOnly &&
+      isLastNonUser &&
+      previousStatus === 'streaming' &&
+      status !== 'streaming'
+    ) {
+      setAutoPlayTrigger((trigger) => trigger + 1);
+    }
+  }, [status, isAssistantSpeechOnly, isLastNonUser]);
 
   const maybeShowMessageIcons = actionsVisible ? (
     <MessageActions
@@ -179,8 +193,6 @@ export function ChatBox({
       characterName={characterName}
       regenerateMessage={regenerateMessage}
       canRegenerateMessage={canRegenerateMessage}
-      generateSpeechStreamFn={generateSpeechStreamFn}
-      speechVoice={speechVoice}
       isSpeechModelEnabled={isSpeechModelEnabled}
       showActivityDialog={showActivityDialog}
       activitySteps={activitySteps}
@@ -189,16 +201,22 @@ export function ChatBox({
       isInitialMessage={isInitialMessage}
       isTextVisible={isTextVisible}
       onToggleText={() => setIsTextVisible((visible) => !visible)}
+      showAudioPlayer={showAudioPlayer}
+      onToggleAudioPlayer={() => setShowAudioPlayer((visible) => !visible)}
     />
   ) : null;
 
-  const maybeAudioButton =
-    isAssistantSpeechOnly && (actionsVisible || isSpeechOnlyStreaming) ? (
-      <SpeechAudioButton
+  const maybeAudioPlayer =
+    message.role === 'assistant' ? (
+      <AudioPlayer
         key={speechVoice ?? ''}
+        isSpeechModelEnabled={isSpeechModelEnabled}
         text={plainText}
-        generateSpeechFn={messageSpeechFn}
-        isStreaming={isSpeechOnlyStreaming}
+        isInitialMessage={isInitialMessage}
+        generateSpeechStreamFn={generateSpeechStreamFn}
+        hidden={!showAudioPlayer}
+        autoPlayTrigger={autoPlayTrigger}
+        className="w-full"
       />
     ) : null;
 
@@ -225,7 +243,7 @@ export function ChatBox({
               )}
             >
               {showMessageText && messageContent}
-              {maybeAudioButton}
+              {maybeAudioPlayer}
               {maybeShowMessageIcons}
             </div>
           </div>

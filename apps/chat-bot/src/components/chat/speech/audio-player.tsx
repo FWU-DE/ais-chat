@@ -35,6 +35,14 @@ type AudioPlayerProps = {
    * playback is paused while hidden (resuming where it left off on reopen).
    */
   hidden?: boolean;
+  /**
+   * Incremented by the parent exactly once per automatic playback request (e.g. when a
+   * speech-only message has just finished streaming). Starts playback as soon as it changes to a
+   * value greater than `0`, unless the player is `hidden`. Using a counter (rather than a plain
+   * boolean) lets the parent signal a one-off "play now" event without re-triggering on rerenders.
+   */
+  autoPlayTrigger?: number;
+  className?: string;
 };
 
 export default function AudioPlayer({
@@ -43,6 +51,8 @@ export default function AudioPlayer({
   isSpeechModelEnabled,
   isInitialMessage,
   hidden = false,
+  autoPlayTrigger = 0,
+  className,
 }: AudioPlayerProps) {
   const t = useTranslations('common');
   const {
@@ -70,6 +80,15 @@ export default function AudioPlayer({
     }
   }, [hidden, status, pause]);
 
+  const lastAutoPlayTriggerRef = React.useRef(autoPlayTrigger);
+  React.useEffect(() => {
+    const previousTrigger = lastAutoPlayTriggerRef.current;
+    lastAutoPlayTriggerRef.current = autoPlayTrigger;
+    if (autoPlayTrigger > previousTrigger && !hidden && status === 'idle') {
+      void start(text);
+    }
+  }, [autoPlayTrigger, hidden, status, start, text]);
+
   if (!isSpeechModelEnabled) return null;
 
   async function handleButtonClick() {
@@ -91,7 +110,7 @@ export default function AudioPlayer({
   }
 
   return (
-    <div className={cn('flex flex-col gap-1 pt-4', hidden && 'hidden')}>
+    <div className={cn('flex flex-col gap-1 pt-4', hidden && 'hidden', className)}>
       <div className="flex flex-row gap-2 items-center">
         <Button
           variant="ghost"

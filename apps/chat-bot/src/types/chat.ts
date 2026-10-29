@@ -32,16 +32,6 @@ export type SerializedError = {
  */
 export type ChatStatus = 'ready' | 'submitted' | 'reasoning' | 'streaming' | 'error';
 
-/**
- * Generates speech audio for a message. Receives a flag indicating whether this is an
- * initial message (e.g. a character's initial message), in order to route it to a non-billed endpoint.
- */
-export type GenerateSpeechFn = (
-  text: string,
-  isInitialMessage: boolean,
-  signal?: AbortSignal,
-) => Promise<Blob>;
-
 export const chatMessageSchema = z.object({
   id: z.string(),
   role: z.enum(CONVERSATION_ROLES),

@@ -1,5 +1,5 @@
 import type { AiActivityStep } from '@/types/ai-activity';
-import { type ChatStatus, type GenerateSpeechFn, type UIMessage } from '@/types/chat';
+import { type ChatStatus, type UIMessage } from '@/types/chat';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import { ChatBox, type PendingFileModel } from './chat-box';
@@ -23,7 +23,6 @@ interface MessagesProps {
   webSourceMapping?: Map<string, WebSource[]>;
   activitySteps?: AiActivityStep[];
   showActivityDialog?: boolean;
-  generateSpeechFn: GenerateSpeechFn;
   generateSpeechStreamFn: GenerateSpeechStreamFn;
   speechVoice?: string;
   isSpeechModelEnabled: boolean;
@@ -43,7 +42,6 @@ export function Messages({
   webSourceMapping,
   activitySteps = [],
   showActivityDialog = false,
-  generateSpeechFn,
   generateSpeechStreamFn,
   speechVoice,
   isSpeechModelEnabled,
@@ -76,7 +74,6 @@ export function Messages({
             webSources={message.role === 'user' ? webSourceMapping?.get(message.id) : undefined}
             status={status}
             showActivityDialog={showActivityDialog}
-            generateSpeechFn={generateSpeechFn}
             generateSpeechStreamFn={generateSpeechStreamFn}
             speechVoice={speechVoice}
             isSpeechModelEnabled={isSpeechModelEnabled}

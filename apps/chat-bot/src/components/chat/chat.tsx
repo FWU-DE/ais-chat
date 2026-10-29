@@ -274,34 +274,6 @@ export default function Chat({
     });
   }
 
-  async function generateSpeech(
-    text: string,
-    isInitialMessage: boolean,
-    signal?: AbortSignal,
-  ): Promise<Blob> {
-    const useInitialMessage = isInitialMessage && character !== undefined;
-
-    const response = await fetch(
-      useInitialMessage ? '/api/v1/speech/initial-message' : '/api/v1/speech',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal,
-        body: JSON.stringify(
-          useInitialMessage
-            ? { characterId: character.id }
-            : { conversationId: id, text, voice: speechVoice },
-        ),
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error('Could not generate speech');
-    }
-
-    return response.blob();
-  }
-
   async function generateSpeechStream(
     text: string,
     isInitialMessage: boolean,
@@ -403,7 +375,6 @@ export default function Chat({
               webSourceMapping={webSourceMapping}
               activitySteps={activitySteps}
               showActivityDialog={character !== undefined}
-              generateSpeechFn={generateSpeech}
               generateSpeechStreamFn={generateSpeechStream}
               speechVoice={speechVoice}
               isSpeechModelEnabled={
