@@ -50,6 +50,7 @@ export function ChatInputBox({
   fileUploadFn?: (file: File) => Promise<FileUploadResponse>;
   showPlaceholder?: boolean;
 }) {
+  const tChat = useTranslations('chat');
   const tCommon = useTranslations('common');
   const tFileInteraction = useTranslations('file-interaction');
   const toast = useToast();
@@ -113,29 +114,29 @@ export function ChatInputBox({
   const userActionButton = isGenerating ? (
     <button
       type="button"
-      title="Stop generating"
+      title={tChat('stop-generating')}
       onClick={handleStopGeneration}
       className={cn(
         'p-1.5 my-2 flex items-center justify-center group disabled:cursor-not-allowed me-2',
         iconClassName,
       )}
-      aria-label="Stop"
+      aria-label={tChat('stop-generating')}
     >
       <StopIcon className={cn('w-6 h-6')} />
     </button>
   ) : (
     <button
       type="submit"
-      title="Nachricht abschicken"
+      title={tChat('send-message')}
       disabled={!canSubmit}
       className={cn(
         iconClassName,
         'my-2 mx-2 flex items-center self-end justify-center group disabled:cursor-not-allowed text-dark-gray',
       )}
-      aria-label="Nachricht abschicken"
+      aria-label={tChat('send-message')}
       data-testid="submit-button"
     >
-      <ArrowRightIcon className={cn('h-9 w-9')} />
+      <ArrowRightIcon className={cn('h-9 w-9')} aria-hidden="true" />
     </button>
   );
 
@@ -170,6 +171,7 @@ export function ChatInputBox({
             onPaste={enableFileUpload ? handlePaste : undefined}
             maxLength={CHAT_MESSAGE_LENGTH_LIMIT}
             data-testid="chat-input"
+            aria-label={tChat('chat-textarea')}
           />
           {enableFileUpload && files !== undefined && setFiles !== undefined && (
             <div className="flex flex-row gap-x-3 rounded-enterprise-sm">
