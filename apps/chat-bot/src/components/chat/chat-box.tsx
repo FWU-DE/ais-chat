@@ -213,6 +213,7 @@ export function ChatBox({
         isSpeechModelEnabled={isSpeechModelEnabled}
         text={plainText}
         isInitialMessage={isInitialMessage}
+        isGenerating={isLastNonUser && status === 'streaming'}
         generateSpeechStreamFn={generateSpeechStreamFn}
         hidden={!showAudioPlayer}
         autoPlayTrigger={autoPlayTrigger}

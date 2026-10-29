@@ -30,6 +30,12 @@ type AudioPlayerProps = {
   isSpeechModelEnabled: boolean;
   isInitialMessage: boolean;
   /**
+   * True while `text` is still being streamed in (not yet the final message content). Manual
+   * playback is disabled during this time, since starting it would synthesize only the current
+   * partial text and `text` is never re-synthesized once playback has started.
+   */
+  isGenerating?: boolean;
+  /**
    * Visually hides the player without unmounting it, so the buffered audio, playback position,
    * and underlying `AudioContext` survive toggling the player closed and back open. Active
    * playback is paused while hidden (resuming where it left off on reopen).
@@ -50,6 +56,7 @@ export default function AudioPlayer({
   generateSpeechStreamFn,
   isSpeechModelEnabled,
   isInitialMessage,
+  isGenerating = false,
   hidden = false,
   autoPlayTrigger = 0,
   className,
@@ -93,6 +100,7 @@ export default function AudioPlayer({
 
   async function handleButtonClick() {
     if (status === 'idle') {
+      if (isGenerating) return;
       if (isStreamFullyLoaded) {
         restart();
       } else {
@@ -115,7 +123,7 @@ export default function AudioPlayer({
         <Button
           variant="ghost"
           size="icon-sm"
-          disabled={status === 'loading'}
+          disabled={status === 'loading' || (status === 'idle' && isGenerating)}
           aria-label={label}
           title={label}
           onClick={() => handleButtonClick()}
