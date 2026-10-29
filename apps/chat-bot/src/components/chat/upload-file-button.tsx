@@ -62,7 +62,7 @@ export default function UploadFileButton({
         className={cn(className, 'disabled:cursor-not-allowed')}
         disabled={isUploadLimitReached}
         type="button"
-        aria-label="Datei hochladen"
+        aria-label={t('upload.upload-input-aria-label')}
         title={
           isUploadLimitReached
             ? t('upload.upload-file-button-disabled', { max_files: NUMBER_OF_FILES_LIMIT })

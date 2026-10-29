@@ -8,16 +8,19 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@ui/components/dropdown-menu';
+import { useTranslations } from 'next-intl';
 import { ProfileMenuContent } from './profile-menu-content';
 
 export default function ProfileMenu({ userAndContext }: { userAndContext?: UserAndContext }) {
+  const t = useTranslations('common');
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="icon-round"
-          aria-label="Profil-Dropdown"
+          aria-label={t('profile-dropdown')}
           className="text-primary"
           title="Profil"
         >

@@ -1,4 +1,8 @@
+import { useTranslations } from 'next-intl';
+
 export function GreenLeafIcon(props: React.ComponentProps<'svg'>) {
+  const t = useTranslations('common');
+
   return (
     <svg
       width="11"
@@ -6,7 +10,7 @@ export function GreenLeafIcon(props: React.ComponentProps<'svg'>) {
       viewBox="0 0 11 10"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="Energieeffizientes Modell"
+      aria-label={t('energy-efficient-model')}
       role="img"
       {...props}
     >

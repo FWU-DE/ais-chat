@@ -24,6 +24,7 @@
     "llm-model": "Sprachmodell",
     "current-language-model": "Aktuelles Sprachmodell",
     "no-language-model-available": "Kein Sprachmodell verfügbar",
+    "energy-efficient-model": "Energieeffizientes Modell",
     "conversation-download": "Konversation herunterladen",
     "send-message-placeholder": "Wie kann ich Dir helfen?",
     "information-disclaimer": "AIS.chat kann Fehler machen. Sei kritisch und überprüfe alle Informationen.",
@@ -75,7 +76,13 @@
     "retry-button": "Erneut versuchen",
     "please-select": "Bitte auswählen",
     "sidebar-toggle-close": "Seitenleiste schließen",
-    "sidebar-toggle-open": "Seitenleiste öffnen"
+    "sidebar-toggle-open": "Seitenleiste öffnen",
+    "profile-dropdown": "Profil-Dropdown"
+  },
+  "chat": {
+    "send-message": "Nachricht abschicken",
+    "chat-textarea": "Chat-Eingabefeld",
+    "stop-generating": "Antwort stoppen"
   },
   "errors": {
     "no-api-key": "Dem Bundesland wurde noch kein API-Schlüssel zugewiesen."
