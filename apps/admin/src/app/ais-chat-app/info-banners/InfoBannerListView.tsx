@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@ui/components/button';
 import {
@@ -22,6 +21,7 @@ import {
   TableRow,
 } from '@ui/components/table';
 import { ROUTES } from '@/consts/routes';
+import { ClickableTableRow } from '@/components/common/ClickableTableRow';
 import { getInfoBannersAction } from './actions';
 import type { InfoBanner } from '@shared/info-banners/info-banner';
 
@@ -90,25 +90,19 @@ export default function InfoBannerListView() {
               <TableHead>Nachricht</TableHead>
               <TableHead>Start</TableHead>
               <TableHead>Ende</TableHead>
-              <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {infoBanners.map((infoBanner) => (
-              <TableRow key={infoBanner.id}>
+              <ClickableTableRow
+                key={infoBanner.id}
+                href={ROUTES.app.infoBannerDetails(infoBanner.id)}
+              >
                 <TableCell>{getTypeLabel(infoBanner.type)}</TableCell>
                 <TableCell>{truncateMessage(infoBanner.message)}</TableCell>
                 <TableCell>{infoBanner.startsAt.toLocaleString()}</TableCell>
                 <TableCell>{infoBanner.endsAt.toLocaleString()}</TableCell>
-                <TableCell>
-                  <Link
-                    href={ROUTES.app.infoBannerDetails(infoBanner.id)}
-                    aria-label={`Details für ${getTypeLabel(infoBanner.type)}-Banner anzeigen`}
-                  >
-                    <Search className="text-primary" />
-                  </Link>
-                </TableCell>
-              </TableRow>
+              </ClickableTableRow>
             ))}
           </TableBody>
         </Table>

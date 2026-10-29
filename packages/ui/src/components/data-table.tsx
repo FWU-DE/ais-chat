@@ -21,7 +21,15 @@ import {
   type SortingState,
 } from '@tanstack/react-table';
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
+import {
+  ClickableTableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './table';
 import { useState } from 'react';
 
 export const dataTableFeatures = tableFeatures({
@@ -46,6 +54,8 @@ interface DataTableProps<TData extends RowData> {
   columns: ColumnDef<DataTableFeatures, TData>[];
   data: TData[];
   rowClickHandler?: (row: TData) => void;
+  /** Set to false when rows contain their own focusable control, to avoid a duplicate tab stop. */
+  focusableRows?: boolean;
   columnFilters?: ColumnFiltersState;
   onColumnFiltersChange?: OnChangeFn<ColumnFiltersState>;
 }
@@ -60,6 +70,7 @@ export function DataTable<TData extends RowData>({
   columns,
   data,
   rowClickHandler,
+  focusableRows = true,
   columnFilters,
   onColumnFiltersChange,
 }: DataTableProps<TData>) {
@@ -96,19 +107,19 @@ export function DataTable<TData extends RowData>({
         <TableBody>
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
-              <TableRow
+              <ClickableTableRow
                 key={row.id}
                 data-testid="data-table-row"
                 data-state={row.getIsSelected() && 'selected'}
-                className="cursor-pointer"
-                onClick={() => rowClickHandler?.(row.original)}
+                onActivate={rowClickHandler && (() => rowClickHandler(row.original))}
+                focusable={focusableRows}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
                     <table.FlexRender cell={cell} />
                   </TableCell>
                 ))}
-              </TableRow>
+              </ClickableTableRow>
             ))
           ) : (
             <TableRow>

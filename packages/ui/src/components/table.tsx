@@ -53,6 +53,40 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
   );
 }
 
+function ClickableTableRow({
+  onActivate,
+  focusable = true,
+  className,
+  ...props
+}: React.ComponentProps<'tr'> & {
+  onActivate?: () => void;
+  /** Set to false when the row contains its own focusable control, to avoid a duplicate tab stop. */
+  focusable?: boolean;
+}) {
+  if (!onActivate) return <TableRow className={className} {...props} />;
+
+  return (
+    <TableRow
+      className={cn(
+        'cursor-pointer',
+        focusable &&
+          'focus-visible:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2',
+        className,
+      )}
+      tabIndex={focusable ? 0 : undefined}
+      onClick={onActivate}
+      onKeyDown={
+        focusable
+          ? (event) => {
+              if (event.target === event.currentTarget && event.key === 'Enter') onActivate();
+            }
+          : undefined
+      }
+      {...props}
+    />
+  );
+}
+
 function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
   return (
     <th
@@ -89,4 +123,14 @@ function TableCaption({ className, ...props }: React.ComponentProps<'caption'>) 
   );
 }
 
-export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption };
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableHead,
+  TableRow,
+  ClickableTableRow,
+  TableCell,
+  TableCaption,
+};
