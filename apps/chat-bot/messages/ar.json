@@ -52,7 +52,7 @@
       "go-to": "انتقل إلى",
       "enter-code": "أدخل الرمز.",
       "open-chat": "فتح محادثة",
-      "use-qr": "امسح رمز QR.",
+      "use-qr": "أو استخدم رمز QR",
       "copy-link": "نسخ رابط البدء",
       "learning-scenario": {
         "sub-header": "سيناريو التعلّم",
@@ -75,7 +75,7 @@
       "analysis": "تحليل",
       "analysis-summary": "ملخص التحليل",
       "done": "تم",
-      "web_search": "بحث في الإنترنت",
+      "web_search": "بحث على الويب",
       "web_scraper": "تمت قراءة صفحة ويب",
       "retrieve_text_chunks": "تمت قراءة مقاطع ذات صلة من الملف",
       "retrieve_text_chunks_prefix": "مصطلحات البحث:",
