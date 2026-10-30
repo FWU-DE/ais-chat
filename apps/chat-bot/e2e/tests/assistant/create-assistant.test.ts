@@ -3,6 +3,7 @@ import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
 import { waitForAutosave, waitForToast } from '../../utils/utils';
 import { sendMessage } from '../../utils/chat';
 import { configureAssistant, createAssistant, deleteAssistant } from '../../utils/assistant';
+import { verifyLicenseInformation } from '../../utils/license-information';
 import { nanoid } from 'nanoid';
 
 test.use({ storageState: AUTH_FILES.teacher });
@@ -151,4 +152,7 @@ test('data is autosaved on blur', async ({ page }) => {
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('prompt-suggestion-1-input')).toHaveValue('New Prompt Suggestion');
+
+  // license information
+  await verifyLicenseInformation(page, '/assistants');
 });
