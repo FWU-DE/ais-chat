@@ -1,5 +1,5 @@
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
-import { getSharedChatExportImageUrl, getSharedChatImageUrl } from '@/utils/shared-chat-files';
+import { getSharedChatImageUrl } from '@/utils/shared-chat-files';
 import { checkInviteCodeForExport } from '@shared/conversation/conversation-service';
 import { dbGetFilesInIds } from '@shared/db/functions/files';
 import { type FileModel } from '@shared/db/schema';
@@ -57,15 +57,13 @@ export async function POST(request: NextRequest) {
             throw new ForbiddenError('Not authorized to access this file');
           }
 
-          return getSharedChatExportImageUrl(
-            getSharedChatImageUrl({
-              fileId: file.id,
-              inviteCode,
-              entityType: file.metadata.entityType,
-              entityId: file.metadata.entityId,
-              sharedSessionId: file.metadata.sessionId,
-            }),
-          );
+          return getSharedChatImageUrl({
+            fileId: file.id,
+            inviteCode,
+            entityType: file.metadata.entityType,
+            entityId: file.metadata.entityId,
+            sharedSessionId: file.metadata.sessionId,
+          });
         },
       }),
     });

@@ -22,8 +22,3 @@ export function getSharedChatImageUrl({
 
   return `/api/v1/shared-chat/files/${fileId}/scaled-image?${params.toString()}`;
 }
-
-export function getSharedChatExportImageUrl(imageUrl: string): string {
-  const separator = imageUrl.includes('?') ? '&' : '?';
-  return `${imageUrl}${separator}export=true`;
-}
