@@ -6,7 +6,7 @@ services:
   # so that a service is reachable under the same URL from within a container and
   # from the browser
   keycloak:
-    image: quay.io/keycloak/keycloak:26.8.1-0
+    image: quay.io/keycloak/keycloak:26.8.1-1
     restart: unless-stopped
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
