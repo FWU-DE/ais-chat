@@ -26,10 +26,10 @@
   "dependencies": {
     "@ais-chat/ai-core": "workspace:*",
     "@ais-chat/shared-core": "workspace:*",
-    "@aws-sdk/client-s3": "3.1154.0",
-    "@aws-sdk/s3-request-presigner": "3.1154.0",
+    "@aws-sdk/client-s3": "3.1156.0",
+    "@aws-sdk/s3-request-presigner": "3.1156.0",
     "@opentelemetry/api": "1.10.0",
-    "@sentry/nextjs": "11.8.0",
+    "@sentry/nextjs": "11.9.0",
     "@t3-oss/env-core": "0.13.11",
     "drizzle-kit": "0.31.11",
     "drizzle-orm": "0.45.4",
@@ -37,12 +37,12 @@
     "ioredis": "6.0.0",
     "linkup-sdk": "3.7.1",
     "nanoid": "6.0.2",
-    "next": "16.4.2",
+    "next": "16.4.3",
     "pg": "8.23.1",
     "rabbitmq-client": "5.1.0",
     "unstorage": "1.17.6",
     "uuid": "14.0.3",
-    "viem": "2.57.7",
+    "viem": "2.57.11",
     "zod": "4.6.7"
   },
   "devDependencies": {

@@ -34,7 +34,7 @@
     "prettier": "3.9.10",
     "prettier-eslint": "17.1.2",
     "react": "19.3.1",
-    "react-hook-form": "7.90.0",
+    "react-hook-form": "7.91.0",
     "tailwindcss": "4.3.3",
     "tailwindcss-animate": "1.0.7",
     "typescript": "6.0.3"
