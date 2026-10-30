@@ -5,7 +5,7 @@ import { generateChatSpeechStream } from '@shared/speech/speech-service';
 import { requiredNonEmptyString } from '@shared/utils/zod';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { buildSpeechStreamResponse } from '../../../utils/response-builder';
+import { buildSpeechStreamResponse } from '../../../utils/speech-stream-response';
 
 const speechRequestSchema = z.object({
   conversationId: z.string().optional(),

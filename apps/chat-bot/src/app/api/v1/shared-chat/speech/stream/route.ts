@@ -5,7 +5,7 @@ import { generateSharedChatSpeechStream } from '@shared/speech/shared-chat-speec
 import { requiredNonEmptyString } from '@shared/utils/zod';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { buildSpeechStreamResponse } from '../../../../utils/response-builder';
+import { buildSpeechStreamResponse } from '../../../../utils/speech-stream-response';
 
 const sharedChatSpeechRequestSchema = z.object({
   inviteCode: requiredNonEmptyString('inviteCode is required'),
