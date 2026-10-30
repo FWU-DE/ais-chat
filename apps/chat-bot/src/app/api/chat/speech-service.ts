@@ -1,11 +1,8 @@
-import {
-  getCachedSpeechPreview,
-  setCachedSpeechPreview,
-} from '@/app/api/utils/speech-preview-cache';
 import type { AudioFormat } from '@ais-chat/ai-core';
 import { generateSpeechById, streamSpeechById } from '@ais-chat/ai-core';
 import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
 import { InvalidArgumentError } from '@shared/error';
+import { getCachedSpeechPreview, setCachedSpeechPreview } from '@shared/speech/speech-cache';
 import { calculateSpeechCostsInCent } from '@shared/speech/utils';
 /**
  * Public result of the chat-facing streaming speech functions.
