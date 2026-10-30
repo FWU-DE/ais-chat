@@ -676,6 +676,13 @@
       "title": "Instruktionen: Beispielhafter Inhalt",
       "close": "Schließen"
     },
+    "license-information": {
+      "heading": "Lizenzinformationen",
+      "heading-tooltip": "Sofern erforderlich, können hier Lizenzinformationen zu verwendeten Medien angegeben werden.",
+      "toggle-aria-label": "Lizenzinformationen ein- oder ausklappen",
+      "copyright-link": "Übersicht zum Urheberrecht",
+      "max-length": "Die Lizenzinformationen dürfen maximal {maxLength} Zeichen lang sein."
+    },
     "web-search": {
       "heading": "Websuche für Aktuelles",
       "heading-tooltip": "Falls aktiviert, sucht AIS.chat automatisch im Internet, sofern aktuelle Informationen nötig sind.",
