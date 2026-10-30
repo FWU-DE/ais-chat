@@ -32,7 +32,7 @@ services:
 
   # Fix keycloak volume permissions (runs with uid 1000)
   fix-keycloak-volume-ownership:
-    image: alpine:3.24.2
+    image: alpine:3.24.3
     restart: no
     entrypoint: /bin/sh -c "chown 1000 /keycloak"
     volumes:
@@ -362,7 +362,7 @@ services:
 
   # Initialization container
   ais-chat-init:
-    image: alpine:3.24.2
+    image: alpine:3.24.3
     restart: no
     environment:
       # Database URLs for both databases
