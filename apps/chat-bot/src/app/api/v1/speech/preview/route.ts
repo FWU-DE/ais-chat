@@ -1,6 +1,6 @@
-import { generateSpeechPreview } from '@/app/api/chat/speech-service';
 import { getUser } from '@/auth/utils';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
+import { generateSpeechPreview } from '@shared/speech/speech-service';
 import { requiredNonEmptyString } from '@shared/utils/zod';
 import { getTranslations } from 'next-intl/server';
 import { NextRequest, NextResponse } from 'next/server';
