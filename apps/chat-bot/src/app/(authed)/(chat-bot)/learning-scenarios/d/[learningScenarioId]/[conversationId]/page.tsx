@@ -96,8 +96,6 @@ export default async function Page(
         <Chat
           id={chat.id}
           initialMessages={chatMessages}
-          initialConversationCreatedAt={chat.createdAt}
-          initialConversationTitle={chat.name}
           learningScenario={learningScenario}
           enableFileUpload={true}
           imageSource={avatarPictureUrl}

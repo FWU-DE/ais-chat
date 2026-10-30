@@ -96,8 +96,6 @@ export default async function Page(props: PageProps<'/d/[conversationId]'>) {
         <Chat
           id={conversation.id}
           initialMessages={convertedMessages}
-          initialConversationCreatedAt={conversation.createdAt}
-          initialConversationTitle={conversation.name}
           initialFileMapping={fileMapping}
           enableFileUpload={true}
           webSourceMapping={webSourceMapping}

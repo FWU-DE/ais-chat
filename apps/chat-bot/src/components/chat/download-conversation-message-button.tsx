@@ -14,6 +14,7 @@ import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import type { ConversationDownloadFile } from './conversation-download-context';
+import { useConversationDownload } from './conversation-download-context';
 
 type DownloadConversationMessageButtonProps = {
   message: ChatMessage;
@@ -26,6 +27,7 @@ type DownloadConversationMessageParams = {
   files: ConversationDownloadFile[];
   characterName?: string;
   modelName?: string;
+  conversationTitle?: string;
 };
 
 export async function fetchConversationMessageDownload({
@@ -33,6 +35,7 @@ export async function fetchConversationMessageDownload({
   files,
   characterName,
   modelName,
+  conversationTitle,
 }: DownloadConversationMessageParams) {
   if (message.createdAt === undefined) {
     throw new Error('Cannot export a message without a creation timestamp');
@@ -42,7 +45,8 @@ export async function fetchConversationMessageDownload({
     messages: [message],
     fileMapping: new Map([[message.id, files]]),
   });
-  const safeName = characterName ?? 'AIS.chat';
+  const gptName = characterName ?? 'AIS.chat';
+  const conversationName = conversationTitle ?? 'Konversation';
 
   return {
     blob: await markdownToDocxBlob(
@@ -52,7 +56,7 @@ export async function fetchConversationMessageDownload({
         modelName: modelName ?? 'AIS.chat',
       }),
     ),
-    fileName: `${createdAt.slice(0, 10)} ${safeName} Antwort.docx`,
+    fileName: `${createdAt.slice(0, 10)} ${gptName} Antwort aus ${conversationName}.docx`,
   };
 }
 
@@ -61,6 +65,7 @@ export default function DownloadConversationMessageButton({
   files,
   characterName,
 }: DownloadConversationMessageButtonProps) {
+  const { data: conversationDownloadData } = useConversationDownload();
   const [isLoading, setIsLoading] = React.useState(false);
   const toast = useToast();
   const tCommon = useTranslations('common');
@@ -73,6 +78,7 @@ export default function DownloadConversationMessageButton({
         message,
         files,
         characterName,
+        conversationTitle: conversationDownloadData?.conversationTitle,
         modelName: message.modelName,
       });
 

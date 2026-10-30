@@ -8,6 +8,12 @@ export async function fetchClientSideConversations(): Promise<ConversationModel[
   }
 
   const data = await response.json();
+  const conversations = data.conversations as ConversationModel[];
 
-  return Array.isArray(data.conversations) ? data.conversations : [];
+  return Array.isArray(conversations)
+    ? conversations.map((conversation) => ({
+        ...conversation,
+        createdAt: new Date(conversation.createdAt),
+      }))
+    : [];
 }
