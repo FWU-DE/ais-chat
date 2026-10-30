@@ -1,6 +1,7 @@
 'use client';
 
 import { refetchFileMapping } from '@/app/(authed)/(chat-bot)/actions';
+import { fetchClientSideConversations } from '@/app/(authed)/(chat-bot)/utils';
 import { getErrorMessageByType } from '@/error/get-error-message-by-type';
 import { useAutoScroll } from '@/hooks/use-auto-scroll';
 import { useMainChat, type ChatMessage } from '@/hooks/use-chat-hooks';
@@ -18,7 +19,8 @@ import {
 } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import { logDebug, logError, logWarning } from '@shared/logging';
-import { useQueryClient } from '@tanstack/react-query';
+import { isToolRelatedMessage } from '@shared/utils/tool-related-message';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import React, { ReactNode, SyntheticEvent, useEffect, useState } from 'react';
@@ -29,6 +31,7 @@ import { useLlmModels } from '../providers/llm-model-provider';
 import { useUserSettings } from '../providers/user-settings-provider';
 import { AssistantIcon } from './assistant-icon';
 import { ChatInputBox } from './chat-input-box';
+import { useConversationDownload } from './conversation-download-context';
 import { ErrorChatPlaceholder } from './error-chat-placeholder';
 import { FloatingText } from './floating-text';
 import { InitialChatContentDisplay } from './initial-content-display';
@@ -68,8 +71,21 @@ export default function Chat({
   const tLearningScenarioShared = useTranslations('learning-scenarios.shared');
 
   const federalState = useFederalState();
-  const { selectedModel, setDownloadConversationEnabled } = useLlmModels();
+  const { models, selectedModel, setDownloadConversationEnabled } = useLlmModels();
   const { settings } = useUserSettings();
+  const { setData: setConversationDownloadData } = useConversationDownload();
+  const { data: conversations } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: fetchClientSideConversations,
+  });
+  const conversation = conversations?.find((conversation) => conversation.id === id);
+  const [chatInitialMessages] = useState(() =>
+    initialMessages.map((message) => ({
+      ...message,
+      modelName:
+        models.find((model) => model.name === message.modelName)?.displayName ?? message.modelName,
+    })),
+  );
   const entitySpeechEnabled =
     assistant?.isSpeechEnabled ?? character?.isSpeechEnabled ?? learningScenario?.isSpeechEnabled;
   const entitySpeechOnly =
@@ -97,7 +113,10 @@ export default function Chat({
   const session = useSession();
 
   function refetchConversations() {
-    void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    void queryClient.fetchQuery({
+      queryKey: ['conversations'],
+      queryFn: fetchClientSideConversations,
+    });
   }
 
   // Ref to hold pending files that will be associated with the next user message
@@ -122,8 +141,9 @@ export default function Chat({
     error,
   } = useMainChat({
     conversationId: id,
-    initialMessages: initialMessages,
+    initialMessages: chatInitialMessages,
     modelId: selectedModel?.id,
+    modelName: selectedModel?.displayName,
     characterId: character?.id,
     learningScenarioId: learningScenario?.id,
     assistantId: assistant?.id,
@@ -182,6 +202,25 @@ export default function Chat({
   useEffect(() => {
     pendingFileMappingRef.current = pendingFileMapping;
   }, [pendingFileMapping]);
+
+  useEffect(() => {
+    const downloadFileMapping = new Map(fileMapping);
+    for (const [messageId, files] of pendingFileMapping) {
+      downloadFileMapping.set(messageId, files);
+    }
+
+    if (conversation === undefined) {
+      setConversationDownloadData(undefined);
+      return;
+    }
+
+    setConversationDownloadData({
+      messages: messages.filter((message) => !isToolRelatedMessage(message)),
+      fileMapping: downloadFileMapping,
+      createdAt: conversation.createdAt,
+      conversationTitle: conversation.name ?? undefined,
+    });
+  }, [conversation, fileMapping, messages, pendingFileMapping, setConversationDownloadData]);
 
   // Blob URLs stay usable for the whole session, so they are kept once the files are persisted
   // and only revoked on unmount.

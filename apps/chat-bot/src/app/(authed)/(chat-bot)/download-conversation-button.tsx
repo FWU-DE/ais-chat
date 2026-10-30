@@ -1,9 +1,17 @@
 'use client';
 
+import {
+  type ConversationDownloadData,
+  useConversationDownload,
+} from '@/components/chat/conversation-download-context';
 import { useToast } from '@/components/common/toast';
 import Spinner from '@/components/icons/spinner';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
-import { formatConversationExport, markdownToDocxBlob } from '@/utils/files/markdown-docx';
+import {
+  createConversationExportMessages,
+  formatConversationExport,
+  markdownToDocxBlob,
+} from '@/utils/files/markdown-docx';
 import { cn } from '@/utils/tailwind';
 import { BoxArrowDownIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
@@ -11,7 +19,6 @@ import { useTranslations } from 'next-intl';
 import React from 'react';
 
 type DownloadConversationButtonProps = {
-  conversationId: string;
   characterName?: string;
   disabled: boolean;
   showText?: boolean;
@@ -19,75 +26,75 @@ type DownloadConversationButtonProps = {
 };
 
 type DownloadConversationParams = {
-  conversationId: string;
+  messages: Parameters<typeof createConversationExportMessages>[0]['messages'];
+  fileMapping: Parameters<typeof createConversationExportMessages>[0]['fileMapping'];
+  createdAt: Date;
+  conversationTitle?: string;
   characterName?: string;
+  modelName?: string;
 };
 
 export async function fetchConversationDownload({
-  conversationId,
+  messages,
+  fileMapping,
+  createdAt,
+  conversationTitle,
   characterName,
+  modelName,
 }: DownloadConversationParams) {
-  const searchParams = new URLSearchParams({
-    conversationId,
-  });
-
-  if (characterName !== undefined) {
-    searchParams.append('enterpriseGptName', characterName);
-  }
-
-  const response = await fetch(`/api/download-conversation?${searchParams.toString()}`);
-
-  if (!response.ok) {
-    throw new Error('Failed to download the document');
-  }
-
-  const responseData = (await response.json()) as {
-    fileName: string;
-    conversationTitle: string | null;
-    createdAt: string;
-    modelName: string;
-    messages: Array<{
-      role: string;
-      content: string;
-      images: Array<{ alt: string; url: string }>;
-    }>;
-  };
-  const { fileName, conversationTitle, createdAt, modelName, messages } = responseData;
+  const exportMessages = createConversationExportMessages({ messages, fileMapping });
+  const createdAtISOString = createdAt.toISOString();
+  const gptName = characterName ?? 'AIS.chat';
+  const conversationName = conversationTitle ?? 'Konversation';
 
   return {
     blob: await markdownToDocxBlob(
       formatConversationExport({
-        messages,
-        createdAt,
-        modelName,
-        conversationTitle: conversationTitle ?? undefined,
+        messages: exportMessages,
+        createdAt: createdAtISOString,
+        modelName: modelName ?? 'AIS.chat',
+        conversationTitle,
       }),
     ),
-    fileName,
+    fileName: `${createdAtISOString.slice(0, 10)} ${gptName} Gespräch über ${conversationName}.docx`,
   };
 }
 
+export function getLastAssistantModelName(messages: ConversationDownloadData['messages']) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message?.role === 'assistant' && message.modelName !== undefined) {
+      return message.modelName;
+    }
+  }
+}
+
 export default function DownloadConversationButton({
-  conversationId,
   characterName,
   disabled = true,
   showText = false,
   className,
 }: DownloadConversationButtonProps) {
+  const { data } = useConversationDownload();
   const [isLoading, setIsLoading] = React.useState(false);
   const toast = useToast();
   const tCommon = useTranslations('common');
+  const isDisabled = disabled || data === undefined;
 
   async function handleDownload() {
-    if (disabled) {
+    if (isDisabled) {
       return;
     }
     try {
       setIsLoading(true);
 
       const { blob, fileName } = await fetchConversationDownload({
-        conversationId,
+        messages: data.messages,
+        fileMapping: data.fileMapping,
+        createdAt: data.createdAt,
+        conversationTitle: data.conversationTitle,
         characterName,
+        modelName: getLastAssistantModelName(data.messages),
       });
 
       downloadFileFromBlob(blob, fileName);
@@ -107,7 +114,7 @@ export default function DownloadConversationButton({
       className={cn('text-primary', className)}
       title={t('conversation-download')}
       onClick={handleDownload}
-      disabled={disabled}
+      disabled={isDisabled}
     >
       {isLoading ? (
         <Spinner className="p-2 size-8" />
