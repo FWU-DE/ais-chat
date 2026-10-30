@@ -3,6 +3,7 @@ import { renderPlotPng } from '@/components/chat/plot/png-export';
 import { getRenderedPlot } from '@/components/chat/plot/rendered-plots';
 import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
 import { parsePlotSpec, type BoundingBox } from '@/utils/plot/plot-spec';
+import type { ParagraphChild } from 'docx';
 import {
   AlignmentType,
   BorderStyle,
@@ -11,6 +12,7 @@ import {
   Table,
   TableBorders,
   TableCell,
+  TableOfContents,
   TableRow,
   TextRun,
   WidthType,
@@ -153,10 +155,19 @@ const styledBlocksPlugin: RemarkDocxPlugin = async () => ({
                   children: [
                     new Paragraph({
                       alignment: textAlign?.[index] ?? AlignmentType.LEFT,
-                      children: context.render(cell.children, {
-                        ...context,
-                        rtl: undefined,
-                      }),
+                      children: context
+                        .render(cell.children, {
+                          ...context,
+                          rtl: undefined,
+                        })
+                        .filter(
+                          (child): child is ParagraphChild =>
+                            !(
+                              child instanceof Paragraph ||
+                              child instanceof Table ||
+                              child instanceof TableOfContents
+                            ),
+                        ),
                     }),
                   ],
                 }),
@@ -273,7 +284,18 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
       const imageKey = plotExportMetadata.get(node)?.imageKey;
       return !plotCodeNodes.has(node) || imageKey === undefined || !context.images.has(imageKey)
         ? null
-        : new Paragraph({ children: context.render([{ type: 'image', url: imageKey }]) });
+        : new Paragraph({
+            children: context
+              .render([{ type: 'image', url: imageKey }])
+              .filter(
+                (child): child is ParagraphChild =>
+                  !(
+                    child instanceof Paragraph ||
+                    child instanceof Table ||
+                    child instanceof TableOfContents
+                  ),
+              ),
+          });
     },
   };
 };
