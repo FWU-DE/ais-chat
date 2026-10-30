@@ -1,11 +1,11 @@
 import { TRUNCATE_IMAGE_HEIGHT } from '@/const';
-import { FileMetadata, FileModel } from '@shared/db/schema';
-import { getFileFromS3, getReadOnlySignedUrl } from '@shared/s3';
 import { isImageFile } from '@/utils/files/generic';
 import { getImageContentType, streamToBase64 } from '@/utils/files/image-data';
-import sharp from 'sharp';
-import { logError } from '@shared/logging';
 import { ChatAttachment } from '@ais-chat/ai-core';
+import { FileMetadata, FileModel } from '@shared/db/schema';
+import { logError } from '@shared/logging';
+import { getFileFromS3, getReadOnlySignedUrl } from '@shared/s3';
+import sharp from 'sharp';
 import { measureImageProcessing } from './image-processing-metrics';
 
 export type ChatAttachmentWithMessageId = ChatAttachment & {

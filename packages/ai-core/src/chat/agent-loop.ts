@@ -27,9 +27,16 @@ const toolCallDuration = metrics
 const generationRssDelta = metrics
   .getMeter('ais-chat.gen_ai', '0.0.1')
   .createHistogram('ai_generation_rss_delta', {
-    description: 'Process RSS change across a single agent loop run',
+    description: 'Magnitude of the process RSS change across a single agent loop run',
     unit: 'By',
   });
+
+/** The SDK drops negative histogram values, so the sign has to travel as an attribute. */
+function memoryDirection(delta: number): 'increase' | 'decrease' | 'unchanged' {
+  if (delta > 0) return 'increase';
+  if (delta < 0) return 'decrease';
+  return 'unchanged';
+}
 
 function logError(message: string, error: unknown) {
   console.error(message, error);
@@ -113,8 +120,11 @@ export function runAgentLoop({
     // Attributes stay free of prompts, completions and user identifiers by design.
     // The histogram's own count series carries the per-outcome run count, so no extra counter.
     const recordOutcome = (outcome: 'success' | 'error' | 'aborted', error?: Error) => {
-      generationRssDelta.record(process.memoryUsage().rss - rssBefore, {
+      const rssDelta = process.memoryUsage().rss - rssBefore;
+
+      generationRssDelta.record(Math.abs(rssDelta), {
         outcome,
+        'memory.direction': memoryDirection(rssDelta),
         'gen_ai.agent.name': agentName,
         'gen_ai.request.model': modelSelection.modelName,
         ...(error ? { 'error.type': error.name } : {}),

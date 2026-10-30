@@ -15,8 +15,7 @@ const MIB = 1024 * 1024;
 
 /**
  * The SDK default boundaries top out at 10000, which collapses every byte-scale sample into the
- * +Inf bucket. Negative boundaries matter because a memory delta can be negative when GC runs
- * during the measured operation.
+ * +Inf bucket. Byte histograms carry magnitudes only, because the SDK drops negative values.
  */
 const byteHistogramView: ViewOptions = {
   instrumentType: InstrumentType.HISTOGRAM,
@@ -25,9 +24,6 @@ const byteHistogramView: ViewOptions = {
     type: AggregationType.EXPLICIT_BUCKET_HISTOGRAM,
     options: {
       boundaries: [
-        -100 * MIB,
-        -25 * MIB,
-        -5 * MIB,
         0,
         MIB,
         5 * MIB,
