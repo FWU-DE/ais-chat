@@ -93,6 +93,7 @@ export const mockLearningScenario = (): LearningScenarioSelectModel => {
     modelId: generateUUID(),
     userId: generateUUID(),
     studentExercise: generateRandomString(10),
+    licenseInformation: '',
     attachedLinks: [],
     filterGroup: {
       school_types: [],
@@ -174,6 +175,7 @@ export const mockCharacter = (): CharacterSelectModel => {
     restrictions: generateRandomString(10),
     pictureId: generateUUID(),
     initialMessage: generateRandomString(10),
+    licenseInformation: '',
     isSchoolShared: false,
     isCommunityShared: false,
     isGlobal: false,
