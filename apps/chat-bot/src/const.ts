@@ -48,6 +48,10 @@ export const AVATAR_MAX_SIZE = 340;
 export const TRUNCATE_IMAGE_HEIGHT = 720;
 
 export const MAX_FILE_SIZE = 20_000_000; // 20MB
+
+/** Upper bound for the requested dimensions of a scaled image, to cap decoding work per request. */
+export const MAX_SCALED_IMAGE_DIMENSION = 1000;
+
 export const EMBEDDING_BATCH_SIZE = 100;
 
 /**

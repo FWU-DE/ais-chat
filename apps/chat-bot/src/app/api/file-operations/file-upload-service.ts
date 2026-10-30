@@ -1,12 +1,13 @@
-import { isSupportedImageExtension } from '@/const';
-import { getFileExtension } from '@/utils/files/generic';
-import { FileMetadata } from '@shared/db/schema';
-import { cnanoid } from '@shared/random/randomService';
-import { preprocessImage } from './preprocess-image';
-import { uploadMessageAttachment } from '@shared/files/fileService';
+import { isSupportedImageExtension, MAX_FILE_SIZE } from '@/const';
+import { parseSupportedFileExtension } from '@/utils/files/generic';
 import { dbInsertFileWithChunks } from '@shared/db/functions/files';
+import { FileMetadata } from '@shared/db/schema';
+import { InvalidArgumentError } from '@shared/error';
+import { uploadMessageAttachment } from '@shared/files/fileService';
+import { cnanoid } from '@shared/random/randomService';
 import { fileExtractionXberg } from '../file-extraction/file-extraction-xberg';
 import { chunkAndEmbed } from '../rag/rag-service';
+import { preprocessImage } from './preprocess-image';
 
 /**
  *
@@ -28,10 +29,21 @@ export async function uploadFile({
   userId: string | null;
   federalStateId: string;
 }): Promise<string> {
+  // Both guards run before the body is read, so a rejected upload is never materialised in memory.
+  const fileExtension = parseSupportedFileExtension(file.name);
+  if (fileExtension === undefined) {
+    throw new InvalidArgumentError('Unsupported file type');
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    throw new InvalidArgumentError(
+      `File exceeds the maximum size of ${MAX_FILE_SIZE} bytes: ${file.size}`,
+    );
+  }
+
   const fileId = `file_${cnanoid()}`;
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
-  const fileExtension = getFileExtension(file.name);
 
   if (isSupportedImageExtension(fileExtension)) {
     return uploadImageFile({

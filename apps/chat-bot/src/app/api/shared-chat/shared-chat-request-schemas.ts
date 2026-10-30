@@ -1,5 +1,6 @@
-import { z } from 'zod';
+import { MAX_SCALED_IMAGE_DIMENSION } from '@/const';
 import { requiredNonEmptyString } from '@shared/utils/zod';
+import { z } from 'zod';
 
 export const sharedChatCommonRequestSchema = z.object({
   inviteCode: requiredNonEmptyString('inviteCode is required'),
@@ -16,8 +17,8 @@ export const sharedChatUploadFormSchema = sharedChatCommonRequestSchema.extend({
 
 export const sharedChatImageRequestSchema = sharedChatCommonRequestSchema.extend({
   fileId: requiredNonEmptyString('fileId is required'),
-  width: z.coerce.number().int().positive().max(1000),
-  height: z.coerce.number().int().positive().max(1000),
+  width: z.coerce.number().int().positive().max(MAX_SCALED_IMAGE_DIMENSION),
+  height: z.coerce.number().int().positive().max(MAX_SCALED_IMAGE_DIMENSION),
 });
 
 export const sharedChatSpeechRequestSchema = z.object({
