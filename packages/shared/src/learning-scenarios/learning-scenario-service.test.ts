@@ -1537,6 +1537,7 @@ describe('learning-scenario-service', () => {
           languages: [],
         },
         studentExercise: '',
+        licenseInformation: '',
         additionalInstructions: null,
         restrictions: null,
         attachedLinks: [],

@@ -33,6 +33,7 @@ import { CustomChatCreateSuspensionRequestButton } from '@/components/custom-cha
 import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-author-info';
 import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
 import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-chat-filter-display-section';
+import { CustomChatLicenseInformationView } from '@/components/custom-chat/license-information/custom-chat-license-information-view';
 import { extractFilterValues } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import { FieldGroup } from '@ui/components/field';
 import { CustomChatWebSearchView } from '@/components/custom-chat/web-search/custom-chat-web-search-view';
@@ -209,6 +210,9 @@ export function LearningScenarioView({
                 value={learningScenario.studentExercise}
               />
               <FilterDisplaySection values={filterValues} />
+              <CustomChatLicenseInformationView
+                licenseInformation={learningScenario.licenseInformation}
+              />
             </FieldGroup>
           </CardContent>
         </Card>

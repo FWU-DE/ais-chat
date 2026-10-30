@@ -3,6 +3,7 @@ export const TEXT_INPUT_FIELDS_LENGTH_LIMIT = 500;
 export const TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS = 50_000;
 export const CHAT_MESSAGE_LENGTH_LIMIT = 50_000;
 export const SMALL_TEXT_INPUT_FIELDS_LIMIT = 50;
+export const LICENSE_INFORMATION_LENGTH_LIMIT = 2000;
 
 // Web scraper
 export const WEB_SCRAPE_RESULT_LENGTH_LIMIT = 6000; // Maximum total characters from a single web scrape result (~4 DIN A4 pages)

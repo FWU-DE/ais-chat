@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  LICENSE_INFORMATION_LENGTH_LIMIT,
   SMALL_TEXT_INPUT_FIELDS_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS,
@@ -81,6 +82,7 @@ import {
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
 import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
+import { CustomChatLicenseInformationEditView } from '@/components/custom-chat/license-information/custom-chat-license-information-edit-view';
 import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
 import { resolveInitialVoice } from '@/components/custom-chat/speech/resolve-initial-voice';
 
@@ -122,6 +124,7 @@ function createLearningScenarioFormValuesSchema(t: LearningScenarioTranslator) {
     description: z.string(),
     additionalInstructions: z.string(),
     studentExercise: z.string(),
+    licenseInformation: z.string().max(LICENSE_INFORMATION_LENGTH_LIMIT),
     modelId: z.string(),
     schoolTypes: z.array(schoolTypesSchema),
     gradeRanges: z.array(gradeRangesSchema),
@@ -192,6 +195,7 @@ export function LearningScenarioEdit({
     description: learningScenario.description ?? '',
     additionalInstructions: learningScenario.additionalInstructions ?? '',
     studentExercise: learningScenario.studentExercise ?? '',
+    licenseInformation: learningScenario.licenseInformation,
     modelId: selectedModelId ?? '',
     schoolTypes: filterValues.schoolTypes,
     gradeRanges: filterValues.gradeRanges,
@@ -232,7 +236,11 @@ export function LearningScenarioEdit({
       isDirty,
       getValues,
       reset: (values) => {
-        reset({ ...values, name: values.name.trim() });
+        reset({
+          ...values,
+          name: values.name.trim(),
+          licenseInformation: values.licenseInformation.trimEnd(),
+        });
       },
       validate: trigger,
       saveValues: async (data) => {
@@ -244,6 +252,7 @@ export function LearningScenarioEdit({
             name: data.name.trim(),
             description: data.description ?? '',
             studentExercise: data.studentExercise ?? '',
+            licenseInformation: data.licenseInformation.trimEnd(),
             filterGroup: toFilterGroup(data),
             attachedLinks: attachedLinksRef.current,
           },
@@ -657,6 +666,7 @@ export function LearningScenarioEdit({
                 void flushAutoSave();
               }}
             />
+            <CustomChatLicenseInformationEditView control={control} onBlur={handleAutoSave} />
           </form>
         </div>
       </CustomChatLayoutContainer>

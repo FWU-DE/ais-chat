@@ -715,6 +715,13 @@
       "when": 1792677379276,
       "tag": "0101_crazy_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1793351718720,
+      "tag": "0102_absurd_shockwave",
+      "breakpoints": true
     }
   ]
 }
