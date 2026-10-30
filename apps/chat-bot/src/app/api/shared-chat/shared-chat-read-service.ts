@@ -29,7 +29,9 @@ export async function verifySharedChatImageAccess({
   });
 
   if (allowEnded) {
+    // User should still be able to access files even if the chat has ended, as long as it is not deleted or suspended
     verify.sharedChatIsNotDeleted(entity);
+    verify.sharedChatIsNotSuspended(entity);
   } else {
     verify.sharedChatEntityIsAccessible(entity);
   }
