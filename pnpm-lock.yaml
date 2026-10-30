@@ -243,8 +243,8 @@ importers:
         specifier: 1.64.1
         version: 1.64.1
       '@sentry/esbuild-plugin':
-        specifier: 11.8.0
-        version: 11.8.0(@babel/core@7.29.7)(rollup@4.64.7)(webpack@5.111.1(@swc/core@1.16.13(@swc/helpers@0.5.23))(esbuild@0.28.2)(postcss@8.5.25))
+        specifier: 11.9.0
+        version: 11.9.0(rollup@4.64.7)(webpack@5.111.1(@swc/core@1.16.13(@swc/helpers@0.5.23))(esbuild@0.28.2)(postcss@8.5.25))
       '@types/node':
         specifier: 24.19.2
         version: 24.19.2
@@ -4472,6 +4472,18 @@ packages:
       webpack:
         optional: true
 
+  '@sentry/bundler-plugins@11.9.0':
+    resolution: {integrity: sha512-wpz/gcM/6rld/wb4Mhf8kbDN9ngG5myKQSZC+45gzqR1w+GcdfVnYkp3sHL9AV4mrwL8skhTItdUghMwMTknKg==}
+    engines: {node: '>=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0'}
+    peerDependencies:
+      rollup: '>=3.2.0'
+      webpack: '>=5.1.0'
+    peerDependenciesMeta:
+      rollup:
+        optional: true
+      webpack:
+        optional: true
+
   '@sentry/cloudflare@11.8.0':
     resolution: {integrity: sha512-Xcj2ofSWL/p3IC+2K/Y2keu+hPgY8v08nnsXnpRm+iMoOoNC6x5pbdk6T8smoiFPPghAUBWNBYNqBaKWsgfipg==}
     engines: {node: '>=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0'}
@@ -4495,8 +4507,12 @@ packages:
     resolution: {integrity: sha512-4MVTthk6C/1oQFjbVIfygHyNkx2YGbwNLml0kJji0vjJXy6ZNls9zdIp0FTBTi4e3189IcSc5OXD4qcJdmEeKA==}
     engines: {node: '>=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0'}
 
-  '@sentry/esbuild-plugin@11.8.0':
-    resolution: {integrity: sha512-e/qu/Dfjrs67lyGdx+35Hyb83cuhW2Aw06ve2D4I2ySkcIwfwOJEuGHhmRO2o+g/mUdxn9hvNP344wGyXyrWhA==}
+  '@sentry/core@11.9.0':
+    resolution: {integrity: sha512-t0dZyHILt2XVC4Fe9UmAty6YRfOuQv95cvWeNl+HlW4LphjF5/jkALV3cJCUMdhpblYELgIJC4U/S/GoYuI2bA==}
+    engines: {node: '>=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0'}
+
+  '@sentry/esbuild-plugin@11.9.0':
+    resolution: {integrity: sha512-BXh9HURoqBXhdcZ2vUvDehyZoZIsQi5N0plmFG2foYWhqladz84KsgKAQ7uWXeleWyxhkOntzSEelxEoezfaGQ==}
     engines: {node: '>=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0'}
 
   '@sentry/feedback@11.8.0':
@@ -13791,6 +13807,19 @@ snapshots:
       rollup: 4.64.7
       webpack: 5.111.1(esbuild@0.28.2)(postcss@8.5.31)
 
+  '@sentry/bundler-plugins@11.9.0(rollup@4.64.7)(webpack@5.111.1(@swc/core@1.16.13(@swc/helpers@0.5.23))(esbuild@0.28.2)(postcss@8.5.25))':
+    dependencies:
+      '@sentry/core': 11.9.0
+      dotenv: 17.4.2
+      glob: 13.0.6
+      magic-string: 1.4.3
+      oxc-parser: 0.152.0
+      sentry: 0.45.0
+      supports-color: 8.1.1
+    optionalDependencies:
+      rollup: 4.64.7
+      webpack: 5.111.1(@swc/core@1.16.13(@swc/helpers@0.5.23))(esbuild@0.28.2)(postcss@8.5.25)
+
   '@sentry/cloudflare@11.8.0(vite@8.3.1(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))':
     dependencies:
       '@opentelemetry/api': 1.10.0
@@ -13808,11 +13837,14 @@ snapshots:
     dependencies:
       '@sentry/conventions': 0.27.0
 
-  '@sentry/esbuild-plugin@11.8.0(@babel/core@7.29.7)(rollup@4.64.7)(webpack@5.111.1(@swc/core@1.16.13(@swc/helpers@0.5.23))(esbuild@0.28.2)(postcss@8.5.25))':
+  '@sentry/core@11.9.0':
     dependencies:
-      '@sentry/bundler-plugins': 11.8.0(@babel/core@7.29.7)(rollup@4.64.7)(webpack@5.111.1(@swc/core@1.16.13(@swc/helpers@0.5.23))(esbuild@0.28.2)(postcss@8.5.25))
+      '@sentry/conventions': 0.27.0
+
+  '@sentry/esbuild-plugin@11.9.0(rollup@4.64.7)(webpack@5.111.1(@swc/core@1.16.13(@swc/helpers@0.5.23))(esbuild@0.28.2)(postcss@8.5.25))':
+    dependencies:
+      '@sentry/bundler-plugins': 11.9.0(rollup@4.64.7)(webpack@5.111.1(@swc/core@1.16.13(@swc/helpers@0.5.23))(esbuild@0.28.2)(postcss@8.5.25))
     transitivePeerDependencies:
-      - '@babel/core'
       - rollup
       - webpack
 
