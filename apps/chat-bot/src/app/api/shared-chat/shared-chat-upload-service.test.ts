@@ -159,7 +159,7 @@ describe('uploadSharedChatFile', () => {
     );
   });
 
-  it('rejects an oversized upload before reading the body', async () => {
+  it('rejects an oversized upload before copying it into a buffer', async () => {
     mocks.dbGetCharacterByIdAndInviteCodeMock.mockResolvedValue(validEntity);
 
     const { uploadSharedChatFile } = await import('./shared-chat-upload-service');
@@ -182,7 +182,7 @@ describe('uploadSharedChatFile', () => {
     expect(mocks.preprocessImageMock).not.toHaveBeenCalled();
   });
 
-  it('rejects an unsupported file type before reading the body', async () => {
+  it('rejects an unsupported file type before copying it into a buffer', async () => {
     mocks.dbGetCharacterByIdAndInviteCodeMock.mockResolvedValue(validEntity);
 
     const { uploadSharedChatFile } = await import('./shared-chat-upload-service');

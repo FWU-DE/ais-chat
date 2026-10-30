@@ -29,7 +29,8 @@ export async function uploadFile({
   userId: string | null;
   federalStateId: string;
 }): Promise<string> {
-  // Both guards run before the body is read, so a rejected upload is never materialised in memory.
+  // The routes already buffered the multipart body; rejecting here still avoids the arrayBuffer
+  // copy, image decoding, text extraction and S3 upload.
   const fileExtension = parseSupportedFileExtension(file.name);
   if (fileExtension === undefined) {
     throw new InvalidArgumentError('Unsupported file type');
