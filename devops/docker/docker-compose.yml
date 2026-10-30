@@ -61,7 +61,7 @@ services:
 
   # Valkey (Redis-compatible) for session storage
   valkey:
-    image: ghcr.io/valkey-io/valkey:9.1.2-alpine
+    image: ghcr.io/valkey-io/valkey:9.1.3-alpine
     restart: unless-stopped
     volumes:
       - valkey_data:/data
