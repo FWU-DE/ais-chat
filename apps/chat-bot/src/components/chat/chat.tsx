@@ -17,10 +17,10 @@ import {
   type CharacterSelectModel,
   type LearningScenarioSelectModel,
 } from '@shared/db/schema';
-import { ConversationModel, WebSource } from '@shared/db/types';
+import { WebSource } from '@shared/db/types';
 import { logDebug, logError, logWarning } from '@shared/logging';
 import { isToolRelatedMessage } from '@shared/utils/tool-related-message';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import React, { ReactNode, SyntheticEvent, useEffect, useState } from 'react';
@@ -42,8 +42,6 @@ import PromptSuggestions from './prompt-suggestions';
 type ChatProps = {
   id: string;
   initialMessages: ChatMessage[];
-  initialConversationCreatedAt?: Date;
-  initialConversationTitle?: string | null;
   assistant?: AssistantSelectModel;
   character?: CharacterSelectModel;
   learningScenario?: LearningScenarioSelectModel;
@@ -58,8 +56,6 @@ type ChatProps = {
 export default function Chat({
   id,
   initialMessages,
-  initialConversationCreatedAt,
-  initialConversationTitle,
   assistant,
   character,
   learningScenario,
@@ -78,8 +74,11 @@ export default function Chat({
   const { models, selectedModel, setDownloadConversationEnabled } = useLlmModels();
   const { settings } = useUserSettings();
   const { setData: setConversationDownloadData } = useConversationDownload();
-  const [conversationCreatedAt] = useState(() => initialConversationCreatedAt ?? new Date());
-  const [conversationTitle, setConversationTitle] = useState(initialConversationTitle ?? undefined);
+  const { data: conversations } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: fetchClientSideConversations,
+  });
+  const conversation = conversations?.find((conversation) => conversation.id === id);
   const [chatInitialMessages] = useState(() =>
     initialMessages.map((message) => ({
       ...message,
@@ -114,13 +113,10 @@ export default function Chat({
   const session = useSession();
 
   function refetchConversations() {
-    void queryClient
-      .fetchQuery({ queryKey: ['conversations'], queryFn: fetchClientSideConversations })
-      .then((conversations: ConversationModel[]) => {
-        setConversationTitle(
-          conversations.find((conversation) => conversation.id === id)?.name ?? undefined,
-        );
-      });
+    void queryClient.fetchQuery({
+      queryKey: ['conversations'],
+      queryFn: fetchClientSideConversations,
+    });
   }
 
   // Ref to hold pending files that will be associated with the next user message
@@ -212,20 +208,19 @@ export default function Chat({
     for (const [messageId, files] of pendingFileMapping) {
       downloadFileMapping.set(messageId, files);
     }
+
+    if (conversation === undefined) {
+      setConversationDownloadData(undefined);
+      return;
+    }
+
     setConversationDownloadData({
       messages: messages.filter((message) => !isToolRelatedMessage(message)),
       fileMapping: downloadFileMapping,
-      createdAt: conversationCreatedAt,
-      conversationTitle,
+      createdAt: conversation.createdAt,
+      conversationTitle: conversation.name ?? undefined,
     });
-  }, [
-    conversationCreatedAt,
-    conversationTitle,
-    fileMapping,
-    messages,
-    pendingFileMapping,
-    setConversationDownloadData,
-  ]);
+  }, [conversation, fileMapping, messages, pendingFileMapping, setConversationDownloadData]);
 
   // Blob URLs stay usable for the whole session, so they are kept once the files are persisted
   // and only revoked on unmount.

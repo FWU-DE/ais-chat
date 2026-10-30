@@ -10,6 +10,7 @@ import {
   formatConversationExport,
   markdownToDocxBlob,
 } from '@/utils/files/markdown-docx';
+import { formatDateToDayMonthYear } from '@shared/utils/date';
 import { BoxArrowDownIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
@@ -43,7 +44,13 @@ export async function fetchSharedConversationDownload({
     messages: conversationMessages,
     fileMapping,
   });
-  const fileName = `${new Date().toISOString().slice(0, 10)}-AIS.chat-Konversation.docx`;
+  const currentDate = formatDateToDayMonthYear(new Date());
+  const fileName =
+    characterName !== undefined
+      ? `${currentDate}-Gespräch mit ${characterName}.docx`
+      : sharedConversationName !== undefined
+        ? `${currentDate}-Dialog über ${sharedConversationName}.docx`
+        : 'AIS-chat-Konversation.docx';
 
   return {
     blob: await markdownToDocxBlob(

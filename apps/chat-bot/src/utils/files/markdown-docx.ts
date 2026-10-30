@@ -3,7 +3,9 @@ import { createBoard } from '@/components/chat/plot/jsxgraph-board';
 import { renderPlotPng } from '@/components/chat/plot/png-export';
 import { getRenderedPlot } from '@/components/chat/plot/rendered-plots';
 import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
+import { isImageFile } from '@/utils/files/generic';
 import { parsePlotSpec, type BoundingBox } from '@/utils/plot/plot-spec';
+import { logWarning } from '@shared/logging';
 import type { ParagraphChild } from 'docx';
 import {
   AlignmentType,
@@ -223,67 +225,63 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
         return;
       }
 
-      const renderedPlot = getRenderedPlot(parsed.spec);
-      if (renderedPlot !== undefined) {
-        const { width: renderedWidth, height: renderedHeight } =
-          renderedPlot.getBoundingClientRect();
-        const scale = Math.min(
-          PLOT_IMAGE_WIDTH / renderedWidth,
-          PLOT_IMAGE_MAX_HEIGHT / renderedHeight,
-        );
-        const width = Math.round(renderedWidth * scale);
-        const height = Math.round(renderedHeight * scale);
-        const png = await renderPlotPng(renderedPlot);
-        images.set(imageKey, {
-          type: 'png',
-          width,
-          height,
-          data: await png.arrayBuffer(),
-        });
-        return;
-      }
-
-      const { width, height } = getPlotImageDimensions(
-        parsed.spec.board.boundingBox ?? DEFAULT_PLOT_BOUNDING_BOX,
-      );
-      const container = document.createElement('div');
-      container.style.cssText = `position:fixed;left:-10000px;top:0;width:${width}px;height:${height}px;`;
-      document.body.append(container);
-
-      let board: JXG.Board | undefined;
       try {
-        board = createBoard(container, parsed.spec, undefined, [], false).board;
-        // sync jsx graph rendering with the browser's rendering cycle
-        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-        board.fullUpdate();
-        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-        const svg = container.querySelector('svg');
-        if (svg === null) {
+        const renderedPlot = getRenderedPlot(parsed.spec);
+        if (renderedPlot !== undefined) {
+          const { width: renderedWidth, height: renderedHeight } =
+            renderedPlot.getBoundingClientRect();
+          const scale = Math.min(
+            PLOT_IMAGE_WIDTH / renderedWidth,
+            PLOT_IMAGE_MAX_HEIGHT / renderedHeight,
+          );
+          const width = Math.round(renderedWidth * scale);
+          const height = Math.round(renderedHeight * scale);
+          const png = await renderPlotPng(renderedPlot);
+          images.set(imageKey, {
+            type: 'png',
+            width,
+            height,
+            data: await png.arrayBuffer(),
+          });
           return;
         }
 
-        const exportSvg = svg.cloneNode(true) as SVGSVGElement;
-        exportSvg
-          .querySelectorAll('foreignObject')
-          .forEach((foreignObject) => foreignObject.remove());
-        exportSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-        exportSvg.setAttribute('width', String(width));
-        exportSvg.setAttribute('height', String(height));
-        const data = new TextEncoder().encode(
-          new XMLSerializer().serializeToString(exportSvg),
-        ).buffer;
-        images.set(imageKey, {
-          type: 'svg',
-          width,
-          height,
-          data,
-          fallback: await (await renderPlotPng(svg)).arrayBuffer(),
-        });
-      } finally {
-        if (board !== undefined) {
-          JXG.JSXGraph.freeBoard(board);
+        const { width, height } = getPlotImageDimensions(
+          parsed.spec.board.boundingBox ?? DEFAULT_PLOT_BOUNDING_BOX,
+        );
+        const container = document.createElement('div');
+        container.style.cssText = `position:fixed;left:-10000px;top:0;width:${width}px;height:${height}px;`;
+        document.body.append(container);
+
+        let board: JXG.Board | undefined;
+        try {
+          board = createBoard(container, parsed.spec, undefined, [], false).board;
+          // sync jsx graph rendering with the browser's rendering cycle
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          board.fullUpdate();
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          const svg = container.querySelector('svg');
+          if (svg === null) {
+            return;
+          }
+
+          const png = await renderPlotPng(svg);
+          images.set(imageKey, {
+            type: 'png',
+            width,
+            height,
+            data: await png.arrayBuffer(),
+          });
+        } finally {
+          if (board !== undefined) {
+            JXG.JSXGraph.freeBoard(board);
+          }
+          container.remove();
         }
-        container.remove();
+      } catch (error) {
+        logWarning('Plot could not be exported', {
+          message: error instanceof Error ? error.message : String(error),
+        });
       }
     }),
   );
@@ -333,7 +331,7 @@ export type ConversationExportMessage = {
 };
 
 export type ConversationExport = {
-  markdownBlocks: Array<{ markdown: string; messageId?: string }>;
+  markdownBlocks: Array<{ markdown: string }>;
 };
 
 export function createConversationExportMessages({
@@ -352,7 +350,7 @@ export function createConversationExportMessages({
     role,
     content,
     images: (fileMapping.get(id) ?? [])
-      .filter((file) => /\.(?:apng|avif|gif|jpe?g|png|svg|webp)$/i.test(file.name))
+      .filter((file) => isImageFile(file.name))
       .map((file) => ({
         alt: file.name,
         url: file.localUrl ?? imageUrl(file),
@@ -383,13 +381,10 @@ export function formatConversationExport({
   }
   markdownBlocks.push({ markdown: `Erstellt am: ${formattedDate}` });
 
-  for (const { id, role, content, images } of messages) {
+  for (const { role, content, images } of messages) {
     markdownBlocks.push({ markdown: PARAGRAPH_SPACER });
     const messageHeading = role === 'user' ? 'Nutzer/in' : 'AIS.chat';
-    markdownBlocks.push(
-      { markdown: `### ${messageHeading}:` },
-      { markdown: content, messageId: id },
-    );
+    markdownBlocks.push({ markdown: `### ${messageHeading}:` }, { markdown: content });
     markdownBlocks.push(...images.map(({ alt, url }) => ({ markdown: `![${alt}](${url})` })));
   }
 

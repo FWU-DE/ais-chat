@@ -44,7 +44,8 @@ export async function fetchConversationDownload({
 }: DownloadConversationParams) {
   const exportMessages = createConversationExportMessages({ messages, fileMapping });
   const createdAtISOString = createdAt.toISOString();
-  const safeName = conversationTitle ?? characterName ?? 'AIS.chat';
+  const gptName = characterName ?? 'AIS.chat';
+  const conversationName = conversationTitle ?? 'Konversation';
 
   return {
     blob: await markdownToDocxBlob(
@@ -55,7 +56,7 @@ export async function fetchConversationDownload({
         conversationTitle,
       }),
     ),
-    fileName: `${createdAtISOString.slice(0, 10)} ${safeName} Gespräch.docx`,
+    fileName: `${createdAtISOString.slice(0, 10)} ${gptName} Gespräch über ${conversationName}.docx`,
   };
 }
 
