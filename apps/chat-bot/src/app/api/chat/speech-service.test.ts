@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   setCachedSpeechPreview: vi.fn(),
 }));
 
-vi.mock('@/app/api/utils/speech-preview-cache', () => ({
+vi.mock('@shared/speech/speech-cache', () => ({
   getCachedSpeechPreview: mocks.getCachedSpeechPreview,
   setCachedSpeechPreview: mocks.setCachedSpeechPreview,
 }));
