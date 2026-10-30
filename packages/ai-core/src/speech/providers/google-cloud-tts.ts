@@ -1,110 +1,93 @@
+import { isLlmProvider } from '@ais-chat/api-database/llm-model';
 import type { protos } from '@google-cloud/text-to-speech';
-import { v1beta1 } from '@google-cloud/text-to-speech';
+import { v1 } from '@google-cloud/text-to-speech';
 import { AiGenerationError, ProviderConfigurationError } from '../../errors';
-import { createGoogleAuth } from '../../google-client';
-import type { AiModel, SpeechUsage } from '../types';
+import {
+  createGoogleAuth,
+  getCredentialsFingerprint,
+  getGoogleTextToSpeechServiceAddress,
+} from '../../google-client';
+import {
+  PCM_STREAM_AUDIO_FORMAT,
+  type AiModel,
+  type SpeechStreamGenerationFn,
+  type SpeechUsage,
+} from '../types';
 
-/**
- * Selects the audio container/encoding `constructGoogleCloudTtsStreamingSpeechGenerationFn`
- * requests from Google Cloud Text-to-Speech:
- * - `'ogg_opus'`: Opus encoded audio wrapped in an Ogg container. Self-describing (sample rate and
- *   channel count travel with the stream), so it's playable as-is (e.g. in a browser `<audio>`
- *   element) without extra metadata.
- * - `'pcm'`: headerless raw 16-bit signed little-endian samples at 24 kHz mono, matching the shape
- *   of the Gemini TTS provider's output (see `PCM_STREAM_AUDIO_FORMAT` in `../types`, though this is
- *   a separate constant since it's produced by a different provider). Useful when the caller needs
- *   raw samples to process (e.g. resampling, mixing) rather than a container format.
- */
-export type GoogleCloudTtsAudioEncoding = 'ogg_opus' | 'pcm';
+// We only support German voices at the moment
+const LANGUAGE_CODE = 'de-DE';
 
-export const OGG_OPUS_STREAM_AUDIO_FORMAT = {
-  encoding: 'ogg_opus',
-} as const;
+// Todo: google cloud tts does not return token usage information
+const NO_USAGE: SpeechUsage = { inputTextTokens: 0, outputAudioTokens: 0 };
 
-/** Google Cloud Text-to-Speech streams PCM for Chirp 3: HD voices at 24 kHz mono. */
-export const PCM_STREAM_AUDIO_FORMAT = {
-  encoding: 'pcm_s16le',
-  sampleRate: 24_000,
-  channels: 1,
-} as const;
-
-export type GoogleCloudTtsAudioFormat =
-  typeof OGG_OPUS_STREAM_AUDIO_FORMAT | typeof PCM_STREAM_AUDIO_FORMAT;
-
-/**
- * Result of `constructGoogleCloudTtsStreamingSpeechGenerationFn`'s generation call. Mirrors the
- * shape of `SpeechStreamResult` from `../types` (chunks/usage/format), but isn't that exact type
- * since `format` here depends on the requested `audioFormat` rather than always being the shared
- * `AudioFormat` (which currently only describes the Gemini provider's raw PCM output).
- */
-export type GoogleCloudTtsStreamResult = {
-  chunks: AsyncGenerator<Buffer, void, unknown>;
-  usage: Promise<SpeechUsage>;
-  format: GoogleCloudTtsAudioFormat;
-};
-
-export type GoogleCloudTtsStreamingSpeechGenerationFn = (args: {
-  text: string;
-  voice: string;
-  abortSignal: AbortSignal;
-  audioFormat: GoogleCloudTtsAudioEncoding;
-}) => Promise<GoogleCloudTtsStreamResult>;
-
-const CHIRP3_HD_VOICE_NAME_PATTERN = /^(?<languageCode>.+)-Chirp3-HD-[^-]+$/;
-
-/**
- * Derives the BCP-47 language code Chirp 3: HD voices require from their full voice name, e.g.
- * `"en-US-Chirp3-HD-Aoede"` -> `"en-US"`.
- */
-function getChirp3HdLanguageCode(voice: string): string {
-  const match = CHIRP3_HD_VOICE_NAME_PATTERN.exec(voice);
-  const languageCode = match?.groups?.languageCode;
-  if (!languageCode) {
-    throw new ProviderConfigurationError(
-      `Voice "${voice}" is not a valid Chirp 3: HD voice name (expected format "<languageCode>-Chirp3-HD-<name>")`,
-    );
-  }
-  return languageCode;
+// Cancellations and the `streamSpeechById` timeout arrive on the same signal, but only a
+// cancellation should end the stream quietly.
+function isTimeoutAbort(signal: AbortSignal): boolean {
+  const reason: unknown = signal.reason;
+  return reason instanceof Error && reason.name === 'TimeoutError';
 }
 
-/**
- * Streaming speech generation using Google Cloud Text-to-Speech's Chirp 3: HD voices, returning
- * either Ogg Opus or raw PCM audio depending on the `audioFormat` argument passed to the returned
- * function (see `GoogleCloudTtsAudioEncoding`).
- *
- * Cloud Text-to-Speech has no REST streaming endpoint: the REST `text:synthesize` call always
- * returns the complete audio in a single batch response. Progressive audio chunks are only
- * available through the bidirectional streaming gRPC method `StreamingSynthesize`, which is
- * itself only compatible with Chirp 3: HD voices. This is why this provider uses the
- * `@google-cloud/text-to-speech` gRPC client instead of the REST-based `@google/genai` client used
- * by the Gemini TTS provider in `./google.ts`. The gRPC stream is a Node `Duplex`, so from the
- * caller's perspective it behaves the same as the Gemini provider's `for await` stream, and its
- * output (`AsyncGenerator<Buffer>`) is just as suitable for piping into an HTTP response stream.
- *
- * Not wired into `generate.ts`/`generate-stream.ts` or any app/route yet — this is a standalone
- * implementation.
- */
-export function constructGoogleCloudTtsStreamingSpeechGenerationFn(
-  model: AiModel,
-): GoogleCloudTtsStreamingSpeechGenerationFn {
-  if (model.setting.provider !== 'google') {
+async function* readNothing(): AsyncGenerator<Buffer, void, unknown> {
+  yield* [];
+}
+
+// Each client owns a gRPC channel, so they are reused across requests instead of re-running the
+// TCP/TLS/HTTP2 handshake per synthesis. Never closed: they live for the process lifetime.
+const clientCache = new Map<string, v1.TextToSpeechClient>();
+
+function getClient(model: AiModel) {
+  if (!isLlmProvider(model.setting, 'google')) {
     throw new ProviderConfigurationError('Invalid model configuration for Google');
   }
 
-  const client = new v1beta1.TextToSpeechClient({ auth: createGoogleAuth(model) });
+  const { projectId, location, authCredentials } = model.setting;
+  const cacheKey = `${projectId}-${location}-${getCredentialsFingerprint(authCredentials)}`;
 
-  return async function getGoogleCloudTtsSpeechStream({ text, voice, abortSignal, audioFormat }) {
+  const cachedClient = clientCache.get(cacheKey);
+  if (cachedClient) {
+    return cachedClient;
+  }
+
+  const client = new v1.TextToSpeechClient({
+    auth: createGoogleAuth(model),
+    apiEndpoint: getGoogleTextToSpeechServiceAddress(location),
+    projectId,
+    // Mirrors the `x-goog-user-project` header the regional endpoints expect for quota/billing.
+    quotaProjectId: projectId,
+  });
+  clientCache.set(cacheKey, client);
+
+  return client;
+}
+
+export function constructGoogleCloudTtsStreamingSpeechGenerationFn(
+  model: AiModel,
+): SpeechStreamGenerationFn {
+  const client = getClient(model);
+
+  return async function getGoogleCloudTtsSpeechStream({ text, voice, abortSignal }) {
     // `AbortSignal` only fires the `abort` event at the moment `.abort()` is called, so a listener
     // added after that (the `addEventListener` call below) would never run if the signal was
     // already aborted when we got here. Bail out before creating the gRPC stream/sending any text
     // so an already-cancelled caller doesn't still trigger synthesis.
     if (abortSignal.aborted) {
-      throw new AiGenerationError('Google Cloud Text-to-Speech (stream) request was aborted');
+      if (isTimeoutAbort(abortSignal)) {
+        throw new AiGenerationError('Google Cloud Text-to-Speech (stream) request timed out');
+      }
+
+      return {
+        chunks: readNothing(),
+        usage: Promise.resolve(NO_USAGE),
+        format: PCM_STREAM_AUDIO_FORMAT,
+      };
     }
 
-    const languageCode = getChirp3HdLanguageCode(voice);
-
     const grpcStream = client.streamingSynthesize();
+
+    let resolveUsage: (usage: SpeechUsage) => void;
+    const usage = new Promise<SpeechUsage>((resolve) => {
+      resolveUsage = resolve;
+    });
 
     // The RPC starts writing immediately below, but `readChunks()` below is an async generator:
     // its body (including the `for await` and its `catch`) only starts running once the caller
@@ -115,34 +98,41 @@ export function constructGoogleCloudTtsStreamingSpeechGenerationFn(
     const captureEarlyError = (error: Error) => {
       earlyError = error;
     };
-    grpcStream.on('error', captureEarlyError);
-
     const onAbort = () => grpcStream.cancel();
-    abortSignal.addEventListener('abort', onAbort);
 
-    const streamingAudioConfig: protos.google.cloud.texttospeech.v1beta1.IStreamingAudioConfig =
-      audioFormat === 'pcm'
-        ? { audioEncoding: 'PCM', sampleRateHertz: PCM_STREAM_AUDIO_FORMAT.sampleRate }
-        : { audioEncoding: 'OGG_OPUS' };
+    let released = false;
+    // Also hooked to `close` so a caller that never iterates `chunks` (e.g. the pipeline threw
+    // before consuming them) doesn't leak the abort listener or leave `usage` pending forever.
+    const release = () => {
+      if (released) return;
+      released = true;
+      grpcStream.off('error', captureEarlyError);
+      abortSignal.removeEventListener('abort', onAbort);
+      resolveUsage(NO_USAGE);
+    };
 
-    const streamingConfig: protos.google.cloud.texttospeech.v1beta1.IStreamingSynthesizeRequest = {
+    grpcStream.on('error', captureEarlyError);
+    grpcStream.once('close', release);
+    abortSignal.addEventListener('abort', onAbort, { once: true });
+
+    const streamingAudioConfig: protos.google.cloud.texttospeech.v1.IStreamingAudioConfig = {
+      audioEncoding: 'PCM',
+      sampleRateHertz: PCM_STREAM_AUDIO_FORMAT.sampleRate,
+    };
+
+    const streamingConfig: protos.google.cloud.texttospeech.v1.IStreamingSynthesizeRequest = {
       streamingConfig: {
-        voice: { languageCode, name: voice },
+        voice: { languageCode: LANGUAGE_CODE, name: voice },
         streamingAudioConfig,
       },
     };
-    const inputRequest: protos.google.cloud.texttospeech.v1beta1.IStreamingSynthesizeRequest = {
+    const inputRequest: protos.google.cloud.texttospeech.v1.IStreamingSynthesizeRequest = {
       input: { text },
     };
 
     grpcStream.write(streamingConfig);
     grpcStream.write(inputRequest);
     grpcStream.end();
-
-    let resolveUsage: (usage: SpeechUsage) => void;
-    const usage = new Promise<SpeechUsage>((resolve) => {
-      resolveUsage = resolve;
-    });
 
     async function* readChunks() {
       let receivedAudio = false;
@@ -154,33 +144,35 @@ export function constructGoogleCloudTtsStreamingSpeechGenerationFn(
           throw earlyError;
         }
 
-        for await (const response of grpcStream as AsyncIterable<protos.google.cloud.texttospeech.v1beta1.IStreamingSynthesizeResponse>) {
+        for await (const response of grpcStream as AsyncIterable<protos.google.cloud.texttospeech.v1.IStreamingSynthesizeResponse>) {
           if (response.audioContent) {
             receivedAudio = true;
             yield Buffer.from(response.audioContent);
           }
         }
       } catch (error) {
+        // Cancelling mid-playback is a normal user action, so end the stream instead of raising
+        // an error the caller would log and report.
+        if (abortSignal.aborted && !isTimeoutAbort(abortSignal)) {
+          return;
+        }
+
         throw new AiGenerationError(
           `Google Cloud Text-to-Speech (stream) request failed: ${
             error instanceof Error ? error.message : String(error)
           }`,
         );
       } finally {
-        grpcStream.off('error', captureEarlyError);
-        abortSignal.removeEventListener('abort', onAbort);
-        // Todo: google cloud tts does not return token usage information
-        resolveUsage({ inputTextTokens: 0, outputAudioTokens: 0 });
+        release();
       }
 
-      if (!receivedAudio) {
+      if (!receivedAudio && !abortSignal.aborted) {
         throw new AiGenerationError(
           'No audio data received from Google Cloud Text-to-Speech stream',
         );
       }
     }
 
-    const format = audioFormat === 'pcm' ? PCM_STREAM_AUDIO_FORMAT : OGG_OPUS_STREAM_AUDIO_FORMAT;
-    return { chunks: readChunks(), usage, format };
+    return { chunks: readChunks(), usage, format: PCM_STREAM_AUDIO_FORMAT };
   };
 }

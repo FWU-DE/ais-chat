@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ProviderConfigurationError } from '../../errors';
 import { buildGuardPrompt } from '../prompt';
 import type { AiModel } from '../types';
-import { ProviderConfigurationError } from '../../errors';
 import { constructGoogleSafetyCheckFn } from './google';
 
 const { captureExceptionMock, captureMessageMock, getClientMock, GoogleAuthMock } = vi.hoisted(
@@ -46,7 +46,7 @@ function createGoogleSafetyModel(): AiModel {
     setting: {
       provider: 'google',
       projectId: 'project-id',
-      location: 'us-central1',
+      location: 'europe-west3',
       authCredentials: { client_email: 'test@example.com' },
     },
     priceMetadata: {
@@ -86,7 +86,7 @@ describe('constructGoogleSafetyCheckFn', () => {
 
     const [requestUrl, request] = vi.mocked(fetch).mock.calls[0] ?? [];
     expect(requestUrl).toBe(
-      'https://vertex.example.com/v1/projects/project-id/locations/us-central1/endpoints/endpoint-id:predict',
+      'https://vertex.example.com/v1/projects/project-id/locations/europe-west3/endpoints/endpoint-id:predict',
     );
     expect(request).toMatchObject({
       method: 'POST',
@@ -475,7 +475,7 @@ describe('constructGoogleSafetyCheckFn', () => {
     model.setting = {
       provider: 'google',
       projectId: 'project-id',
-      location: 'us-central1',
+      location: 'europe-west3',
       authCredentials: undefined,
     };
 
@@ -487,7 +487,7 @@ describe('constructGoogleSafetyCheckFn', () => {
     model.setting = {
       provider: 'google',
       projectId: 'project-id',
-      location: 'us-central1',
+      location: 'europe-west3',
       authCredentials: 'not-json',
     };
 

@@ -1,10 +1,10 @@
-import { createHash } from 'crypto';
 import type { LlmModel } from '@ais-chat/api-database';
 import { isLlmProvider } from '@ais-chat/api-database/llm-model';
 import { GoogleGenAI } from '@google/genai';
+import { instrumentGoogleGenAIClient } from '@sentry/server-utils';
+import { createHash } from 'crypto';
 import { GoogleAuth, type GoogleAuthOptions } from 'google-auth-library';
 import { ProviderConfigurationError } from './errors';
-import { instrumentGoogleGenAIClient } from '@sentry/server-utils';
 
 type GoogleGenAIAuthOptions = NonNullable<
   NonNullable<ConstructorParameters<typeof GoogleGenAI>[0]>['googleAuthOptions']
@@ -12,7 +12,6 @@ type GoogleGenAIAuthOptions = NonNullable<
 
 const GOOGLE_API_VERSION = 'v1';
 const GOOGLE_CLOUD_PLATFORM_SCOPE = 'https://www.googleapis.com/auth/cloud-platform';
-const GOOGLE_MULTI_REGION_LOCATIONS = new Set(['eu', 'us']);
 
 export interface GoogleClientConfig {
   projectId: string;
@@ -26,10 +25,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Data residency is non-negotiable: every Google request must stay inside the EU. Enforced in
+ * `getGoogleAuthOptions` so it covers every Google client (chat, images, safety, speech) instead
+ * of each provider having to remember the check.
+ */
+export function assertGoogleEuLocation(location: string): void {
+  if (location !== 'eu' && !location.startsWith('europe-')) {
+    throw new ProviderConfigurationError(
+      `Google location "${location}" is outside the EU; only "eu" and "europe-*" are allowed`,
+    );
+  }
+}
+
 export function getGoogleAuthOptions(
   settings: Extract<LlmModel['setting'], { provider: 'google' }>,
   requireCredentials = false,
 ): GoogleAuthOptions {
+  assertGoogleEuLocation(settings.location);
+
   const authCredentials = settings.authCredentials;
   if (authCredentials === undefined) {
     if (requireCredentials) {
@@ -67,7 +81,7 @@ export function createGoogleAuth(model: LlmModel): GoogleAuth {
   return new GoogleAuth(getGoogleAuthOptions(model.setting, true));
 }
 
-function getCredentialsFingerprint(
+export function getCredentialsFingerprint(
   authCredentials: Extract<LlmModel['setting'], { provider: 'google' }>['authCredentials'],
 ): string {
   if (authCredentials === undefined) return 'adc';
@@ -133,13 +147,21 @@ export function formatGoogleError(errorLabel: string, error: unknown): string {
 }
 
 export function getGoogleServiceAddress(location: string): string {
-  if (location === 'global') {
-    return 'aiplatform.googleapis.com';
-  }
-
-  if (GOOGLE_MULTI_REGION_LOCATIONS.has(location)) {
-    return `aiplatform.${location}.rep.googleapis.com`;
+  if (location === 'eu') {
+    return 'aiplatform.eu.rep.googleapis.com';
   }
 
   return `${location}-aiplatform.googleapis.com`;
+}
+
+/**
+ * Cloud Text-to-Speech only offers `global`, `eu` and `us` endpoints, so the Vertex AI location
+ * from the model configuration (e.g. `europe-west3`) maps onto the `eu` multi-region rather than
+ * onto a same-named regional endpoint.
+ * https://cloud.google.com/text-to-speech/docs/endpoints
+ */
+export function getGoogleTextToSpeechServiceAddress(location: string): string {
+  assertGoogleEuLocation(location);
+
+  return 'eu-texttospeech.googleapis.com';
 }

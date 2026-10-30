@@ -1,11 +1,11 @@
-import { getSpeechModelById } from '../models';
 import { AiGenerationError } from '../errors';
+import { getSpeechModelById } from '../models';
 import { constructGoogleStreamingSpeechGenerationFn } from './providers/google';
 import type { SpeechStreamResult } from './types';
 
-// Generous ceiling for the whole stream (not just time-to-first-chunk), since long assistant
-// messages legitimately take longer to fully synthesize than the non-streaming SPEECH_TIMEOUT_MS.
-const SPEECH_STREAM_MAX_DURATION_MS = 60_000;
+// Todo: Find a more appropriate max duration for speech streams
+// Browser can throttle the download speed as soon as buffer fills up.
+const SPEECH_STREAM_MAX_DURATION_MS = 5 * 60_000;
 
 export async function streamSpeechById({
   modelId,
