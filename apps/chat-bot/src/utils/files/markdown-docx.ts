@@ -30,8 +30,6 @@ import remarkParse from 'remark-parse';
 import { unified } from 'unified';
 import { visit } from 'unist-util-visit';
 
-const MAX_IMAGE_WIDTH = 200;
-const MAX_IMAGE_HEIGHT = 320;
 const PARAGRAPH_SPACER = '\u200B';
 const PLOT_IMAGE_WIDTH = 600;
 const PLOT_IMAGE_MIN_HEIGHT = 260;
@@ -371,81 +369,73 @@ async function loadImageForDocx(url: string): Promise<ArrayBuffer> {
     throw new Error(`Failed to load image: ${response.status}`);
   }
 
-  const imageBlob = await response.blob();
-  if (imageBlob.type === 'image/svg+xml') {
-    return imageBlob.arrayBuffer();
-  }
-
-  const bitmap = await createImageBitmap(imageBlob);
-  const scale = Math.min(1, MAX_IMAGE_WIDTH / bitmap.width, MAX_IMAGE_HEIGHT / bitmap.height);
-
-  if (scale === 1) {
-    return imageBlob.arrayBuffer();
-  }
-
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-
-  const resizedBlob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => (blob === null ? reject(new Error('Failed to resize image')) : resolve(blob)),
-      'image/png',
-    );
-  });
-
-  return resizedBlob.arrayBuffer();
+  return response.arrayBuffer();
 }
 
-const docxOptions: DocxOptions = {
-  plugins: [
-    latexPlugin(),
-    imagePlugin({ load: loadImageForDocx }),
-    plotPlugin,
-    paddedCodeBlockPlugin,
-    styledBlocksPlugin,
-  ],
-  spacing: 80,
-  thematicBreak: 'line',
-  orderedListFormat: [
-    { format: 'DECIMAL', text: '%1.' },
-    { format: 'DECIMAL', text: '%2.' },
-    { format: 'DECIMAL', text: '%3.' },
-    { format: 'DECIMAL', text: '%4.' },
-  ],
-  styles: {
-    default: {
-      document: {
-        run: { font: 'Barlow', size: 22 },
-      },
-      title: { run: { font: 'Barlow SemiBold', size: 40 } },
-      heading1: { run: { font: 'Barlow SemiBold', size: 28 } },
-      heading2: {
-        run: { font: 'Barlow SemiBold', size: 22 },
-      },
-      heading3: {
-        run: { font: 'Barlow', size: 18, bold: false, italics: true, color: '666666' },
-      },
-      listParagraph: { run: { font: 'Barlow', size: 22 } },
-    },
-    characterStyles: [
-      {
-        id: 'Hyperlink',
-        name: 'Hyperlink',
-        run: { color: '2F80ED', size: 22 },
-      },
+function createDocxOptions({ exportImages = false }: MarkdownToDocxOptions = {}): DocxOptions {
+  const loadImage = exportImages
+    ? (url: string) => {
+        const exportUrl = new URL(url, window.location.origin);
+        exportUrl.searchParams.set('export', 'true');
+        return loadImageForDocx(exportUrl.toString());
+      }
+    : loadImageForDocx;
+
+  return {
+    plugins: [
+      latexPlugin(),
+      imagePlugin({ load: loadImage }),
+      plotPlugin,
+      paddedCodeBlockPlugin,
+      styledBlocksPlugin,
     ],
-  },
+    spacing: 80,
+    thematicBreak: 'line',
+    orderedListFormat: [
+      { format: 'DECIMAL', text: '%1.' },
+      { format: 'DECIMAL', text: '%2.' },
+      { format: 'DECIMAL', text: '%3.' },
+      { format: 'DECIMAL', text: '%4.' },
+    ],
+    styles: {
+      default: {
+        document: {
+          run: { font: 'Barlow', size: 22 },
+        },
+        title: { run: { font: 'Barlow SemiBold', size: 40 } },
+        heading1: { run: { font: 'Barlow SemiBold', size: 28 } },
+        heading2: {
+          run: { font: 'Barlow SemiBold', size: 22 },
+        },
+        heading3: {
+          run: { font: 'Barlow', size: 18, bold: false, italics: true, color: '666666' },
+        },
+        listParagraph: { run: { font: 'Barlow', size: 22 } },
+      },
+      characterStyles: [
+        {
+          id: 'Hyperlink',
+          name: 'Hyperlink',
+          run: { color: '2F80ED', size: 22 },
+        },
+      ],
+    },
+  };
+}
+
+type MarkdownToDocxOptions = {
+  exportImages?: boolean;
 };
 
-const processor = unified()
-  .use(remarkParse)
-  .use(RemarkMathPlugin)
-  .use(remarkGfm)
-  .use(remarkDocx, docxOptions);
-
-export async function markdownToDocxBlob(exportDocument: ConversationExport): Promise<Blob> {
+export async function markdownToDocxBlob(
+  exportDocument: ConversationExport,
+  options?: MarkdownToDocxOptions,
+): Promise<Blob> {
+  const processor = unified()
+    .use(remarkParse)
+    .use(RemarkMathPlugin)
+    .use(remarkGfm)
+    .use(remarkDocx, createDocxOptions(options));
   const roots = await Promise.all(
     exportDocument.markdownBlocks.map(async ({ markdown }) => {
       const parsedRoot = processor.parse(markdown) as Root;

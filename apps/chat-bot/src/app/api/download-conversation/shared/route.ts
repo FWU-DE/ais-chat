@@ -1,4 +1,5 @@
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
+import { getSharedChatImageUrl } from '@/utils/shared-chat-files';
 import { checkInviteCodeForExport } from '@shared/conversation/conversation-service';
 import { dbGetFilesInIds } from '@shared/db/functions/files';
 import { type FileModel } from '@shared/db/schema';
@@ -48,7 +49,23 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       fileName,
-      messages: await serializeMessages({ messages, fileMapping }),
+      messages: await serializeMessages({
+        messages,
+        fileMapping,
+        imageUrl: (file) => {
+          if (!isSharedChatFileMetadata(file.metadata)) {
+            throw new ForbiddenError('Not authorized to access this file');
+          }
+
+          return getSharedChatImageUrl({
+            fileId: file.id,
+            inviteCode,
+            entityType: file.metadata.entityType,
+            entityId: file.metadata.entityId,
+            sharedSessionId: file.metadata.sessionId,
+          });
+        },
+      }),
     });
   } catch (error) {
     return handleErrorInRoute(error);
