@@ -48,6 +48,16 @@ export const AVATAR_MAX_SIZE = 340;
 export const TRUNCATE_IMAGE_HEIGHT = 720;
 
 export const MAX_FILE_SIZE = 20_000_000; // 20MB
+
+/**
+ * Ceiling for a whole multipart upload body, checked before the request is parsed.
+ * The slack above MAX_FILE_SIZE covers part boundaries, headers and the other form fields.
+ */
+export const MAX_UPLOAD_BODY_SIZE = MAX_FILE_SIZE + 1_000_000;
+
+/** Upper bound for the requested dimensions of a scaled image, to cap decoding work per request. */
+export const MAX_SCALED_IMAGE_DIMENSION = 1000;
+
 export const EMBEDDING_BATCH_SIZE = 100;
 
 /**

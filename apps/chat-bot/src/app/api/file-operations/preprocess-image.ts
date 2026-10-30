@@ -1,11 +1,12 @@
 import { TRUNCATE_IMAGE_HEIGHT } from '@/const';
-import { FileMetadata, FileModel } from '@shared/db/schema';
-import { getFileFromS3, getReadOnlySignedUrl } from '@shared/s3';
 import { isImageFile } from '@/utils/files/generic';
 import { getImageContentType, streamToBase64 } from '@/utils/files/image-data';
-import sharp from 'sharp';
-import { logError } from '@shared/logging';
 import { ChatAttachment } from '@ais-chat/ai-core';
+import { FileMetadata, FileModel } from '@shared/db/schema';
+import { logError } from '@shared/logging';
+import { getFileFromS3, getReadOnlySignedUrl } from '@shared/s3';
+import sharp from 'sharp';
+import { measureImageProcessing } from './image-processing-metrics';
 
 export type ChatAttachmentWithMessageId = ChatAttachment & {
   messageId: string;
@@ -26,6 +27,20 @@ export async function createImageAttachmentsForConversation(
     return [];
   }
 
+  // Only the base64 path materialises image bytes; url mode just signs S3 keys.
+  if (imageAttachmentType !== 'base64') {
+    return buildImageAttachments(imageFiles, imageAttachmentType);
+  }
+
+  return measureImageProcessing({ operation: 'attach' }, () =>
+    buildImageAttachments(imageFiles, imageAttachmentType),
+  );
+}
+
+async function buildImageAttachments(
+  imageFiles: (FileModel & { conversationMessageId: string })[],
+  imageAttachmentType: 'url' | 'base64',
+): Promise<ChatAttachmentWithMessageId[]> {
   const imagePromises = imageFiles.map(async (file) => {
     let url: string;
     const contentType = getImageContentType(file.type);
@@ -80,6 +95,15 @@ async function rasterizeSvgToPng(fileContent: Buffer): Promise<Buffer> {
 }
 
 export async function preprocessImage(
+  fileContent: Buffer,
+  type: string,
+): Promise<{ buffer: Buffer; metadata: FileMetadata; type: string }> {
+  return measureImageProcessing({ operation: 'upload', format: type }, () =>
+    runPreprocessImage(fileContent, type),
+  );
+}
+
+async function runPreprocessImage(
   fileContent: Buffer,
   type: string,
 ): Promise<{ buffer: Buffer; metadata: FileMetadata; type: string }> {

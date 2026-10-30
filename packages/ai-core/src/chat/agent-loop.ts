@@ -24,6 +24,20 @@ const toolCallDuration = metrics
     unit: 'ms',
   });
 
+const generationRssDelta = metrics
+  .getMeter('ais-chat.gen_ai', '0.0.1')
+  .createHistogram('ai_generation_rss_delta', {
+    description: 'Magnitude of the process RSS change across a single agent loop run',
+    unit: 'By',
+  });
+
+/** The SDK drops negative histogram values, so the sign has to travel as an attribute. */
+function memoryDirection(delta: number): 'increase' | 'decrease' | 'unchanged' {
+  if (delta > 0) return 'increase';
+  if (delta < 0) return 'decrease';
+  return 'unchanged';
+}
+
 function logError(message: string, error: unknown) {
   console.error(message, error);
 }
@@ -101,8 +115,24 @@ export function runAgentLoop({
     const modelUsages: ModelUsage[] = [];
     const loopMessages = [...messages];
     const tools = toolRegistry ? Object.values(toolRegistry).map((entry) => entry.definition) : [];
+    const rssBefore = process.memoryUsage().rss;
 
-    const complete = () =>
+    // Attributes stay free of prompts, completions and user identifiers by design.
+    // The histogram's own count series carries the per-outcome run count, so no extra counter.
+    const recordOutcome = (outcome: 'success' | 'error' | 'aborted', error?: Error) => {
+      const rssDelta = process.memoryUsage().rss - rssBefore;
+
+      generationRssDelta.record(Math.abs(rssDelta), {
+        outcome,
+        'memory.direction': memoryDirection(rssDelta),
+        'gen_ai.agent.name': agentName,
+        'gen_ai.request.model': modelSelection.modelName,
+        ...(error ? { 'error.type': error.name } : {}),
+      });
+    };
+
+    const complete = () => {
+      recordOutcome(abortSignal?.aborted ? 'aborted' : 'success');
       onComplete({
         fullText,
         ...sumModelUsages(modelUsages),
@@ -110,12 +140,15 @@ export function runAgentLoop({
         modelUsages,
         agentLoopMessages: loopMessages.slice(messages.length),
       });
+    };
 
-    const fail = (error: Error) =>
+    const fail = (error: Error) => {
+      recordOutcome('error', error);
       onError(error, {
         ...sumModelUsages(modelUsages),
         modelUsages,
       });
+    };
 
     try {
       await Sentry.startSpan(
@@ -318,6 +351,7 @@ export function runAgentLoop({
 
         // Nothing was generated and nothing was billed, so there is nothing to report.
         if (modelUsages.length === 0) {
+          recordOutcome('aborted');
           return;
         }
       }
@@ -329,6 +363,8 @@ export function runAgentLoop({
       if (abortSignal?.aborted) {
         if (fullText.trim().length > 0 || modelUsages.length > 0) {
           complete();
+        } else {
+          recordOutcome('aborted');
         }
         return;
       }

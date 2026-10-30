@@ -1,3 +1,5 @@
+import { MAX_FILE_SIZE } from '@/const';
+import { InvalidArgumentError } from '@shared/error';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -155,5 +157,50 @@ describe('uploadSharedChatFile', () => {
       }),
       expect.any(Array),
     );
+  });
+
+  it('rejects an oversized upload before copying it into a buffer', async () => {
+    mocks.dbGetCharacterByIdAndInviteCodeMock.mockResolvedValue(validEntity);
+
+    const { uploadSharedChatFile } = await import('./shared-chat-upload-service');
+
+    const file = new File([new Uint8Array([1, 2, 3])], 'huge.png', { type: 'image/png' });
+    Object.defineProperty(file, 'size', { value: MAX_FILE_SIZE + 1 });
+    const arrayBuffer = vi.spyOn(file, 'arrayBuffer');
+
+    await expect(
+      uploadSharedChatFile({
+        file,
+        inviteCode: 'invite',
+        entityType: 'character',
+        entityId: 'character-1',
+        sharedSessionId: 'session-1',
+      }),
+    ).rejects.toThrow(InvalidArgumentError);
+
+    expect(arrayBuffer).not.toHaveBeenCalled();
+    expect(mocks.preprocessImageMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unsupported file type before copying it into a buffer', async () => {
+    mocks.dbGetCharacterByIdAndInviteCodeMock.mockResolvedValue(validEntity);
+
+    const { uploadSharedChatFile } = await import('./shared-chat-upload-service');
+
+    const file = new File([new Uint8Array([1, 2, 3])], 'payload.exe');
+    const arrayBuffer = vi.spyOn(file, 'arrayBuffer');
+
+    await expect(
+      uploadSharedChatFile({
+        file,
+        inviteCode: 'invite',
+        entityType: 'character',
+        entityId: 'character-1',
+        sharedSessionId: 'session-1',
+      }),
+    ).rejects.toThrow(InvalidArgumentError);
+
+    expect(arrayBuffer).not.toHaveBeenCalled();
+    expect(mocks.fileExtractionXbergMock).not.toHaveBeenCalled();
   });
 });

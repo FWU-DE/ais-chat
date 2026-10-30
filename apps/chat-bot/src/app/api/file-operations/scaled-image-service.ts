@@ -3,6 +3,7 @@ import { getFileFromS3 } from '@shared/s3';
 import { dbGetFilesInIds } from '@shared/db/functions/files';
 import { NotFoundError } from '@shared/error';
 import { getImageContentType, streamToBuffer } from '@/utils/files/image-data';
+import { measureImageProcessing } from './image-processing-metrics';
 
 export async function createScaledImage({
   fileId,
@@ -21,6 +22,20 @@ export async function createScaledImage({
     throw new NotFoundError(`File is not an image: ${fileId}`);
   }
 
+  return measureImageProcessing({ operation: 'scale', format: file.type }, () =>
+    scaleImage({ fileId, width, height }),
+  );
+}
+
+async function scaleImage({
+  fileId,
+  width,
+  height,
+}: {
+  fileId: string;
+  width: number;
+  height: number;
+}): Promise<{ buffer: Buffer; contentType: string }> {
   const imageStream = await getFileFromS3(`message_attachments/${fileId}`);
   const imageBuffer = await streamToBuffer(imageStream);
   const image = sharp(imageBuffer);
