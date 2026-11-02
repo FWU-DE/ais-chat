@@ -1,6 +1,7 @@
 const MAX_LIVE_PLOTS = 4;
 
 export type LivePlot = {
+  plotKey: string;
   isVisible: boolean;
   lastSeen: number;
   activate: () => void;
@@ -10,6 +11,7 @@ export type LivePlot = {
 const livePlots = new Set<LivePlot>();
 const registeredPlots = new Set<LivePlot>();
 const plotsRetainedForExport = new Set<LivePlot>();
+const activeExportPlotKeys = new Map<string, number>();
 let exportActivationCount = 0;
 let livePlotsBeforeExport: Set<LivePlot> | undefined;
 
@@ -29,7 +31,7 @@ export function releaseOverflow() {
 
 export function registerLivePlot(plot: LivePlot) {
   registeredPlots.add(plot);
-  if (exportActivationCount > 0) {
+  if (activeExportPlotKeys.has(plot.plotKey)) {
     livePlots.add(plot);
     plotsRetainedForExport.add(plot);
     plot.activate();
@@ -46,13 +48,19 @@ export function retainLivePlot(plot: LivePlot) {
   releaseOverflow();
 }
 
-export function activateAllLivePlots() {
+export function activateLivePlots(plotKeys: ReadonlySet<string>) {
   if (exportActivationCount === 0) {
     livePlotsBeforeExport = new Set(livePlots);
   }
   exportActivationCount += 1;
+  for (const plotKey of plotKeys) {
+    activeExportPlotKeys.set(plotKey, (activeExportPlotKeys.get(plotKey) ?? 0) + 1);
+  }
 
   for (const plot of registeredPlots) {
+    if (!plotKeys.has(plot.plotKey)) {
+      continue;
+    }
     livePlots.add(plot);
     plotsRetainedForExport.add(plot);
     plot.activate();
@@ -65,6 +73,14 @@ export function activateAllLivePlots() {
     }
     restored = true;
     exportActivationCount -= 1;
+    for (const plotKey of plotKeys) {
+      const activationCount = activeExportPlotKeys.get(plotKey) ?? 0;
+      if (activationCount <= 1) {
+        activeExportPlotKeys.delete(plotKey);
+      } else {
+        activeExportPlotKeys.set(plotKey, activationCount - 1);
+      }
+    }
     if (exportActivationCount > 0) {
       return;
     }
@@ -79,6 +95,7 @@ export function activateAllLivePlots() {
       }
     }
     plotsRetainedForExport.clear();
+    activeExportPlotKeys.clear();
     livePlotsBeforeExport = undefined;
     releaseOverflow();
   };

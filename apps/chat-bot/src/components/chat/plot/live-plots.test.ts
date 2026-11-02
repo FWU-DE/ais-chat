@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  activateAllLivePlots,
+  activateLivePlots,
   registerLivePlot,
   releaseOverflow,
   retainLivePlot,
@@ -10,8 +10,10 @@ import {
 function makePlot(
   lastSeen: number,
   isVisible = false,
+  plotKey = `plot-${lastSeen}`,
 ): LivePlot & { activated: boolean; released: boolean } {
   const plot = {
+    plotKey,
     isVisible,
     lastSeen,
     activated: false,
@@ -24,6 +26,10 @@ function makePlot(
     },
   };
   return plot;
+}
+
+function activatePlots(plots: LivePlot[]) {
+  return activateLivePlots(new Set(plots.map((plot) => plot.plotKey)));
 }
 
 describe('registerLivePlot / releaseOverflow', () => {
@@ -89,7 +95,7 @@ describe('registerLivePlot / releaseOverflow', () => {
   });
 });
 
-describe('activateAllLivePlots', () => {
+describe('activateLivePlots', () => {
   it('activates released plots and restores the previous live state', () => {
     const plots = [makePlot(1), makePlot(2), makePlot(3), makePlot(4), makePlot(5)];
     const unregisters = plots.map((plot) => registerLivePlot(plot));
@@ -97,7 +103,7 @@ describe('activateAllLivePlots', () => {
     const releasedPlot = plots[0]!;
     releasedPlot.released = false;
 
-    const restore = activateAllLivePlots();
+    const restore = activatePlots(plots);
     expect(releasedPlot.activated).toBe(true);
     restore();
     expect(releasedPlot.released).toBe(true);
@@ -109,8 +115,8 @@ describe('activateAllLivePlots', () => {
     const plot = makePlot(1);
     const unregister = registerLivePlot(plot);
 
-    const restoreFirst = activateAllLivePlots();
-    const restoreSecond = activateAllLivePlots();
+    const restoreFirst = activatePlots([plot]);
+    const restoreSecond = activatePlots([plot]);
     restoreFirst();
     expect(plot.released).toBe(false);
 
@@ -122,7 +128,7 @@ describe('activateAllLivePlots', () => {
   it('does not evict temporarily retained plots during export', () => {
     const plots = [makePlot(1), makePlot(2), makePlot(3), makePlot(4), makePlot(5)];
     const unregisters = plots.map((plot) => registerLivePlot(plot));
-    const restore = activateAllLivePlots();
+    const restore = activatePlots(plots);
 
     releaseOverflow();
     expect(plots.every((plot) => !plot.released)).toBe(true);
@@ -135,7 +141,7 @@ describe('activateAllLivePlots', () => {
   it('preserves a plot that becomes visible during export', () => {
     const plot = makePlot(1);
     const unregister = registerLivePlot(plot);
-    const restore = activateAllLivePlots();
+    const restore = activatePlots([plot]);
 
     plot.isVisible = true;
     retainLivePlot(plot);
@@ -144,5 +150,20 @@ describe('activateAllLivePlots', () => {
     expect(plot.isVisible).toBe(true);
     expect(plot.released).toBe(false);
     unregister();
+  });
+
+  it('activates only plots included in the export', () => {
+    const exportedPlot = makePlot(1, false, 'exported');
+    const unrelatedPlot = makePlot(2, false, 'unrelated');
+    const unregisterExported = registerLivePlot(exportedPlot);
+    const unregisterUnrelated = registerLivePlot(unrelatedPlot);
+
+    const restore = activateLivePlots(new Set(['exported']));
+
+    expect(exportedPlot.activated).toBe(true);
+    expect(unrelatedPlot.activated).toBe(false);
+    restore();
+    unregisterExported();
+    unregisterUnrelated();
   });
 });
