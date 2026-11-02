@@ -267,7 +267,6 @@ export type DisclaimerConfig = {
   acceptLabel?: string;
   /** Multiple confirmations; all have to be checked before the disclaimer can be accepted. */
   checkboxes?: string[];
-  /** Shown below the checkboxes. */
   footerText?: string;
   image?: string;
 };
