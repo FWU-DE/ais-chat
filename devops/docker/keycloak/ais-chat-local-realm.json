@@ -3002,6 +3002,24 @@
       ]
     },
     {
+      "username": "teacher-sn",
+      "firstName": "Teacher",
+      "lastName": "Teacher",
+      "email": "teacher-sn@example.com",
+      "attributes": {
+        "schulnummer": ["test_school1-SN"],
+        "federal_state": ["DE-SN"],
+        "role": ["LEHR"]
+      },
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ]
+    },
+    {
       "username": "admin",
       "firstName": "Admin",
       "lastName": "Admin",
