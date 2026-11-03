@@ -1,12 +1,7 @@
 import type { AiActivityToolName } from '@/types/ai-activity';
-import { test } from '../../fixtures/test';
+import { expect, test } from '../../fixtures/test';
 import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
-import {
-  expectAiActivityStep,
-  expectNoAiActivityStep,
-  sendMessage,
-  uploadFile,
-} from '../../utils/chat';
+import { expectAiActivityStep, sendMessage, uploadFile } from '../../utils/chat';
 
 test.use({ storageState: AUTH_FILES.teacher });
 
@@ -69,6 +64,5 @@ test('shows no AI activity step for a call to an unknown tool', async ({ page })
   await page.goto('/');
 
   await sendMessage(page, MOCK_LLM_COMMANDS.CALL_TOOL('not_a_real_tool', {}));
-  // The invalid tool is filtered out client-side, so no AI activity panel renders at all.
-  await expectNoAiActivityStep(page, 'math_calculate', 1);
+  await expect(page.getByTestId('ai-activity-toggle-1')).toHaveCount(0);
 });
