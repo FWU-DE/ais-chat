@@ -1,5 +1,5 @@
 import { expect, Page } from '@playwright/test';
-import { waitForAutosave } from './utils';
+import { openCollapsible, waitForAutosave } from './utils';
 
 export async function verifyDidacticCommentary(
   page: Page,
@@ -13,10 +13,7 @@ export async function verifyDidacticCommentary(
 
   const toggle = page.getByTestId('didactic-commentary-toggle');
   const input = page.getByTestId('didactic-commentary-input');
-  const infoTooltipTrigger = page
-    .getByRole('heading', { name: heading })
-    .locator('..')
-    .getByRole('button');
+  const infoTooltipTrigger = page.getByRole('button', { name: heading, exact: true });
 
   // An empty didactic commentary renders nothing in the read-only view
   await page.goto(`${viewBasePath}/${entityId}`);
@@ -25,15 +22,7 @@ export async function verifyDidacticCommentary(
   await page.goto(editorUrl);
   await expect(input).toBeHidden();
 
-  // Radix only registers the collapsible's click handler once the editor has hydrated.
-  // A click that lands before that is silently dropped, so retry while it stays closed.
-  await expect(toggle).toHaveAttribute('data-state', 'closed');
-  await expect(async () => {
-    if ((await toggle.getAttribute('data-state')) === 'closed') {
-      await toggle.click();
-    }
-    await expect(toggle).toHaveAttribute('data-state', 'open', { timeout: 1000 });
-  }).toPass({ timeout: 15_000 });
+  await openCollapsible(toggle);
   await expect(input).toBeVisible();
 
   await expect(async () => {

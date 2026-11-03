@@ -517,7 +517,7 @@ describe('template-service', () => {
       await expect(createTemplateFromUrl('/invalid/url')).rejects.toThrow('Invalid url format.');
     });
 
-    it('should duplicate the learning scenario picture in S3 under a key scoped to the new template id', async () => {
+    it('should copy learning scenario fields and picture to the template', async () => {
       const originalId = generateUUID();
       (
         dbGetLearningScenarioById as MockedFunction<typeof dbGetLearningScenarioById>
@@ -526,6 +526,8 @@ describe('template-service', () => {
         name: 'Original name',
         modelId: generateUUID(),
         userId: generateUUID(),
+        licenseInformation: 'Learning scenario license',
+        didacticCommentary: 'Learning scenario teaching notes',
         isSchoolShared: false,
         isCommunityShared: false,
         isGlobal: false,
@@ -544,6 +546,12 @@ describe('template-service', () => {
         newKey: call?.pictureId,
       });
       expect(call?.pictureId).not.toContain(originalId);
+      expect(call).toEqual(
+        expect.objectContaining({
+          licenseInformation: 'Learning scenario license',
+          didacticCommentary: 'Learning scenario teaching notes',
+        }),
+      );
     });
   });
 

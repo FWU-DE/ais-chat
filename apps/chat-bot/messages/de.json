@@ -678,7 +678,6 @@
     },
     "didactic-commentary": {
       "heading": "Didaktischer Kommentar",
-      "heading-tooltip": "Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieses Angebot eingesetzt werden kann.",
       "heading-tooltip-assistant": "Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieser Assistent eingesetzt werden kann.",
       "heading-tooltip-character": "Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieser Dialogpartner eingesetzt werden kann.",
       "heading-tooltip-learning-scenario": "Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieses Lernszenario eingesetzt werden kann.",

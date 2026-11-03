@@ -1,5 +1,5 @@
 import { expect, Page } from '@playwright/test';
-import { waitForAutosave } from './utils';
+import { openCollapsible, waitForAutosave } from './utils';
 
 export async function verifyLicenseInformation(page: Page, viewBasePath: string) {
   const editorUrl = page.url();
@@ -13,15 +13,7 @@ export async function verifyLicenseInformation(page: Page, viewBasePath: string)
   await expect(input).toBeHidden();
   await expect(copyrightLink).toBeHidden();
 
-  // Radix only registers the collapsible's click handler once the editor has hydrated.
-  // A click that lands before that is silently dropped, so retry while it stays closed.
-  await expect(toggle).toHaveAttribute('data-state', 'closed');
-  await expect(async () => {
-    if ((await toggle.getAttribute('data-state')) === 'closed') {
-      await toggle.click();
-    }
-    await expect(toggle).toHaveAttribute('data-state', 'open', { timeout: 1000 });
-  }).toPass({ timeout: 15_000 });
+  await openCollapsible(toggle);
   await expect(input).toBeVisible();
   await expect(copyrightLink).toBeVisible();
 
