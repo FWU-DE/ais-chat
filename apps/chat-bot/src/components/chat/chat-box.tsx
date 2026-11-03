@@ -141,9 +141,12 @@ export function ChatBox({
       </div>
     ) : null;
 
+  // Turn number within the conversation (1-based), shared by a user message and its assistant reply.
+  const assistantMessageNumber = Math.floor(index / 2 + 1);
+
   const AiActivity =
     activitySteps.length > 0 && !showActivityDialog ? (
-      <AiActivityPanel steps={activitySteps} panelId={`assistant-ai-activity-${message.id}`} />
+      <AiActivityPanel steps={activitySteps} messageIndex={assistantMessageNumber} />
     ) : null;
 
   const margin =
@@ -235,7 +238,7 @@ export function ChatBox({
       {AiActivity}
       {/* Hover surface for the message actions revealed by MessageActions. */}
       <div key={index} className={cn('w-full group/message', userClassName, margin)}>
-        <div aria-label={`${message.role} message ${Math.floor(index / 2 + 1)}`}>
+        <div aria-label={`${message.role} message ${assistantMessageNumber}`}>
           <div className={cn('flex min-w-0', isAtLeast.sm ? 'flex-row' : 'flex-col')}>
             {message.role === 'assistant' && assistantIcon}
             <div

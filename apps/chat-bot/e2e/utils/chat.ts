@@ -1,6 +1,9 @@
 import { expect, Page, test } from '@playwright/test';
 import path from 'node:path';
+import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
 import { waitForToast } from './utils';
+
+type AiActivityStepId = AiActivityToolName | Exclude<AiActivityStep['kind'], 'tool'>;
 
 export async function regenerateMessage(page: Page) {
   await page.getByTestId('regenerate-message-button').click();
@@ -101,6 +104,54 @@ export async function selectDifferentModel(page: Page, modelName?: string) {
     const firstOption = page.getByRole('menuitem').first();
     await firstOption.click();
   }
+}
+
+/**
+ * Opens the AI activity panel on the given assistant message (last one by default, if needed)
+ * and asserts whether the given step is listed. For `visible: false`, a hidden toggle (panel not
+ * rendered) also passes.
+ */
+async function expectAiActivityStepVisibility(
+  page: Page,
+  stepId: AiActivityStepId,
+  visible: boolean,
+  messageIndex?: number,
+) {
+  await test.step('expect AI activity step visibility', async () => {
+    const aiActivityToggles =
+      messageIndex !== undefined
+        ? page.getByTestId(`ai-activity-toggle-${messageIndex}`)
+        : page.getByTestId(/^ai-activity-toggle-/);
+    const aiActivityToggle = aiActivityToggles.last();
+
+    if (!visible && (await aiActivityToggles.count()) === 0) {
+      await expect(aiActivityToggle).not.toBeVisible();
+      return;
+    }
+
+    await expect(aiActivityToggle).toBeVisible();
+
+    if ((await aiActivityToggle.getAttribute('aria-expanded')) === 'false') {
+      await aiActivityToggle.click();
+    }
+
+    const panelContentId = await aiActivityToggle.getAttribute('aria-controls');
+    const panelContent = panelContentId ? page.locator(`#${panelContentId}`) : page;
+    const step = panelContent.getByTestId(`ai-activity-step-${stepId}`);
+    await (visible ? expect(step).toBeVisible() : expect(step).not.toBeVisible());
+  });
+}
+
+export function expectAiActivityStep(page: Page, stepId: AiActivityStepId, messageIndex?: number) {
+  return expectAiActivityStepVisibility(page, stepId, true, messageIndex);
+}
+
+export function expectNoAiActivityStep(
+  page: Page,
+  stepId: AiActivityStepId,
+  messageIndex?: number,
+) {
+  return expectAiActivityStepVisibility(page, stepId, false, messageIndex);
 }
 
 /**
