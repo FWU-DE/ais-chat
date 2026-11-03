@@ -1,10 +1,18 @@
-import { sharedChatSpeechRequestSchema } from '@/app/api/shared-chat/shared-chat-request-schemas';
 import { requireValidInviteCode } from '@/auth/requireValidInviteCode';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
 import { logError } from '@shared/logging';
 import { generateSharedChatSpeechStream } from '@shared/speech/shared-chat-speech-service';
+import { requiredNonEmptyString } from '@shared/utils/zod';
 import { NextRequest } from 'next/server';
-import { buildSpeechStreamResponse } from '../../../../utils/response-builder';
+import { z } from 'zod';
+import { buildSpeechStreamResponse } from '../../../../utils/speech-stream-response';
+
+const sharedChatSpeechRequestSchema = z.object({
+  inviteCode: requiredNonEmptyString('inviteCode is required'),
+  entityType: z.union([z.literal('character'), z.literal('learningScenario')]),
+  entityId: requiredNonEmptyString('entityId is required'),
+  text: requiredNonEmptyString('text is required'),
+});
 
 /**
  * Streaming counterpart of /api/v1/shared-chat/speech.

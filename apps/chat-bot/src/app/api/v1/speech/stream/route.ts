@@ -1,10 +1,17 @@
-import { speechRequestSchema } from '@/app/api/chat/speech-request-schemas';
 import { getUser } from '@/auth/utils';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
 import { logError } from '@shared/logging';
 import { generateChatSpeechStream } from '@shared/speech/speech-service';
+import { requiredNonEmptyString } from '@shared/utils/zod';
 import { NextRequest } from 'next/server';
-import { buildSpeechStreamResponse } from '../../../utils/response-builder';
+import { z } from 'zod';
+import { buildSpeechStreamResponse } from '../../../utils/speech-stream-response';
+
+const speechRequestSchema = z.object({
+  conversationId: z.string().optional(),
+  text: requiredNonEmptyString('text is required'),
+  voice: z.string().optional(),
+});
 
 /**
  * Streaming endpoint for speech.
