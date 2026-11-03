@@ -1033,6 +1033,55 @@ export type SharedLearningScenarioSelectModel = z.infer<typeof sharedLearningSce
 export type SharedLearningScenarioInsertModel = z.infer<typeof sharedLearningScenarioInsertSchema>;
 export type SharedLearningScenarioUpdateModel = z.infer<typeof sharedLearningScenarioUpdateSchema>;
 
+/**
+ * Message history for shared-chat browser session.
+ */
+export const sharedChatSessionTable = pgTable(
+  'shared_chat_session',
+  {
+    id: text('id').primaryKey(),
+    inviteCode: text('invite_code').notNull(),
+    entityType: text('entity_type').$type<'character' | 'learningScenario'>().notNull(),
+    entityId: uuid('entity_id').notNull(),
+    expiresAt: timestamp('expires_at', { mode: 'date', withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => [
+    check(
+      'shared_chat_session_entity_type_check',
+      sql`${table.entityType} in ('character', 'learningScenario')`,
+    ),
+    index().on(table.expiresAt),
+  ],
+);
+
+export const sharedChatSessionMessageTable = pgTable(
+  'shared_chat_session_message',
+  {
+    id: text('id').notNull(),
+    sessionId: text('session_id')
+      .references(() => sharedChatSessionTable.id, { onDelete: 'cascade' })
+      .notNull(),
+    content: text('content').notNull(),
+    role: conversationRoleEnum('role').notNull(),
+    orderNumber: integer('order_number').notNull(),
+    toolCalls: json('tool_calls').$type<ToolCall[]>(),
+    toolCallId: text('tool_call_id'),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.sessionId, table.id] }),
+    uniqueIndex('shared_chat_session_message_session_id_order_number_unique').on(
+      table.sessionId,
+      table.orderNumber,
+    ),
+  ],
+);
+
 // Type for learning scenario with sharing data (from JOIN with sharedLearningScenario)
 const sharedLearningScenarioTransformedSchema = sharedLearningScenarioSelectSchema
   .omit({ id: true, learningScenarioId: true, userId: true })

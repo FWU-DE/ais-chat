@@ -28,16 +28,9 @@ export default function CharacterSharedChat({
   const t = useTranslations('characters.shared');
   const { id, inviteCode, modelId } = character;
 
-  const initialMessages: ChatMessage[] =
-    loadSharedChat(inviteCode)?.messages.map((message) => ({
-      id: message.id,
-      role: message.role,
-      content: message.content,
-      activitySteps: message.activitySteps,
-    })) ??
-    (character.initialMessage
-      ? [{ id: 'initial-message', role: 'assistant', content: character.initialMessage }]
-      : []);
+  const initialMessages: ChatMessage[] = character.initialMessage
+    ? [{ id: 'initial-message', role: 'assistant', content: character.initialMessage }]
+    : [];
 
   const chat = useCharacterChat({
     characterId: id,
