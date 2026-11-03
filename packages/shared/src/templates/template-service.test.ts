@@ -130,6 +130,31 @@ describe('template-service', () => {
   });
 
   describe('copyAssistant', () => {
+    it('should copy licenseInformation and didacticCommentary to the new entity', async () => {
+      const sourceAssistant = {
+        id: 'assistant-origin',
+        name: 'Original assistant',
+        licenseInformation: 'Assistant license',
+        didacticCommentary: 'Assistant teaching notes',
+      };
+
+      (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
+        sourceAssistant as never,
+      );
+      (dbUpsertAssistant as MockedFunction<typeof dbUpsertAssistant>).mockResolvedValue({
+        id: 'assistant-copy',
+      } as never);
+
+      await copyAssistant('assistant-origin', false, { id: 'user-1' });
+
+      expect(dbUpsertAssistant).toHaveBeenCalledWith({
+        assistant: expect.objectContaining({
+          licenseInformation: 'Assistant license',
+          didacticCommentary: 'Assistant teaching notes',
+        }),
+      });
+    });
+
     it('should use duplicateAssistantName when provided', async () => {
       const originalId = 'assistant-origin';
       const sourceAssistant = {
@@ -246,6 +271,31 @@ describe('template-service', () => {
   });
 
   describe('copyCharacter', () => {
+    it('should copy licenseInformation and didacticCommentary to the new entity', async () => {
+      const sourceCharacter = {
+        id: 'character-origin',
+        name: 'Original character',
+        licenseInformation: 'Character license',
+        didacticCommentary: 'Character teaching notes',
+      };
+
+      (dbGetCharacterById as MockedFunction<typeof dbGetCharacterById>).mockResolvedValue(
+        sourceCharacter as never,
+      );
+      (dbCreateCharacter as MockedFunction<typeof dbCreateCharacter>).mockResolvedValue([
+        { id: 'character-copy' },
+      ] as never);
+
+      await copyCharacter('character-origin', false, { id: 'user-1' });
+
+      expect(dbCreateCharacter).toHaveBeenCalledWith(
+        expect.objectContaining({
+          licenseInformation: 'Character license',
+          didacticCommentary: 'Character teaching notes',
+        }),
+      );
+    });
+
     it('should use duplicateCharacterName when provided', async () => {
       const originalId = 'character-origin';
       const sourceCharacter = {

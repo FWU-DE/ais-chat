@@ -55,6 +55,7 @@ import { FieldGroup } from '@ui/components/field';
 import { Card, CardContent } from '@ui/components/card';
 import {
   LICENSE_INFORMATION_LENGTH_LIMIT,
+  DIDACTIC_COMMENTARY_LENGTH_LIMIT,
   SMALL_TEXT_INPUT_FIELDS_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS,
@@ -83,6 +84,7 @@ import {
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
 import { CustomChatLicenseInformationEditView } from '@/components/custom-chat/license-information/custom-chat-license-information-edit-view';
+import { CustomChatDidacticCommentaryEditView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-edit-view';
 
 type CharacterTranslator = ReturnType<typeof useTranslations<'characters'>>;
 
@@ -122,6 +124,7 @@ function createCharacterFormValuesSchema(t: CharacterTranslator) {
     description: z.string(),
     instructions: z.string(),
     initialMessage: z.string(),
+    didacticCommentary: z.string().max(DIDACTIC_COMMENTARY_LENGTH_LIMIT),
     licenseInformation: z.string().max(LICENSE_INFORMATION_LENGTH_LIMIT),
     modelId: z.string(),
     schoolTypes: z.array(schoolTypesSchema),
@@ -173,6 +176,7 @@ export function CharacterEdit({
   const router = useRouter();
   const toast = useToast();
   const t = useTranslations('characters');
+  const tChat = useTranslations('custom-chat');
   const characterFormValuesSchema = useMemo(() => createCharacterFormValuesSchema(t), [t]);
 
   const { models, defaultModel } = useLlmModels();
@@ -186,6 +190,7 @@ export function CharacterEdit({
     description: character.description ?? '',
     instructions: character.instructions ?? '',
     initialMessage: character.initialMessage ?? '',
+    didacticCommentary: character.didacticCommentary,
     licenseInformation: character.licenseInformation,
     modelId: selectedModelId ?? '',
     schoolTypes: filterValues.schoolTypes,
@@ -230,6 +235,7 @@ export function CharacterEdit({
         reset({
           ...values,
           name: values.name.trim(),
+          didacticCommentary: values.didacticCommentary.trimEnd(),
           licenseInformation: values.licenseInformation.trimEnd(),
         });
       },
@@ -243,6 +249,7 @@ export function CharacterEdit({
           description: data.description,
           instructions: data.instructions,
           initialMessage: data.initialMessage,
+          didacticCommentary: data.didacticCommentary.trimEnd(),
           licenseInformation: data.licenseInformation.trimEnd(),
           modelId: data.modelId,
           filterGroup: toFilterGroup(data),
@@ -641,6 +648,11 @@ export function CharacterEdit({
               setValue('languages', values, { shouldDirty: true });
               void flushAutoSave();
             }}
+          />
+          <CustomChatDidacticCommentaryEditView
+            control={control}
+            onBlur={handleAutoSave}
+            tooltip={tChat('didactic-commentary.heading-tooltip-character')}
           />
           <CustomChatLicenseInformationEditView control={control} onBlur={handleAutoSave} />
         </form>

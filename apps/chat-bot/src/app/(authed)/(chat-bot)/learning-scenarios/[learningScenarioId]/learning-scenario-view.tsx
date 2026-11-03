@@ -34,6 +34,7 @@ import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-autho
 import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
 import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-chat-filter-display-section';
 import { CustomChatLicenseInformationView } from '@/components/custom-chat/license-information/custom-chat-license-information-view';
+import { CustomChatDidacticCommentaryView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-view';
 import { extractFilterValues } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import { FieldGroup } from '@ui/components/field';
 import { CustomChatWebSearchView } from '@/components/custom-chat/web-search/custom-chat-web-search-view';
@@ -64,6 +65,7 @@ export function LearningScenarioView({
   const toast = useToast();
   const t = useTranslations('learning-scenarios');
   const tToast = useTranslations('learning-scenarios.toasts');
+  const tChat = useTranslations('custom-chat');
   const { models } = useLlmModels();
   const filterValues = extractFilterValues(learningScenario);
 
@@ -210,6 +212,11 @@ export function LearningScenarioView({
                 value={learningScenario.studentExercise}
               />
               <FilterDisplaySection values={filterValues} />
+              {/* TODO(TD-1542): final placement to be confirmed with design (AC says after Kurzbeschreibung). */}
+              <CustomChatDidacticCommentaryView
+                didacticCommentary={learningScenario.didacticCommentary}
+                tooltip={tChat('didactic-commentary.heading-tooltip-learning-scenario')}
+              />
               <CustomChatLicenseInformationView
                 licenseInformation={learningScenario.licenseInformation}
               />

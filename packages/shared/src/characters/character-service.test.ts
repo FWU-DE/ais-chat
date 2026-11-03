@@ -1523,6 +1523,7 @@ describe('character-service', () => {
         pictureId: null,
         initialMessage: null,
         licenseInformation: '',
+        didacticCommentary: '',
         originalCharacterId: null,
         tokenPointsLimit: 50,
         maxUsageTimeLimit: 60,

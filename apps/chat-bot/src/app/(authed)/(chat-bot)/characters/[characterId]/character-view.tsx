@@ -34,6 +34,7 @@ import { CustomChatCreateSuspensionRequestButton } from '@/components/custom-cha
 import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-author-info';
 import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-chat-filter-display-section';
 import { CustomChatLicenseInformationView } from '@/components/custom-chat/license-information/custom-chat-license-information-view';
+import { CustomChatDidacticCommentaryView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-view';
 import { extractFilterValues } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import { CustomChatWebSearchView } from '@/components/custom-chat/web-search/custom-chat-web-search-view';
 import { CustomChatSpeechView } from '@/components/custom-chat/speech/custom-chat-speech-view';
@@ -186,6 +187,11 @@ export function CharacterView({
                 value={character.initialMessage}
               />
               <FilterDisplaySection values={filterValues} />
+              {/* TODO(TD-1542): final placement to be confirmed with design (AC says after Kurzbeschreibung). */}
+              <CustomChatDidacticCommentaryView
+                didacticCommentary={character.didacticCommentary}
+                tooltip={tChat('didactic-commentary.heading-tooltip-character')}
+              />
               <CustomChatLicenseInformationView licenseInformation={character.licenseInformation} />
             </FieldGroup>
           </CardContent>
