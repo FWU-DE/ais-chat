@@ -5,7 +5,6 @@ import { getErrorMessageByType } from '@/error/get-error-message-by-type';
 import { useAutoScroll } from '@/hooks/use-auto-scroll';
 import { useMainChat, type ChatMessage } from '@/hooks/use-chat-hooks';
 import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
-import { unlockAudioPlayback } from '@/utils/audio/unlock-audio-playback';
 import { getConversationPath } from '@/utils/chat/path';
 import { getFileExtension, isImageFile } from '@/utils/files/generic';
 import { navigateWithoutRefresh } from '@/utils/navigation/router';
@@ -204,12 +203,6 @@ export default function Chat({
 
   async function customHandleSubmit(e: SyntheticEvent) {
     e.preventDefault();
-
-    // Speech-only replies autoplay once streaming finishes, with no user gesture of their own, so
-    // the page's audio playback must be unlocked here while this submit is still a real gesture.
-    if (speechOnly && isSpeechModelEnabled) {
-      unlockAudioPlayback();
-    }
 
     try {
       reactivateAutoScrolling();

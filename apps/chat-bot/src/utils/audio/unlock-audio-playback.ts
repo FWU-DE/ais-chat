@@ -6,6 +6,9 @@ let unlocked = false;
  * an `AudioContext` to leave the `suspended` state this way; once the page has been unlocked like
  * this, contexts created later outside a gesture (e.g. for autoplaying a speech-only reply once it
  * finishes streaming) start already running instead of silently staying suspended.
+ *
+ * Called unconditionally from the chat input submit handler: it runs at most once per page and
+ * needs no knowledge of the speech settings, so no chat surface can forget to unlock.
  */
 export function unlockAudioPlayback(): void {
   if (unlocked) {
