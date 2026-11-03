@@ -303,7 +303,7 @@ export const federalStateDisclaimers: Partial<Record<FederalStateId, DisclaimerC
     pageContents: [EDUCATION_HINT_SN],
     showCheckBox: true,
     checkboxes: [
-      'Ich bestätige die Nutzungsbedingungen von AIS.chat.',
+      'Ich bestätige die [Nutzungsbedingungen](https://ais-chat.schule/terms-of-use/) von AIS.chat.',
       AI_COMPETENCE_CONFIRMATION_SN,
     ],
     footerText: 'Diese Bestätigung ist Voraussetzung für die Nutzung von AIS.chat.',
