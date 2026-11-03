@@ -143,7 +143,7 @@ services:
         condition: service_started
 
   bifrost:
-    image: ghcr.io/maximhq/bifrost:v2.3.2
+    image: ghcr.io/maximhq/bifrost:v2.4.0
     restart: unless-stopped
     environment:
       BIFROST_ADMIN_USERNAME: admin
