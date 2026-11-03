@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { requiredNonEmptyString } from '@shared/utils/zod';
+import { z } from 'zod';
 
 export const sharedChatCommonRequestSchema = z.object({
   inviteCode: requiredNonEmptyString('inviteCode is required'),
@@ -25,9 +25,4 @@ export const sharedChatSpeechRequestSchema = z.object({
   entityType: z.union([z.literal('character'), z.literal('learningScenario')]),
   entityId: requiredNonEmptyString('entityId is required'),
   text: requiredNonEmptyString('text is required'),
-});
-
-export const sharedChatInitialMessageSpeechRequestSchema = z.object({
-  inviteCode: requiredNonEmptyString('inviteCode is required'),
-  characterId: requiredNonEmptyString('characterId is required'),
 });

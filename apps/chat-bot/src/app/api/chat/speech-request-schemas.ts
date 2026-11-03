@@ -7,14 +7,6 @@ export const speechRequestSchema = z.object({
   voice: z.string().optional(),
 });
 
-export const speechWithConversationIdRequestSchema = speechRequestSchema.extend({
-  conversationId: requiredNonEmptyString('conversationId is required'),
-});
-
 export const speechPreviewRequestSchema = z.object({
   voice: requiredNonEmptyString('voice is required'),
-});
-
-export const initialMessageSpeechRequestSchema = z.object({
-  characterId: requiredNonEmptyString('characterId is required'),
 });

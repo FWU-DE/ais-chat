@@ -79,34 +79,6 @@ export default function CharacterSharedChat({
     };
   }
 
-  async function generateSharedCharacterSpeech(
-    text: string,
-    isInitialMessage: boolean,
-    signal?: AbortSignal,
-  ): Promise<Blob> {
-    const response = await fetch(
-      isInitialMessage
-        ? '/api/v1/shared-chat/speech/initial-message'
-        : '/api/v1/shared-chat/speech',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal,
-        body: JSON.stringify(
-          isInitialMessage
-            ? { inviteCode, characterId: id }
-            : { text, inviteCode, entityType: 'character', entityId: id },
-        ),
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error('Could not generate speech');
-    }
-
-    return response.blob();
-  }
-
   async function generateSharedCharacterSpeechStream(
     text: string,
     _isInitialMessage: boolean,
@@ -132,7 +104,6 @@ export default function CharacterSharedChat({
       assistantIcon={assistantIcon}
       uploadFileFn={uploadSharedCharacterFile}
       isSpeechModelEnabled={isSpeechModelEnabled}
-      generateSpeechFn={generateSharedCharacterSpeech}
       speechOnly={character.speechOnly}
       generateSpeechStreamFn={generateSharedCharacterSpeechStream}
     />

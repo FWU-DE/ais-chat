@@ -2,20 +2,11 @@ import {
   getCachedSpeechPreview,
   setCachedSpeechPreview,
 } from '@/app/api/utils/speech-preview-cache';
-import { UserAndContext } from '@/auth/types';
 import type { AudioFormat } from '@ais-chat/ai-core';
-import { generateSpeechById, streamSpeechById, TokenPointsExceededError } from '@ais-chat/ai-core';
-import { getConversation } from '@shared/conversation/conversation-service';
+import { generateSpeechById, streamSpeechById } from '@ais-chat/ai-core';
 import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
-import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
 import { InvalidArgumentError } from '@shared/error';
-import {
-  constructNewMessageEvent,
-  constructTokenBudgetExceededEvent,
-  sendRabbitmqEvent,
-} from '@shared/rabbitmq';
 import { calculateSpeechCostsInCent } from '@shared/speech/utils';
-import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
 /**
  * Public result of the chat-facing streaming speech functions.
  * Raw PCM `chunks` in `format`, plus the `contentType` to send back.
@@ -25,55 +16,6 @@ export type ChatSpeechStreamResult = {
   contentType: string;
   format: AudioFormat;
 };
-
-async function resolveSpeechModelAndVoice(voice?: string) {
-  const speechModel = await dbGetSpeechModel();
-
-  if (!speechModel) {
-    throw new Error('No speech model configured');
-  }
-
-  const voices = speechModel.modelConfig?.voices ?? [];
-  const [firstVoice] = voices;
-
-  if (firstVoice === undefined) {
-    throw new Error('No voices configured for the speech model');
-  }
-
-  const selectedVoice = voice && voices.some((v) => v.name === voice) ? voice : firstVoice.name;
-
-  return { speechModel, selectedVoice };
-}
-
-export async function generateSpeech({
-  text,
-  voice,
-  abortSignal,
-}: {
-  text: string;
-  voice?: string;
-  abortSignal?: AbortSignal;
-}) {
-  const { speechModel, selectedVoice } = await resolveSpeechModelAndVoice(voice);
-
-  const { wavBuffer, usage } = await generateSpeechById({
-    modelId: speechModel.id,
-    text,
-    voice: selectedVoice,
-    abortSignal,
-  });
-
-  const costsInCent = calculateSpeechCostsInCent(speechModel, usage);
-
-  return {
-    buffer: wavBuffer,
-    contentType: 'audio/wav',
-    costsInCent,
-    modelId: speechModel.id,
-    provider: speechModel.provider,
-    modelName: speechModel.name,
-  };
-}
 
 /**
  * Streaming counterpart of `generateSpeech`. Yields raw PCM chunks as they arrive instead of
@@ -129,56 +71,6 @@ export async function generateSpeechStream({
   };
 }
 
-export async function generateChatSpeech({
-  user,
-  conversationId,
-  text,
-  voice,
-  abortSignal,
-}: {
-  user: UserAndContext;
-  conversationId: string;
-  text: string;
-  voice?: string;
-  abortSignal?: AbortSignal;
-}): Promise<{ buffer: Buffer; contentType: string }> {
-  const conversation = await getConversation({
-    conversationId,
-    userId: user.id,
-  });
-
-  if (await userHasReachedTokenPointsLimit({ user })) {
-    await sendRabbitmqEvent(constructTokenBudgetExceededEvent({ user }));
-    throw new TokenPointsExceededError();
-  }
-
-  const speechResult = await generateSpeech({ text, voice, abortSignal });
-
-  await dbInsertConversationUsage({
-    conversationId,
-    userId: user.id,
-    modelId: speechResult.modelId,
-    completionTokens: 0,
-    promptTokens: 0,
-    costsInCent: speechResult.costsInCent,
-  });
-
-  await sendRabbitmqEvent(
-    constructNewMessageEvent({
-      user,
-      promptTokens: 0,
-      completionTokens: 0,
-      costsInCent: speechResult.costsInCent,
-      provider: speechResult.provider,
-      modelName: speechResult.modelName,
-      anonymous: false,
-      conversation,
-    }),
-  );
-
-  return { buffer: speechResult.buffer, contentType: speechResult.contentType };
-}
-
 export async function generateSpeechPreview({ text, voice }: { text: string; voice: string }) {
   const speechModel = await dbGetSpeechModel();
 
@@ -207,44 +99,6 @@ export async function generateSpeechPreview({ text, voice }: { text: string; voi
   });
 
   await setCachedSpeechPreview(speechModel.id, voice, text, wavBuffer);
-
-  return {
-    buffer: wavBuffer,
-    contentType: 'audio/wav',
-  };
-}
-
-/**
- * Generates speech for a static message (e.g. a character's initial message).
- * The result is cached because the text is identical for every listener, and generation is unbilled.
- */
-export async function generateStaticMessageSpeech({
-  text,
-  voice,
-  abortSignal,
-}: {
-  text: string;
-  voice?: string;
-  abortSignal?: AbortSignal;
-}): Promise<{ buffer: Buffer; contentType: string }> {
-  const { speechModel, selectedVoice } = await resolveSpeechModelAndVoice(voice);
-
-  const cached = await getCachedSpeechPreview(speechModel.id, selectedVoice, text);
-  if (cached !== undefined) {
-    return {
-      buffer: cached,
-      contentType: 'audio/wav',
-    };
-  }
-
-  const { wavBuffer } = await generateSpeechById({
-    modelId: speechModel.id,
-    text,
-    voice: selectedVoice,
-    abortSignal,
-  });
-
-  await setCachedSpeechPreview(speechModel.id, selectedVoice, text, wavBuffer);
 
   return {
     buffer: wavBuffer,

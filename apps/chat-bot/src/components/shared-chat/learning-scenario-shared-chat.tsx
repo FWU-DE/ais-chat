@@ -63,25 +63,6 @@ export default function LearningScenarioSharedChat({
     };
   }
 
-  async function generateSharedLearningScenarioSpeech(
-    text: string,
-    _isInitialMessage: boolean,
-    signal?: AbortSignal,
-  ): Promise<Blob> {
-    const response = await fetch('/api/v1/shared-chat/speech', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal,
-      body: JSON.stringify({ text, inviteCode, entityType: 'learningScenario', entityId: id }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Could not generate speech');
-    }
-
-    return response.blob();
-  }
-
   async function generateSharedLearningScenarioSpeechStream(
     text: string,
     _isInitialMessage: boolean,
@@ -108,7 +89,6 @@ export default function LearningScenarioSharedChat({
       exerciseTitle={t('exercise-title')}
       uploadFileFn={uploadSharedLearningScenarioFile}
       isSpeechModelEnabled={isSpeechModelEnabled}
-      generateSpeechFn={generateSharedLearningScenarioSpeech}
       speechOnly={sharedSchoolChat.speechOnly}
       generateSpeechStreamFn={generateSharedLearningScenarioSpeechStream}
     />
