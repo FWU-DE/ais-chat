@@ -10,7 +10,7 @@ test('should successfully upload an image and get response about its contents', 
   page,
 }) => {
   await page.goto('/');
-  await selectDifferentModel(page, LLM_MODELS.IMAGE_CAPABLE_MODEL);
+  await selectDifferentModel(page, LLM_MODELS.REAL_MODEL);
 
   await uploadFile(page, './e2e/fixtures/lazy.webp');
 

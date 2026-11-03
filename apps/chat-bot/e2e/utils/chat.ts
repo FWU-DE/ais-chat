@@ -138,7 +138,11 @@ async function expectAiActivityStepVisibility(
     const panelContentId = await aiActivityToggle.getAttribute('aria-controls');
     const panelContent = panelContentId ? page.locator(`#${panelContentId}`) : page;
     const step = panelContent.getByTestId(`ai-activity-step-${stepId}`);
-    await (visible ? expect(step).toBeVisible() : expect(step).not.toBeVisible());
+    if (visible) {
+      await expect(step.first()).toBeVisible();
+    } else {
+      await expect(step).toHaveCount(0);
+    }
   });
 }
 
