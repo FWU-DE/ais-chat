@@ -4,6 +4,7 @@ import {
   dbGetExpiredLearningScenarioShares,
   dbGetSharedChatFileCandidates,
 } from '@shared/db/functions/shared-chat-files';
+import { dbDeleteExpiredSharedChatSessions } from '@shared/db/functions/shared-chat-sessions';
 import { deleteMessageAttachments } from '@shared/files/fileService';
 import { isSharedChatFileMetadata, SharedChatFileMetadata } from '@shared/shared-chat';
 import { addDays } from '@shared/utils/date';
@@ -21,6 +22,9 @@ type SharedFileCandidate = {
  * The function removes files and chunks from database, then deletes corresponding S3 objects.
  */
 export async function cleanupExpiredSharedChatFiles(): Promise<number> {
+  const cutoffDate = addDays(new Date(), EXPIRATION_OFFSET_IN_DAYS);
+  await dbDeleteExpiredSharedChatSessions(cutoffDate);
+
   const maybeSharedFiles = await dbGetSharedChatFileCandidates();
 
   const sharedFiles: SharedFileCandidate[] = maybeSharedFiles
@@ -35,8 +39,6 @@ export async function cleanupExpiredSharedChatFiles(): Promise<number> {
   if (sharedFiles.length === 0) {
     return 0;
   }
-
-  const cutoffDate = addDays(new Date(), EXPIRATION_OFFSET_IN_DAYS);
 
   const characterInviteCodes = [
     ...new Set(

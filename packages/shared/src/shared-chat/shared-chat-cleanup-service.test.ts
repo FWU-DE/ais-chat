@@ -4,6 +4,7 @@ import {
   dbGetExpiredLearningScenarioShares,
   dbGetSharedChatFileCandidates,
 } from '@shared/db/functions/shared-chat-files';
+import { dbDeleteExpiredSharedChatSessions } from '@shared/db/functions/shared-chat-sessions';
 import { deleteMessageAttachments } from '@shared/files/fileService';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -18,6 +19,10 @@ vi.mock('@shared/db/functions/shared-chat-files', () => ({
 
 vi.mock('@shared/files/fileService', () => ({
   deleteMessageAttachments: vi.fn(),
+}));
+
+vi.mock('@shared/db/functions/shared-chat-sessions', () => ({
+  dbDeleteExpiredSharedChatSessions: vi.fn(),
 }));
 
 const originalEnv = { ...process.env };
@@ -62,6 +67,7 @@ beforeEach(() => {
   vi.mocked(dbGetExpiredCharacterShares).mockResolvedValue([]);
   vi.mocked(dbGetExpiredLearningScenarioShares).mockResolvedValue([]);
   vi.mocked(dbDeleteFilesByIds).mockResolvedValue(undefined as never);
+  vi.mocked(dbDeleteExpiredSharedChatSessions).mockResolvedValue(0);
   vi.mocked(deleteMessageAttachments).mockResolvedValue(undefined);
 });
 

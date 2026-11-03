@@ -10,6 +10,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { ReactNode, RefObject, SyntheticEvent, useEffect, useRef, useState } from 'react';
 
+import { loadSharedChatSessionMessagesAction } from '@/app/api/shared-chat/actions';
 import { ChatInputBox } from '@/components/chat/chat-input-box';
 import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
 import { InitialChatContentDisplay } from '@/components/chat/initial-content-display';
@@ -134,37 +135,7 @@ export default function GenericSharedChat({
   );
   const [files, setFiles] = useState<Map<string, LocalFileState>>(new Map());
   const [messageFileMapping, setMessageFileMapping] = useState<Map<string, MessageFileModel[]>>(
-    () => {
-      const restored = loadSharedChat(inviteCode);
-      const mapping = new Map<string, MessageFileModel[]>();
-      if (restored === null) return mapping;
-
-      for (const message of restored.messages) {
-        if (message.files.length > 0) {
-          // Persisted files only keep id/name/type/size; fill in the remaining
-          // FileModel fields with placeholders since they aren't used for display.
-          mapping.set(
-            message.id,
-            message.files.map((file) => ({
-              ...file,
-              createdAt: new Date(),
-              metadata: null,
-              userId: null,
-              localUrl: isImageFile(file.name)
-                ? getSharedChatImageUrl({
-                    fileId: file.id,
-                    inviteCode,
-                    entityType: sharedEntityType,
-                    entityId: entity.id,
-                    sharedSessionId: restored.sharedSessionId,
-                  })
-                : undefined,
-            })),
-          );
-        }
-      }
-      return mapping;
-    },
+    new Map(),
   );
 
   const {
@@ -183,6 +154,7 @@ export default function GenericSharedChat({
   const { scrollRef, reactivateAutoScrolling } = useAutoScroll([messages, entity.id, inviteCode]);
   const containerRef = useRef<HTMLDivElement>(null);
   const alreadyMounted = useRef(false); // Guard against the mount effect running twice (e.g. React StrictMode dev behavior)
+  const historyLoaded = useRef(false);
 
   const chatUsable =
     chatActive && !TokenPointsExceededError.is(error) && !SharedChatExpiredError.is(error);
@@ -281,20 +253,31 @@ export default function GenericSharedChat({
   }
 
   useEffect(() => {
+    if (historyLoaded.current) return;
+    historyLoaded.current = true;
+
+    void loadSharedChatSessionMessagesAction({
+      sharedSessionId,
+      inviteCode,
+      entityType: sharedEntityType,
+      entityId: entity.id,
+    })
+      .then((storedMessages) => {
+        if (storedMessages.length > 0) {
+          setMessages(storedMessages);
+        }
+      })
+      .catch((error) => {
+        logError('Failed to load shared chat history', error);
+      });
+  }, [entity.id, inviteCode, setMessages, sharedEntityType, sharedSessionId]);
+
+  useEffect(() => {
     // Do not persist messages during streaming (assistant content is incomplete).
     if (status === 'streaming') return;
 
-    saveSharedChat(inviteCode, {
-      sharedSessionId,
-      messages: messages.map((message) => ({
-        id: message.id,
-        role: message.role,
-        content: message.content,
-        activitySteps: message.activitySteps,
-        files: messageFileMapping.get(message.id) ?? [],
-      })),
-    });
-  }, [inviteCode, sharedSessionId, messages, messageFileMapping, status]);
+    saveSharedChat(inviteCode, { sharedSessionId });
+  }, [inviteCode, sharedSessionId, status]);
 
   function handleReload() {
     void reload({ fileIds: getMessageFileIds(), sharedSessionId });
