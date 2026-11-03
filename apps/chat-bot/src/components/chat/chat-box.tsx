@@ -168,7 +168,8 @@ export function ChatBox({
 
   // Starts playback automatically once the current (last) assistant message has just finished
   // streaming. Uses a counter bumped exactly once per streaming-to-ready transition, so historical
-  // messages that are already complete when the page loads never auto-play.
+  // messages that are already complete when the page loads never auto-play. Aborted streams end in
+  // 'error' and must not be read aloud.
   const [autoPlayTrigger, setAutoPlayTrigger] = useState(0);
   const previousStatusRef = useRef(status);
   useEffect(() => {
@@ -178,7 +179,7 @@ export function ChatBox({
       isAssistantSpeechOnly &&
       isLastNonUser &&
       previousStatus === 'streaming' &&
-      status !== 'streaming'
+      status === 'ready'
     ) {
       setAutoPlayTrigger((trigger) => trigger + 1);
     }

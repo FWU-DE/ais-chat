@@ -26,11 +26,10 @@ export type SerializedError = {
  * Status of a chat conversation.
  * - 'ready': Chat is ready for input
  * - 'submitted': Message has been submitted, waiting for response
- * - 'reasoning': Model is reasoning (for reasoning models like o1/o3)
  * - 'streaming': Response is being streamed
  * - 'error': An error occurred
  */
-export type ChatStatus = 'ready' | 'submitted' | 'reasoning' | 'streaming' | 'error';
+export type ChatStatus = 'ready' | 'submitted' | 'streaming' | 'error';
 
 export const chatMessageSchema = z.object({
   id: z.string(),
