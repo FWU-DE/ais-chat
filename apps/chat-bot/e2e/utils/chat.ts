@@ -75,7 +75,7 @@ export async function uploadFile(page: Page, filePath: string) {
 
 /** Opens the LLM model dropdown and selects a specific model by displayName, or the first available alternative if no name is provided. */
 export async function selectDifferentModel(page: Page, modelName?: string) {
-  const dropdown = page.getByTestId('main-menu-item-model-dropdown');
+  const dropdown = page.getByTestId('main-menu-item-text-model-dropdown');
   await expect(dropdown).toBeVisible();
 
   const isDisabled = await dropdown.evaluate((el) => (el as HTMLButtonElement).disabled);
@@ -98,6 +98,33 @@ export async function selectDifferentModel(page: Page, modelName?: string) {
     await option.click();
     const response = await modelUpdate;
     expect(response.ok(), `Failed to persist selected model ${modelName}`).toBe(true);
+  } else {
+    // The selected model is not listed in the dropdown
+    // -> selecting the first menu item will be a different model
+    const firstOption = page.getByRole('menuitem').first();
+    await firstOption.click();
+  }
+}
+
+/** Opens the image model dropdown and selects a specific model by displayName, or the first available alternative if no name is provided. */
+export async function selectDifferentImageModel(page: Page, modelName?: string) {
+  const dropdown = page.getByTestId('main-menu-item-image-model-dropdown');
+  await expect(dropdown).toBeVisible();
+
+  const isDisabled = await dropdown.evaluate((el) => (el as HTMLButtonElement).disabled);
+  if (isDisabled) return;
+
+  const selectedModel = await page.getByTestId('main-menu-item-image-model-selected').innerText();
+  if (modelName && selectedModel === modelName) {
+    // requested model is already selected
+    return;
+  }
+
+  await dropdown.click();
+
+  if (modelName) {
+    const option = page.getByTestId(`menu-item-${modelName}`);
+    await option.click();
   } else {
     // The selected model is not listed in the dropdown
     // -> selecting the first menu item will be a different model

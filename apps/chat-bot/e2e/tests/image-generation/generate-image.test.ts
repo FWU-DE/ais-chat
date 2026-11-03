@@ -1,18 +1,17 @@
 import { expect, test } from '../../fixtures/test';
+import { selectDifferentImageModel } from '../../utils/chat';
 import { AUTH_FILES } from '../../utils/const';
+import { LLM_MODELS } from '../../utils/llm-models';
 import { waitForToast } from '../../utils/utils';
 
 test.use({ storageState: AUTH_FILES.teacher });
 
-test('can generate an image and use image actions', async ({ page }) => {
+test('can generate an image and use image actions', { tag: '@smoke' }, async ({ page }) => {
   // navigate to image generation
   await page.goto('/image-generation');
   await page.waitForURL('/image-generation**');
 
-  // get selected model (use whatever image model is selected, don't switch it)
-  const selectedModelLocator = page.getByTestId('main-menu-item-image-model-selected');
-  const currentSelectedText = await selectedModelLocator.textContent();
-  expect(currentSelectedText).toBeTruthy();
+  await selectDifferentImageModel(page, LLM_MODELS.IMAGE_MODEL);
 
   // send message
   const prompt = 'A duck with a hat';
@@ -25,7 +24,7 @@ test('can generate an image and use image actions', async ({ page }) => {
 
   // Wait for loading to finish
   try {
-    await loadingAnimation.waitFor({ state: 'detached', timeout: 60000 });
+    await loadingAnimation.waitFor({ state: 'detached', timeout: 20000 });
   } catch {
     // If loading doesn't detach, check if an error appeared
     const errorMessage = page.getByText('Ein Fehler ist aufgetreten');

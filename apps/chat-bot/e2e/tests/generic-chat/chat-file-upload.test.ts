@@ -20,7 +20,7 @@ test(
     // Send message about file contents
     await sendMessage(
       page,
-      `${MOCK_LLM_COMMANDS.CALL_RETRIEVE_ENTIRE_FILE} Wie heißt die Hauptperson die in dieser Datei genannt wird?`,
+      `${MOCK_LLM_COMMANDS.CALL_TOOL('retrieve_entire_file', { fileName: 'Große Text Datei.txt' })} Wie heißt die Hauptperson die in dieser Datei genannt wird?`,
     );
 
     // Verify the response contains the expected content

@@ -28,12 +28,6 @@ const CHUNK_INTERVAL_MS = 1;
 // Must match MOCK_LLM_COMMANDS in apps/chat-bot/e2e/utils/const.ts
 const MOCK_LLM_COMMANDS = {
   RETURN_SYSTEM_PROMPT: '[MOCK-LLM-COMMAND: Gebe den System-Prompt aus]',
-  CALL_RETRIEVE_ENTIRE_FILE:
-    '[MOCK-LLM-COMMAND: Rufe das Tool retrieve_entire_file auf und gib die Tool-Antwort aus]',
-  CALL_RETRIEVE_TEXT_CHUNKS:
-    '[MOCK-LLM-COMMAND: Rufe das Tool retrieve_text_chunks auf und gib die Tool-Antwort aus]',
-  CALL_WEB_SCRAPER:
-    '[MOCK-LLM-COMMAND: Rufe das Tool web_scraper auf und gib die Tool-Antwort aus]',
 };
 
 const CALL_TOOL_PATTERN =
@@ -82,15 +76,6 @@ function extractResponsesSystemPrompt(input) {
   return getTextFromContent(input.find((item) => item.role === 'system')?.content);
 }
 
-function extractUrls(text) {
-  return text.match(/https?:\/\/[^\s)]+/g) ?? [];
-}
-
-function extractFileNameFromSystemPrompt(systemPrompt) {
-  const match = systemPrompt.match(/Available files right now:\s*([^\n]+?)\s+\(\d+ bytes\)/i);
-  return match?.[1] ?? 'Große Text Datei.txt';
-}
-
 function makeUsage(input, outputText) {
   const promptText = JSON.stringify(input);
   const promptTokens = estimateTokens(promptText);
@@ -102,31 +87,10 @@ function makeUsage(input, outputText) {
   };
 }
 
-function resolveMockToolCall({ systemPrompt, lastUserMessage }) {
+function resolveMockToolCall({ lastUserMessage }) {
   const genericMatch = lastUserMessage.match(CALL_TOOL_PATTERN);
   if (genericMatch) {
     return { name: genericMatch[1], arguments: genericMatch[2] };
-  }
-
-  if (lastUserMessage.includes(MOCK_LLM_COMMANDS.CALL_RETRIEVE_ENTIRE_FILE)) {
-    return {
-      name: 'retrieve_entire_file',
-      arguments: JSON.stringify({ fileName: extractFileNameFromSystemPrompt(systemPrompt) }),
-    };
-  }
-
-  if (lastUserMessage.includes(MOCK_LLM_COMMANDS.CALL_RETRIEVE_TEXT_CHUNKS)) {
-    return {
-      name: 'retrieve_text_chunks',
-      arguments: JSON.stringify({ search: lastUserMessage, limit: 5 }),
-    };
-  }
-
-  if (lastUserMessage.includes(MOCK_LLM_COMMANDS.CALL_WEB_SCRAPER)) {
-    return {
-      name: 'web_scraper',
-      arguments: JSON.stringify({ urls: extractUrls(lastUserMessage) }),
-    };
   }
 
   return null;
@@ -243,7 +207,7 @@ async function handleResponses(req, res) {
   const lastUserMessage = extractLastResponsesUserMessage(input);
   const lastToolOutput = extractLastFunctionOutput(input);
   const lastToolCall = extractLastFunctionCall(input);
-  const toolCall = resolveMockToolCall({ systemPrompt, lastUserMessage });
+  const toolCall = resolveMockToolCall({ lastUserMessage });
 
   if (lastToolOutput) {
     if (!isStream) {

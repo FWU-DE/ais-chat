@@ -3,7 +3,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { adminLogin } from './utils/admin-login';
 import { selectDifferentModel } from './utils/chat';
-import { ADMIN_BASE_URL, AUTH_FILES, EDITOR_AUTH_FILE, LLM_MODELS_FILE } from './utils/const';
+import {
+  ADMIN_BASE_URL,
+  AUTH_FILES,
+  EDITOR_AUTH_FILE,
+  IMAGE_MODELS_FILE,
+  LLM_MODELS_FILE,
+} from './utils/const';
 import { LLM_MODELS } from './utils/llm-models';
 import { login } from './utils/login';
 
@@ -14,14 +20,16 @@ import { login } from './utils/login';
 const MOCK_MODEL_DISPLAY_NAMES = new Set<string>([
   LLM_MODELS.TEXT_MODEL_1,
   LLM_MODELS.TEXT_MODEL_2,
+  LLM_MODELS.IMAGE_MODEL,
 ]);
 
-async function readModelsFromDropdown(page: Page): Promise<string[]> {
-  const dropdown = page.getByTestId(`text-model-dropdown`);
+async function readModelsFromDropdown(page: Page, modelType: 'text' | 'image'): Promise<string[]> {
+  const selected = page.getByTestId(`main-menu-item-${modelType}-model-selected`);
+  await selected.waitFor();
+  const selectedModelName = await selected.innerText();
 
-  if (!(await dropdown.isVisible())) return [];
-
-  const selectedModelName = await dropdown.innerText();
+  const dropdown = page.getByTestId(`main-menu-item-${modelType}-model-dropdown`);
+  if (!(await dropdown.isVisible())) return selectedModelName ? [selectedModelName] : [];
 
   const isDisabled = await dropdown.evaluate((el) => (el as HTMLButtonElement).disabled);
   if (isDisabled) return selectedModelName ? [selectedModelName] : [];
@@ -31,7 +39,9 @@ async function readModelsFromDropdown(page: Page): Promise<string[]> {
   const otherModels = await page
     .getByRole('menuitem')
     .evaluateAll((els) =>
-      els.map((el) => el.getAttribute('data-testid')).filter((id) => id !== null),
+      els
+        .map((el) => el.getAttribute('data-testid')?.replace(/^menu-item-/, ''))
+        .filter((name) => name !== undefined),
     );
 
   await page.keyboard.press('Escape');
@@ -40,16 +50,29 @@ async function readModelsFromDropdown(page: Page): Promise<string[]> {
 }
 
 async function saveLlmModels(page: Page) {
-  const allModels = await readModelsFromDropdown(page);
+  const allModels = await readModelsFromDropdown(page, 'text');
   const realModels = allModels.filter((name) => !MOCK_MODEL_DISPLAY_NAMES.has(name));
 
   await fs.mkdir(path.dirname(LLM_MODELS_FILE), { recursive: true });
   await fs.writeFile(LLM_MODELS_FILE, JSON.stringify(realModels, null, 2));
 }
 
+/** Visits the image generation page and saves the display names of all real (non-mock) image models. */
+async function saveImageModels(page: Page) {
+  await page.goto('/image-generation');
+  await page.waitForURL('/image-generation**');
+
+  const allModels = await readModelsFromDropdown(page, 'image');
+  const realModels = allModels.filter((name) => !MOCK_MODEL_DISPLAY_NAMES.has(name));
+
+  await fs.mkdir(path.dirname(IMAGE_MODELS_FILE), { recursive: true });
+  await fs.writeFile(IMAGE_MODELS_FILE, JSON.stringify(realModels, null, 2));
+}
+
 async function saveAuthState(baseUrl: string) {
   await using browser = await chromium.launch();
   let llmModelsSaved = false;
+  let imageModelsSaved = false;
 
   for (const [user, file] of Object.entries(AUTH_FILES)) {
     await fs.mkdir(path.dirname(file), { recursive: true });
@@ -63,6 +86,11 @@ async function saveAuthState(baseUrl: string) {
     if (!llmModelsSaved) {
       await saveLlmModels(page);
       llmModelsSaved = true;
+    }
+
+    if (!imageModelsSaved) {
+      await saveImageModels(page);
+      imageModelsSaved = true;
     }
 
     await context.storageState({ path: file });
@@ -91,10 +119,10 @@ async function saveAdminEditorAuthState() {
 /**
  * Global Playwright setup — runs once before all test suites.
  *
- * - Reads available text models from the UI dropdown (menuitem data-testid) and
- *   writes their display names to LLM_MODELS_FILE so tests can discover them
- *   dynamically at load time. Mock models are excluded so that the
- *   external-services suite only tests real LLMs.
+ * - Reads available text and image models from the UI dropdowns (menuitem data-testid) and
+ *   writes their display names to LLM_MODELS_FILE / IMAGE_MODELS_FILE so tests can discover
+ *   them dynamically at load time. Mock models are excluded so that the external-services
+ *   suite only tests real LLMs.
  * - For each user defined in AUTH_FILES, performs a real browser login and
  *   saves the resulting storage state under `.playwright-auth/`. Tests restore
  *   this session via `test.use({ storageState: AUTH_FILES.<user> })`, avoiding
