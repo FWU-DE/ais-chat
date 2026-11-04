@@ -48,10 +48,12 @@ function mapBifrostResult(result: OpenAI.Images.ImagesResponse, headers: Headers
   return {
     data,
     output_format: result.output_format,
+    // Bifrost can return an empty usage object (e.g. for a custom provider it has no pricing
+    // rule for), so every field here is defaulted rather than assumed present.
     usage: result.usage
       ? {
-          input_text_tokens: result.usage.input_tokens_details.text_tokens,
-          input_image_tokens: result.usage.input_tokens_details.image_tokens ?? 0,
+          input_text_tokens: result.usage.input_tokens_details?.text_tokens ?? 0,
+          input_image_tokens: result.usage.input_tokens_details?.image_tokens ?? 0,
           output_text_tokens: result.usage.output_tokens_details?.text_tokens,
           output_image_tokens: result.usage.output_tokens_details?.image_tokens ?? 0,
         }
@@ -82,6 +84,7 @@ export function constructBifrostImageGenerationFn(model: AiModel): ImageGenerati
           image: uploadables,
         })
         .withResponse();
+
       return mapBifrostResult(editResult, httpResponse.headers);
     }
 
