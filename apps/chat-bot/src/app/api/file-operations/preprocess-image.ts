@@ -6,7 +6,7 @@ import { FileMetadata, FileModel } from '@shared/db/schema';
 import { logError } from '@shared/logging';
 import { getFileFromS3, getReadOnlySignedUrl } from '@shared/s3';
 import sharp from 'sharp';
-import { measureImageProcessing } from './image-processing-metrics';
+import { measureImageProcessing } from './metrics/image-processing-metrics';
 
 export type ChatAttachmentWithMessageId = ChatAttachment & {
   messageId: string;

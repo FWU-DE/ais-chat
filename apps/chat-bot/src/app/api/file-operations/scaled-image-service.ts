@@ -1,9 +1,9 @@
-import sharp from 'sharp';
-import { getFileFromS3 } from '@shared/s3';
+import { getImageContentType, streamToBuffer } from '@/utils/files/image-data';
 import { dbGetFilesInIds } from '@shared/db/functions/files';
 import { NotFoundError } from '@shared/error';
-import { getImageContentType, streamToBuffer } from '@/utils/files/image-data';
-import { measureImageProcessing } from './image-processing-metrics';
+import { getFileFromS3 } from '@shared/s3';
+import sharp from 'sharp';
+import { measureImageProcessing } from './metrics/image-processing-metrics';
 
 export async function createScaledImage({
   fileId,
