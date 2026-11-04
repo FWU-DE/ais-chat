@@ -22,7 +22,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function Page(props: PageProps<'/assistants/editor/[assistantId]'>) {
   const { assistantId } = await props.params;
   const { user, federalState } = await requireAuth();
-  requireTeacherRole(user.userRole);
+  try {
+    requireTeacherRole(user.userRole);
+  } catch (error) {
+    handleErrorInServerComponent(error);
+  }
 
   const { assistant, fileMappings, pictureUrl } = await getAssistantByUser({
     assistantId: assistantId,
