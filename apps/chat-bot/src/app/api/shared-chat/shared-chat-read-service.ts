@@ -9,14 +9,14 @@ export async function verifySharedChatImageAccess({
   entityId,
   fileId,
   sharedSessionId,
-  allowEnded = false,
+  allowExport = false,
 }: {
   inviteCode: string;
   entityType: 'character' | 'learningScenario';
   entityId: string;
   fileId: string;
   sharedSessionId: string;
-  allowEnded?: boolean;
+  allowExport?: boolean;
 }): Promise<void> {
   if (sharedSessionId.trim() === '') {
     throw new ForbiddenError('Not authorized to access this file');
@@ -28,7 +28,7 @@ export async function verifySharedChatImageAccess({
     entityId,
   });
 
-  if (allowEnded) {
+  if (allowExport) {
     // User should still be able to access files even if the chat has ended, as long as it is not deleted or suspended
     verify.sharedChatIsNotDeleted(entity);
     verify.sharedChatIsNotSuspended(entity);

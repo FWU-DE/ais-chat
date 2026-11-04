@@ -21,7 +21,7 @@ export async function GET(
 
     const { export: exportRequest, ...imageRequest } = parsed.data;
     await verifySharedChatImageAccess(
-      exportRequest === 'true' ? { ...imageRequest, allowEnded: true } : imageRequest,
+      exportRequest === 'true' ? { ...imageRequest, allowExport: true } : imageRequest,
     );
 
     const scaledImage = await createScaledImage({
