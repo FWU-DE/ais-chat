@@ -184,42 +184,6 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     },
   },
   {
-    id: '9578ed80-b0c2-4968-b253-d897576e5512',
-    organizationId: ORGANIZATION_ID,
-    provider: 'ionos',
-    name: 'meta-llama/Meta-Llama-3.1-8B-Instruct',
-    displayName: 'Llama-3.1-8B',
-    description: 'Efficient for lighter tasks',
-    setting: {
-      provider: 'ionos',
-      apiKey: ionosApiKey,
-      baseUrl: ionosBaseUrl,
-    },
-    priceMetadata: {
-      type: 'text',
-      promptTokenPrice: 170,
-      completionTokenPrice: 280,
-    },
-  },
-  {
-    id: '038ac4d1-c8c9-49a1-a2f9-c269b07961aa',
-    organizationId: ORGANIZATION_ID,
-    provider: 'ionos',
-    name: 'mistralai/Mistral-Nemo-Instruct-2407',
-    displayName: 'Mistral Nemo Instruct',
-    description: 'Multilingual, open source and efficient',
-    setting: {
-      provider: 'ionos',
-      apiKey: ionosApiKey,
-      baseUrl: ionosBaseUrl,
-    },
-    priceMetadata: {
-      type: 'text',
-      promptTokenPrice: 150,
-      completionTokenPrice: 150,
-    },
-  },
-  {
     id: '4f8a2c1e-93d7-4b6a-a5e0-d2f1c8b7e3a9',
     organizationId: ORGANIZATION_ID,
     provider: 'azure',
