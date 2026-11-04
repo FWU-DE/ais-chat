@@ -108,26 +108,15 @@ export async function selectDifferentModel(page: Page, modelName?: string) {
 
 /**
  * Opens the AI activity panel on the given assistant message (last one by default, if needed)
- * and asserts whether the given step is listed. For `visible: false`, a hidden toggle (panel not
- * rendered) also passes.
+ * and asserts that the given step is listed.
  */
-async function expectAiActivityStepVisibility(
-  page: Page,
-  stepId: AiActivityStepId,
-  visible: boolean,
-  messageIndex?: number,
-) {
-  await test.step('expect AI activity step visibility', async () => {
+export function expectAiActivityStep(page: Page, stepId: AiActivityStepId, messageIndex?: number) {
+  return test.step('expect AI activity step visibility', async () => {
     const aiActivityToggles =
       messageIndex !== undefined
         ? page.getByTestId(`ai-activity-toggle-${messageIndex}`)
         : page.getByTestId(/^ai-activity-toggle-/);
     const aiActivityToggle = aiActivityToggles.last();
-
-    if (!visible && (await aiActivityToggles.count()) === 0) {
-      await expect(aiActivityToggle).not.toBeVisible();
-      return;
-    }
 
     await expect(aiActivityToggle).toBeVisible();
 
@@ -138,24 +127,8 @@ async function expectAiActivityStepVisibility(
     const panelContentId = await aiActivityToggle.getAttribute('aria-controls');
     const panelContent = panelContentId ? page.locator(`#${panelContentId}`) : page;
     const step = panelContent.getByTestId(`ai-activity-step-${stepId}`);
-    if (visible) {
-      await expect(step.first()).toBeVisible();
-    } else {
-      await expect(step).toHaveCount(0);
-    }
+    await expect(step.first()).toBeVisible();
   });
-}
-
-export function expectAiActivityStep(page: Page, stepId: AiActivityStepId, messageIndex?: number) {
-  return expectAiActivityStepVisibility(page, stepId, true, messageIndex);
-}
-
-export function expectNoAiActivityStep(
-  page: Page,
-  stepId: AiActivityStepId,
-  messageIndex?: number,
-) {
-  return expectAiActivityStepVisibility(page, stepId, false, messageIndex);
 }
 
 /**
