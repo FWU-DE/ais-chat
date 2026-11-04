@@ -5,9 +5,9 @@ import { logError, logWarning } from '@shared/logging/logging';
 import JXG from 'jsxgraph';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createBoard, type ViewState } from './jsxgraph-board';
-import { registerLivePlot, releaseOverflow, type LivePlot } from './live-plots';
+import { registerLivePlot, releaseOverflow, retainLivePlot, type LivePlot } from './live-plots';
 import { PlotFrame } from './plot-frame';
-import { registerRenderedPlot } from './rendered-plots';
+import { getPlotKey, registerRenderedPlot } from './rendered-plots';
 import { getSliderDefinitions } from './slider-definitions';
 
 const ACTIVATE_DELAY_MS = 150;
@@ -30,11 +30,19 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
   const [isActive, setIsActive] = useState(false);
   const [resetCount, setResetCount] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [livePlot] = useState<LivePlot>(() => ({
-    isVisible: false,
-    lastSeen: 0,
-    release: () => setIsActive(false),
-  }));
+  const plotKey = useMemo(() => getPlotKey(spec), [spec]);
+  const livePlot = useMemo<LivePlot>(
+    () => ({
+      plotKey,
+      isVisible: false,
+      lastSeen: 0,
+      activate: () => setIsActive(true),
+      release: () => setIsActive(false),
+    }),
+    [plotKey],
+  );
+
+  useEffect(() => registerLivePlot(livePlot), [livePlot]);
 
   // Boards are expensive: build them shortly after the plot scrolls into view and drop
   // the least recently seen ones once more than a few are alive.
@@ -49,7 +57,10 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
         livePlot.lastSeen = Date.now();
         clearTimeout(timer);
         if (livePlot.isVisible) {
-          timer = setTimeout(() => setIsActive(true), ACTIVATE_DELAY_MS);
+          timer = setTimeout(() => {
+            retainLivePlot(livePlot);
+            setIsActive(true);
+          }, ACTIVATE_DELAY_MS);
         } else {
           releaseOverflow();
         }
@@ -90,7 +101,6 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
     );
     setSliderRef.current = setSlider;
     boardRef.current = board;
-    const unregister = registerLivePlot(livePlot);
     const svg = boardDiv.querySelector('svg');
     const unregisterRendered =
       svg === null ? undefined : registerRenderedPlot(spec, svg as SVGSVGElement);
@@ -118,7 +128,6 @@ export default function JsxGraphPlot({ spec, title }: { spec: PlotSpec; title?: 
         viewStateRef.current = undefined;
       }
       discardViewRef.current = false;
-      unregister();
       JXG.JSXGraph.freeBoard(board);
       container.replaceChildren();
     };

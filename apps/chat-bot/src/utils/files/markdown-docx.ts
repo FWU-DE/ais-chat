@@ -1,6 +1,7 @@
 import { createBoard } from '@/components/chat/plot/jsxgraph-board';
+import { activateLivePlots } from '@/components/chat/plot/live-plots';
 import { renderPlotPng } from '@/components/chat/plot/png-export';
-import { getRenderedPlot } from '@/components/chat/plot/rendered-plots';
+import { getPlotKey, getRenderedPlot } from '@/components/chat/plot/rendered-plots';
 import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
 import { parsePlotSpec, type BoundingBox } from '@/utils/plot/plot-spec';
 import type { ParagraphChild } from 'docx';
@@ -300,12 +301,16 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
   };
 };
 
-function preparePlotCodeBlocks(root: Root) {
+function preparePlotCodeBlocks(root: Root, plotKeys: Set<string>) {
   visit(root, 'code', (node) => {
     if (node.lang !== PLOT_LANGUAGE) {
       return;
     }
 
+    const parsed = parsePlotSpec(node.value);
+    if (!('error' in parsed)) {
+      plotKeys.add(getPlotKey(parsed.spec));
+    }
     // Set lang here to json so shikiPlugin renders the code blocks correctly
     // as it only recognizes json but not jsxgraph-json
     node.lang = 'json';
@@ -445,21 +450,42 @@ const processor = unified()
   .use(remarkGfm)
   .use(remarkDocx, docxOptions);
 
-export async function markdownToDocxBlob(exportDocument: ConversationExport): Promise<Blob> {
-  const roots = await Promise.all(
-    exportDocument.markdownBlocks.map(async ({ markdown }) => {
-      const parsedRoot = processor.parse(markdown) as Root;
-      preparePlotCodeBlocks(parsedRoot);
-      return (await processor.run(parsedRoot)) as Root;
-    }),
-  );
-  const combinedRoot: Root = {
-    type: 'root',
-    children: roots.flatMap((root) => root.children),
-  };
-  const arrayBuffer = await processor.stringify(combinedRoot);
+async function waitForPlotActivation() {
+  if (typeof requestAnimationFrame === 'undefined') {
+    return;
+  }
 
-  return new Blob([arrayBuffer], {
-    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
   });
+}
+
+export async function markdownToDocxBlob(exportDocument: ConversationExport): Promise<Blob> {
+  const roots = exportDocument.markdownBlocks.map(
+    ({ markdown }) => processor.parse(markdown) as Root,
+  );
+  const plotKeys = new Set<string>();
+  roots.forEach((root) => preparePlotCodeBlocks(root, plotKeys));
+  const restoreLivePlots = plotKeys.size > 0 ? activateLivePlots(plotKeys) : undefined;
+  try {
+    if (plotKeys.size > 0) {
+      await waitForPlotActivation();
+    }
+    const processedRoots = await Promise.all(
+      roots.map(async (root) => (await processor.run(root)) as Root),
+    );
+    const combinedRoot: Root = {
+      type: 'root',
+      children: processedRoots.flatMap((root) => root.children),
+    };
+    const arrayBuffer = await processor.stringify(combinedRoot);
+
+    return new Blob([arrayBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+  } finally {
+    restoreLivePlots?.();
+  }
 }
