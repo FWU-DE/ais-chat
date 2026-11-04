@@ -10,8 +10,8 @@ import {
   formatConversationExport,
   markdownToDocxBlob,
 } from '@/utils/files/markdown-docx';
-import { formatDateToDayMonthYear } from '@shared/utils/date';
 import { BoxArrowDownIcon } from '@phosphor-icons/react';
+import { formatDateToDayMonthYear } from '@shared/utils/date';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
 import React from 'react';
@@ -24,14 +24,14 @@ type DownloadConversationButtonProps = {
   sharedConversationName?: string;
   characterName?: string;
   showText?: boolean;
-  fileMapping: Map<string, ConversationDownloadFile[]>;
+  fileMapping: ReadonlyMap<string, ConversationDownloadFile[]>;
 };
 
 type DownloadSharedConversationParams = {
   conversationMessages: Message[];
   sharedConversationName?: string;
   characterName?: string;
-  fileMapping: Map<string, ConversationDownloadFile[]>;
+  fileMapping: ReadonlyMap<string, ConversationDownloadFile[]>;
 };
 
 export async function fetchSharedConversationDownload({

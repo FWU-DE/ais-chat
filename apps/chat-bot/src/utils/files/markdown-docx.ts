@@ -347,7 +347,7 @@ export function createConversationExportMessages({
   messages: Array<
     Pick<ConversationExportMessage, 'id' | 'role' | 'content'> & { createdAt?: Date }
   >;
-  fileMapping: Map<string, ConversationDownloadFile[]>;
+  fileMapping: ReadonlyMap<string, ConversationDownloadFile[]>;
   imageUrl?: (file: ConversationDownloadFile) => string;
 }): ConversationExportMessage[] {
   return messages.map(({ id, role, content }) => ({
@@ -358,7 +358,7 @@ export function createConversationExportMessages({
       .filter((file) => isImageFile(file.name))
       .map((file) => ({
         alt: file.name,
-        url: file.localUrl ?? imageUrl(file),
+        url: imageUrl(file),
       })),
   }));
 }

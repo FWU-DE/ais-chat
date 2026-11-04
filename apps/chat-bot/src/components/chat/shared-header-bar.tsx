@@ -1,25 +1,25 @@
 'use client';
 
-import useBreakpoints from '../hooks/use-breakpoints';
-import { useTranslations } from 'next-intl';
-import { cn } from '@/utils/tailwind';
 import DownloadSharedConversationButton, {
   fetchSharedConversationDownload,
 } from '@/app/(unauth)/ua/download-shared-conversation-button';
+import { useToast } from '@/components/common/toast';
+import { type ChatMessage as Message } from '@/types/chat';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
+import { cn } from '@/utils/tailwind';
+import { reductionBreakpoint } from '@/utils/tailwind/layout';
+import { BoxArrowDownIcon, TrashSimpleIcon } from '@phosphor-icons/react';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
+import { Button } from '@ui/components/button';
+import { useTranslations } from 'next-intl';
 import Image from 'next/image';
+import React from 'react';
+import useBreakpoints from '../hooks/use-breakpoints';
 import ProfileMenu from '../navigation/profile-menu';
 import {
   ThreeDotsProfileMenu,
   type ThreeDotsProfileMenuItem,
 } from '../navigation/three-dots-profile-menu';
-import { type ChatMessage as Message } from '@/types/chat';
-import { reductionBreakpoint } from '@/utils/tailwind/layout';
-import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
-import { Button } from '@ui/components/button';
-import { BoxArrowDownIcon, TrashSimpleIcon } from '@phosphor-icons/react';
-import { useToast } from '@/components/common/toast';
-import React from 'react';
 import type { ConversationDownloadFile } from './conversation-download-context';
 
 export function SharedChatHeader({
@@ -41,7 +41,7 @@ export function SharedChatHeader({
   messages: Message[];
   imageSource?: string;
   dialogStarted: boolean;
-  fileMapping: Map<string, ConversationDownloadFile[]>;
+  fileMapping: ReadonlyMap<string, ConversationDownloadFile[]>;
 }) {
   const { isBelow } = useBreakpoints();
   const tCommon = useTranslations('common');

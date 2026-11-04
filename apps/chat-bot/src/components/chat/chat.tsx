@@ -116,10 +116,7 @@ export default function Chat({
   const session = useSession();
 
   function refetchConversations() {
-    void queryClient.fetchQuery({
-      queryKey: ['conversations'],
-      queryFn: fetchClientSideConversations,
-    });
+    void queryClient.invalidateQueries({ queryKey: ['conversations'] });
   }
 
   // Ref to hold pending files that will be associated with the next user message

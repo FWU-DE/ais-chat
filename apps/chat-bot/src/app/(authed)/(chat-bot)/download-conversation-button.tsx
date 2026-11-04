@@ -61,12 +61,9 @@ export async function fetchConversationDownload({
 }
 
 export function getLastAssistantModelName(messages: ConversationDownloadData['messages']) {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-    if (message?.role === 'assistant' && message.modelName !== undefined) {
-      return message.modelName;
-    }
-  }
+  return messages.findLast(
+    (message) => message.role === 'assistant' && message.modelName !== undefined,
+  )?.modelName;
 }
 
 export default function DownloadConversationButton({

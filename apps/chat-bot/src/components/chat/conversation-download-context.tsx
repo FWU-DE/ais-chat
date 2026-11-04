@@ -6,7 +6,6 @@ import React from 'react';
 export type ConversationDownloadFile = {
   id: string;
   name: string;
-  localUrl?: string;
 };
 
 export type ConversationDownloadData = {
