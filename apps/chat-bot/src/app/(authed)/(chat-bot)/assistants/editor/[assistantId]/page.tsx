@@ -8,6 +8,7 @@ import { AssistantEdit } from './assistant-edit';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { requireTeacherRole } from '@shared/auth/authorization-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function Page(props: PageProps<'/assistants/editor/[assistantId]'>) {
   const { assistantId } = await props.params;
   const { user, federalState } = await requireAuth();
+  requireTeacherRole(user.userRole);
 
   const { assistant, fileMappings, pictureUrl } = await getAssistantByUser({
     assistantId: assistantId,
