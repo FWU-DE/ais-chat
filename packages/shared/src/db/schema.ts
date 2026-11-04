@@ -1,3 +1,10 @@
+import { ToolCall } from '@ais-chat/ai-core/chat/types';
+import {
+  llmModelPriceMetadataSchema,
+  type LlmModelPriceMetadata,
+} from '@ais-chat/shared-core/schemas/llm-model-price-metadata';
+import { logError } from '@shared/logging';
+import { isNull, sql } from 'drizzle-orm';
 import {
   boolean,
   check,
@@ -6,6 +13,7 @@ import {
   index,
   integer,
   json,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -14,15 +22,11 @@ import {
   unique,
   uniqueIndex,
   uuid,
-  vector,
   varchar,
-  jsonb,
+  vector,
 } from 'drizzle-orm/pg-core';
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import {
-  llmModelPriceMetadataSchema,
-  type LlmModelPriceMetadata,
-} from '@ais-chat/shared-core/schemas/llm-model-price-metadata';
 import {
   conversationRoleSchema,
   conversationTypeSchema,
@@ -38,10 +42,6 @@ export type DesignConfiguration = {
 };
 
 export { llmModelPriceMetadataSchema, type LlmModelPriceMetadata };
-import { isNull, sql } from 'drizzle-orm';
-import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod';
-import { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { logError } from '@shared/logging';
 
 // can be expanded to include other metadata of other file types
 export type FileMetadata = Record<string, unknown>;
@@ -1227,10 +1227,10 @@ export type ConversationUsageTrackingUpdateModel = z.infer<
 >;
 
 /**
- * Schema for table shared_character_conversation
+ * Schema for table shared_character
  */
 export const sharedCharacterConversation = pgTable(
-  'shared_character_conversation',
+  'shared_character',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     characterId: uuid('character_id').notNull(),
