@@ -29,6 +29,7 @@ import {
   sharedCharacter,
   SharedCharacterChatUsageTrackingInsertModel,
   sharedCharacterChatUsageTrackingTable,
+  sharedChatSessionTable,
   userTable,
 } from '../schema';
 import { PgTransactionObject } from '../types';
@@ -757,6 +758,13 @@ export async function dbExtendSharedCharacterExpiration({
     .set({ expiredAt: newExpiredAt })
     .where(eq(sharedCharacter.id, share.id))
     .returning();
+
+  if (updatedShare !== undefined) {
+    await db
+      .update(sharedChatSessionTable)
+      .set({ expiresAt: newExpiredAt })
+      .where(eq(sharedChatSessionTable.inviteCode, updatedShare.inviteCode));
+  }
 
   return updatedShare ?? null;
 }
