@@ -279,9 +279,6 @@ importers:
       '@ais-chat/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@ais-chat/shared-core':
-        specifier: workspace:*
-        version: link:../../packages/shared-core
       '@ais-chat/ui':
         specifier: workspace:*
         version: link:../../packages/ui
