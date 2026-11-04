@@ -45,7 +45,7 @@ export default function ImageGenerationChat({
   const [input, setInput] = useState('');
   const [files, setFiles] = useState<Map<string, LocalFileState>>(new Map());
   const imageRef = useRef<HTMLImageElement>(null);
-  const [isImageReady, setIsImageReady] = useState(false);
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
   const [showAiBadge, setShowAiBadge] = useState(true);
   const [bakedEntry, setBakedEntry] = useState<{
     sourceUrl: string;
@@ -80,6 +80,11 @@ export default function ImageGenerationChat({
     showAiBadge && bakedEntry !== null && bakedEntry.sourceUrl === sourceUrl
       ? bakedEntry.objectUrl
       : (sourceUrl ?? '');
+
+  // The displayed image's src can change after it has already loaded (e.g. once
+  // the baked-AI-badge version becomes available), which resets img.complete.
+  // Track readiness per src so copy/download aren't clickable against a stale image.
+  const isImageReady = loadedSrc !== null && loadedSrc === displaySrc;
 
   const { aspectRatio } = useImageAspectRatio();
 
@@ -163,7 +168,6 @@ export default function ImageGenerationChat({
 
     const generatedImage = await generate({ prompt, inputFileIds });
     if (generatedImage !== null) {
-      setIsImageReady(false);
       appendVersion({ ...generatedImage, attachedFiles });
     }
   }
@@ -235,7 +239,7 @@ export default function ImageGenerationChat({
                 loading="eager"
                 unoptimized
                 crossOrigin="anonymous" // Needed for clipboard copy to work
-                onLoad={() => setIsImageReady(true)}
+                onLoad={() => setLoadedSrc(displaySrc)}
               />
               <ImageActionButtons
                 imageRef={imageRef}

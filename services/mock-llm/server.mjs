@@ -36,6 +36,9 @@ const MOCK_LLM_COMMANDS = {
     '[MOCK-LLM-COMMAND: Rufe das Tool web_scraper auf und gib die Tool-Antwort aus]',
 };
 
+const CALL_TOOL_PATTERN =
+  /\[MOCK-LLM-COMMAND: Rufe das Tool (\S+) mit den Argumenten (.+?) auf und gib die Tool-Antwort aus\]/;
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function readBody(req) {
@@ -100,6 +103,11 @@ function makeUsage(input, outputText) {
 }
 
 function resolveMockToolCall({ systemPrompt, lastUserMessage }) {
+  const genericMatch = lastUserMessage.match(CALL_TOOL_PATTERN);
+  if (genericMatch) {
+    return { name: genericMatch[1], arguments: genericMatch[2] };
+  }
+
   if (lastUserMessage.includes(MOCK_LLM_COMMANDS.CALL_RETRIEVE_ENTIRE_FILE)) {
     return {
       name: 'retrieve_entire_file',

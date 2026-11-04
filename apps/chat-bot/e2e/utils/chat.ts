@@ -1,6 +1,9 @@
 import { expect, Page, test } from '@playwright/test';
 import path from 'node:path';
+import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
 import { waitForToast } from './utils';
+
+type AiActivityStepId = AiActivityToolName | Exclude<AiActivityStep['kind'], 'tool'>;
 
 export async function regenerateMessage(page: Page) {
   await page.getByTestId('regenerate-message-button').click();
@@ -101,6 +104,31 @@ export async function selectDifferentModel(page: Page, modelName?: string) {
     const firstOption = page.getByRole('menuitem').first();
     await firstOption.click();
   }
+}
+
+/**
+ * Opens the AI activity panel on the given assistant message (last one by default, if needed)
+ * and asserts that the given step is listed.
+ */
+export function expectAiActivityStep(page: Page, stepId: AiActivityStepId, messageIndex?: number) {
+  return test.step('expect AI activity step visibility', async () => {
+    const aiActivityToggles =
+      messageIndex !== undefined
+        ? page.getByTestId(`ai-activity-toggle-${messageIndex}`)
+        : page.getByTestId(/^ai-activity-toggle-/);
+    const aiActivityToggle = aiActivityToggles.last();
+
+    await expect(aiActivityToggle).toBeVisible();
+
+    if ((await aiActivityToggle.getAttribute('aria-expanded')) === 'false') {
+      await aiActivityToggle.click();
+    }
+
+    const panelContentId = await aiActivityToggle.getAttribute('aria-controls');
+    const panelContent = panelContentId ? page.locator(`#${panelContentId}`) : page;
+    const step = panelContent.getByTestId(`ai-activity-step-${stepId}`);
+    await expect(step.first()).toBeVisible();
+  });
 }
 
 /**

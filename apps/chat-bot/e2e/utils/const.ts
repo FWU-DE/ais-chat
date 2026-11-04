@@ -1,4 +1,5 @@
 import path from 'node:path';
+import type { AiActivityToolName } from '@/types/ai-activity';
 
 export const E2E_FEDERAL_STATE = 'DE-TEST';
 
@@ -44,4 +45,7 @@ export const MOCK_LLM_COMMANDS = {
     '[MOCK-LLM-COMMAND: Rufe das Tool retrieve_text_chunks auf und gib die Tool-Antwort aus]',
   CALL_WEB_SCRAPER:
     '[MOCK-LLM-COMMAND: Rufe das Tool web_scraper auf und gib die Tool-Antwort aus]',
+  /** Forces a tool call with specific arguments. `toolName` accepts any string, e.g. to test invalid tools. */
+  CALL_TOOL: (toolName: AiActivityToolName | (string & {}), args: unknown) =>
+    `[MOCK-LLM-COMMAND: Rufe das Tool ${toolName} mit den Argumenten ${JSON.stringify(args)} auf und gib die Tool-Antwort aus]`,
 };
