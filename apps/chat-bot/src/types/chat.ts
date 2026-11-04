@@ -1,9 +1,4 @@
-import type { ChatAttachment } from '@ais-chat/ai-core';
-import {
-  CONVERSATION_ROLES,
-  type ConversationRole,
-  type ToolCall,
-} from '@ais-chat/ai-core/chat/types';
+import { CONVERSATION_ROLES } from '@ais-chat/ai-core/chat/types';
 import type {
   ResponsibleAIError,
   SharedChatExpiredError,
@@ -12,7 +7,7 @@ import type {
 import type { NotFoundError } from '@shared/error';
 import { isToolRelatedMessage } from '@shared/utils/tool-related-message';
 import z from 'zod';
-import { aiActivityStepSchema, type AiActivityStep } from './ai-activity';
+import { aiActivityStepSchema } from './ai-activity';
 
 /**
  * Serialized error that can be safely transmitted across the Server Action boundary.
@@ -36,6 +31,7 @@ export const chatMessageSchema = z.object({
   role: z.enum(CONVERSATION_ROLES),
   content: z.string(),
   createdAt: z.coerce.date().optional(),
+  modelName: z.string().optional(),
   attachments: z.array(z.any()).optional(),
   activitySteps: z.array(aiActivityStepSchema).optional(),
   toolCalls: z.array(z.any()).optional(),
@@ -46,16 +42,7 @@ export const chatMessageSchema = z.object({
  * Basic chat message type used throughout the application.
  * This replaces the Message type from the 'ai' package.
  */
-export type ChatMessage = {
-  id: string;
-  role: ConversationRole;
-  content: string;
-  createdAt?: Date;
-  attachments?: ChatAttachment[];
-  activitySteps?: AiActivityStep[];
-  toolCalls?: ToolCall[];
-  toolCallId?: string;
-};
+export type ChatMessage = z.infer<typeof chatMessageSchema>;
 
 /**
  * Result returned when sending a chat message.

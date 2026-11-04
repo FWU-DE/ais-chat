@@ -1,6 +1,7 @@
 'use client';
 
 import { ChatInputBox } from '@/components/chat/chat-input-box';
+import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
 import { InitialChatContentDisplay } from '@/components/chat/initial-content-display';
 import { SharedChatHeader } from '@/components/chat/shared-header-bar';
 import ExpiredChatModal from '@/components/common/expired-chat-modal';
@@ -310,6 +311,14 @@ export default function GenericSharedChat({
       ? messages.length === 0 && !dialogStarted
       : messages.length === 0;
   const showChatInputBox = dialogStartMode === 'explicit' ? dialogStarted : true;
+  const imageUrl = (file: ConversationDownloadFile) =>
+    getSharedChatImageUrl({
+      fileId: file.id,
+      inviteCode,
+      entityType: sharedEntityType,
+      entityId: entity.id,
+      sharedSessionId,
+    });
 
   useEffect(() => {
     if (alreadyMounted.current) {
@@ -334,8 +343,8 @@ export default function GenericSharedChat({
         <ExpiredChatModal
           conversationMessages={uiMessages}
           title={entity.name}
-          inviteCode={inviteCode}
-          sharedSessionId={sharedSessionId}
+          fileMapping={pendingFileMapping}
+          imageUrl={imageUrl}
           handleRetry={handleRetry}
         />
       )}
@@ -349,8 +358,8 @@ export default function GenericSharedChat({
           messages={uiMessages}
           dialogStarted={dialogStarted}
           imageSource={avatarPictureUrl}
-          inviteCode={inviteCode}
-          sharedSessionId={sharedSessionId}
+          fileMapping={pendingFileMapping}
+          imageUrl={imageUrl}
         />
         <div ref={containerRef} className="relative flex min-h-0 flex-1 flex-col items-center">
           <div ref={scrollRef} className="min-h-0 w-full flex-1 max-w-5xl overflow-y-auto p-4">

@@ -1,21 +1,22 @@
 'use client';
 
-import { UserAndContext } from '@/auth/types';
-import SelectLlmModel from '../conversation/select-llm-model';
-import { NewChatButton } from '../navigation/sidebar/collapsible-sidebar';
 import DownloadConversationButton, {
   fetchConversationDownload,
+  getLastAssistantModelName,
 } from '@/app/(authed)/(chat-bot)/download-conversation-button';
-import { downloadFileFromBlob } from '@/utils/files/blob-download';
-import { useLlmModels } from '../providers/llm-model-provider';
+import { UserAndContext } from '@/auth/types';
+import { useToast } from '@/components/common/toast';
 import {
   ApplicationHeaderActions,
   type HeaderActionConfig,
 } from '@/components/layout/application-header';
+import { downloadFileFromBlob } from '@/utils/files/blob-download';
 import { BoxArrowDownIcon } from '@phosphor-icons/react';
 import { useTranslations } from 'next-intl';
-import { useToast } from '@/components/common/toast';
-import { useCallback } from 'react';
+import SelectLlmModel from '../conversation/select-llm-model';
+import { NewChatButton } from '../navigation/sidebar/collapsible-sidebar';
+import { useLlmModels } from '../providers/llm-model-provider';
+import { useConversationDownload } from './conversation-download-context';
 
 export type ChatHeaderBarProps = {
   userAndContext: UserAndContext;
@@ -28,29 +29,34 @@ export function ChatHeaderBar({
   userAndContext,
   title,
   downloadConversationEnabled: downloadConversationEnabledProp,
-  chatId,
 }: ChatHeaderBarProps) {
   const tCommon = useTranslations('common');
   const toast = useToast();
+  const { data } = useConversationDownload();
   const { downloadConversationEnabled: downloadConversationEnabledFromContext } = useLlmModels();
   const downloadConversationEnabled =
-    downloadConversationEnabledProp || downloadConversationEnabledFromContext;
+    (downloadConversationEnabledProp || downloadConversationEnabledFromContext) &&
+    data !== undefined;
 
-  const handleDownload = useCallback(async () => {
+  async function handleDownload() {
     if (!downloadConversationEnabled) {
       return;
     }
 
     try {
       const { blob, fileName } = await fetchConversationDownload({
-        conversationId: chatId,
+        messages: data.messages,
+        fileMapping: data.fileMapping,
+        createdAt: data.createdAt,
+        conversationTitle: data.conversationTitle,
         characterName: title,
+        modelName: getLastAssistantModelName(data.messages),
       });
       downloadFileFromBlob(blob, fileName);
     } catch {
       toast.error('Der Download der Konversation ist fehlgeschlagen.');
     }
-  }, [chatId, downloadConversationEnabled, title, toast]);
+  }
 
   const actions: HeaderActionConfig[] = [
     {
@@ -67,7 +73,6 @@ export function ChatHeaderBar({
             )}
             <div className="hidden sm:flex">
               <DownloadConversationButton
-                conversationId={chatId}
                 characterName={title}
                 disabled={!downloadConversationEnabled}
                 showText={false}

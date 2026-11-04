@@ -22,6 +22,7 @@ export function useMainChat(options: {
   conversationId: string;
   initialMessages?: ChatMessage[];
   modelId?: string;
+  modelName?: string;
   characterId?: string;
   learningScenarioId?: string;
   assistantId?: string;

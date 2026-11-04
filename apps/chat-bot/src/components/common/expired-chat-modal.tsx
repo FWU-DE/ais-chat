@@ -1,11 +1,10 @@
 'use client';
 
-import React from 'react';
-import StopWatchDoneIcon from '@/components/icons/stopwatch-done';
 import DownloadSharedConversationButton from '@/app/(unauth)/ua/download-shared-conversation-button';
+import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
+import StopWatchDoneIcon from '@/components/icons/stopwatch-done';
 import { type ChatMessage as Message } from '@/types/chat';
-import { useTranslations } from 'next-intl';
-import { Button } from '@ui/components/button';
+import { ArrowClockwiseIcon } from '@phosphor-icons/react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -14,21 +13,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@ui/components/alert-dialog';
-import { ArrowClockwiseIcon } from '@phosphor-icons/react';
+import { Button } from '@ui/components/button';
+import { useTranslations } from 'next-intl';
 
 type ExpiredChatModalProps = {
   conversationMessages: Message[];
   title: string;
-  inviteCode: string;
-  sharedSessionId: string;
+  fileMapping: ReadonlyMap<string, ConversationDownloadFile[]>;
+  imageUrl: (file: ConversationDownloadFile) => string;
   handleRetry: () => void;
 };
 
 export default function ExpiredChatModal({
   conversationMessages,
   title,
-  inviteCode,
-  sharedSessionId,
+  fileMapping,
+  imageUrl,
   handleRetry,
 }: ExpiredChatModalProps) {
   const t = useTranslations('sharing');
@@ -55,8 +55,8 @@ export default function ExpiredChatModal({
                 characterName={title}
                 conversationMessages={conversationMessages}
                 disabled={false}
-                inviteCode={inviteCode}
-                sharedSessionId={sharedSessionId}
+                fileMapping={fileMapping}
+                imageUrl={imageUrl}
               />
             )}
             <Button onClick={handleRetry}>

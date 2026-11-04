@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import CopyToClipboardButton from '../common/clipboard-button';
 import ReloadIcon from '../icons/reload';
 import { AiActivityDialog } from './activity/ai-activity';
+import type { ConversationDownloadFile } from './conversation-download-context';
 import DownloadConversationMessageButton from './download-conversation-message-button';
 import ShowAudioPlayerButton from './speech/show-audio-player-button';
 
@@ -28,12 +29,14 @@ export function MessageActions({
   onToggleText,
   showAudioPlayer,
   onToggleAudioPlayer,
+  files,
 }: {
   message: UIMessage;
   plainText: string;
   status: ChatStatus;
   conversationId?: string;
   characterName?: string;
+  files: ConversationDownloadFile[];
   regenerateMessage: () => void;
   canRegenerateMessage: boolean;
   isSpeechModelEnabled: boolean;
@@ -70,8 +73,8 @@ export function MessageActions({
         !isInitialMessage &&
         (!isLastMessage || status === 'ready') && (
           <DownloadConversationMessageButton
-            conversationId={conversationId}
-            messageId={message.id}
+            message={message}
+            files={files}
             characterName={characterName}
           />
         )}
