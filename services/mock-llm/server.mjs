@@ -9,7 +9,9 @@
  * POST /v1/images/generations
  * POST /v1/images/edits
  *   Returns an OpenAI Images API-compatible response with a random solid-color PNG, sized to
- *   match the requested `size` (ignoring the prompt and, for edits, the uploaded image).
+ *   match the requested `size` (the generated content itself ignores the prompt and, for
+ *   edits, the uploaded image). Usage token counts are estimated from the prompt length and
+ *   image size/count, not from the actual (ignored) content.
  *
  * POST /v1/embeddings
  *   Returns an OpenAI Embeddings API-compatible response with a static 1024-entry vector per
@@ -98,6 +100,10 @@ function resolveMockToolCall({ lastUserMessage }) {
 
 function estimateTokens(text) {
   return Math.max(1, Math.ceil(text.length / 4));
+}
+
+function estimateImageTokens(width, height) {
+  return Math.max(1, Math.round((width * height) / 750));
 }
 
 function writeResponsesHeaders(res) {
@@ -312,21 +318,24 @@ function createSolidColorPngBase64(width, height) {
   ]).toString('base64');
 }
 
-function respondWithMockImage(res, size) {
+function respondWithMockImage(res, { size, prompt, inputImageCount = 0 } = {}) {
   const { width, height } = parseImageSize(size);
+  const inputTextTokens = estimateTokens(prompt ?? '');
+  const inputImageTokens = inputImageCount * estimateImageTokens(width, height);
+  const outputImageTokens = estimateImageTokens(width, height);
+
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(
     JSON.stringify({
       created: Math.floor(Date.now() / 1000),
       data: [{ b64_json: createSolidColorPngBase64(width, height) }],
       output_format: 'png',
-      // Zeroed out — only present so consumers expecting a usage shape (e.g. Bifrost) don't break.
       usage: {
-        input_tokens: 0,
-        input_tokens_details: { text_tokens: 0, image_tokens: 0 },
-        output_tokens: 0,
-        output_tokens_details: { text_tokens: 0 },
-        total_tokens: 0,
+        input_tokens: inputTextTokens + inputImageTokens,
+        input_tokens_details: { text_tokens: inputTextTokens, image_tokens: inputImageTokens },
+        output_tokens: outputImageTokens,
+        output_tokens_details: { text_tokens: 0, image_tokens: outputImageTokens },
+        total_tokens: inputTextTokens + inputImageTokens + outputImageTokens,
       },
     }),
   );
@@ -334,17 +343,23 @@ function respondWithMockImage(res, size) {
 
 async function handleImagesGenerate(req, res) {
   let size;
+  let prompt;
   try {
-    size = JSON.parse(await readBody(req)).size;
+    const data = JSON.parse(await readBody(req));
+    size = data.size;
+    prompt = data.prompt;
   } catch {
     // ignore, use default size
   }
-  respondWithMockImage(res, size);
+  respondWithMockImage(res, { size, prompt });
 }
 
 async function handleImagesEdit(req, res) {
   const body = await readBody(req);
-  respondWithMockImage(res, /name="size"\r\n\r\n([^\r\n]+)/.exec(body)?.[1]);
+  const size = /name="size"\r\n\r\n([^\r\n]+)/.exec(body)?.[1];
+  const prompt = /name="prompt"\r\n\r\n([^\r\n]+)/.exec(body)?.[1];
+  const inputImageCount = (body.match(/name="image(\[\])?"/g) ?? []).length;
+  respondWithMockImage(res, { size, prompt, inputImageCount });
 }
 
 // --- Mock embeddings (OpenAI Embeddings API-compatible) ---
