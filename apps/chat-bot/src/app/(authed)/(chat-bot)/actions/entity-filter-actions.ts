@@ -12,6 +12,7 @@ import { getAssistantsByOverviewFilter } from '@shared/assistants/assistant-serv
 import { enrichCharactersWithImage, type CharacterWithImage } from '../characters/utils';
 import { enrichAssistantsWithImage, type AssistantWithImage } from '../assistants/utils';
 import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
+import { requireTeacherRole } from '@shared/auth/authorization-service';
 
 function resolveFilter(filter: OverviewFilter, isSchoolSharingEnabled: boolean): OverviewFilter {
   return !isSchoolSharingEnabled && filter === 'school' ? 'mine' : filter;
@@ -21,6 +22,7 @@ export async function getCharactersByFilterAction(
   filter: OverviewFilter,
 ): Promise<CharacterWithImage[]> {
   const { user, federalState } = await requireAuth();
+  requireTeacherRole(user.userRole);
   const effectiveFilter = resolveFilter(
     filter,
     federalState.featureToggles.isShareTemplateWithSchoolEnabled,
@@ -42,6 +44,7 @@ export async function getLearningScenariosByFilterAction(
   filter: OverviewFilter,
 ): Promise<LearningScenarioWithImage[]> {
   const { user, federalState } = await requireAuth();
+  requireTeacherRole(user.userRole);
   const effectiveFilter = resolveFilter(
     filter,
     federalState.featureToggles.isShareTemplateWithSchoolEnabled,
@@ -65,6 +68,7 @@ export async function getAssistantsByFilterAction(
   filter: OverviewFilter,
 ): Promise<AssistantWithImage[]> {
   const { user, federalState } = await requireAuth();
+  requireTeacherRole(user.userRole);
   const effectiveFilter = resolveFilter(
     filter,
     federalState.featureToggles.isShareTemplateWithSchoolEnabled,

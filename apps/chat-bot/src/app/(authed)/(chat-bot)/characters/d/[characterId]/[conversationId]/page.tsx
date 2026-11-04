@@ -19,6 +19,7 @@ import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { NotFoundError } from '@shared/error';
+import { toChatCharacterDto } from '@/components/chat/chat-client-dto';
 
 export const dynamic = 'force-dynamic';
 const searchParamsSchema = z.object({ model: z.string().optional() });
@@ -104,7 +105,7 @@ export default async function Page(
         <Chat
           id={chat.id}
           initialMessages={chatMessages}
-          character={character}
+          character={toChatCharacterDto(character)}
           enableFileUpload={true}
           imageSource={avatarPictureUrl}
           logoElement={logoElement}
