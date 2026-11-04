@@ -14,6 +14,7 @@ import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { toChatCharacterDto } from '@/components/chat/chat-client-dto';
 
 export const dynamic = 'force-dynamic';
 const searchParamsSchema = z.object({ model: z.string().optional() });
@@ -78,7 +79,7 @@ export default async function Page(props: PageProps<'/characters/d/[characterId]
         <Chat
           id={id}
           initialMessages={initialMessages}
-          character={character}
+          character={toChatCharacterDto(character)}
           imageSource={avatarPictureUrl}
           enableFileUpload={true}
           logoElement={logoElement}

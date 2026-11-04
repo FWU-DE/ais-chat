@@ -134,6 +134,7 @@ describe('template-service', () => {
       const sourceAssistant = {
         id: 'assistant-origin',
         name: 'Original assistant',
+        systemPrompt: 'Assistant system prompt',
         licenseInformation: 'Assistant license',
         didacticCommentary: 'Assistant teaching notes',
       };
@@ -155,11 +156,32 @@ describe('template-service', () => {
       });
     });
 
+    it('should reject an over-limit didacticCommentary before writing', async () => {
+      const sourceAssistant = {
+        id: 'assistant-origin',
+        name: 'Original assistant',
+        systemPrompt: 'Assistant system prompt',
+        didacticCommentary: 'a'.repeat(2001),
+      };
+
+      (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
+        sourceAssistant as never,
+      );
+
+      await expect(
+        copyAssistant('assistant-origin', false, { id: 'user-1' }),
+      ).rejects.toMatchObject({
+        name: 'ZodError',
+      });
+      expect(dbUpsertAssistant).not.toHaveBeenCalled();
+    });
+
     it('should use duplicateAssistantName when provided', async () => {
       const originalId = 'assistant-origin';
       const sourceAssistant = {
         id: originalId,
         name: 'Original name',
+        systemPrompt: 'Assistant system prompt',
         description: 'description',
         hasLinkAccess: true,
       };
@@ -199,6 +221,7 @@ describe('template-service', () => {
       const sourceAssistant = {
         id: 'assistant-origin',
         name: 'Original name',
+        systemPrompt: 'Assistant system prompt',
         pictureId: 'custom-gpts/assistant-origin/avatar_abc123',
       };
       (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
@@ -223,6 +246,7 @@ describe('template-service', () => {
       const sourceAssistant = {
         id: 'assistant-origin',
         name: 'Source assistant name',
+        systemPrompt: 'Assistant system prompt',
       };
       const upsertedAssistant = { id: 'assistant-copy', name: 'Source assistant name' };
 
@@ -259,6 +283,7 @@ describe('template-service', () => {
       (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue({
         id: 'assistant-origin',
         name: 'Original name',
+        systemPrompt: 'Assistant system prompt',
       } as never);
       (dbUpsertAssistant as MockedFunction<typeof dbUpsertAssistant>).mockResolvedValue(
         {} as never,
@@ -275,6 +300,8 @@ describe('template-service', () => {
       const sourceCharacter = {
         id: 'character-origin',
         name: 'Original character',
+        userId: '11111111-1111-4111-8111-111111111111',
+        modelId: '22222222-2222-4222-8222-222222222222',
         licenseInformation: 'Character license',
         didacticCommentary: 'Character teaching notes',
       };
@@ -296,11 +323,34 @@ describe('template-service', () => {
       );
     });
 
+    it('should reject an over-limit didacticCommentary before writing', async () => {
+      const sourceCharacter = {
+        id: 'character-origin',
+        name: 'Original character',
+        userId: '11111111-1111-4111-8111-111111111111',
+        modelId: '22222222-2222-4222-8222-222222222222',
+        didacticCommentary: 'a'.repeat(2001),
+      };
+
+      (dbGetCharacterById as MockedFunction<typeof dbGetCharacterById>).mockResolvedValue(
+        sourceCharacter as never,
+      );
+
+      await expect(
+        copyCharacter('character-origin', false, { id: 'user-1' }),
+      ).rejects.toMatchObject({
+        name: 'ZodError',
+      });
+      expect(dbCreateCharacter).not.toHaveBeenCalled();
+    });
+
     it('should use duplicateCharacterName when provided', async () => {
       const originalId = 'character-origin';
       const sourceCharacter = {
         id: originalId,
         name: 'Original character',
+        userId: '11111111-1111-4111-8111-111111111111',
+        modelId: '22222222-2222-4222-8222-222222222222',
         description: 'description',
         hasLinkAccess: true,
       };
@@ -340,6 +390,8 @@ describe('template-service', () => {
       const sourceCharacter = {
         id: 'character-origin',
         name: 'Original character',
+        userId: '11111111-1111-4111-8111-111111111111',
+        modelId: '22222222-2222-4222-8222-222222222222',
         pictureId: 'characters/character-origin/avatar_abc123',
       };
       (dbGetCharacterById as MockedFunction<typeof dbGetCharacterById>).mockResolvedValue(
@@ -364,6 +416,8 @@ describe('template-service', () => {
       const sourceCharacter = {
         id: 'character-origin',
         name: 'Source character name',
+        userId: '11111111-1111-4111-8111-111111111111',
+        modelId: '22222222-2222-4222-8222-222222222222',
       };
       const createdCharacter = { id: 'character-copy', name: 'Source character name' };
 
@@ -391,6 +445,8 @@ describe('template-service', () => {
       const sourceCharacter = {
         id: 'character-origin',
         name: 'Source',
+        userId: '11111111-1111-4111-8111-111111111111',
+        modelId: '22222222-2222-4222-8222-222222222222',
       };
       const createdCharacter = { id: 'character-copy', name: longName.substring(0, 50) };
 
@@ -424,6 +480,8 @@ describe('template-service', () => {
       (dbGetCharacterById as MockedFunction<typeof dbGetCharacterById>).mockResolvedValue({
         id: 'character-origin',
         name: 'Original name',
+        userId: '11111111-1111-4111-8111-111111111111',
+        modelId: '22222222-2222-4222-8222-222222222222',
       } as never);
       (dbCreateCharacter as MockedFunction<typeof dbCreateCharacter>).mockResolvedValue(
         [] as never,

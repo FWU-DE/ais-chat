@@ -14,8 +14,10 @@ import {
 import { dbGetLearningScenarioById } from '@shared/db/functions/learning-scenario';
 import {
   assistantTable,
+  assistantInsertSchema,
   assistantTemplateMappingTable,
   characterTable,
+  characterInsertSchema,
   characterTemplateMappingTable,
   federalStateTable,
   FileModel,
@@ -563,7 +565,7 @@ export async function copyAssistant(
   const newAssistantId = generateUUID();
 
   const newAssistant = {
-    ...sourceAssistant,
+    ...assistantInsertSchema.parse(sourceAssistant),
     name: (duplicateAssistantName ?? sourceAssistant.name).substring(0, MAX_ENTITY_NAME_LENGTH),
     id: newAssistantId,
     originalAssistantId: originalId,
@@ -627,7 +629,7 @@ export async function copyCharacter(
   const newCharacterId = generateUUID();
 
   const newCharacter = {
-    ...sourceCharacter,
+    ...characterInsertSchema.parse(sourceCharacter),
     name: (duplicateCharacterName ?? sourceCharacter.name).substring(0, MAX_ENTITY_NAME_LENGTH),
     id: newCharacterId,
     originalCharacterId: originalId,

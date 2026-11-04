@@ -14,6 +14,7 @@ import { getTranslations } from 'next-intl/server';
 import { NextIntlClientProvider } from 'next-intl';
 import { resolveSharingLocale } from '@/i18n/sharing-locale';
 import { loadTranslations } from '@/i18n/load-translations';
+import { toSharedLearningScenarioDto } from '@/components/shared-chat/shared-chat-client-dto';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('learning-scenarios.page-titles');
@@ -65,8 +66,10 @@ export default async function Page(
       >
         <ThemeProvider designConfiguration={designConfiguration}>
           <LearningScenarioSharedChat
-            {...learningScenario}
-            inviteCode={searchParams.inviteCode}
+            learningScenario={toSharedLearningScenarioDto(
+              learningScenario,
+              searchParams.inviteCode,
+            )}
             avatarPictureUrl={avatarPictureUrl}
             isSpeechModelEnabled={
               federalState?.featureToggles?.isSpeechModelEnabled === true &&

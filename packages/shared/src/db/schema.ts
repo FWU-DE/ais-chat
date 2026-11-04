@@ -23,6 +23,7 @@ import {
   llmModelPriceMetadataSchema,
   type LlmModelPriceMetadata,
 } from '@ais-chat/shared-core/schemas/llm-model-price-metadata';
+import { DIDACTIC_COMMENTARY_LENGTH_LIMIT } from '@ais-chat/shared-core/limits';
 import {
   conversationRoleSchema,
   conversationTypeSchema,
@@ -633,6 +634,7 @@ export const characterInsertSchema = createInsertSchema(characterTable)
     suspended: true,
   })
   .extend({
+    didacticCommentary: z.string().max(DIDACTIC_COMMENTARY_LENGTH_LIMIT).optional(),
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
@@ -646,6 +648,7 @@ export const characterUpdateSchema = createUpdateSchema(characterTable)
   })
   .extend({
     id: z.string(),
+    didacticCommentary: z.string().max(DIDACTIC_COMMENTARY_LENGTH_LIMIT).optional(),
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
@@ -920,6 +923,7 @@ export const learningScenarioInsertSchema = createInsertSchema(learningScenarioT
     suspended: true,
   })
   .extend({
+    didacticCommentary: z.string().max(DIDACTIC_COMMENTARY_LENGTH_LIMIT).optional(),
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
@@ -928,6 +932,7 @@ export const learningScenarioUpdateSchema = createUpdateSchema(learningScenarioT
   .omit({ userId: true, createdAt: true, updatedAt: true, suspended: true })
   .extend({
     id: z.string(),
+    didacticCommentary: z.string().max(DIDACTIC_COMMENTARY_LENGTH_LIMIT).optional(),
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
@@ -1412,6 +1417,7 @@ export const assistantSelectSchema = createSelectSchema(assistantTable).extend({
 export const assistantInsertSchema = createInsertSchema(assistantTable)
   .omit({ id: true, createdAt: true, updatedAt: true, suspended: true })
   .extend({
+    didacticCommentary: z.string().max(DIDACTIC_COMMENTARY_LENGTH_LIMIT).optional(),
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
@@ -1425,6 +1431,7 @@ export const assistantUpdateSchema = createUpdateSchema(assistantTable)
   })
   .extend({
     id: z.string(),
+    didacticCommentary: z.string().max(DIDACTIC_COMMENTARY_LENGTH_LIMIT).optional(),
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
