@@ -30,11 +30,25 @@ type AudioPlayerProps = {
   isSpeechModelEnabled: boolean;
   isInitialMessage: boolean;
   /**
+   * True while `text` is still being streamed in (not yet the final message content). Manual
+   * playback is disabled during this time, since starting it would synthesize only the current
+   * partial text and `text` is never re-synthesized once playback has started.
+   */
+  isGenerating?: boolean;
+  /**
    * Visually hides the player without unmounting it, so the buffered audio, playback position,
    * and underlying `AudioContext` survive toggling the player closed and back open. Active
    * playback is paused while hidden (resuming where it left off on reopen).
    */
   hidden?: boolean;
+  /**
+   * Incremented by the parent exactly once per automatic playback request (e.g. when a
+   * speech-only message has just finished streaming). Starts playback as soon as it changes to a
+   * value greater than `0`, unless the player is `hidden`. Using a counter (rather than a plain
+   * boolean) lets the parent signal a one-off "play now" event without re-triggering on rerenders.
+   */
+  autoPlayTrigger?: number;
+  className?: string;
 };
 
 export default function AudioPlayer({
@@ -42,7 +56,10 @@ export default function AudioPlayer({
   generateSpeechStreamFn,
   isSpeechModelEnabled,
   isInitialMessage,
+  isGenerating = false,
   hidden = false,
+  autoPlayTrigger = 0,
+  className,
 }: AudioPlayerProps) {
   const t = useTranslations('common');
   const {
@@ -70,10 +87,20 @@ export default function AudioPlayer({
     }
   }, [hidden, status, pause]);
 
+  const lastAutoPlayTriggerRef = React.useRef(autoPlayTrigger);
+  React.useEffect(() => {
+    const previousTrigger = lastAutoPlayTriggerRef.current;
+    lastAutoPlayTriggerRef.current = autoPlayTrigger;
+    if (autoPlayTrigger > previousTrigger && !hidden && status === 'idle') {
+      void start(text);
+    }
+  }, [autoPlayTrigger, hidden, status, start, text]);
+
   if (!isSpeechModelEnabled) return null;
 
   async function handleButtonClick() {
     if (status === 'idle') {
+      if (isGenerating) return;
       if (isStreamFullyLoaded) {
         restart();
       } else {
@@ -91,12 +118,12 @@ export default function AudioPlayer({
   }
 
   return (
-    <div className={cn('flex flex-col gap-1 pt-4', hidden && 'hidden')}>
+    <div className={cn('flex flex-col gap-1 pt-4', hidden && 'hidden', className)}>
       <div className="flex flex-row gap-2 items-center">
         <Button
           variant="ghost"
           size="icon-sm"
-          disabled={status === 'loading'}
+          disabled={status === 'loading' || (status === 'idle' && isGenerating)}
           aria-label={label}
           title={label}
           onClick={() => handleButtonClick()}

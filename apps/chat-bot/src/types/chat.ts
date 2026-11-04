@@ -26,21 +26,10 @@ export type SerializedError = {
  * Status of a chat conversation.
  * - 'ready': Chat is ready for input
  * - 'submitted': Message has been submitted, waiting for response
- * - 'reasoning': Model is reasoning (for reasoning models like o1/o3)
  * - 'streaming': Response is being streamed
  * - 'error': An error occurred
  */
-export type ChatStatus = 'ready' | 'submitted' | 'reasoning' | 'streaming' | 'error';
-
-/**
- * Generates speech audio for a message. Receives a flag indicating whether this is an
- * initial message (e.g. a character's initial message), in order to route it to a non-billed endpoint.
- */
-export type GenerateSpeechFn = (
-  text: string,
-  isInitialMessage: boolean,
-  signal?: AbortSignal,
-) => Promise<Blob>;
+export type ChatStatus = 'ready' | 'submitted' | 'streaming' | 'error';
 
 export const chatMessageSchema = z.object({
   id: z.string(),

@@ -76,7 +76,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Restore smart-reporter test history
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: apps/chat-bot/smart-report/test-history.json
           # On a PR, restore the target branch's history (read-only baseline, see baseline.branch
@@ -276,7 +276,7 @@ jobs:
 
       - name: Save smart-reporter test history
         if: always() && github.event_name != 'pull_request'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: apps/chat-bot/smart-report/test-history.json
           key: test-history-${{ github.ref_name }}-${{ github.run_id }}
