@@ -1,4 +1,4 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 
 export async function startShare(page: Page, { id }: { id: string }) {
   await page.waitForURL((url) => url.pathname.endsWith(`/editor/${id}`));
@@ -45,6 +45,21 @@ export async function waitForChatHistory(page: Page) {
 
 export async function waitForAutosave(page: Page) {
   await expect(page.getByTestId('autosave-saved').first()).toBeVisible({ timeout: 5000 });
+}
+
+export async function openCollapsible(toggle: Locator) {
+  if ((await toggle.getAttribute('data-state')) === 'open') {
+    return;
+  }
+
+  await expect(toggle).toHaveAttribute('data-state', 'closed');
+  await expect(async () => {
+    if ((await toggle.getAttribute('data-state')) === 'closed') {
+      await toggle.click();
+    }
+
+    await expect(toggle).toHaveAttribute('data-state', 'open', { timeout: 1000 });
+  }).toPass({ timeout: 15_000 });
 }
 
 export async function confirmDuplicate(page: Page) {

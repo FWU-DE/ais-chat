@@ -1,5 +1,5 @@
 import { expect, Page } from '@playwright/test';
-import { waitForAutosave } from './utils';
+import { openCollapsible, waitForAutosave } from './utils';
 
 export async function verifyLicenseInformation(page: Page, viewBasePath: string) {
   const editorUrl = page.url();
@@ -13,7 +13,7 @@ export async function verifyLicenseInformation(page: Page, viewBasePath: string)
   await expect(input).toBeHidden();
   await expect(copyrightLink).toBeHidden();
 
-  await toggle.click();
+  await openCollapsible(toggle);
   await expect(input).toBeVisible();
   await expect(copyrightLink).toBeVisible();
 

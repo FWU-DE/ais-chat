@@ -1538,6 +1538,7 @@ describe('learning-scenario-service', () => {
         },
         studentExercise: '',
         licenseInformation: '',
+        didacticCommentary: '',
         additionalInstructions: null,
         restrictions: null,
         attachedLinks: [],
@@ -1578,12 +1579,14 @@ describe('learning-scenario-service', () => {
       vi.useRealTimers();
     });
 
-    it('returns the learning scenario when the share is active', async () => {
+    it('returns license information and didactic commentary with an active share', async () => {
       const learningScenarioId = generateUUID();
       const userId = generateUUID();
       const learningScenario = mockLearningScenarioWithShareData({
         id: learningScenarioId,
         userId,
+        licenseInformation: 'Learning scenario license',
+        didacticCommentary: 'Learning scenario teaching notes',
         expiredAt: new Date(NOW.getTime() + 60 * 60 * 1000),
       });
       vi.mocked(dbGetLearningScenarioByIdWithShareData).mockResolvedValue(
@@ -1596,6 +1599,12 @@ describe('learning-scenario-service', () => {
       });
 
       expect(result).toBe(learningScenario);
+      expect(result).toEqual(
+        expect.objectContaining({
+          licenseInformation: 'Learning scenario license',
+          didacticCommentary: 'Learning scenario teaching notes',
+        }),
+      );
     });
 
     it('returns the learning scenario when the share has expired but is within the grace window', async () => {

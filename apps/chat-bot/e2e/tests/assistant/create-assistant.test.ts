@@ -4,6 +4,7 @@ import { waitForAutosave, waitForToast } from '../../utils/utils';
 import { sendMessage } from '../../utils/chat';
 import { configureAssistant, createAssistant, deleteAssistant } from '../../utils/assistant';
 import { verifyLicenseInformation } from '../../utils/license-information';
+import { verifyDidacticCommentary } from '../../utils/didactic-commentary';
 import { nanoid } from 'nanoid';
 
 test.use({ storageState: AUTH_FILES.teacher });
@@ -154,5 +155,10 @@ test('data is autosaved on blur', async ({ page }) => {
   await expect(page.getByTestId('prompt-suggestion-1-input')).toHaveValue('New Prompt Suggestion');
 
   // license information
+  await verifyDidacticCommentary(
+    page,
+    '/assistants',
+    'Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieser Assistent eingesetzt werden kann.',
+  );
   await verifyLicenseInformation(page, '/assistants');
 });
