@@ -108,17 +108,18 @@ export async function selectDifferentModel(page: Page, modelName?: string) {
 
 /** Opens the image model dropdown and selects a specific model by displayName, or the first available alternative if no name is provided. */
 export async function selectDifferentImageModel(page: Page, modelName?: string) {
-  const dropdown = page.getByTestId('main-menu-item-image-model-dropdown');
-  await expect(dropdown).toBeVisible();
-
-  const isDisabled = await dropdown.evaluate((el) => (el as HTMLButtonElement).disabled);
-  if (isDisabled) return;
-
   const selectedModel = await page.getByTestId('main-menu-item-image-model-selected').innerText();
   if (modelName && selectedModel === modelName) {
     // requested model is already selected
     return;
   }
+
+  // When there's only one image model, the dropdown isn't rendered at all (nothing to switch to)
+  const dropdown = page.getByTestId('main-menu-item-image-model-dropdown');
+  await expect(dropdown).toBeVisible();
+
+  const isDisabled = await dropdown.evaluate((el) => (el as HTMLButtonElement).disabled);
+  if (isDisabled) return;
 
   await dropdown.click();
 
