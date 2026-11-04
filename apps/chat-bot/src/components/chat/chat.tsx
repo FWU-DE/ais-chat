@@ -36,7 +36,7 @@ import { ErrorChatPlaceholder } from './error-chat-placeholder';
 import { FloatingText } from './floating-text';
 import { InitialChatContentDisplay } from './initial-content-display';
 import MarkdownDisplay from './markdown-display';
-import { Messages, type PendingFileModel } from './messages';
+import { Messages, type MessageFileModel } from './messages';
 import PromptSuggestions from './prompt-suggestions';
 
 type ChatProps = {
@@ -104,12 +104,12 @@ export default function Chat({
   const [fileMapping, setFileMapping] = useState<Map<string, FileModel[]>>(
     initialFileMapping ?? new Map(),
   );
-  // pendingFileMapping stores files for messages that haven't been persisted to DB yet
+  // messageFileMapping stores files associated with messages, including local preview URLs
   // This allows immediate display of attachments while the server processes the message
-  const [pendingFileMapping, setPendingFileMapping] = useState<Map<string, PendingFileModel[]>>(
+  const [messageFileMapping, setMessageFileMapping] = useState<Map<string, MessageFileModel[]>>(
     new Map(),
   );
-  const pendingFileMappingRef = React.useRef(pendingFileMapping);
+  const messageFileMappingRef = React.useRef(messageFileMapping);
   const [files, setFiles] = useState<Map<string, LocalFileState>>(new Map());
   const [countOfFilesInChat, setCountOfFilesInChat] = useState(0);
   const queryClient = useQueryClient();
@@ -120,7 +120,7 @@ export default function Chat({
   }
 
   // Ref to hold pending files that will be associated with the next user message
-  const pendingFilesRef = React.useRef<PendingFileModel[]>([]);
+  const pendingFilesRef = React.useRef<MessageFileModel[]>([]);
 
   // Tracks whether this is the first user message in the conversation (used to trigger
   // URL update and sidebar refetch). For character chats with an initial assistant message,
@@ -148,10 +148,10 @@ export default function Chat({
     learningScenarioId: learningScenario?.id,
     assistantId: assistant?.id,
     onMessageCreated: (messageId) => {
-      // Associate pending files with the message ID immediately when the message is created
+      // Associate files waiting for a message ID as soon as the message is created
       const filesToAssociate = pendingFilesRef.current;
       if (filesToAssociate.length > 0) {
-        setPendingFileMapping((prev) => {
+        setMessageFileMapping((prev) => {
           const newMap = new Map(prev);
           newMap.set(messageId, filesToAssociate);
           return newMap;
@@ -200,12 +200,12 @@ export default function Chat({
   }, [countOfFilesInChat, id, messages.length]);
 
   useEffect(() => {
-    pendingFileMappingRef.current = pendingFileMapping;
-  }, [pendingFileMapping]);
+    messageFileMappingRef.current = messageFileMapping;
+  }, [messageFileMapping]);
 
   useEffect(() => {
     const downloadFileMapping = new Map(fileMapping);
-    for (const [messageId, files] of pendingFileMapping) {
+    for (const [messageId, files] of messageFileMapping) {
       downloadFileMapping.set(messageId, files);
     }
 
@@ -220,13 +220,13 @@ export default function Chat({
       createdAt: conversation.createdAt,
       conversationTitle: conversation.name ?? undefined,
     });
-  }, [conversation, fileMapping, messages, pendingFileMapping, setConversationDownloadData]);
+  }, [conversation, fileMapping, messages, messageFileMapping, setConversationDownloadData]);
 
   // Blob URLs stay usable for the whole session, so they are kept once the files are persisted
   // and only revoked on unmount.
   useEffect(
     () => () => {
-      for (const files of pendingFileMappingRef.current.values()) {
+      for (const files of messageFileMappingRef.current.values()) {
         for (const file of files) {
           if (file.localUrl !== undefined) {
             URL.revokeObjectURL(file.localUrl);
@@ -410,7 +410,7 @@ export default function Chat({
               assistantIcon={assistantIcon}
               containerClassName="flex flex-col gap-2 mx-auto p-4"
               fileMapping={fileMapping}
-              pendingFileMapping={pendingFileMapping}
+              messageFileMapping={messageFileMapping}
               webSourceMapping={webSourceMapping}
               activitySteps={activitySteps}
               showActivityDialog={character !== undefined}
