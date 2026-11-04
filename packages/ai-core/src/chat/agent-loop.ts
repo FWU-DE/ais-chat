@@ -1,8 +1,9 @@
-import { metrics } from '@opentelemetry/api';
 import * as Sentry from '@sentry/core';
 import { env } from '../env';
 import { EmptyResponseError } from '../errors';
 import { generateAgenticStreamWithBilling } from './agentic-stream';
+import { recordGenerationRssDelta } from './metrics/generation-rss-delta';
+import { recordToolCallDuration } from './metrics/tool-call-duration';
 import type {
   Message as AiCoreMessage,
   ModelSelection,
@@ -16,27 +17,6 @@ import type {
 
 export const MAX_AGENTIC_ITERATIONS = env.maxAgenticIterations;
 export const MAX_TOOL_CALLS_PER_ITERATION = env.maxToolCallsPerIteration;
-
-const toolCallDuration = metrics
-  .getMeter('ais-chat.tools', '0.0.1')
-  .createHistogram('tool_call_duration', {
-    description: 'Duration of executed AI tool calls',
-    unit: 'ms',
-  });
-
-const generationRssDelta = metrics
-  .getMeter('ais-chat.gen_ai', '0.0.1')
-  .createHistogram('ai_generation_rss_delta', {
-    description: 'Magnitude of the process RSS change across a single agent loop run',
-    unit: 'By',
-  });
-
-/** The SDK drops negative histogram values, so the sign has to travel as an attribute. */
-function memoryDirection(delta: number): 'increase' | 'decrease' | 'unchanged' {
-  if (delta > 0) return 'increase';
-  if (delta < 0) return 'decrease';
-  return 'unchanged';
-}
 
 function logError(message: string, error: unknown) {
   console.error(message, error);
@@ -117,17 +97,14 @@ export function runAgentLoop({
     const tools = toolRegistry ? Object.values(toolRegistry).map((entry) => entry.definition) : [];
     const rssBefore = process.memoryUsage().rss;
 
-    // Attributes stay free of prompts, completions and user identifiers by design.
     // The histogram's own count series carries the per-outcome run count, so no extra counter.
     const recordOutcome = (outcome: 'success' | 'error' | 'aborted', error?: Error) => {
-      const rssDelta = process.memoryUsage().rss - rssBefore;
-
-      generationRssDelta.record(Math.abs(rssDelta), {
+      recordGenerationRssDelta({
+        rssDelta: process.memoryUsage().rss - rssBefore,
         outcome,
-        'memory.direction': memoryDirection(rssDelta),
-        'gen_ai.agent.name': agentName,
-        'gen_ai.request.model': modelSelection.modelName,
-        ...(error ? { 'error.type': error.name } : {}),
+        agentName,
+        modelName: modelSelection.modelName,
+        errorType: error?.name,
       });
     };
 
@@ -307,9 +284,10 @@ export function runAgentLoop({
                       result = { error: message };
                       serializedResult = JSON.stringify(result);
                     } finally {
-                      toolCallDuration.record(performance.now() - startedAt, {
-                        'gen_ai.tool.name': registryEntry ? toolCall.name : 'unknown',
-                        'tool.status': status,
+                      recordToolCallDuration({
+                        durationMs: performance.now() - startedAt,
+                        toolName: registryEntry ? toolCall.name : 'unknown',
+                        status,
                       });
                     }
 
