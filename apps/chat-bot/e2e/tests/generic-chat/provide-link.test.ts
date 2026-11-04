@@ -8,7 +8,9 @@ test('teacher can provide link and it is displayed in the chat', async ({ page }
   await page.goto('/');
   await sendMessage(
     page,
-    `${MOCK_LLM_COMMANDS.CALL_WEB_SCRAPER}
+    `${MOCK_LLM_COMMANDS.CALL_TOOL('web_scraper', {
+      urls: ['https://www.planet-wissen.de/geschichte/neuzeit/barock/index.html'],
+    })}
     Wann hatte der Barock seinen Anfang?
     https://www.planet-wissen.de/geschichte/neuzeit/barock/index.html`,
   );

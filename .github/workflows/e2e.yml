@@ -241,6 +241,7 @@ jobs:
           E2E_GUARD_TEXT_MODEL: GPT-5 nano
           E2E_TEXT_MODEL_1: Mock LLM
           E2E_TEXT_MODEL_2: Mock LLM (2)
+          E2E_IMAGE_MODEL: Mock LLM (Image)
 
       - name: Run E2E tests (admin)
         # Run even if the app suite failed, but not if it was skipped (e.g. setup failed) or cancelled.

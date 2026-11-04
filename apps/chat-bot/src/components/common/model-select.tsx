@@ -70,7 +70,7 @@ export default function ModelSelect({
         triggerLabel={currentSelectedModel?.displayName ?? noModelsLabel}
         triggerAriaLabel={`Select ${modelType} Model Dropdown`}
         isDropdownEnabled={selectableModels.length > 0}
-        mainMenuItemTestId={`main-menu-item-model-dropdown`}
+        mainMenuItemTestId={`main-menu-item-${modelType}-model-dropdown`}
         selectedMenuItemTestId={`main-menu-item-${modelType}-model-selected`}
         isNew={isNew}
         isGreen={isGreen}
