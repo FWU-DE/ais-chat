@@ -1,17 +1,11 @@
-import { metrics } from '@opentelemetry/api';
 import { billTextGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
 import { hasAccessToModel } from '../api-keys/model-access';
 import { ApiKeyQuotaExceededError, InvalidModelError, normalizeAiGenerationError } from '../errors';
 import { getTextModelById } from '../models';
+import { recordEstimatedTokenUsage } from './metrics/estimated-token-usage';
 import { getUsedModelId } from './model-selection';
 import { generateAgenticStream } from './providers';
 import type { GenerationOptions, Message, ModelSelection, StreamEvent, TokenUsage } from './types';
-
-const estimatedUsageCounter = metrics
-  .getMeter('ais-chat.billing', '0.0.1')
-  .createCounter('estimated_token_usage', {
-    description: 'Generations billed with locally estimated token usage instead of provider data',
-  });
 
 /**
  * Generates streaming agentic output using the specified model and messages, with access control and billing.
@@ -87,9 +81,9 @@ export async function* generateAgenticStreamWithBilling(
         );
 
         if (event.usage.estimated) {
-          estimatedUsageCounter.add(1, {
-            'gen_ai.request.model': billingModel.name,
-            'gen_ai.provider.name': billingModel.provider,
+          recordEstimatedTokenUsage({
+            modelName: billingModel.name,
+            provider: billingModel.provider,
           });
         }
         if (onComplete) {

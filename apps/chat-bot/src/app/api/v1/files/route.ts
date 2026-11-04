@@ -1,6 +1,7 @@
+import { isUploadBodyTooLarge } from '@/app/api/file-operations/upload-body-limit';
 import { getUser } from '@/auth/utils';
-import { NextRequest, NextResponse } from 'next/server';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
+import { NextRequest, NextResponse } from 'next/server';
 import { uploadFile } from '../../file-operations/file-upload-service';
 
 /**
@@ -16,6 +17,10 @@ export async function POST(req: NextRequest) {
     const user = await getUser();
     if (user === undefined) {
       return NextResponse.json({ status: 403 });
+    }
+
+    if (isUploadBodyTooLarge(req)) {
+      return NextResponse.json({ error: 'Request body too large' }, { status: 413 });
     }
 
     const formData = await req.formData();

@@ -1,11 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { handleErrorInRoute } from '@/error/handle-error-in-route';
-import { uploadSharedChatFile } from '@/app/api/shared-chat/shared-chat-upload-service';
+import { isUploadBodyTooLarge } from '@/app/api/file-operations/upload-body-limit';
 import { sharedChatUploadFormSchema } from '@/app/api/shared-chat/shared-chat-request-schemas';
+import { uploadSharedChatFile } from '@/app/api/shared-chat/shared-chat-upload-service';
 import { requireValidInviteCode } from '@/auth/requireValidInviteCode';
+import { handleErrorInRoute } from '@/error/handle-error-in-route';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
+    if (isUploadBodyTooLarge(req)) {
+      return NextResponse.json({ error: 'Request body too large' }, { status: 413 });
+    }
+
     const formData = await req.formData();
     const parseResult = sharedChatUploadFormSchema.parse({
       file: formData.get('file'),
