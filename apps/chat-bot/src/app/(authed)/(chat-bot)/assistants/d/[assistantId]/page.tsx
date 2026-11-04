@@ -11,6 +11,7 @@ import { getAvatarPictureUrl } from '@shared/files/fileService';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { toChatAssistantDto } from '@/components/chat/chat-client-dto';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +64,7 @@ export default async function Page(props: PageProps<'/assistants/d/[assistantId]
         <Chat
           id={id}
           initialMessages={[]}
-          assistant={assistant}
+          assistant={toChatAssistantDto(assistant)}
           enableFileUpload={true}
           promptSuggestions={assistant.promptSuggestions}
           imageSource={avatarPictureUrl}

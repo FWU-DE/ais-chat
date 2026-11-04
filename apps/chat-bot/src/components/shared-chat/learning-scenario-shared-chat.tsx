@@ -3,22 +3,22 @@
 import { useLearningScenarioChat } from '@/hooks/use-chat-hooks';
 import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
 import { loadSharedChat } from '@/utils/shared-chat-storage';
-import { LearningScenarioWithShareDataModel } from '@shared/db/schema';
 import { useTranslations } from 'next-intl';
 import { z } from 'zod';
 import GenericSharedChat from './generic-shared-chat';
+import type { SharedLearningScenarioDto } from './shared-chat-client-dto';
 
 export default function LearningScenarioSharedChat({
+  learningScenario,
   avatarPictureUrl,
   isSpeechModelEnabled,
-  ...sharedSchoolChat
-}: LearningScenarioWithShareDataModel & {
-  inviteCode: string;
+}: {
+  learningScenario: SharedLearningScenarioDto;
   avatarPictureUrl?: string;
   isSpeechModelEnabled: boolean;
 }) {
   const t = useTranslations('learning-scenarios.shared');
-  const { id, inviteCode, modelId } = sharedSchoolChat;
+  const { id, inviteCode, modelId } = learningScenario;
 
   const initialMessages =
     loadSharedChat(inviteCode)?.messages.map((message) => ({
@@ -78,18 +78,18 @@ export default function LearningScenarioSharedChat({
   return (
     <GenericSharedChat
       headerT={t}
-      entity={sharedSchoolChat}
+      entity={learningScenario}
       inviteCode={inviteCode}
       sharedEntityType="learningScenario"
       avatarPictureUrl={avatarPictureUrl}
       chat={chat}
       dialogStartMode="explicit"
       enableFloatingText
-      exerciseDescription={sharedSchoolChat.studentExercise}
+      exerciseDescription={learningScenario.studentExercise}
       exerciseTitle={t('exercise-title')}
       uploadFileFn={uploadSharedLearningScenarioFile}
       isSpeechModelEnabled={isSpeechModelEnabled}
-      speechOnly={sharedSchoolChat.speechOnly}
+      speechOnly={learningScenario.speechOnly}
       generateSpeechStreamFn={generateSharedLearningScenarioSpeechStream}
     />
   );

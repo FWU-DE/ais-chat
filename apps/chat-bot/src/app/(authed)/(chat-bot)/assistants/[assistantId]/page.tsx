@@ -6,6 +6,7 @@ import { AssistantView } from './assistant-view';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { prepareAssistantForView } from './assistant-view-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,7 @@ export default async function Page(props: PageProps<'/assistants/[assistantId]'>
   return (
     <DefaultPageLayout>
       <AssistantView
-        assistant={assistant}
+        assistant={prepareAssistantForView(assistant, user.userRole)}
         fileMappings={fileMappings}
         pictureUrl={pictureUrl}
         isWebSearchAvailable={isWebSearchAvailableForFederalState(federalState.featureToggles)}
