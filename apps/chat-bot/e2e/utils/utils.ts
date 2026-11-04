@@ -48,6 +48,10 @@ export async function waitForAutosave(page: Page) {
 }
 
 export async function openCollapsible(toggle: Locator) {
+  if ((await toggle.getAttribute('data-state')) === 'open') {
+    return;
+  }
+
   await expect(toggle).toHaveAttribute('data-state', 'closed');
   await expect(async () => {
     if ((await toggle.getAttribute('data-state')) === 'closed') {

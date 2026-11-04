@@ -681,7 +681,7 @@
       "heading-tooltip-assistant": "Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieser Assistent eingesetzt werden kann.",
       "heading-tooltip-character": "Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieser Dialogpartner eingesetzt werden kann.",
       "heading-tooltip-learning-scenario": "Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieses Lernszenario eingesetzt werden kann.",
-      "toggle-aria-label": "Didaktischen Kommentar ein- oder ausklappen",
+      "toggle-aria-label": "Didaktischen Kommentar ein-/ausklappen",
       "max-length": "Der didaktische Kommentar darf maximal {maxLength} Zeichen lang sein."
     },
     "license-information": {
