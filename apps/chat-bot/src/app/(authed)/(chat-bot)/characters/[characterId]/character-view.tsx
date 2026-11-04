@@ -175,6 +175,10 @@ export function CharacterView({
             <FieldGroup>
               <CustomChatFieldInfo label={t('name-label')} value={character.name} />
               <CustomChatFieldInfo label={t('description-label')} value={character.description} />
+              <CustomChatDidacticCommentaryView
+                didacticCommentary={character.didacticCommentary}
+                tooltip={tChat('didactic-commentary.heading-tooltip-character')}
+              />
               {selectedModel && (
                 <CustomChatFieldInfo
                   label={tChat('model.label')}
@@ -187,11 +191,6 @@ export function CharacterView({
                 value={character.initialMessage}
               />
               <FilterDisplaySection values={filterValues} />
-              {/* TODO(TD-1542): final placement to be confirmed with design (AC says after Kurzbeschreibung). */}
-              <CustomChatDidacticCommentaryView
-                didacticCommentary={character.didacticCommentary}
-                tooltip={tChat('didactic-commentary.heading-tooltip-character')}
-              />
               <CustomChatLicenseInformationView licenseInformation={character.licenseInformation} />
             </FieldGroup>
           </CardContent>

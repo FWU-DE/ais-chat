@@ -101,6 +101,10 @@ export function AssistantView({
           <FieldGroup>
             <CustomChatFieldInfo label={t('name-label')} value={assistant.name} />
             <CustomChatFieldInfo label={t('description-label')} value={assistant.description} />
+            <CustomChatDidacticCommentaryView
+              didacticCommentary={assistant.didacticCommentary}
+              tooltip={tChat('didactic-commentary.heading-tooltip-assistant')}
+            />
             <CustomChatFieldInfo label={t('instructions-label')} value={assistant.instructions} />
             {assistant.promptSuggestions.map((suggestion, index) => (
               <CustomChatFieldInfo
@@ -110,11 +114,6 @@ export function AssistantView({
               />
             ))}
             <FilterDisplaySection values={filterValues} />
-            {/* TODO(TD-1542): final placement to be confirmed with design (AC says after Kurzbeschreibung). */}
-            <CustomChatDidacticCommentaryView
-              didacticCommentary={assistant.didacticCommentary}
-              tooltip={tChat('didactic-commentary.heading-tooltip-assistant')}
-            />
             <CustomChatLicenseInformationView licenseInformation={assistant.licenseInformation} />
           </FieldGroup>
         </CardContent>

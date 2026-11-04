@@ -200,6 +200,10 @@ export function LearningScenarioView({
                 label={t('description-label')}
                 value={learningScenario.description}
               />
+              <CustomChatDidacticCommentaryView
+                didacticCommentary={learningScenario.didacticCommentary}
+                tooltip={tChat('didactic-commentary.heading-tooltip-learning-scenario')}
+              />
               {modelDisplayName && (
                 <CustomChatFieldInfo label={t('form.model-label')} value={modelDisplayName} />
               )}
@@ -212,11 +216,6 @@ export function LearningScenarioView({
                 value={learningScenario.studentExercise}
               />
               <FilterDisplaySection values={filterValues} />
-              {/* TODO(TD-1542): final placement to be confirmed with design (AC says after Kurzbeschreibung). */}
-              <CustomChatDidacticCommentaryView
-                didacticCommentary={learningScenario.didacticCommentary}
-                tooltip={tChat('didactic-commentary.heading-tooltip-learning-scenario')}
-              />
               <CustomChatLicenseInformationView
                 licenseInformation={learningScenario.licenseInformation}
               />
