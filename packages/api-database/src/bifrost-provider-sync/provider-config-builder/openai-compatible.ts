@@ -15,8 +15,7 @@ type AllowedRequests = NonNullable<
 /**
  * Derives a stable Bifrost provider id for an `openai`-typed provider key that uses a non-default
  * base URL, so it gets its own Bifrost provider config instead of merging with the real OpenAI
- * provider (or with other custom base URLs). Based on the provider key's `name`, which is unique
- * per organization.
+ * provider (or with other custom base URLs). Based on the provider key's `name`, which is unique.
  */
 export function buildCustomOpenAiProviderId(name: string): string {
   const slug = name

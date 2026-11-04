@@ -26,6 +26,5 @@ test.describe('GET /v1/models', { tag: '@smoke' }, () => {
 
     // Sensitive fields should be stripped
     expect(model).not.toHaveProperty('setting');
-    expect(model).not.toHaveProperty('organizationId');
   });
 });

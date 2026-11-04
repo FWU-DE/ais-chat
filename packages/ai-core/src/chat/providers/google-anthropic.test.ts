@@ -57,7 +57,6 @@ function createGoogleAnthropicModel(projectId = 'test-project', location = 'us-c
     displayName: 'Claude 3.5 Sonnet v2',
     provider: 'google',
     description: 'Test model',
-    organizationId: 'org-test',
     createdAt: new Date(),
     supportedImageFormats: ['image/png', 'image/jpeg'],
     imageGenerationConfig: null,

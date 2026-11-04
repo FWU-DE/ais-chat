@@ -10,7 +10,6 @@ const baseModel: LlmModel = {
   description: 'A test model',
   setting: { apiKey: 'sk-secret', baseUrl: 'https://api.openai.com/v1', provider: 'openai' },
   priceMetadata: { type: 'text', completionTokenPrice: 1, promptTokenPrice: 1 },
-  organizationId: 'org-123',
   createdAt: new Date('2025-01-01'),
   supportedImageFormats: [],
   imageGenerationConfig: null,
@@ -23,11 +22,10 @@ const baseModel: LlmModel = {
 };
 
 describe('obscureModels', () => {
-  it('removes setting and organizationId from each model', () => {
+  it('removes setting from each model', () => {
     const result = obscureModels([baseModel]);
     expect(result).toHaveLength(1);
     expect(result[0]).not.toHaveProperty('setting');
-    expect(result[0]).not.toHaveProperty('organizationId');
   });
 
   it('preserves all other model fields', () => {

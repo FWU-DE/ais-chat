@@ -16,7 +16,7 @@ export async function Header() {
       </Link>
       <div className="flex-1 flex flex-row gap-4">
         {session?.adminRole === 'Admin' && (
-          <Link href={ROUTES.api.organizations}>
+          <Link href={ROUTES.api.llms}>
             <Button variant={'link'}>AIS.chat-api</Button>
           </Link>
         )}

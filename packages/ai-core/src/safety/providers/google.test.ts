@@ -30,7 +30,6 @@ function createGoogleSafetyModel(): AiModel {
     displayName: 'Google Safety Model',
     description: 'Test safety model',
     provider: 'google',
-    organizationId: 'org-test',
     createdAt: new Date(),
     supportedImageFormats: [],
     imageGenerationConfig: null,

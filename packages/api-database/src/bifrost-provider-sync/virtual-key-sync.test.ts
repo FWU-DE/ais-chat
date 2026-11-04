@@ -96,7 +96,7 @@ describe('ensureBifrostVirtualKeyProviderAccess', () => {
     expect(azureConfig?.key_ids).toEqual(['*']);
   });
 
-  test('drops managed providers no longer used by any organization', async () => {
+  test('drops managed providers no longer used by any model', async () => {
     const virtualKey: BifrostVirtualKey = {
       id: 'vk-all',
       provider_configs: [

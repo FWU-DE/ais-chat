@@ -18,7 +18,6 @@ function providerKey(
     provider: overrides.settings.provider,
     weight: overrides.weight ?? 1,
     isEnabled: overrides.isEnabled ?? true,
-    organizationId: overrides.organizationId ?? 'org-1',
     createdAt: overrides.createdAt ?? new Date(),
     models: overrides.models ?? [
       { model: { id: 'model-1', name: 'gpt-4o', isDeleted: false }, upstreamModelName: 'gpt-4o' },

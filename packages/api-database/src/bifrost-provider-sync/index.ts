@@ -92,29 +92,6 @@ async function deleteStaleManagedProviders(
   }
 }
 
-export async function syncBifrostProvidersForOrganization(
-  organizationId: string,
-  options: BifrostProviderSyncOptions,
-): Promise<void> {
-  // Bifrost provider configuration and virtual keys are shared across organizations. Rebuild the
-  // complete desired state so syncing one organization cannot remove another organization's keys.
-  const providerKeys = await dbGetAllProviderKeysWithModels();
-  await syncBifrostProviders(providerKeys, {
-    ...options,
-    logger: options.logger
-      ? {
-          ...options.logger,
-          info: (message, context) =>
-            options.logger?.info?.(message, { organizationId, ...context }),
-          warning: (message, context) =>
-            options.logger?.warning?.(message, { organizationId, ...context }),
-          error: (message, error, context) =>
-            options.logger?.error?.(message, error, { organizationId, ...context }),
-        }
-      : undefined,
-  });
-}
-
 export async function syncAllBifrostProviders(options: BifrostProviderSyncOptions): Promise<void> {
   await syncBifrostProviders(await dbGetAllProviderKeysWithModels(), options);
 }

@@ -5,8 +5,7 @@ import {
   llmModelTable,
 } from '../schema';
 import { db } from '../db';
-import { dbGetAllApiKeysByProjectId } from './api-key';
-import { dbGetOrganizationAndProjectsByOrganizationId } from './organization';
+import { dbGetAllApiKeys } from './api-key';
 import type { LlmInsertModel, LlmModel } from '../schema';
 
 export async function dbGetAllModels() {
@@ -58,14 +57,6 @@ export async function dbHasApiKeyAccessToModel({
   return rows.length > 0;
 }
 
-export async function dbGetAllModelsByOrganizationId(organizationId: string) {
-  return await db
-    .select()
-    .from(llmModelTable)
-    .where(eq(llmModelTable.organizationId, organizationId))
-    .orderBy(llmModelTable.name, llmModelTable.createdAt);
-}
-
 /**
  * Returns the list of llm models linked to the given API key.
  * The deleted flag is ignored for now because ais-chat-app needs all models and the deleted flag needs to be mirrored.
@@ -93,16 +84,12 @@ export async function dbCreateLlmModel(llmModel: LlmInsertModel) {
   return modelCreated[0];
 }
 
-export async function dbUpdateLlmModel(
-  id: string,
-  organizationId: string,
-  llmModel: Partial<LlmModel>,
-) {
+export async function dbUpdateLlmModel(id: string, llmModel: Partial<LlmModel>) {
   const updatedModel = (
     await db
       .update(llmModelTable)
       .set({ ...llmModel })
-      .where(and(eq(llmModelTable.id, id), eq(llmModelTable.organizationId, organizationId)))
+      .where(eq(llmModelTable.id, id))
       .returning()
   )[0];
 
@@ -113,12 +100,12 @@ export async function dbDeleteLlmModelById(id: string) {
   return (await db.delete(llmModelTable).where(eq(llmModelTable.id, id)).returning())[0];
 }
 
-export async function dbDeleteLlmModel(id: string, organizationId: string): Promise<boolean> {
+export async function dbDeleteLlmModel(id: string): Promise<boolean> {
   return db.transaction(async (tx) => {
     const [model] = await tx
       .select({ id: llmModelTable.id })
       .from(llmModelTable)
-      .where(and(eq(llmModelTable.id, id), eq(llmModelTable.organizationId, organizationId)))
+      .where(eq(llmModelTable.id, id))
       .limit(1);
     if (!model) return false;
 
@@ -139,22 +126,6 @@ export async function dbGetModelsByIds({ modelIds }: { modelIds: string[] }) {
   return await db.select().from(llmModelTable).where(inArray(llmModelTable.id, modelIds));
 }
 
-// Helper to get all API keys in an organization
-export async function getAllApiKeys(
-  organizationId: string,
-): Promise<{ id: string; name: string }[]> {
-  const orgWithProjects = await dbGetOrganizationAndProjectsByOrganizationId({
-    organizationId,
-  });
-  if (!orgWithProjects) return [];
-  const allApiKeys: { id: string; name: string }[] = [];
-  for (const project of orgWithProjects.projects) {
-    const keys = await dbGetAllApiKeysByProjectId(organizationId, project.id);
-    allApiKeys.push(...keys.map((k) => ({ id: k.id, name: k.name })));
-  }
-  return allApiKeys;
-}
-
 export async function dbCreateModelWithApiKeyLinks({
   provider,
   name,
@@ -162,7 +133,6 @@ export async function dbCreateModelWithApiKeyLinks({
   description = '',
   setting,
   priceMetadata,
-  organizationId,
   apiKeyNames,
   isNew,
   isDeleted,
@@ -175,14 +145,11 @@ export async function dbCreateModelWithApiKeyLinks({
       linkedApiKeys: { id: string; name: string }[];
     }
 > {
-  // Logical model names are unique within an organization regardless of upstream provider.
-  const existingModel = await db
-    .select()
-    .from(llmModelTable)
-    .where(and(eq(llmModelTable.name, name), eq(llmModelTable.organizationId, organizationId)));
+  // Logical model names are unique regardless of upstream provider.
+  const existingModel = await db.select().from(llmModelTable).where(eq(llmModelTable.name, name));
   if (existingModel.length > 0) {
     return {
-      error: 'A model with this name already exists for this organization.',
+      error: 'A model with this name already exists.',
     };
   }
 
@@ -196,7 +163,6 @@ export async function dbCreateModelWithApiKeyLinks({
       description: description ?? '',
       setting,
       priceMetadata,
-      organizationId,
       isNew,
       isDeleted,
     })
@@ -206,9 +172,9 @@ export async function dbCreateModelWithApiKeyLinks({
     return { error: 'Failed to create model' };
   }
 
-  const allApiKeys = await getAllApiKeys(organizationId);
+  const allApiKeys = await dbGetAllApiKeys();
   if (!allApiKeys.length) {
-    return { error: 'Organization not found' };
+    return { error: 'No API keys found' };
   }
   // Find API keys by name
   const apiKeysToLink =
@@ -219,7 +185,7 @@ export async function dbCreateModelWithApiKeyLinks({
       .filter((k) => k !== undefined) ?? allApiKeys;
 
   if (apiKeysToLink === undefined) {
-    return { error: 'One or more API key names not found in organization' };
+    return { error: 'One or more API key names not found' };
   }
   // Link model to API keys
   if (apiKeysToLink.length > 0) {
