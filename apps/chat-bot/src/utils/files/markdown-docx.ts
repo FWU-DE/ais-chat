@@ -45,6 +45,11 @@ const CODE_BLOCK_VERTICAL_PADDING = 120;
 const CODE_BLOCK_BACKGROUND = '011627';
 const CODE_BLOCK_HEADER_BACKGROUND = 'F1F5F9';
 const CODE_BLOCK_HEADER_TEXT_COLOR = '000000';
+const TABLE_BORDER = {
+  color: 'B7B7B7',
+  size: 4,
+  style: BorderStyle.SINGLE,
+};
 const plotCodeNodes = new WeakSet<object>();
 const plotExportMetadata = new WeakMap<object, { imageKey: string }>();
 
@@ -179,6 +184,14 @@ const styledBlocksPlugin: RemarkDocxPlugin = async () => ({
       width: { size: 100, type: WidthType.PERCENTAGE },
       alignment: AlignmentType.CENTER,
       style: 'TableGrid',
+      borders: {
+        top: TABLE_BORDER,
+        bottom: TABLE_BORDER,
+        left: TABLE_BORDER,
+        right: TABLE_BORDER,
+        insideHorizontal: TABLE_BORDER,
+        insideVertical: TABLE_BORDER,
+      },
       margins: {
         top: TABLE_CELL_PADDING,
         bottom: TABLE_CELL_PADDING,
