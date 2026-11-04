@@ -33,6 +33,7 @@ import { CustomChatShareWithLearners } from '@/components/custom-chat/share-with
 import { CustomChatCreateSuspensionRequestButton } from '@/components/custom-chat/custom-chat-create-suspension-request-button';
 import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-author-info';
 import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-chat-filter-display-section';
+import { CustomChatLicenseInformationView } from '@/components/custom-chat/license-information/custom-chat-license-information-view';
 import { extractFilterValues } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import { CustomChatWebSearchView } from '@/components/custom-chat/web-search/custom-chat-web-search-view';
 import { CustomChatSpeechView } from '@/components/custom-chat/speech/custom-chat-speech-view';
@@ -185,6 +186,7 @@ export function CharacterView({
                 value={character.initialMessage}
               />
               <FilterDisplaySection values={filterValues} />
+              <CustomChatLicenseInformationView licenseInformation={character.licenseInformation} />
             </FieldGroup>
           </CardContent>
         </Card>

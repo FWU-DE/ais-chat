@@ -2,6 +2,7 @@
 
 import {
   NUMBER_OF_EXAMPLE_PROMPTS_LIMIT,
+  LICENSE_INFORMATION_LENGTH_LIMIT,
   SMALL_TEXT_INPUT_FIELDS_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS,
@@ -74,6 +75,7 @@ import {
   toFilterGroup,
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
+import { CustomChatLicenseInformationEditView } from '@/components/custom-chat/license-information/custom-chat-license-information-edit-view';
 
 type AssistantTranslator = ReturnType<typeof useTranslations<'assistants'>>;
 
@@ -110,6 +112,7 @@ function createAssistantFormValuesSchema(t: AssistantTranslator) {
     name: z.string().trim().min(1, t('name-required')).max(SMALL_TEXT_INPUT_FIELDS_LIMIT),
     description: z.string(),
     instructions: z.string(),
+    licenseInformation: z.string().max(LICENSE_INFORMATION_LENGTH_LIMIT),
     schoolTypes: z.array(schoolTypesSchema),
     gradeRanges: z.array(gradeRangesSchema),
     subjects: z.array(subjectsSchema),
@@ -173,6 +176,7 @@ export function AssistantEdit({
     name: assistant.name,
     description: assistant.description ?? '',
     instructions: assistant.instructions ?? '',
+    licenseInformation: assistant.licenseInformation,
     schoolTypes: filterValues.schoolTypes,
     gradeRanges: filterValues.gradeRanges,
     subjects: filterValues.subjects,
@@ -216,7 +220,11 @@ export function AssistantEdit({
       isDirty,
       getValues,
       reset: (values) => {
-        reset({ ...values, name: values.name.trim() });
+        reset({
+          ...values,
+          name: values.name.trim(),
+          licenseInformation: values.licenseInformation.trimEnd(),
+        });
       },
       validate: trigger,
       saveValues: async (data) => {
@@ -226,6 +234,7 @@ export function AssistantEdit({
           name: data.name.trim(),
           description: data.description,
           instructions: data.instructions,
+          licenseInformation: data.licenseInformation.trimEnd(),
           filterGroup: toFilterGroup(data),
           hasLinkAccess: data.hasLinkAccess,
           isWebSearchEnabled: data.isWebSearchEnabled,
@@ -552,6 +561,7 @@ export function AssistantEdit({
               void flushAutoSave();
             }}
           />
+          <CustomChatLicenseInformationEditView control={control} onBlur={handleAutoSave} />
         </form>
       </CustomChatLayoutContainer>
     </>

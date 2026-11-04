@@ -9,6 +9,7 @@ import {
   deleteLearningScenario,
   deleteLearningScenarioFromDetailPage,
 } from '../../utils/learning-scenario';
+import { verifyLicenseInformation } from '../../utils/license-information';
 import { nanoid } from 'nanoid';
 
 test.use({ storageState: AUTH_FILES.teacher });
@@ -265,6 +266,9 @@ test('data is autosaved on blur', async ({ page }) => {
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Arbeitsauftrag' })).toHaveValue('New Exercise');
+
+  // License information
+  await verifyLicenseInformation(page, '/learning-scenarios');
 
   // cleanup
   await deleteLearningScenarioFromDetailPage(page);

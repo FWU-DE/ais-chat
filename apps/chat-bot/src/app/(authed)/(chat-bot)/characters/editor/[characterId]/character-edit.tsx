@@ -54,6 +54,7 @@ import { CustomChatImageUpload } from '@/components/custom-chat/custom-chat-imag
 import { FieldGroup } from '@ui/components/field';
 import { Card, CardContent } from '@ui/components/card';
 import {
+  LICENSE_INFORMATION_LENGTH_LIMIT,
   SMALL_TEXT_INPUT_FIELDS_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS,
@@ -81,6 +82,7 @@ import {
   toFilterGroup,
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
+import { CustomChatLicenseInformationEditView } from '@/components/custom-chat/license-information/custom-chat-license-information-edit-view';
 
 type CharacterTranslator = ReturnType<typeof useTranslations<'characters'>>;
 
@@ -120,6 +122,7 @@ function createCharacterFormValuesSchema(t: CharacterTranslator) {
     description: z.string(),
     instructions: z.string(),
     initialMessage: z.string(),
+    licenseInformation: z.string().max(LICENSE_INFORMATION_LENGTH_LIMIT),
     modelId: z.string(),
     schoolTypes: z.array(schoolTypesSchema),
     gradeRanges: z.array(gradeRangesSchema),
@@ -183,6 +186,7 @@ export function CharacterEdit({
     description: character.description ?? '',
     instructions: character.instructions ?? '',
     initialMessage: character.initialMessage ?? '',
+    licenseInformation: character.licenseInformation,
     modelId: selectedModelId ?? '',
     schoolTypes: filterValues.schoolTypes,
     gradeRanges: filterValues.gradeRanges,
@@ -223,7 +227,11 @@ export function CharacterEdit({
       isDirty,
       getValues,
       reset: (values) => {
-        reset({ ...values, name: values.name.trim() });
+        reset({
+          ...values,
+          name: values.name.trim(),
+          licenseInformation: values.licenseInformation.trimEnd(),
+        });
       },
       validate: trigger,
       saveValues: async (data) => {
@@ -235,6 +243,7 @@ export function CharacterEdit({
           description: data.description,
           instructions: data.instructions,
           initialMessage: data.initialMessage,
+          licenseInformation: data.licenseInformation.trimEnd(),
           modelId: data.modelId,
           filterGroup: toFilterGroup(data),
           hasLinkAccess: data.hasLinkAccess,
@@ -633,6 +642,7 @@ export function CharacterEdit({
               void flushAutoSave();
             }}
           />
+          <CustomChatLicenseInformationEditView control={control} onBlur={handleAutoSave} />
         </form>
       </CustomChatLayoutContainer>
     </>
