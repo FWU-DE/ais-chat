@@ -79,6 +79,7 @@ export async function fetchSharedConversationDownload({
         modelName: 'AIS.chat',
         conversationTitle: sharedConversationName ?? characterName,
       }),
+      { exportImages: true },
     ),
     fileName,
   };
