@@ -10,7 +10,12 @@ import { getFileExtension, isImageFile } from '@/utils/files/generic';
 import { navigateWithoutRefresh } from '@/utils/navigation/router';
 import { deepCopy } from '@/utils/object';
 import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
-import { FileModel } from '@shared/db/schema';
+import {
+  FileModel,
+  type AssistantSelectModel,
+  type CharacterSelectModel,
+  type LearningScenarioSelectModel,
+} from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import { logDebug, logError, logWarning } from '@shared/logging';
 import { useQueryClient } from '@tanstack/react-query';
@@ -30,18 +35,13 @@ import { InitialChatContentDisplay } from './initial-content-display';
 import MarkdownDisplay from './markdown-display';
 import { Messages, type PendingFileModel } from './messages';
 import PromptSuggestions from './prompt-suggestions';
-import type {
-  ChatAssistantDto,
-  ChatCharacterDto,
-  ChatLearningScenarioDto,
-} from './chat-client-dto';
 
 type ChatProps = {
   id: string;
   initialMessages: ChatMessage[];
-  assistant?: ChatAssistantDto;
-  character?: ChatCharacterDto;
-  learningScenario?: ChatLearningScenarioDto;
+  assistant?: AssistantSelectModel;
+  character?: CharacterSelectModel;
+  learningScenario?: LearningScenarioSelectModel;
   imageSource?: string;
   promptSuggestions?: string[];
   initialFileMapping?: Map<string, FileModel[]>;

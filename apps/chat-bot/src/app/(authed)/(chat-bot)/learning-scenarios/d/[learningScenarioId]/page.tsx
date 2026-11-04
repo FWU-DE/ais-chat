@@ -13,7 +13,6 @@ import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { getLearningScenarioForChatSession } from '@shared/learning-scenarios/learning-scenario-service';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { toChatLearningScenarioDto } from '@/components/chat/chat-client-dto';
 
 export const dynamic = 'force-dynamic';
 const searchParamsSchema = z.object({ model: z.string().optional() });
@@ -75,7 +74,7 @@ export default async function Page(props: PageProps<'/learning-scenarios/d/[lear
         <Chat
           id={id}
           initialMessages={[]}
-          learningScenario={toChatLearningScenarioDto(learningScenario)}
+          learningScenario={learningScenario}
           imageSource={avatarPictureUrl}
           enableFileUpload={true}
           logoElement={logoElement}

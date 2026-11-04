@@ -4,22 +4,22 @@ import { useCharacterChat, type ChatMessage } from '@/hooks/use-chat-hooks';
 import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
 import { loadSharedChat } from '@/utils/shared-chat-storage';
 import { reductionBreakpoint } from '@/utils/tailwind/layout';
+import { CharacterWithShareDataModel } from '@shared/db/schema';
 import { useTranslations } from 'next-intl';
 import { z } from 'zod';
 import { AssistantIcon } from '../chat/assistant-icon';
 import useBreakpoints from '../hooks/use-breakpoints';
 import GenericSharedChat from './generic-shared-chat';
-import type { SharedCharacterDto } from './shared-chat-client-dto';
 
 /**
  * This component is used if a character is shared via invite code.
  */
 export default function CharacterSharedChat({
-  character,
   avatarPictureUrl,
   isSpeechModelEnabled,
-}: {
-  character: SharedCharacterDto;
+  ...character
+}: CharacterWithShareDataModel & {
+  inviteCode: string;
   avatarPictureUrl?: string;
   isSpeechModelEnabled: boolean;
 }) {

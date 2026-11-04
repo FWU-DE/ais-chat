@@ -14,7 +14,6 @@ import { getTranslations } from 'next-intl/server';
 import { NextIntlClientProvider } from 'next-intl';
 import { resolveSharingLocale } from '@/i18n/sharing-locale';
 import { loadTranslations } from '@/i18n/load-translations';
-import { toSharedCharacterDto } from '@/components/shared-chat/shared-chat-client-dto';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('characters.page-titles');
@@ -61,7 +60,9 @@ export default async function Page(props: PageProps<'/ua/characters/[characterId
       >
         <ThemeProvider designConfiguration={designConfiguration}>
           <CharacterSharedChat
-            character={toSharedCharacterDto(character, searchParams.inviteCode)}
+            {...character}
+            initialMessage={character.initialMessage ?? ''}
+            inviteCode={searchParams.inviteCode}
             avatarPictureUrl={avatarPictureUrl}
             isSpeechModelEnabled={
               federalState?.featureToggles?.isSpeechModelEnabled === true &&
