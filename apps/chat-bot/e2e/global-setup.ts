@@ -1,4 +1,4 @@
-import { chromium, FullConfig, Page } from '@playwright/test';
+import { chromium, expect, FullConfig, Page } from '@playwright/test';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { adminLogin } from './utils/admin-login';
@@ -24,7 +24,13 @@ async function readModelsFromDropdown(page: Page, modelType: 'text' | 'image'): 
   const isDisabled = await dropdown.evaluate((el) => (el as HTMLButtonElement).disabled);
   if (isDisabled) return selectedModelName ? [selectedModelName] : [];
 
-  await dropdown.click();
+  const firstMenuItem = page.getByRole('menuitem').first();
+  await expect(async () => {
+    if ((await dropdown.getAttribute('aria-expanded')) !== 'true') {
+      await dropdown.click();
+    }
+    await expect(firstMenuItem).toBeVisible({ timeout: 1000 });
+  }).toPass();
 
   const otherModels = await page
     .getByRole('menuitem')
