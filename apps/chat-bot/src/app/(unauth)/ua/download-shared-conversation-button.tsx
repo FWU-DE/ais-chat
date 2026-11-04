@@ -25,6 +25,7 @@ type DownloadConversationButtonProps = {
   characterName?: string;
   showText?: boolean;
   fileMapping: ReadonlyMap<string, ConversationDownloadFile[]>;
+  imageUrl: (file: ConversationDownloadFile) => string;
 };
 
 type DownloadSharedConversationParams = {
@@ -32,6 +33,7 @@ type DownloadSharedConversationParams = {
   sharedConversationName?: string;
   characterName?: string;
   fileMapping: ReadonlyMap<string, ConversationDownloadFile[]>;
+  imageUrl: (file: ConversationDownloadFile) => string;
 };
 
 export async function fetchSharedConversationDownload({
@@ -39,10 +41,12 @@ export async function fetchSharedConversationDownload({
   sharedConversationName,
   characterName,
   fileMapping,
+  imageUrl,
 }: DownloadSharedConversationParams) {
   const messages = createConversationExportMessages({
     messages: conversationMessages,
     fileMapping,
+    imageUrl,
   });
   const currentDate = formatDateToDayMonthYear(new Date());
   const fileName =
@@ -74,6 +78,7 @@ export default function DownloadSharedConversationButton({
   characterName,
   showText = true,
   fileMapping,
+  imageUrl,
 }: DownloadConversationButtonProps) {
   const [isLoading, setIsLoading] = React.useState(false);
   const isMountedRef = React.useRef(true);
@@ -104,6 +109,7 @@ export default function DownloadSharedConversationButton({
         sharedConversationName,
         characterName,
         fileMapping,
+        imageUrl,
       });
 
       downloadFileFromBlob(blob, fileName);

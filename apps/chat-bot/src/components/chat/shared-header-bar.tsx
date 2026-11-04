@@ -32,6 +32,7 @@ export function SharedChatHeader({
   imageSource,
   dialogStarted,
   fileMapping,
+  imageUrl,
 }: {
   chatActive: boolean;
   hasMessages: boolean;
@@ -42,6 +43,7 @@ export function SharedChatHeader({
   imageSource?: string;
   dialogStarted: boolean;
   fileMapping: ReadonlyMap<string, ConversationDownloadFile[]>;
+  imageUrl: (file: ConversationDownloadFile) => string;
 }) {
   const { isBelow } = useBreakpoints();
   const tCommon = useTranslations('common');
@@ -76,6 +78,7 @@ export function SharedChatHeader({
             conversationMessages: messages,
             sharedConversationName: title,
             fileMapping,
+            imageUrl,
           });
 
           downloadFileFromBlob(blob, fileName);
@@ -128,6 +131,7 @@ export function SharedChatHeader({
             sharedConversationName={title}
             showText={false}
             fileMapping={fileMapping}
+            imageUrl={imageUrl}
           />
           <ProfileMenu userAndContext={undefined} />
         </>

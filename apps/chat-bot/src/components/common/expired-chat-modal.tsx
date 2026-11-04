@@ -20,6 +20,7 @@ type ExpiredChatModalProps = {
   conversationMessages: Message[];
   title: string;
   fileMapping: ReadonlyMap<string, ConversationDownloadFile[]>;
+  imageUrl: (file: ConversationDownloadFile) => string;
   handleRetry: () => void;
 };
 
@@ -27,6 +28,7 @@ export default function ExpiredChatModal({
   conversationMessages,
   title,
   fileMapping,
+  imageUrl,
   handleRetry,
 }: ExpiredChatModalProps) {
   const t = useTranslations('sharing');
@@ -54,6 +56,7 @@ export default function ExpiredChatModal({
                 conversationMessages={conversationMessages}
                 disabled={false}
                 fileMapping={fileMapping}
+                imageUrl={imageUrl}
               />
             )}
             <Button onClick={handleRetry}>
