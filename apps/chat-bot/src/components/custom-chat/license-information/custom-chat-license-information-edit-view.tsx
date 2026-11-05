@@ -40,7 +40,7 @@ export function CustomChatLicenseInformationEditView<
         prefetch={false}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex w-fit items-center gap-1 text-primary hover:underline"
+        className="inline-flex w-fit items-center gap-1 text-sm font-medium text-primary hover:underline"
       >
         {t('copyright-link')}
         <CaretRightIcon aria-hidden="true" />
