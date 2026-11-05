@@ -614,6 +614,7 @@ export const characterTable = pgTable(
     suspended: boolean('suspended').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
     originalCharacterId: uuid('original_character_id'),
+    popularity: integer('popularity').notNull().default(0),
   },
   (table) => [index().on(table.userId)],
 );
@@ -632,6 +633,7 @@ export const characterInsertSchema = createInsertSchema(characterTable)
     createdAt: true,
     updatedAt: true,
     suspended: true,
+    popularity: true,
   })
   .extend({
     filterGroup: filterGroupSchema.optional(),
@@ -644,6 +646,7 @@ export const characterUpdateSchema = createUpdateSchema(characterTable)
     createdAt: true,
     updatedAt: true,
     suspended: true,
+    popularity: true,
   })
   .extend({
     id: z.string(),
@@ -892,6 +895,7 @@ export const learningScenarioTable = pgTable(
     isCommunityShared: boolean('is_community_shared').notNull().default(false),
     isGlobal: boolean('is_global').notNull().default(false),
     originalLearningScenarioId: uuid('original_learning_scenario_id'),
+    popularity: integer('popularity').notNull().default(0),
     hasLinkAccess: boolean('has_link_access').notNull().default(false),
     isWebSearchEnabled: boolean('is_web_search_enabled').notNull().default(false),
     webSearchScope: webSearchScopeEnum('web_search_scope').notNull().default('all-web'),
@@ -919,6 +923,7 @@ export const learningScenarioInsertSchema = createInsertSchema(learningScenarioT
     createdAt: true,
     updatedAt: true,
     suspended: true,
+    popularity: true,
   })
   .extend({
     filterGroup: filterGroupSchema.optional(),
@@ -926,7 +931,13 @@ export const learningScenarioInsertSchema = createInsertSchema(learningScenarioT
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
   });
 export const learningScenarioUpdateSchema = createUpdateSchema(learningScenarioTable)
-  .omit({ userId: true, createdAt: true, updatedAt: true, suspended: true })
+  .omit({
+    userId: true,
+    createdAt: true,
+    updatedAt: true,
+    suspended: true,
+    popularity: true,
+  })
   .extend({
     id: z.string(),
     filterGroup: filterGroupSchema.optional(),
@@ -1392,6 +1403,7 @@ export const assistantTable = pgTable(
     suspended: boolean('suspended').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
     originalAssistantId: uuid('original_assistant_id'),
+    popularity: integer('popularity').notNull().default(0),
   },
   (table) => [index().on(table.userId)],
 );
@@ -1405,7 +1417,7 @@ export const assistantSelectSchema = createSelectSchema(assistantTable).extend({
   webSearchIncludedDomains: webSearchIncludedDomainsSchema,
 });
 export const assistantInsertSchema = createInsertSchema(assistantTable)
-  .omit({ id: true, createdAt: true, updatedAt: true, suspended: true })
+  .omit({ id: true, createdAt: true, updatedAt: true, suspended: true, popularity: true })
   .extend({
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
@@ -1417,6 +1429,7 @@ export const assistantUpdateSchema = createUpdateSchema(assistantTable)
     createdAt: true,
     updatedAt: true,
     suspended: true,
+    popularity: true,
   })
   .extend({
     id: z.string(),

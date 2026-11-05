@@ -464,6 +464,29 @@ describe('learning-scenario-service', () => {
         updatedAt,
       });
     });
+
+    it('ignores a popularity value sent by the owner', async () => {
+      const user = mockUser('teacher');
+      const learningScenarioId = generateUUID();
+      const learningScenario = {
+        id: learningScenarioId,
+        userId: user.id,
+        name: 'old',
+        popularity: 3,
+      };
+
+      vi.mocked(dbGetLearningScenarioById).mockResolvedValue(learningScenario as never);
+      mockDbReturning.mockResolvedValue([{ ...learningScenario, name: 'new' }]);
+
+      await updateLearningScenario({
+        learningScenarioId,
+        user,
+        data: { id: learningScenarioId, name: 'new', popularity: 999 } as never,
+      });
+
+      expect(mockDbSet).toHaveBeenCalledTimes(1);
+      expect(mockDbSet).toHaveBeenCalledWith({ id: learningScenarioId, name: 'new' });
+    });
   });
 
   describe('InvalidArgumentError scenarios - invalid parameter format', () => {
@@ -1547,6 +1570,7 @@ describe('learning-scenario-service', () => {
         createdAt: NOW,
         updatedAt: NOW,
         suspended: false,
+        popularity: 0,
         isDeleted: false,
         isSchoolShared: false,
         isCommunityShared: false,
