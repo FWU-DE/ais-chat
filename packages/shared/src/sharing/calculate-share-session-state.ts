@@ -23,13 +23,16 @@ export enum ShareSessionState {
  *   - timeLeftInSeconds: Time remaining in seconds (can be negative for expired sessions)
  *   - isExtendable: Whether the session can still be extended
  */
-export function calculateShareSessionState({
-  expiredAt,
-  manuallyStoppedAt,
-}: {
-  expiredAt: Date | null;
-  manuallyStoppedAt?: Date | null;
-}): {
+export function calculateShareSessionState(
+  {
+    expiredAt,
+    manuallyStoppedAt,
+  }: {
+    expiredAt: Date | null;
+    manuallyStoppedAt?: Date | null;
+  },
+  now: Date = new Date(),
+): {
   shareSessionState: ShareSessionState;
   timeLeftInSeconds: number;
   isExtendable: boolean;
@@ -53,7 +56,7 @@ export function calculateShareSessionState({
   }
 
   const expiredAtDate = new Date(expiredAt);
-  const nowMs = Date.now();
+  const nowMs = now.getTime();
 
   const timeLeftInMs = expiredAtDate.getTime() - nowMs;
   const timeLeftInSeconds = Math.floor(timeLeftInMs / 1000);

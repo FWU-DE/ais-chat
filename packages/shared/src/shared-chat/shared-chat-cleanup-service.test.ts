@@ -322,7 +322,7 @@ describe('cleanupExpiredSharedChatFiles', () => {
     expect(dbDeleteFilesByIds).toHaveBeenCalledWith(['file-1']);
   });
 
-  it('correctly calculates cutoff date with EXPIRATION_OFFSET_IN_DAYS', async () => {
+  it('is still active exactly at the reference date boundary (grace window not yet elapsed)', async () => {
     vi.mocked(dbGetSharedChatFileCandidates).mockResolvedValue([
       candidate('file-1', {
         inviteCode: 'invite-1',
