@@ -1,7 +1,7 @@
 import {
   dbDeleteFilesByIds,
-  dbGetExpiredCharacterShares,
-  dbGetExpiredLearningScenarioShares,
+  dbGetCharacterSharesByInviteCodes,
+  dbGetLearningScenarioSharesByInviteCodes,
   dbGetSharedChatFileCandidates,
 } from '@shared/db/functions/shared-chat-files';
 import { deleteMessageAttachments } from '@shared/files/fileService';
@@ -16,7 +16,8 @@ type SharedFileCandidate = {
 };
 
 /**
- * Cleans up files uploaded in shared chats whose linked shared entity expired more than one day ago.
+ * Cleans up files uploaded in shared chats whose linked shared entity expired more than one day
+ * ago, or whose share was deleted along with its entity (e.g. cascade-deleted on entity removal).
  *
  * The function removes files and chunks from database, then deletes corresponding S3 objects.
  */
@@ -54,22 +55,18 @@ export async function cleanupExpiredSharedChatFiles(): Promise<number> {
     ),
   ];
 
-  const [expiredCharacterShares, expiredLearningScenarioShares] = await Promise.all([
-    dbGetExpiredCharacterShares(characterInviteCodes, cutoffDate),
-    dbGetExpiredLearningScenarioShares(learningScenarioInviteCodes, cutoffDate),
+  const [characterShares, learningScenarioShares] = await Promise.all([
+    dbGetCharacterSharesByInviteCodes(characterInviteCodes),
+    dbGetLearningScenarioSharesByInviteCodes(learningScenarioInviteCodes),
   ]);
 
-  const expiredCharacterKeys = new Set(
-    expiredCharacterShares.map((share) => `${share.inviteCode}:${share.entityId}`),
-  );
-  const expiredLearningScenarioKeys = new Set(
-    expiredLearningScenarioShares.map((share) => `${share.inviteCode}:${share.entityId}`),
-  );
+  const activeCharacterKeys = getActiveShareKeys(characterShares, cutoffDate);
+  const activeLearningScenarioKeys = getActiveShareKeys(learningScenarioShares, cutoffDate);
 
   const fileIdsToDelete = getExpiredSharedChatFileIds(
     sharedFiles,
-    expiredCharacterKeys,
-    expiredLearningScenarioKeys,
+    activeCharacterKeys,
+    activeLearningScenarioKeys,
   );
 
   if (fileIdsToDelete.length === 0) {
@@ -82,20 +79,33 @@ export async function cleanupExpiredSharedChatFiles(): Promise<number> {
   return fileIdsToDelete.length;
 }
 
+// Shares that still exist and are not yet expired; anything else (expired, or cascade-deleted
+// along with its entity) is treated as resolved and its files become eligible for cleanup.
+function getActiveShareKeys(
+  shares: { inviteCode: string; entityId: string; expiredAt: Date }[],
+  cutoffDate: Date,
+) {
+  return new Set(
+    shares
+      .filter((share) => share.expiredAt >= cutoffDate)
+      .map((share) => `${share.inviteCode}:${share.entityId}`),
+  );
+}
+
 function getExpiredSharedChatFileIds(
   sharedFiles: SharedFileCandidate[],
-  expiredCharacterKeys: Set<string>,
-  expiredLearningScenarioKeys: Set<string>,
+  activeCharacterKeys: Set<string>,
+  activeLearningScenarioKeys: Set<string>,
 ) {
   return sharedFiles
     .filter((file) => {
       const key = `${file.metadata.inviteCode}:${file.metadata.entityId}`;
 
       if (file.metadata.entityType === 'character') {
-        return expiredCharacterKeys.has(key);
+        return !activeCharacterKeys.has(key);
       }
 
-      return expiredLearningScenarioKeys.has(key);
+      return !activeLearningScenarioKeys.has(key);
     })
     .map((file) => file.id);
 }
