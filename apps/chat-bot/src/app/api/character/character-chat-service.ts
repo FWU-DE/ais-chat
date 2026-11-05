@@ -109,9 +109,9 @@ export async function sendCharacterMessage({
     inviteCode,
     entityType: 'character',
     entityId: character.id,
-    expiresAt: character.expiredAt,
     initialMessage: character.initialMessage,
     clientMessages: messages,
+    fileIds,
   });
 
   // Check limits
@@ -134,7 +134,7 @@ export async function sendCharacterMessage({
   // Get related files and web sources
   const relatedFileEntities = await combineSharedRelatedFiles({
     relatedFileEntities: await dbGetRelatedCharacterFiles(character.id),
-    fileIds,
+    fileIds: sharedChatSession.fileIds ?? fileIds,
     inviteCode,
     entityType: 'character',
     entityId: characterId,
@@ -263,13 +263,16 @@ export async function sendCharacterMessage({
     onToolResult: aiActivity.onToolResult,
     onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {
       try {
-        aiActivity.finish();
-        await sharedChatSession.persistResponse({
-          assistantMessageId,
-          fullText,
-          agentLoopMessages,
-        });
-        await persistUsage({ usage, priceInCents, modelUsages });
+        try {
+          aiActivity.finish();
+          await sharedChatSession.persistResponse({
+            assistantMessageId,
+            fullText,
+            agentLoopMessages,
+          });
+        } finally {
+          await persistUsage({ usage, priceInCents, modelUsages });
+        }
         done();
       } catch (error) {
         logError('Error persisting shared character chat completion:', error);

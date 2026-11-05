@@ -114,8 +114,8 @@ export async function sendLearningScenarioMessage({
     inviteCode,
     entityType: 'learningScenario',
     entityId: learningScenario.id,
-    expiresAt: learningScenario.expiredAt,
     clientMessages: messages,
+    fileIds,
   });
 
   // Check limits
@@ -138,7 +138,7 @@ export async function sendLearningScenarioMessage({
   // Get related files and web sources
   const relatedFileEntities = await combineSharedRelatedFiles({
     relatedFileEntities: await dbGetRelatedLearningScenarioFiles(learningScenario.id),
-    fileIds,
+    fileIds: sharedChatSession.fileIds ?? fileIds,
     inviteCode,
     entityType: 'learningScenario',
     entityId: learningScenarioId,
@@ -267,13 +267,16 @@ export async function sendLearningScenarioMessage({
     onToolResult: aiActivity.onToolResult,
     onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {
       try {
-        aiActivity.finish();
-        await sharedChatSession.persistResponse({
-          assistantMessageId,
-          fullText,
-          agentLoopMessages,
-        });
-        await persistUsage({ usage, priceInCents, modelUsages });
+        try {
+          aiActivity.finish();
+          await sharedChatSession.persistResponse({
+            assistantMessageId,
+            fullText,
+            agentLoopMessages,
+          });
+        } finally {
+          await persistUsage({ usage, priceInCents, modelUsages });
+        }
         done();
       } catch (error) {
         logError('Error persisting shared learning scenario chat completion:', error);

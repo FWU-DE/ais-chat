@@ -1,117 +1,269 @@
-import { and, eq, gte, lt } from 'drizzle-orm';
+import { and, eq, exists, gte, lt, max, or } from 'drizzle-orm';
 import { db } from '..';
-import { sharedChatSessionMessageTable, sharedChatSessionTable } from '../schema';
+import {
+  sharedChatConversationMessageTable,
+  sharedChatConversationTable,
+  SharedChatConversationMessageFileMappingTable,
+  sharedCharacter,
+  sharedLearningScenarioTable,
+} from '../schema';
+import type { PgTransactionObject } from '../types';
 
-export type SharedChatSessionIdentity = {
-  sessionId: string;
+async function lockSharedChatConversation(
+  tx: PgTransactionObject,
+  conversationId: string,
+): Promise<void> {
+  const [session] = await tx
+    .update(sharedChatConversationTable)
+    .set({ updatedAt: new Date() })
+    .where(eq(sharedChatConversationTable.id, conversationId))
+    .returning({ id: sharedChatConversationTable.id });
+
+  if (session === undefined) {
+    throw new Error('Shared chat session no longer exists');
+  }
+}
+
+async function getNextMessageOrderNumber(
+  tx: PgTransactionObject,
+  conversationId: string,
+): Promise<number> {
+  const [lastMessage] = await tx
+    .select({ orderNumber: max(sharedChatConversationMessageTable.orderNumber) })
+    .from(sharedChatConversationMessageTable)
+    .where(eq(sharedChatConversationMessageTable.sessionId, conversationId));
+
+  return (lastMessage?.orderNumber ?? -1) + 1;
+}
+
+async function sharedChatInviteMatches({
+  inviteCode,
+  entityType,
+  entityId,
+}: Pick<SharedChatConversationIdentity, 'inviteCode' | 'entityType' | 'entityId'>) {
+  if (entityType === 'character') {
+    const [share] = await db
+      .select({ id: sharedCharacter.id })
+      .from(sharedCharacter)
+      .where(
+        and(eq(sharedCharacter.characterId, entityId), eq(sharedCharacter.inviteCode, inviteCode)),
+      );
+    return share !== undefined;
+  }
+
+  const [share] = await db
+    .select({ id: sharedLearningScenarioTable.id })
+    .from(sharedLearningScenarioTable)
+    .where(
+      and(
+        eq(sharedLearningScenarioTable.learningScenarioId, entityId),
+        eq(sharedLearningScenarioTable.inviteCode, inviteCode),
+      ),
+    );
+  return share !== undefined;
+}
+
+export type SharedChatConversationIdentity = {
+  conversationId: string;
   inviteCode: string;
   entityType: 'character' | 'learningScenario';
   entityId: string;
 };
 
-export async function dbGetOrCreateSharedChatSession({
-  sessionId,
+export async function dbGetOrCreateSharedChatConversation({
+  conversationId,
   inviteCode,
   entityType,
   entityId,
-  expiresAt,
-}: SharedChatSessionIdentity & { expiresAt: Date }) {
+}: SharedChatConversationIdentity) {
+  if (!(await sharedChatInviteMatches({ inviteCode, entityType, entityId }))) {
+    return undefined;
+  }
+
   await db
-    .insert(sharedChatSessionTable)
-    .values({ id: sessionId, inviteCode, entityType, entityId, expiresAt })
+    .insert(sharedChatConversationTable)
+    .values({ id: conversationId, entityType, entityId })
     .onConflictDoNothing();
 
   const [session] = await db
     .select()
-    .from(sharedChatSessionTable)
-    .where(eq(sharedChatSessionTable.id, sessionId));
+    .from(sharedChatConversationTable)
+    .where(eq(sharedChatConversationTable.id, conversationId));
 
-  if (
-    session === undefined ||
-    session.inviteCode !== inviteCode ||
-    session.entityType !== entityType ||
-    session.entityId !== entityId
-  ) {
+  if (session === undefined || session.entityType !== entityType || session.entityId !== entityId) {
     return undefined;
-  }
-
-  if (session.expiresAt.getTime() !== expiresAt.getTime()) {
-    await db
-      .update(sharedChatSessionTable)
-      .set({ expiresAt })
-      .where(eq(sharedChatSessionTable.id, sessionId));
   }
 
   return session;
 }
 
-export async function dbGetSharedChatSession({
-  sessionId,
+export async function dbGetSharedChatConversation({
+  conversationId,
   inviteCode,
   entityType,
   entityId,
-}: SharedChatSessionIdentity) {
+}: SharedChatConversationIdentity) {
+  if (!(await sharedChatInviteMatches({ inviteCode, entityType, entityId }))) {
+    return undefined;
+  }
+
   const [session] = await db
     .select()
-    .from(sharedChatSessionTable)
-    .where(eq(sharedChatSessionTable.id, sessionId));
+    .from(sharedChatConversationTable)
+    .where(eq(sharedChatConversationTable.id, conversationId));
 
-  if (
-    session === undefined ||
-    session.inviteCode !== inviteCode ||
-    session.entityType !== entityType ||
-    session.entityId !== entityId ||
-    session.expiresAt <= new Date()
-  ) {
+  if (session === undefined || session.entityType !== entityType || session.entityId !== entityId) {
     return undefined;
   }
 
   return session;
 }
 
-export async function dbGetSharedChatSessionMessages(sessionId: string) {
+export async function dbGetSharedChatConversationMessages(conversationId: string) {
   return db
     .select()
-    .from(sharedChatSessionMessageTable)
-    .where(eq(sharedChatSessionMessageTable.sessionId, sessionId))
-    .orderBy(sharedChatSessionMessageTable.orderNumber);
+    .from(sharedChatConversationMessageTable)
+    .where(eq(sharedChatConversationMessageTable.sessionId, conversationId))
+    .orderBy(sharedChatConversationMessageTable.orderNumber);
 }
 
-export async function dbReplaceSharedChatSessionMessages({
-  sessionId,
-  fromOrderNumber,
-  messages,
-}: {
-  sessionId: string;
-  fromOrderNumber: number;
-  messages: Array<typeof sharedChatSessionMessageTable.$inferInsert>;
-}) {
-  await db.transaction(async (tx) => {
-    await tx
-      .delete(sharedChatSessionMessageTable)
-      .where(
-        and(
-          eq(sharedChatSessionMessageTable.sessionId, sessionId),
-          gte(sharedChatSessionMessageTable.orderNumber, fromOrderNumber),
-        ),
-      );
+export async function dbGetSharedChatConversationMessageFileIds(conversationId: string) {
+  return db
+    .select({
+      messageId: SharedChatConversationMessageFileMappingTable.conversationMessageId,
+      fileId: SharedChatConversationMessageFileMappingTable.fileId,
+    })
+    .from(SharedChatConversationMessageFileMappingTable)
+    .where(eq(SharedChatConversationMessageFileMappingTable.conversationId, conversationId));
+}
 
-    if (messages.length > 0) {
-      await tx.insert(sharedChatSessionMessageTable).values(messages);
+export async function dbPrepareSharedChatConversation({
+  conversationId,
+  userMessage,
+  fileIds,
+}: {
+  conversationId: string;
+  userMessage: { id: string; content: string };
+  fileIds?: string[];
+}) {
+  return db.transaction(async (tx) => {
+    await lockSharedChatConversation(tx, conversationId);
+
+    const sessionMessages = await tx
+      .select()
+      .from(sharedChatConversationMessageTable)
+      .where(eq(sharedChatConversationMessageTable.sessionId, conversationId))
+      .orderBy(sharedChatConversationMessageTable.orderNumber);
+
+    const existingUserMessage = sessionMessages.find((message) => message.id === userMessage.id);
+
+    if (existingUserMessage !== undefined) {
+      await tx
+        .delete(sharedChatConversationMessageTable)
+        .where(
+          and(
+            eq(sharedChatConversationMessageTable.sessionId, conversationId),
+            gte(
+              sharedChatConversationMessageTable.orderNumber,
+              existingUserMessage.orderNumber + 1,
+            ),
+          ),
+        );
+
+      return {
+        userOrderNumber: existingUserMessage.orderNumber,
+        isRetry: true,
+      };
     }
 
-    await tx
-      .update(sharedChatSessionTable)
-      .set({ updatedAt: new Date() })
-      .where(eq(sharedChatSessionTable.id, sessionId));
+    const userOrderNumber = await getNextMessageOrderNumber(tx, conversationId);
+    await tx.insert(sharedChatConversationMessageTable).values({
+      id: userMessage.id,
+      sessionId: conversationId,
+      content: userMessage.content,
+      role: 'user',
+      orderNumber: userOrderNumber,
+      toolCalls: null,
+      toolCallId: null,
+    });
+    if (fileIds !== undefined && fileIds.length > 0) {
+      await tx.insert(SharedChatConversationMessageFileMappingTable).values(
+        fileIds.map((fileId) => ({
+          fileId,
+          conversationMessageId: userMessage.id,
+          conversationId,
+        })),
+      );
+    }
+
+    return {
+      userOrderNumber,
+      isRetry: false,
+    };
   });
 }
 
-export async function dbDeleteExpiredSharedChatSessions(cutoffDate: Date): Promise<number> {
+export async function dbAppendSharedChatConversationMessages({
+  conversationId,
+  messages,
+}: {
+  conversationId: string;
+  messages: Array<Omit<typeof sharedChatConversationMessageTable.$inferInsert, 'orderNumber'>>;
+}) {
+  await db.transaction(async (tx) => {
+    await lockSharedChatConversation(tx, conversationId);
+    const firstOrderNumber = await getNextMessageOrderNumber(tx, conversationId);
+
+    if (messages.length > 0) {
+      await tx.insert(sharedChatConversationMessageTable).values(
+        messages.map((message, index) => ({
+          ...message,
+          orderNumber: firstOrderNumber + index,
+        })),
+      );
+    }
+  });
+}
+
+export async function dbDeleteExpiredSharedChatConversations(cutoffDate: Date): Promise<number> {
   const deletedSessions = await db
-    .delete(sharedChatSessionTable)
-    .where(lt(sharedChatSessionTable.expiresAt, cutoffDate))
-    .returning({ id: sharedChatSessionTable.id });
+    .delete(sharedChatConversationTable)
+    .where(
+      or(
+        and(
+          eq(sharedChatConversationTable.entityType, 'character'),
+          exists(
+            db
+              .select({ id: sharedCharacter.id })
+              .from(sharedCharacter)
+              .where(
+                and(
+                  eq(sharedCharacter.characterId, sharedChatConversationTable.entityId),
+                  lt(sharedCharacter.expiredAt, cutoffDate),
+                ),
+              ),
+          ),
+        ),
+        and(
+          eq(sharedChatConversationTable.entityType, 'learningScenario'),
+          exists(
+            db
+              .select({ id: sharedLearningScenarioTable.id })
+              .from(sharedLearningScenarioTable)
+              .where(
+                and(
+                  eq(
+                    sharedLearningScenarioTable.learningScenarioId,
+                    sharedChatConversationTable.entityId,
+                  ),
+                  lt(sharedLearningScenarioTable.expiredAt, cutoffDate),
+                ),
+              ),
+          ),
+        ),
+      ),
+    )
+    .returning({ id: sharedChatConversationTable.id });
 
   return deletedSessions.length;
 }

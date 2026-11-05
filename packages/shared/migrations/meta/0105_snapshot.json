@@ -1,5 +1,5 @@
 {
-  "id": "001b78ea-745f-4337-9b4b-5d4ad4c8e5d6",
+  "id": "53c2f228-ba5a-4535-b573-05706b6d18af",
   "prevId": "7ccb837c-eaaf-44cc-bf45-58f7ca11fae7",
   "version": "7",
   "dialect": "postgresql",
@@ -611,6 +611,134 @@
           "nullsNotDistinct": false,
           "columns": [
             "learning_scenario_id",
+            "file_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.shared_chat_conversation_message_file_mapping": {
+      "name": "shared_chat_conversation_message_file_mapping",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "file_id": {
+          "name": "file_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "conversation_message_id": {
+          "name": "conversation_message_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "conversation_id": {
+          "name": "conversation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "shared_chat_message_file_message_idx": {
+          "name": "shared_chat_message_file_message_idx",
+          "columns": [
+            {
+              "expression": "conversation_message_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "shared_chat_message_file_conversation_idx": {
+          "name": "shared_chat_message_file_conversation_idx",
+          "columns": [
+            {
+              "expression": "conversation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "shared_chat_message_file_file_fk": {
+          "name": "shared_chat_message_file_file_fk",
+          "tableFrom": "shared_chat_conversation_message_file_mapping",
+          "tableTo": "file_table",
+          "columnsFrom": [
+            "file_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "shared_chat_message_file_message_fk": {
+          "name": "shared_chat_message_file_message_fk",
+          "tableFrom": "shared_chat_conversation_message_file_mapping",
+          "tableTo": "shared_chat_conversation_message",
+          "columnsFrom": [
+            "conversation_id",
+            "conversation_message_id"
+          ],
+          "columnsTo": [
+            "session_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "shared_chat_message_file_conversation_fk": {
+          "name": "shared_chat_message_file_conversation_fk",
+          "tableFrom": "shared_chat_conversation_message_file_mapping",
+          "tableTo": "shared_chat_conversation",
+          "columnsFrom": [
+            "conversation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "shared_chat_message_file_unique": {
+          "name": "shared_chat_message_file_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "conversation_message_id",
+            "conversation_id",
             "file_id"
           ]
         }
@@ -3259,8 +3387,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.shared_chat_session_message": {
-      "name": "shared_chat_session_message",
+    "public.shared_chat_conversation_message": {
+      "name": "shared_chat_conversation_message",
       "schema": "",
       "columns": {
         "id": {
@@ -3314,8 +3442,8 @@
         }
       },
       "indexes": {
-        "shared_chat_session_message_session_id_order_number_unique": {
-          "name": "shared_chat_session_message_session_id_order_number_unique",
+        "shared_chat_message_order_unique": {
+          "name": "shared_chat_message_order_unique",
           "columns": [
             {
               "expression": "session_id",
@@ -3337,10 +3465,10 @@
         }
       },
       "foreignKeys": {
-        "shared_chat_session_message_session_id_shared_chat_session_id_fk": {
-          "name": "shared_chat_session_message_session_id_shared_chat_session_id_fk",
-          "tableFrom": "shared_chat_session_message",
-          "tableTo": "shared_chat_session",
+        "shared_chat_conversation_fk": {
+          "name": "shared_chat_conversation_fk",
+          "tableFrom": "shared_chat_conversation_message",
+          "tableTo": "shared_chat_conversation",
           "columnsFrom": [
             "session_id"
           ],
@@ -3352,8 +3480,8 @@
         }
       },
       "compositePrimaryKeys": {
-        "shared_chat_session_message_session_id_id_pk": {
-          "name": "shared_chat_session_message_session_id_id_pk",
+        "shared_chat_conversation_message_session_id_id_pk": {
+          "name": "shared_chat_conversation_message_session_id_id_pk",
           "columns": [
             "session_id",
             "id"
@@ -3365,20 +3493,14 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.shared_chat_session": {
-      "name": "shared_chat_session",
+    "public.shared_chat_conversation": {
+      "name": "shared_chat_conversation",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "text",
           "primaryKey": true,
-          "notNull": true
-        },
-        "invite_code": {
-          "name": "invite_code",
-          "type": "text",
-          "primaryKey": false,
           "notNull": true
         },
         "entity_type": {
@@ -3390,12 +3512,6 @@
         "entity_id": {
           "name": "entity_id",
           "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
@@ -3414,31 +3530,15 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "shared_chat_session_expires_at_index": {
-          "name": "shared_chat_session_expires_at_index",
-          "columns": [
-            {
-              "expression": "expires_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "shared_chat_session_entity_type_check": {
-          "name": "shared_chat_session_entity_type_check",
-          "value": "\"shared_chat_session\".\"entity_type\" in ('character', 'learningScenario')"
+        "shared_chat_conversation_entity_type_check": {
+          "name": "shared_chat_conversation_entity_type_check",
+          "value": "\"shared_chat_conversation\".\"entity_type\" in ('character', 'learningScenario')"
         }
       },
       "isRLSEnabled": false
