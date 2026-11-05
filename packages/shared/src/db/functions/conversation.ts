@@ -1,14 +1,14 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '..';
+import { deleteFilesFromS3 } from '../../s3';
 import {
   ConversationMessageFileMappingTable,
   conversationMessageTable,
   conversationTable,
   fileTable,
-  sharedCharacterConversation,
+  sharedCharacter,
   sharedLearningScenarioTable,
 } from '../schema';
-import { deleteFilesFromS3 } from '../../s3';
 
 export async function dbDeleteConversationByIdAndUserId({
   conversationId,
@@ -87,14 +87,14 @@ SELECT
 }
 
 /**
- * @returns true if the invite code exists in either the sharedCharacterConversation
+ * @returns true if the invite code exists in either the sharedCharacter or sharedLearningScenario table
  * or sharedLearningScenarioTable, false otherwise.
  */
 export async function dbDoesInviteCodeExist(inviteCode: string) {
   const result = await db
-    .select({ inviteCode: sharedCharacterConversation.inviteCode })
-    .from(sharedCharacterConversation)
-    .where(eq(sharedCharacterConversation.inviteCode, inviteCode))
+    .select({ inviteCode: sharedCharacter.inviteCode })
+    .from(sharedCharacter)
+    .where(eq(sharedCharacter.inviteCode, inviteCode))
     .union(
       db
         .select({ inviteCode: sharedLearningScenarioTable.inviteCode })

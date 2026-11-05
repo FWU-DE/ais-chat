@@ -1229,7 +1229,7 @@ export type ConversationUsageTrackingUpdateModel = z.infer<
 /**
  * Schema for table shared_character
  */
-export const sharedCharacterConversation = pgTable(
+export const sharedCharacter = pgTable(
   'shared_character',
   {
     id: uuid('id').defaultRandom().primaryKey(),
@@ -1247,36 +1247,30 @@ export const sharedCharacterConversation = pgTable(
   (table) => [index().on(table.characterId, table.userId)],
 );
 
-export const sharedCharacterConversationSelectSchema = createSelectSchema(
-  sharedCharacterConversation,
-).extend({
+export const sharedCharacterSelectSchema = createSelectSchema(sharedCharacter).extend({
   startedAt: z.coerce.date(),
   expiredAt: z.coerce.date(),
   manuallyStoppedAt: z.coerce.date().nullable(),
 });
-export const sharedCharacterConversationInsertSchema = createInsertSchema(
-  sharedCharacterConversation,
-).omit({ id: true, inviteCode: true, startedAt: true, expiredAt: true, manuallyStoppedAt: true });
-export const sharedCharacterConversationUpdateSchema = createUpdateSchema(
-  sharedCharacterConversation,
-)
+export const sharedCharacterInsertSchema = createInsertSchema(sharedCharacter).omit({
+  id: true,
+  inviteCode: true,
+  startedAt: true,
+  expiredAt: true,
+  manuallyStoppedAt: true,
+});
+export const sharedCharacterUpdateSchema = createUpdateSchema(sharedCharacter)
   .omit({ characterId: true, userId: true })
   .extend({
     id: z.string(),
   });
 
-export type SharedCharacterConversationSelectModel = z.infer<
-  typeof sharedCharacterConversationSelectSchema
->;
-export type SharedCharacterConversationInsertModel = z.infer<
-  typeof sharedCharacterConversationInsertSchema
->;
-export type SharedCharacterConversationUpdateModel = z.infer<
-  typeof sharedCharacterConversationUpdateSchema
->;
+export type SharedCharacterSelectModel = z.infer<typeof sharedCharacterSelectSchema>;
+export type SharedCharacterInsertModel = z.infer<typeof sharedCharacterInsertSchema>;
+export type SharedCharacterUpdateModel = z.infer<typeof sharedCharacterUpdateSchema>;
 
-// Type for character with sharing data (from JOIN with sharedCharacterConversation)
-const sharedCharacterTransformedSchema = sharedCharacterConversationSelectSchema
+// Type for character with sharing data (from JOIN with sharedCharacter)
+const sharedCharacterTransformedSchema = sharedCharacterSelectSchema
   .omit({ id: true, characterId: true, userId: true })
   .extend({ startedBy: z.string() });
 export const characterWithShareDataModel = characterSelectSchema.and(

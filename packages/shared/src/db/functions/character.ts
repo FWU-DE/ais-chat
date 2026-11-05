@@ -25,9 +25,9 @@ import {
   CharacterWithShareDataModel,
   conversationTable,
   FilterGroup,
+  sharedCharacter,
   SharedCharacterChatUsageTrackingInsertModel,
   sharedCharacterChatUsageTrackingTable,
-  sharedCharacterConversation,
   userTable,
 } from '../schema';
 import { PgTransactionObject } from '../types';
@@ -53,18 +53,18 @@ function excludeDeletedCharacters(options?: IncludeDeletedOption) {
  */
 function latestActiveCharacterShare(user: Pick<UserModel, 'id'>) {
   return db
-    .selectDistinctOn([sharedCharacterConversation.characterId], {
-      ...getTableColumns(sharedCharacterConversation),
+    .selectDistinctOn([sharedCharacter.characterId], {
+      ...getTableColumns(sharedCharacter),
     })
-    .from(sharedCharacterConversation)
+    .from(sharedCharacter)
     .where(
       and(
-        eq(sharedCharacterConversation.userId, user.id),
-        isNull(sharedCharacterConversation.manuallyStoppedAt),
-        sql`${sharedCharacterConversation.expiredAt} >= now()`,
+        eq(sharedCharacter.userId, user.id),
+        isNull(sharedCharacter.manuallyStoppedAt),
+        sql`${sharedCharacter.expiredAt} >= now()`,
       ),
     )
-    .orderBy(sharedCharacterConversation.characterId, desc(sharedCharacterConversation.startedAt))
+    .orderBy(sharedCharacter.characterId, desc(sharedCharacter.startedAt))
     .as('latest_share');
 }
 
@@ -77,12 +77,12 @@ function latestCharacterShare(
   user: Pick<UserModel, 'id'>,
 ): ReturnType<typeof latestActiveCharacterShare> {
   return db
-    .selectDistinctOn([sharedCharacterConversation.characterId], {
-      ...getTableColumns(sharedCharacterConversation),
+    .selectDistinctOn([sharedCharacter.characterId], {
+      ...getTableColumns(sharedCharacter),
     })
-    .from(sharedCharacterConversation)
-    .where(eq(sharedCharacterConversation.userId, user.id))
-    .orderBy(sharedCharacterConversation.characterId, desc(sharedCharacterConversation.startedAt))
+    .from(sharedCharacter)
+    .where(eq(sharedCharacter.userId, user.id))
+    .orderBy(sharedCharacter.characterId, desc(sharedCharacter.startedAt))
     .as('latest_share');
 }
 
@@ -95,17 +95,12 @@ function latestNonStoppedCharacterShare(
   user: Pick<UserModel, 'id'>,
 ): ReturnType<typeof latestActiveCharacterShare> {
   return db
-    .selectDistinctOn([sharedCharacterConversation.characterId], {
-      ...getTableColumns(sharedCharacterConversation),
+    .selectDistinctOn([sharedCharacter.characterId], {
+      ...getTableColumns(sharedCharacter),
     })
-    .from(sharedCharacterConversation)
-    .where(
-      and(
-        eq(sharedCharacterConversation.userId, user.id),
-        isNull(sharedCharacterConversation.manuallyStoppedAt),
-      ),
-    )
-    .orderBy(sharedCharacterConversation.characterId, desc(sharedCharacterConversation.startedAt))
+    .from(sharedCharacter)
+    .where(and(eq(sharedCharacter.userId, user.id), isNull(sharedCharacter.manuallyStoppedAt)))
+    .orderBy(sharedCharacter.characterId, desc(sharedCharacter.startedAt))
     .as('latest_share');
 }
 
@@ -212,7 +207,7 @@ export async function dbGetCharacterByIdOptionalShareData({
 }
 
 /**
- * The returned entity has no Shared Data Attached! These are found in the SharedCharacterConversation Table
+ * The returned entity has no shared data attached. These are found in the SharedCharacter table.
  */
 export async function dbGetCharacterById({
   characterId,
@@ -355,7 +350,7 @@ export async function dbGetCommunityCharacters({
  * Retrieves all characters shared at the school level that are accessible to a user.
  *
  * This includes characters from other users who share at least one school with the requesting user.
- * This includes usage data from the SharedCharacterConversation table.
+ * This includes usage data from the SharedCharacter table.
  *
  * @param params.userId - The unique identifier of the user requesting the characters
  * @returns A promise that resolves to an array of character models with associated conversation metadata
@@ -536,25 +531,22 @@ export async function dbGetCharacterByIdAndInviteCode({
   const [row] = await db
     .select({
       ...getTableColumns(characterTable),
-      tokenPointsLimit: sharedCharacterConversation.tokenPointsLimit,
-      inviteCode: sharedCharacterConversation.inviteCode,
-      maxUsageTimeLimit: sharedCharacterConversation.maxUsageTimeLimit,
-      startedAt: sharedCharacterConversation.startedAt,
-      expiredAt: sharedCharacterConversation.expiredAt,
-      manuallyStoppedAt: sharedCharacterConversation.manuallyStoppedAt,
-      startedBy: sharedCharacterConversation.userId,
+      tokenPointsLimit: sharedCharacter.tokenPointsLimit,
+      inviteCode: sharedCharacter.inviteCode,
+      maxUsageTimeLimit: sharedCharacter.maxUsageTimeLimit,
+      startedAt: sharedCharacter.startedAt,
+      expiredAt: sharedCharacter.expiredAt,
+      manuallyStoppedAt: sharedCharacter.manuallyStoppedAt,
+      startedBy: sharedCharacter.userId,
       ownerSchoolIds: userTable.schoolIds,
     })
     .from(characterTable)
     .innerJoin(userTable, eq(characterTable.userId, userTable.id))
-    .innerJoin(
-      sharedCharacterConversation,
-      eq(sharedCharacterConversation.characterId, characterTable.id),
-    )
+    .innerJoin(sharedCharacter, eq(sharedCharacter.characterId, characterTable.id))
     .where(
       and(
         eq(characterTable.id, id),
-        eq(sharedCharacterConversation.inviteCode, inviteCode),
+        eq(sharedCharacter.inviteCode, inviteCode),
         excludeDeletedCharacters({ includeDeleted }),
       ),
     );
@@ -678,16 +670,16 @@ export async function dbGetLatestManageableCharacterShare({
 
   const [share] = await db
     .select()
-    .from(sharedCharacterConversation)
+    .from(sharedCharacter)
     .where(
       and(
-        eq(sharedCharacterConversation.characterId, characterId),
-        eq(sharedCharacterConversation.userId, user.id),
-        isNull(sharedCharacterConversation.manuallyStoppedAt),
-        gte(sharedCharacterConversation.expiredAt, graceWindowStart),
+        eq(sharedCharacter.characterId, characterId),
+        eq(sharedCharacter.userId, user.id),
+        isNull(sharedCharacter.manuallyStoppedAt),
+        gte(sharedCharacter.expiredAt, graceWindowStart),
       ),
     )
-    .orderBy(desc(sharedCharacterConversation.startedAt))
+    .orderBy(desc(sharedCharacter.startedAt))
     .limit(1);
 
   return share ?? null;
@@ -715,7 +707,7 @@ export async function dbCreateCharacterShare({
 }) {
   const expiredAt = new Date(startedAt.getTime() + maxUsageTimeLimit * 60 * 1000);
   const [newShare] = await db
-    .insert(sharedCharacterConversation)
+    .insert(sharedCharacter)
     .values({
       userId: user.id,
       characterId,
@@ -736,9 +728,9 @@ export async function dbCreateCharacterShare({
  */
 export async function dbStopCharacterShare({ shareId }: { shareId: string }) {
   const [updatedShare] = await db
-    .update(sharedCharacterConversation)
+    .update(sharedCharacter)
     .set({ manuallyStoppedAt: new Date() })
-    .where(eq(sharedCharacterConversation.id, shareId))
+    .where(eq(sharedCharacter.id, shareId))
     .returning();
 
   return updatedShare ?? null;
@@ -748,7 +740,7 @@ export async function dbStopCharacterShare({ shareId }: { shareId: string }) {
  * Extends the expiration timestamp of an already loaded manageable character share.
  * Respects the grace window, so a share that expired recently can still be extended.
  */
-export async function dbExtendSharedCharacterConversationExpiration({
+export async function dbExtendSharedCharacterExpiration({
   share,
   additionalTimeInMinutes,
 }: {
@@ -760,9 +752,9 @@ export async function dbExtendSharedCharacterConversationExpiration({
   const newExpiredAt = new Date(baseDate.getTime() + additionalTimeInMinutes * 60 * 1000);
 
   const [updatedShare] = await db
-    .update(sharedCharacterConversation)
+    .update(sharedCharacter)
     .set({ expiredAt: newExpiredAt })
-    .where(eq(sharedCharacterConversation.id, share.id))
+    .where(eq(sharedCharacter.id, share.id))
     .returning();
 
   return updatedShare ?? null;
@@ -789,9 +781,9 @@ export async function dbUpdateCharacterShareTokenPointsLimit({
   }
 
   const [updatedShare] = await db
-    .update(sharedCharacterConversation)
+    .update(sharedCharacter)
     .set({ tokenPointsLimit })
-    .where(eq(sharedCharacterConversation.id, latestManageableShare.id))
+    .where(eq(sharedCharacter.id, latestManageableShare.id))
     .returning();
 
   return updatedShare;
