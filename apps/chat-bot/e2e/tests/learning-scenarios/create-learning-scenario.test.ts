@@ -233,7 +233,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Title
   await page.getByRole('textbox', { name: 'Name des Lernszenarios' }).fill('');
   await page.getByRole('textbox', { name: 'Name des Lernszenarios' }).fill('New Title');
-  await page.getByRole('textbox', { name: 'Name des Lernszenarios' }).press('Tab');
+  await page.getByRole('textbox', { name: 'Name des Lernszenarios' }).blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Name des Lernszenarios' })).toHaveValue(
@@ -243,7 +243,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Description
   await page.getByRole('textbox', { name: 'Kurzbeschreibung' }).fill('');
   await page.getByRole('textbox', { name: 'Kurzbeschreibung' }).fill('New Description');
-  await page.getByRole('textbox', { name: 'Kurzbeschreibung' }).press('Tab');
+  await page.getByRole('textbox', { name: 'Kurzbeschreibung' }).blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Kurzbeschreibung' })).toHaveValue(
@@ -253,7 +253,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Instructions
   await page.getByRole('textbox', { name: 'Instruktionen' }).fill('');
   await page.getByRole('textbox', { name: 'Instruktionen' }).fill('New Instructions');
-  await page.getByRole('textbox', { name: 'Instruktionen' }).press('Tab');
+  await page.getByRole('textbox', { name: 'Instruktionen' }).blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Instruktionen' })).toHaveValue(
@@ -263,7 +263,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Student Exercise
   await page.getByRole('textbox', { name: 'Arbeitsauftrag' }).fill('');
   await page.getByRole('textbox', { name: 'Arbeitsauftrag' }).fill('New Exercise');
-  await page.getByRole('textbox', { name: 'Arbeitsauftrag' }).press('Tab');
+  await page.getByRole('textbox', { name: 'Arbeitsauftrag' }).blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Arbeitsauftrag' })).toHaveValue('New Exercise');
