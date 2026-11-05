@@ -587,6 +587,7 @@ export const characterTable = pgTable(
     pictureId: text('picture_id'),
     initialMessage: text('initial_message'),
     licenseInformation: text('license_information').notNull().default(''),
+    didacticCommentary: text('didactic_commentary').notNull().default(''),
     isSchoolShared: boolean('is_school_shared').notNull().default(false),
     isCommunityShared: boolean('is_community_shared').notNull().default(false),
     isGlobal: boolean('is_global').notNull().default(false),
@@ -871,6 +872,7 @@ export const learningScenarioTable = pgTable(
       .default(sql`'{}'::json`),
     studentExercise: text('student_exercise').default('').notNull(),
     licenseInformation: text('license_information').notNull().default(''),
+    didacticCommentary: text('didactic_commentary').notNull().default(''),
     additionalInstructions: text('additional_instructions'),
     restrictions: text('restrictions'), // Not used anymore
     attachedLinks: text('attached_links')
@@ -1379,6 +1381,7 @@ export const assistantTable = pgTable(
     description: text('description'),
     instructions: text('instructions'),
     licenseInformation: text('license_information').notNull().default(''),
+    didacticCommentary: text('didactic_commentary').notNull().default(''),
     filterGroup: json('filter_attributes')
       .$type<FilterGroup>()
       .notNull()

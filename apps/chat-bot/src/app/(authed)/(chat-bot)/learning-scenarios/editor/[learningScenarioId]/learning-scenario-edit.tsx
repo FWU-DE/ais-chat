@@ -2,6 +2,7 @@
 
 import {
   LICENSE_INFORMATION_LENGTH_LIMIT,
+  DIDACTIC_COMMENTARY_LENGTH_LIMIT,
   SMALL_TEXT_INPUT_FIELDS_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS,
@@ -83,6 +84,7 @@ import {
 import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
 import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
 import { CustomChatLicenseInformationEditView } from '@/components/custom-chat/license-information/custom-chat-license-information-edit-view';
+import { CustomChatDidacticCommentaryEditView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-edit-view';
 import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
 import { resolveInitialVoice } from '@/components/custom-chat/speech/resolve-initial-voice';
 
@@ -124,6 +126,7 @@ function createLearningScenarioFormValuesSchema(t: LearningScenarioTranslator) {
     description: z.string(),
     additionalInstructions: z.string(),
     studentExercise: z.string(),
+    didacticCommentary: z.string().max(DIDACTIC_COMMENTARY_LENGTH_LIMIT),
     licenseInformation: z.string().max(LICENSE_INFORMATION_LENGTH_LIMIT),
     modelId: z.string(),
     schoolTypes: z.array(schoolTypesSchema),
@@ -178,6 +181,7 @@ export function LearningScenarioEdit({
   const toast = useToast();
   const t = useTranslations('learning-scenarios');
   const tToast = useTranslations('learning-scenarios.toasts');
+  const tChat = useTranslations('custom-chat');
   const learningScenarioFormValuesSchema = useMemo(
     () => createLearningScenarioFormValuesSchema(t),
     [t],
@@ -195,6 +199,7 @@ export function LearningScenarioEdit({
     description: learningScenario.description ?? '',
     additionalInstructions: learningScenario.additionalInstructions ?? '',
     studentExercise: learningScenario.studentExercise ?? '',
+    didacticCommentary: learningScenario.didacticCommentary,
     licenseInformation: learningScenario.licenseInformation,
     modelId: selectedModelId ?? '',
     schoolTypes: filterValues.schoolTypes,
@@ -239,6 +244,7 @@ export function LearningScenarioEdit({
         reset({
           ...values,
           name: values.name.trim(),
+          didacticCommentary: values.didacticCommentary.trimEnd(),
           licenseInformation: values.licenseInformation.trimEnd(),
         });
       },
@@ -252,6 +258,7 @@ export function LearningScenarioEdit({
             name: data.name.trim(),
             description: data.description ?? '',
             studentExercise: data.studentExercise ?? '',
+            didacticCommentary: data.didacticCommentary.trimEnd(),
             licenseInformation: data.licenseInformation.trimEnd(),
             filterGroup: toFilterGroup(data),
             attachedLinks: attachedLinksRef.current,
@@ -665,6 +672,11 @@ export function LearningScenarioEdit({
                 setValue('languages', values, { shouldDirty: true });
                 void flushAutoSave();
               }}
+            />
+            <CustomChatDidacticCommentaryEditView
+              control={control}
+              onBlur={handleAutoSave}
+              tooltip={tChat('didactic-commentary.heading-tooltip-learning-scenario')}
             />
             <CustomChatLicenseInformationEditView control={control} onBlur={handleAutoSave} />
           </form>

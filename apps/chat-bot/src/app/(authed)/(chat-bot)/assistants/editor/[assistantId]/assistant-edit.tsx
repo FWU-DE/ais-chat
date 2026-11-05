@@ -2,6 +2,7 @@
 
 import {
   NUMBER_OF_EXAMPLE_PROMPTS_LIMIT,
+  DIDACTIC_COMMENTARY_LENGTH_LIMIT,
   LICENSE_INFORMATION_LENGTH_LIMIT,
   SMALL_TEXT_INPUT_FIELDS_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT,
@@ -76,6 +77,7 @@ import {
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
 import { CustomChatLicenseInformationEditView } from '@/components/custom-chat/license-information/custom-chat-license-information-edit-view';
+import { CustomChatDidacticCommentaryEditView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-edit-view';
 
 type AssistantTranslator = ReturnType<typeof useTranslations<'assistants'>>;
 
@@ -112,6 +114,7 @@ function createAssistantFormValuesSchema(t: AssistantTranslator) {
     name: z.string().trim().min(1, t('name-required')).max(SMALL_TEXT_INPUT_FIELDS_LIMIT),
     description: z.string(),
     instructions: z.string(),
+    didacticCommentary: z.string().max(DIDACTIC_COMMENTARY_LENGTH_LIMIT),
     licenseInformation: z.string().max(LICENSE_INFORMATION_LENGTH_LIMIT),
     schoolTypes: z.array(schoolTypesSchema),
     gradeRanges: z.array(gradeRangesSchema),
@@ -166,6 +169,7 @@ export function AssistantEdit({
   const router = useRouter();
   const toast = useToast();
   const t = useTranslations('assistants');
+  const tChat = useTranslations('custom-chat');
   const assistantFormValuesSchema = useMemo(() => createAssistantFormValuesSchema(t), [t]);
   const assistantFieldValidationConfig = useMemo(
     () => createAssistantFieldValidationConfig(t),
@@ -176,6 +180,7 @@ export function AssistantEdit({
     name: assistant.name,
     description: assistant.description ?? '',
     instructions: assistant.instructions ?? '',
+    didacticCommentary: assistant.didacticCommentary,
     licenseInformation: assistant.licenseInformation,
     schoolTypes: filterValues.schoolTypes,
     gradeRanges: filterValues.gradeRanges,
@@ -223,6 +228,7 @@ export function AssistantEdit({
         reset({
           ...values,
           name: values.name.trim(),
+          didacticCommentary: values.didacticCommentary.trimEnd(),
           licenseInformation: values.licenseInformation.trimEnd(),
         });
       },
@@ -234,6 +240,7 @@ export function AssistantEdit({
           name: data.name.trim(),
           description: data.description,
           instructions: data.instructions,
+          didacticCommentary: data.didacticCommentary.trimEnd(),
           licenseInformation: data.licenseInformation.trimEnd(),
           filterGroup: toFilterGroup(data),
           hasLinkAccess: data.hasLinkAccess,
@@ -560,6 +567,11 @@ export function AssistantEdit({
               setValue('languages', values, { shouldDirty: true });
               void flushAutoSave();
             }}
+          />
+          <CustomChatDidacticCommentaryEditView
+            control={control}
+            onBlur={handleAutoSave}
+            tooltip={tChat('didactic-commentary.heading-tooltip-assistant')}
           />
           <CustomChatLicenseInformationEditView control={control} onBlur={handleAutoSave} />
         </form>

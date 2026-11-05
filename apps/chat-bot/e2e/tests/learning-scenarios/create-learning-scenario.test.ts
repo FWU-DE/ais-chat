@@ -10,6 +10,7 @@ import {
   deleteLearningScenarioFromDetailPage,
 } from '../../utils/learning-scenario';
 import { verifyLicenseInformation } from '../../utils/license-information';
+import { verifyDidacticCommentary } from '../../utils/didactic-commentary';
 import { nanoid } from 'nanoid';
 
 test.use({ storageState: AUTH_FILES.teacher });
@@ -268,6 +269,11 @@ test('data is autosaved on blur', async ({ page }) => {
   await expect(page.getByRole('textbox', { name: 'Arbeitsauftrag' })).toHaveValue('New Exercise');
 
   // License information
+  await verifyDidacticCommentary(
+    page,
+    '/learning-scenarios',
+    'Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieses Lernszenario eingesetzt werden kann.',
+  );
   await verifyLicenseInformation(page, '/learning-scenarios');
 
   // cleanup

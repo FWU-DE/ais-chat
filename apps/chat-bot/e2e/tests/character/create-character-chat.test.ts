@@ -8,6 +8,7 @@ import {
 } from '../../utils/character';
 import { regenerateMessage, sendMessage } from '../../utils/chat';
 import { verifyLicenseInformation } from '../../utils/license-information';
+import { verifyDidacticCommentary } from '../../utils/didactic-commentary';
 import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
 import { stopShare, waitForAutosave, waitForToast, waitForToastDisappear } from '../../utils/utils';
 
@@ -207,6 +208,11 @@ test('data is autosaved on blur', async ({ page }) => {
   );
 
   // License information
+  await verifyDidacticCommentary(
+    page,
+    '/characters',
+    'Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieser Dialogpartner eingesetzt werden kann.',
+  );
   await verifyLicenseInformation(page, '/characters');
 
   // cleanup
