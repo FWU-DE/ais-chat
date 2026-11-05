@@ -10,7 +10,7 @@ import {
   calculateShareSessionState,
   ShareSessionState,
 } from '@shared/sharing/calculate-share-session-state';
-import { CLEANUP_SAFETY_BUFFER_MS } from '@shared/sharing/const';
+import { SHARE_EXTENSION_WINDOW_MS, SHARE_FILE_CLEANUP_DELAY_MS } from '@shared/sharing/const';
 
 type SharedFileCandidate = {
   id: string;
@@ -20,8 +20,8 @@ type SharedFileCandidate = {
 /**
  * Cleans up files uploaded in shared chats whose linked share has been resolved (expired past
  * its extension window, manually stopped, or deleted along with its entity, e.g. cascade-deleted
- * on entity removal) for at least `CLEANUP_SAFETY_BUFFER_MS`, reusing the same share-state logic
- * the UI uses (`calculateShareSessionState`) evaluated as of that many milliseconds ago.
+ * on entity removal) for at least `SHARE_FILE_CLEANUP_DELAY_MS`, reusing the same share-state
+ * logic the UI uses (`calculateShareSessionState`) evaluated as of that many milliseconds ago.
  *
  * The function removes files and chunks from database, then deletes corresponding S3 objects.
  */
@@ -41,7 +41,13 @@ export async function cleanupExpiredSharedChatFiles(): Promise<number> {
     return 0;
   }
 
-  const referenceDate = new Date(Date.now() - CLEANUP_SAFETY_BUFFER_MS);
+  // calculateShareSessionState already adds SHARE_EXTENSION_WINDOW_MS on top of expiredAt when
+  // deciding EXPIRED_PERMANENTLY, so shifting its reference date by only the remainder of
+  // SHARE_FILE_CLEANUP_DELAY_MS gives a total delay of exactly SHARE_FILE_CLEANUP_DELAY_MS since
+  // expiredAt (or since manuallyStoppedAt, handled below).
+  const referenceDate = new Date(
+    Date.now() - (SHARE_FILE_CLEANUP_DELAY_MS - SHARE_EXTENSION_WINDOW_MS),
+  );
 
   const characterInviteCodes = [
     ...new Set(
@@ -83,16 +89,15 @@ export async function cleanupExpiredSharedChatFiles(): Promise<number> {
   return fileIdsToDelete.length;
 }
 
-// Shares whose state (evaluated as of `referenceDate`, i.e. `CLEANUP_SAFETY_BUFFER_MS` in the
-// past) is still RUNNING or EXPIRED_RECENTLY are considered active; a STOPPED or
-// EXPIRED_PERMANENTLY state (or a missing share, which calculateShareSessionState also treats as
-// EXPIRED_PERMANENTLY) means the share has been resolved for at least the safety buffer and its
-// files become eligible for cleanup.
+// Shares whose state (evaluated as of `referenceDate`) is still RUNNING or EXPIRED_RECENTLY are
+// considered active; a STOPPED or EXPIRED_PERMANENTLY state (or a missing share, which
+// calculateShareSessionState also treats as EXPIRED_PERMANENTLY) means the share has been
+// resolved for at least SHARE_FILE_CLEANUP_DELAY_MS and its files become eligible for cleanup.
 //
-// calculateShareSessionState treats any manuallyStoppedAt as an immediate, un-bufferred STOPPED
+// calculateShareSessionState treats any manuallyStoppedAt as an immediate, un-delayed STOPPED
 // state, so a manual stop is only passed through once it is itself older than referenceDate;
 // otherwise the share falls back to its expiredAt, keeping a just-stopped share's files around
-// for the same safety buffer as a naturally expiring one.
+// for the same delay as a naturally expiring one.
 function getActiveShareKeys(
   shares: {
     inviteCode: string;
