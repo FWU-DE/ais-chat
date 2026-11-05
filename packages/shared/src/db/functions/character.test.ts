@@ -14,13 +14,14 @@ vi.mock('..', () => ({
   },
 }));
 
+import { NotFoundError } from '@shared/error';
 import {
-  dbExtendSharedCharacterConversationExpiration,
+  dbExtendSharedCharacterExpiration,
   dbGetAllAccessibleCharacters,
   dbGetAllCharactersByUser,
   dbGetCharacterById,
-  dbGetCharacterByIdAndUser,
   dbGetCharacterByIdAndInviteCode,
+  dbGetCharacterByIdAndUser,
   dbGetCharacterByIdForConversation,
   dbGetCharacterByIdOptionalShareData,
   dbGetCharacterByIdWithShareData,
@@ -36,7 +37,6 @@ import {
   dbSetCharacterSuspended,
   dbUpdateCharacterShareTokenPointsLimit,
 } from './character';
-import { NotFoundError } from '@shared/error';
 
 function mockSelectChain(result: unknown[]) {
   const chain: Record<string, unknown> = {
@@ -347,7 +347,7 @@ describe('db character sharing helpers', () => {
     });
   });
 
-  describe('dbExtendSharedCharacterConversationExpiration', () => {
+  describe('dbExtendSharedCharacterExpiration', () => {
     it('extends from now when the loaded share is already expired', async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date('2026-01-01T10:00:00.000Z'));
@@ -358,7 +358,7 @@ describe('db character sharing helpers', () => {
       };
       const update = mockUpdateReturning([]);
 
-      const result = await dbExtendSharedCharacterConversationExpiration({
+      const result = await dbExtendSharedCharacterExpiration({
         share: currentShare,
         additionalTimeInMinutes: 30,
       });
@@ -379,7 +379,7 @@ describe('db character sharing helpers', () => {
       };
       const update = mockUpdateReturning([{ ...latestShare, expiredAt: new Date() }]);
 
-      await dbExtendSharedCharacterConversationExpiration({
+      await dbExtendSharedCharacterExpiration({
         share: latestShare,
         additionalTimeInMinutes: 15,
       });
@@ -399,7 +399,7 @@ describe('db character sharing helpers', () => {
       };
       const update = mockUpdateReturning([{ ...latestShare, expiredAt: new Date() }]);
 
-      await dbExtendSharedCharacterConversationExpiration({
+      await dbExtendSharedCharacterExpiration({
         share: latestShare,
         additionalTimeInMinutes: 20,
       });
