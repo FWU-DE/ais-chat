@@ -18,6 +18,7 @@ export async function dbGetCharacterSharesByInviteCodes(inviteCodes: string[]) {
       inviteCode: sharedCharacter.inviteCode,
       entityId: sharedCharacter.characterId,
       expiredAt: sharedCharacter.expiredAt,
+      manuallyStoppedAt: sharedCharacter.manuallyStoppedAt,
     })
     .from(sharedCharacter)
     .where(inArray(sharedCharacter.inviteCode, inviteCodes));
@@ -31,6 +32,7 @@ export async function dbGetLearningScenarioSharesByInviteCodes(inviteCodes: stri
       inviteCode: sharedLearningScenarioTable.inviteCode,
       entityId: sharedLearningScenarioTable.learningScenarioId,
       expiredAt: sharedLearningScenarioTable.expiredAt,
+      manuallyStoppedAt: sharedLearningScenarioTable.manuallyStoppedAt,
     })
     .from(sharedLearningScenarioTable)
     .where(inArray(sharedLearningScenarioTable.inviteCode, inviteCodes));

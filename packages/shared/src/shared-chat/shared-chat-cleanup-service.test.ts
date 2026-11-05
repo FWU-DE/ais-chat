@@ -26,6 +26,8 @@ const NOW = new Date('2026-07-15T00:00:00Z');
 const EXPECTED_CUTOFF = new Date('2026-07-14T00:00:00Z');
 const NOT_EXPIRED = new Date('2026-08-01T00:00:00Z');
 const EXPIRED = new Date('2026-07-01T00:00:00Z');
+const STOPPED_RECENTLY = new Date('2026-07-14T12:00:00Z');
+const STOPPED_LONG_AGO = new Date('2026-07-01T00:00:00Z');
 
 function candidate(
   id: string,
@@ -103,7 +105,12 @@ describe('cleanupExpiredSharedChatFiles', () => {
       }),
     ]);
     vi.mocked(dbGetCharacterSharesByInviteCodes).mockResolvedValue([
-      { inviteCode: 'invite-1', entityId: 'character-1', expiredAt: EXPIRED },
+      {
+        inviteCode: 'invite-1',
+        entityId: 'character-1',
+        expiredAt: EXPIRED,
+        manuallyStoppedAt: null,
+      },
     ]);
 
     const result = await cleanupExpiredSharedChatFiles();
@@ -122,7 +129,12 @@ describe('cleanupExpiredSharedChatFiles', () => {
       }),
     ]);
     vi.mocked(dbGetLearningScenarioSharesByInviteCodes).mockResolvedValue([
-      { inviteCode: 'invite-2', entityId: 'scenario-1', expiredAt: EXPIRED },
+      {
+        inviteCode: 'invite-2',
+        entityId: 'scenario-1',
+        expiredAt: EXPIRED,
+        manuallyStoppedAt: null,
+      },
     ]);
 
     const result = await cleanupExpiredSharedChatFiles();
@@ -173,12 +185,32 @@ describe('cleanupExpiredSharedChatFiles', () => {
       }),
     ]);
     vi.mocked(dbGetCharacterSharesByInviteCodes).mockResolvedValue([
-      { inviteCode: 'invite-1', entityId: 'character-1', expiredAt: EXPIRED },
-      { inviteCode: 'invite-2', entityId: 'character-2', expiredAt: EXPIRED },
+      {
+        inviteCode: 'invite-1',
+        entityId: 'character-1',
+        expiredAt: EXPIRED,
+        manuallyStoppedAt: null,
+      },
+      {
+        inviteCode: 'invite-2',
+        entityId: 'character-2',
+        expiredAt: EXPIRED,
+        manuallyStoppedAt: null,
+      },
     ]);
     vi.mocked(dbGetLearningScenarioSharesByInviteCodes).mockResolvedValue([
-      { inviteCode: 'invite-3', entityId: 'scenario-1', expiredAt: EXPIRED },
-      { inviteCode: 'invite-4', entityId: 'scenario-2', expiredAt: EXPIRED },
+      {
+        inviteCode: 'invite-3',
+        entityId: 'scenario-1',
+        expiredAt: EXPIRED,
+        manuallyStoppedAt: null,
+      },
+      {
+        inviteCode: 'invite-4',
+        entityId: 'scenario-2',
+        expiredAt: EXPIRED,
+        manuallyStoppedAt: null,
+      },
     ]);
 
     const result = await cleanupExpiredSharedChatFiles();
@@ -196,13 +228,64 @@ describe('cleanupExpiredSharedChatFiles', () => {
       }),
     ]);
     vi.mocked(dbGetCharacterSharesByInviteCodes).mockResolvedValue([
-      { inviteCode: 'invite-1', entityId: 'character-1', expiredAt: NOT_EXPIRED },
+      {
+        inviteCode: 'invite-1',
+        entityId: 'character-1',
+        expiredAt: NOT_EXPIRED,
+        manuallyStoppedAt: null,
+      },
     ]);
 
     const result = await cleanupExpiredSharedChatFiles();
 
     expect(result).toBe(0);
     expect(dbDeleteFilesByIds).not.toHaveBeenCalled();
+  });
+
+  it('does not delete files from a share manually stopped within the safety buffer', async () => {
+    vi.mocked(dbGetSharedChatFileCandidates).mockResolvedValue([
+      candidate('file-1', {
+        inviteCode: 'invite-1',
+        entityType: 'character',
+        entityId: 'character-1',
+      }),
+    ]);
+    vi.mocked(dbGetCharacterSharesByInviteCodes).mockResolvedValue([
+      {
+        inviteCode: 'invite-1',
+        entityId: 'character-1',
+        expiredAt: NOT_EXPIRED,
+        manuallyStoppedAt: STOPPED_RECENTLY,
+      },
+    ]);
+
+    const result = await cleanupExpiredSharedChatFiles();
+
+    expect(result).toBe(0);
+    expect(dbDeleteFilesByIds).not.toHaveBeenCalled();
+  });
+
+  it('deletes files from a share manually stopped before the safety buffer, even if not yet expired', async () => {
+    vi.mocked(dbGetSharedChatFileCandidates).mockResolvedValue([
+      candidate('file-1', {
+        inviteCode: 'invite-1',
+        entityType: 'character',
+        entityId: 'character-1',
+      }),
+    ]);
+    vi.mocked(dbGetCharacterSharesByInviteCodes).mockResolvedValue([
+      {
+        inviteCode: 'invite-1',
+        entityId: 'character-1',
+        expiredAt: NOT_EXPIRED,
+        manuallyStoppedAt: STOPPED_LONG_AGO,
+      },
+    ]);
+
+    const result = await cleanupExpiredSharedChatFiles();
+
+    expect(result).toBe(1);
+    expect(dbDeleteFilesByIds).toHaveBeenCalledWith(['file-1']);
   });
 
   it('handles mixed active and expired shares correctly', async () => {
@@ -219,8 +302,18 @@ describe('cleanupExpiredSharedChatFiles', () => {
       }),
     ]);
     vi.mocked(dbGetCharacterSharesByInviteCodes).mockResolvedValue([
-      { inviteCode: 'invite-1', entityId: 'character-1', expiredAt: EXPIRED },
-      { inviteCode: 'invite-2', entityId: 'character-2', expiredAt: NOT_EXPIRED },
+      {
+        inviteCode: 'invite-1',
+        entityId: 'character-1',
+        expiredAt: EXPIRED,
+        manuallyStoppedAt: null,
+      },
+      {
+        inviteCode: 'invite-2',
+        entityId: 'character-2',
+        expiredAt: NOT_EXPIRED,
+        manuallyStoppedAt: null,
+      },
     ]);
 
     const result = await cleanupExpiredSharedChatFiles();
@@ -238,7 +331,12 @@ describe('cleanupExpiredSharedChatFiles', () => {
       }),
     ]);
     vi.mocked(dbGetCharacterSharesByInviteCodes).mockResolvedValue([
-      { inviteCode: 'invite-1', entityId: 'character-1', expiredAt: EXPECTED_CUTOFF },
+      {
+        inviteCode: 'invite-1',
+        entityId: 'character-1',
+        expiredAt: EXPECTED_CUTOFF,
+        manuallyStoppedAt: null,
+      },
     ]);
 
     const result = await cleanupExpiredSharedChatFiles();
@@ -264,10 +362,20 @@ describe('cleanupExpiredSharedChatFiles', () => {
       }),
     ]);
     vi.mocked(dbGetCharacterSharesByInviteCodes).mockResolvedValue([
-      { inviteCode: 'invite-1', entityId: 'character-1', expiredAt: EXPIRED },
+      {
+        inviteCode: 'invite-1',
+        entityId: 'character-1',
+        expiredAt: EXPIRED,
+        manuallyStoppedAt: null,
+      },
     ]);
     vi.mocked(dbGetLearningScenarioSharesByInviteCodes).mockResolvedValue([
-      { inviteCode: 'invite-3', entityId: 'scenario-1', expiredAt: EXPIRED },
+      {
+        inviteCode: 'invite-3',
+        entityId: 'scenario-1',
+        expiredAt: EXPIRED,
+        manuallyStoppedAt: null,
+      },
     ]);
 
     const result = await cleanupExpiredSharedChatFiles();

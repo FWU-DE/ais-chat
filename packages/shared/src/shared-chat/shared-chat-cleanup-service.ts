@@ -16,8 +16,9 @@ type SharedFileCandidate = {
 };
 
 /**
- * Cleans up files uploaded in shared chats whose linked shared entity expired more than one day
- * ago, or whose share was deleted along with its entity (e.g. cascade-deleted on entity removal).
+ * Cleans up files uploaded in shared chats whose linked share expired (plus a safety buffer) or
+ * was manually stopped more than that buffer ago, or whose share was deleted along with its
+ * entity (e.g. cascade-deleted on entity removal).
  *
  * The function removes files and chunks from database, then deletes corresponding S3 objects.
  */
@@ -79,15 +80,26 @@ export async function cleanupExpiredSharedChatFiles(): Promise<number> {
   return fileIdsToDelete.length;
 }
 
-// Shares that still exist and are not yet expired; anything else (expired, or cascade-deleted
-// along with its entity) is treated as resolved and its files become eligible for cleanup.
+// Shares that still exist, are not manually stopped, and are not yet expired (both checked
+// against the same safety-buffer cutoff) are considered active; anything else (expired, manually
+// stopped more than the buffer ago, or cascade-deleted along with its entity) is treated as
+// resolved and its files become eligible for cleanup.
 function getActiveShareKeys(
-  shares: { inviteCode: string; entityId: string; expiredAt: Date }[],
+  shares: {
+    inviteCode: string;
+    entityId: string;
+    expiredAt: Date;
+    manuallyStoppedAt: Date | null;
+  }[],
   cutoffDate: Date,
 ) {
   return new Set(
     shares
-      .filter((share) => share.expiredAt >= cutoffDate)
+      .filter(
+        (share) =>
+          (share.manuallyStoppedAt === null || share.manuallyStoppedAt >= cutoffDate) &&
+          share.expiredAt >= cutoffDate,
+      )
       .map((share) => `${share.inviteCode}:${share.entityId}`),
   );
 }
