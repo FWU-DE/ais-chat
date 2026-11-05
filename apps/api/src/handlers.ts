@@ -83,13 +83,6 @@ export const routeHandlerDefinitions: Array<RouteHandlerDefinition> = [
     schema: { hide: true },
     handler: v1_admin_report_getHandler,
   },
-  {
-    // Deprecated alias kept for existing consumers; `:organizationId` is ignored.
-    path: '/v1/admin/organizations/:organizationId/report/:year',
-    method: 'GET',
-    schema: { hide: true },
-    handler: v1_admin_report_getHandler,
-  },
 ];
 
 export function constructHandlers(fastify: FastifyInstance) {
