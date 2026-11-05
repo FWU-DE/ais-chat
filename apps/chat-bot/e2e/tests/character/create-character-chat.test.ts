@@ -176,7 +176,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Name
   await page.getByTestId('character-name-input').fill('');
   await page.getByTestId('character-name-input').fill('New Name');
-  await page.getByTestId('character-name-input').press('Tab');
+  await page.getByTestId('character-name-input').blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('character-name-input')).toHaveValue('New Name');
@@ -184,7 +184,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Description
   await page.getByTestId('character-description-input').fill('');
   await page.getByTestId('character-description-input').fill('New Description');
-  await page.getByTestId('character-description-input').press('Tab');
+  await page.getByTestId('character-description-input').blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('character-description-input')).toHaveValue('New Description');
@@ -192,7 +192,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Instructions
   await page.getByTestId('character-instructions-input').fill('');
   await page.getByTestId('character-instructions-input').fill('New Instructions');
-  await page.getByTestId('character-instructions-input').press('Tab');
+  await page.getByTestId('character-instructions-input').blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('character-instructions-input')).toHaveValue('New Instructions');
@@ -200,7 +200,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Initial message
   await page.getByTestId('character-initial-message-input').fill('');
   await page.getByTestId('character-initial-message-input').fill('New Initial Message');
-  await page.getByTestId('character-initial-message-input').press('Tab');
+  await page.getByTestId('character-initial-message-input').blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('character-initial-message-input')).toHaveValue(

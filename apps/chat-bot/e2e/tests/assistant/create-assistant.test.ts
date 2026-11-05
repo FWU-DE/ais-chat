@@ -122,7 +122,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // change title to new value
   await page.getByTestId('assistant-name-input').fill('');
   await page.getByTestId('assistant-name-input').fill('New Title');
-  await page.getByTestId('assistant-name-input').press('Tab');
+  await page.getByTestId('assistant-name-input').blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('assistant-name-input')).toHaveValue('New Title');
@@ -131,7 +131,7 @@ test('data is autosaved on blur', async ({ page }) => {
   const descriptionInput = page.getByTestId('assistant-description-input');
   await descriptionInput.fill('');
   await descriptionInput.fill('New Description');
-  await descriptionInput.press('Tab');
+  await descriptionInput.blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('assistant-description-input')).toHaveValue('New Description');
@@ -140,7 +140,7 @@ test('data is autosaved on blur', async ({ page }) => {
   const instructionsInput = page.getByTestId('assistant-instructions-input');
   await instructionsInput.fill('');
   await instructionsInput.fill('New Instructions');
-  await instructionsInput.press('Tab');
+  await instructionsInput.blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('assistant-instructions-input')).toHaveValue('New Instructions');
@@ -149,7 +149,7 @@ test('data is autosaved on blur', async ({ page }) => {
   const promptSuggestionInput = page.getByTestId('prompt-suggestion-1-input');
   await promptSuggestionInput.fill('');
   await promptSuggestionInput.fill('New Prompt Suggestion');
-  await promptSuggestionInput.press('Tab');
+  await promptSuggestionInput.blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('prompt-suggestion-1-input')).toHaveValue('New Prompt Suggestion');
