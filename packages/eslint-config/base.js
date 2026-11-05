@@ -3,6 +3,7 @@ import tseslint from 'typescript-eslint';
 import turboConfig from 'eslint-config-turbo/flat';
 import packageJson from 'eslint-plugin-package-json';
 import prettier from 'eslint-plugin-prettier';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
 
 /**
  * Base ESLint config for pure TypeScript/Node.js packages.
@@ -26,10 +27,13 @@ export default tseslint.config(
     },
     plugins: {
       prettier,
+      'simple-import-sort': simpleImportSort,
     },
     rules: {
       'prettier/prettier': 'error',
       eqeqeq: ['error', 'always'],
+      'simple-import-sort/imports': 'off',
+      'simple-import-sort/exports': 'off',
       'turbo/no-undeclared-env-vars': 'warn',
     },
     files: ['**/*.ts'],
