@@ -12,20 +12,20 @@ import { AiActivityPanel } from './activity/ai-activity';
 import DisplayFileAttachment from './display-file-attachment';
 import MarkdownDisplay from './markdown-display';
 import { MessageActions } from './message-actions';
-import MessageImageAttachment, { type PendingFileModel } from './message-image-attachment';
+import MessageImageAttachment, { type MessageFileModel } from './message-image-attachment';
 import { PlotStreamingContext } from './plot/plot-block';
 import Citation from './sources/citation';
 import AudioPlayer from './speech/audio-player';
 import { GenerateSpeechStreamFn } from './speech/types';
 
 // Re-export for consumers
-export type { PendingFileModel };
+export type { MessageFileModel };
 
 export function ChatBox({
   assistantIcon,
   message,
   fileMapping,
-  pendingFileMapping,
+  messageFileMapping: messageFileMapping,
   index,
   webSources,
   isLastNonUser,
@@ -44,7 +44,7 @@ export function ChatBox({
   assistantIcon?: ReactNode;
   message: UIMessage;
   fileMapping?: Map<string, FileModel[]>;
-  pendingFileMapping?: Map<string, PendingFileModel[]>;
+  messageFileMapping?: Map<string, MessageFileModel[]>;
   index: number;
   webSources?: WebSource[];
   isLastNonUser: boolean;
@@ -69,16 +69,16 @@ export function ChatBox({
       ? 'w-fit p-4 rounded-2xl rounded-br-none self-end bg-secondary/30 max-w-[70%] wrap-break-word'
       : 'w-full min-w-0';
 
-  // Check both DB file mapping and pending files for this message
+  // Check both persisted files and message-associated files for this message
   const dbFiles = fileMapping?.get(message.id);
-  const pendingFiles = pendingFileMapping?.get(message.id);
-  // Prefer DB files if available (they're persisted), otherwise use pending files.
-  // Reuse an already created blob URL so the image does not have to be fetched again.
+  const messageFiles = messageFileMapping?.get(message.id);
+  // Prefer persisted files, overlaying an existing preview URL when available.
+  // Fall back to message-associated files when no persisted entry exists.
   const allFiles =
     dbFiles?.map((file) => {
-      const localUrl = pendingFiles?.find((pendingFile) => pendingFile.id === file.id)?.localUrl;
+      const localUrl = messageFiles?.find((messageFile) => messageFile.id === file.id)?.localUrl;
       return localUrl === undefined ? file : { ...file, localUrl };
-    }) ?? pendingFiles;
+    }) ?? messageFiles;
   const hasFiles = allFiles !== undefined && allFiles.length > 0;
 
   const parsedUrls =

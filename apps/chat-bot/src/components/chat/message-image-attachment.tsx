@@ -7,11 +7,11 @@ import { cn } from '@/utils/tailwind';
 // Minimal type required to render an image attachment chip
 export type ImageAttachment = Pick<FileModel, 'id' | 'name'>;
 
-// Extended type for pending files that includes a local blob URL
-export type PendingFileModel = FileModel & { localUrl?: string };
+// Extended file model that can include a preview URL
+export type MessageFileModel = FileModel & { localUrl?: string };
 
 type MessageImageAttachmentProps = {
-  file: ImageAttachment | PendingFileModel;
+  file: ImageAttachment | MessageFileModel;
   width?: number;
   height?: number;
   className?: string;

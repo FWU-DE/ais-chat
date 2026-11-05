@@ -2,13 +2,13 @@ import type { AiActivityStep } from '@/types/ai-activity';
 import { type ChatStatus, type UIMessage } from '@/types/chat';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
-import { ChatBox, type PendingFileModel } from './chat-box';
+import { ChatBox, type MessageFileModel } from './chat-box';
 import LoadingAnimation from './loading-animation';
 import { AudioPlaybackCoordinatorProvider } from './speech/audio-playback-coordinator';
 import { GenerateSpeechStreamFn } from './speech/types';
 
 // Re-export for consumers that import from this file
-export type { ChatStatus, PendingFileModel };
+export type { ChatStatus, MessageFileModel };
 
 interface MessagesProps {
   messages: UIMessage[];
@@ -19,7 +19,7 @@ interface MessagesProps {
   assistantIcon?: React.ReactNode;
   containerClassName: string;
   fileMapping?: Map<string, FileModel[]>;
-  pendingFileMapping?: Map<string, PendingFileModel[]>;
+  messageFileMapping?: Map<string, MessageFileModel[]>;
   webSourceMapping?: Map<string, WebSource[]>;
   activitySteps?: AiActivityStep[];
   showActivityDialog?: boolean;
@@ -38,7 +38,7 @@ export function Messages({
   assistantIcon,
   containerClassName,
   fileMapping,
-  pendingFileMapping,
+  messageFileMapping: messageFileMapping,
   webSourceMapping,
   activitySteps = [],
   showActivityDialog = false,
@@ -64,7 +64,7 @@ export function Messages({
             index={index}
             message={message}
             fileMapping={fileMapping}
-            pendingFileMapping={pendingFileMapping}
+            messageFileMapping={messageFileMapping}
             isLastNonUser={index === messages.length - 1 && message.role !== 'user'}
             isLoading={isLoading}
             regenerateMessage={reload}

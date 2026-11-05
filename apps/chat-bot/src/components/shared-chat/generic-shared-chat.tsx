@@ -27,7 +27,7 @@ import { useTranslations } from 'next-intl';
 import { ReactNode, RefObject, SyntheticEvent, useEffect, useRef, useState } from 'react';
 import { ErrorChatPlaceholder } from '../chat/error-chat-placeholder';
 import { FloatingText } from '../chat/floating-text';
-import { Messages, PendingFileModel } from '../chat/messages';
+import { MessageFileModel, Messages } from '../chat/messages';
 import { GenerateSpeechStreamFn } from '../chat/speech/types';
 import StreamingFinishedMarker from '../chat/streaming-finished-marker';
 import { LocalFileState } from '../file-upload/upload-file';
@@ -131,10 +131,10 @@ export default function GenericSharedChat({
     () => loadSharedChat(inviteCode)?.sharedSessionId ?? newSharedChatSessionId(),
   );
   const [files, setFiles] = useState<Map<string, LocalFileState>>(new Map());
-  const [pendingFileMapping, setPendingFileMapping] = useState<Map<string, PendingFileModel[]>>(
+  const [messageFileMapping, setMessageFileMapping] = useState<Map<string, MessageFileModel[]>>(
     () => {
       const restored = loadSharedChat(inviteCode);
-      const mapping = new Map<string, PendingFileModel[]>();
+      const mapping = new Map<string, MessageFileModel[]>();
       if (restored === null) return mapping;
 
       for (const message of restored.messages) {
@@ -188,11 +188,11 @@ export default function GenericSharedChat({
   const dialogStarted =
     messages.length > 0 || (dialogStartMode === 'explicit' && explicitDialogStarted);
 
-  function getPendingFileIds() {
+  function getMessageFileIds() {
     return [
       ...new Set(
-        Array.from(pendingFileMapping.values())
-          .flatMap((pendingFiles) => pendingFiles.map((pendingFile) => pendingFile.id))
+        Array.from(messageFileMapping.values())
+          .flatMap((messageFiles) => messageFiles.map((messageFile) => messageFile.id))
           .filter((id): id is string => id.trim() !== ''),
       ),
     ];
@@ -205,14 +205,14 @@ export default function GenericSharedChat({
       reactivateAutoScrolling();
 
       const currentFiles = Array.from(files);
-      const previousFileIds = getPendingFileIds();
+      const previousFileIds = getMessageFileIds();
       const currentFileIds = currentFiles
         .map(([, file]) => file.fileId)
         .filter((id): id is string => id !== undefined && id.trim() !== '');
       const fileIds = [...new Set([...previousFileIds, ...currentFileIds])];
       const userMessageId = crypto.randomUUID();
 
-      const pendingFiles: PendingFileModel[] = currentFiles.reduce<PendingFileModel[]>(
+      const messageFiles: MessageFileModel[] = currentFiles.reduce<MessageFileModel[]>(
         (acc, [, file]) => {
           const fileId = file.fileId;
 
@@ -236,10 +236,10 @@ export default function GenericSharedChat({
         [],
       );
 
-      if (pendingFiles.length > 0) {
-        setPendingFileMapping((prev) => {
+      if (messageFiles.length > 0) {
+        setMessageFileMapping((prev) => {
           const next = new Map(prev);
-          next.set(userMessageId, pendingFiles);
+          next.set(userMessageId, messageFiles);
           return next;
         });
       }
@@ -261,10 +261,10 @@ export default function GenericSharedChat({
   }
 
   function handleOpenNewChat() {
-    for (const pendingFiles of pendingFileMapping.values()) {
-      for (const pendingFile of pendingFiles) {
-        if (pendingFile.localUrl) {
-          URL.revokeObjectURL(pendingFile.localUrl);
+    for (const messageFiles of messageFileMapping.values()) {
+      for (const messageFile of messageFiles) {
+        if (messageFile.localUrl) {
+          URL.revokeObjectURL(messageFile.localUrl);
         }
       }
     }
@@ -272,7 +272,7 @@ export default function GenericSharedChat({
     const nextSharedSessionId = cnanoid();
 
     setFiles(new Map());
-    setPendingFileMapping(new Map());
+    setMessageFileMapping(new Map());
     setSharedSessionId(nextSharedSessionId);
     clearSharedChat(inviteCode);
     setMessages([]);
@@ -289,13 +289,13 @@ export default function GenericSharedChat({
         role: message.role,
         content: message.content,
         activitySteps: message.activitySteps,
-        files: pendingFileMapping.get(message.id) ?? [],
+        files: messageFileMapping.get(message.id) ?? [],
       })),
     });
-  }, [inviteCode, sharedSessionId, messages, pendingFileMapping, status]);
+  }, [inviteCode, sharedSessionId, messages, messageFileMapping, status]);
 
   function handleReload() {
-    void reload({ fileIds: getPendingFileIds(), sharedSessionId });
+    void reload({ fileIds: getMessageFileIds(), sharedSessionId });
   }
 
   function handleRetry() {
@@ -333,7 +333,7 @@ export default function GenericSharedChat({
     }
 
     reactivateAutoScrolling();
-    void reload({ fileIds: getPendingFileIds(), sharedSessionId });
+    void reload({ fileIds: getMessageFileIds(), sharedSessionId });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -343,8 +343,8 @@ export default function GenericSharedChat({
         <ExpiredChatModal
           conversationMessages={uiMessages}
           title={entity.name}
-          fileMapping={pendingFileMapping}
           imageUrl={imageUrl}
+          fileMapping={messageFileMapping}
           handleRetry={handleRetry}
         />
       )}
@@ -358,8 +358,8 @@ export default function GenericSharedChat({
           messages={uiMessages}
           dialogStarted={dialogStarted}
           imageSource={avatarPictureUrl}
-          fileMapping={pendingFileMapping}
           imageUrl={imageUrl}
+          fileMapping={messageFileMapping}
         />
         <div ref={containerRef} className="relative flex min-h-0 flex-1 flex-col items-center">
           <div ref={scrollRef} className="min-h-0 w-full flex-1 max-w-5xl overflow-y-auto p-4">
@@ -395,7 +395,7 @@ export default function GenericSharedChat({
                 reload={handleReload}
                 assistantIcon={assistantIcon}
                 containerClassName="flex flex-col gap-4"
-                pendingFileMapping={pendingFileMapping}
+                messageFileMapping={messageFileMapping}
                 activitySteps={chat.activitySteps}
                 showActivityDialog={showActivityDialog}
                 generateSpeechStreamFn={generateSpeechStreamFn}
