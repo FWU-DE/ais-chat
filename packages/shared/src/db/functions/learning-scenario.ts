@@ -24,7 +24,6 @@ import {
   learningScenarioTable,
   learningScenarioTemplateMappingTable,
   LearningScenarioWithShareDataModel,
-  sharedChatSessionTable,
   sharedLearningScenarioTable,
   sharedLearningScenarioUsageTracking,
   SharedLearningScenarioUsageTrackingInsertModel,
@@ -615,13 +614,6 @@ export async function dbExtendSharedLearningScenarioExpiration({
     .set({ expiredAt: newExpiredAt })
     .where(eq(sharedLearningScenarioTable.id, latestManageableShare.id))
     .returning();
-
-  if (updatedShare !== undefined) {
-    await db
-      .update(sharedChatSessionTable)
-      .set({ expiresAt: newExpiredAt })
-      .where(eq(sharedChatSessionTable.inviteCode, updatedShare.inviteCode));
-  }
 
   return updatedShare;
 }

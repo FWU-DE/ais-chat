@@ -1,13 +1,23 @@
 import type { ChatMessage } from '@/types/chat';
 import type { Message as AiCoreMessage } from '@ais-chat/ai-core';
+import { dbGetFilesInIds } from '@shared/db/functions/files';
 import {
-  dbGetOrCreateSharedChatSession,
-  dbGetSharedChatSession,
-  dbGetSharedChatSessionMessages,
-  dbReplaceSharedChatSessionMessages,
+  dbAppendSharedChatConversationMessages,
+  dbGetOrCreateSharedChatConversation,
+  dbGetSharedChatConversation,
+  dbGetSharedChatConversationMessageFileIds,
+  dbGetSharedChatConversationMessages,
+  dbPrepareSharedChatConversation,
 } from '@shared/db/functions/shared-chat-sessions';
 import { ForbiddenError, InvalidArgumentError } from '@shared/error';
 import { isToolRelatedMessage } from '@shared/utils/tool-related-message';
+
+type SharedChatFile = { id: string; name: string; type: string; size: number };
+
+export type SharedChatSessionHistory = {
+  messages: ChatMessage[];
+  filesByMessageId: Array<{ messageId: string; files: SharedChatFile[] }>;
+};
 
 export async function loadSharedChatSessionMessages({
   sharedSessionId,
@@ -19,25 +29,47 @@ export async function loadSharedChatSessionMessages({
   inviteCode: string;
   entityType: 'character' | 'learningScenario';
   entityId: string;
-}): Promise<ChatMessage[]> {
-  const session = await dbGetSharedChatSession({
-    sessionId: sharedSessionId,
+}): Promise<SharedChatSessionHistory> {
+  const session = await dbGetSharedChatConversation({
+    conversationId: sharedSessionId,
     inviteCode,
     entityType,
     entityId,
   });
   if (session === undefined) {
-    return [];
+    return { messages: [], filesByMessageId: [] };
   }
 
-  const messages = await dbGetSharedChatSessionMessages(session.id);
-  return messages
-    .filter((message) => !isToolRelatedMessage(message))
-    .map((message) => ({
-      id: message.id,
-      role: message.role,
-      content: message.content,
-    }));
+  const messages = await dbGetSharedChatConversationMessages(session.id);
+  const messageFileIds = await dbGetSharedChatConversationMessageFileIds(session.id);
+  const fileIds = messageFileIds.map((mapping) => mapping.fileId);
+  const files = await dbGetFilesInIds([...new Set(fileIds)]);
+  const filesById = new Map(
+    files.map((file) => [
+      file.id,
+      { id: file.id, name: file.name, type: file.type, size: file.size },
+    ]),
+  );
+
+  return {
+    messages: messages
+      .filter((message) => !isToolRelatedMessage(message))
+      .map((message) => ({
+        id: message.id,
+        role: message.role,
+        content: message.content,
+      })),
+    filesByMessageId: [...new Set(messageFileIds.map((mapping) => mapping.messageId))].map(
+      (messageId) => ({
+        messageId,
+        files: messageFileIds
+          .filter((mapping) => mapping.messageId === messageId)
+          .map((mapping) => mapping.fileId)
+          .map((fileId) => filesById.get(fileId))
+          .filter((file): file is NonNullable<typeof file> => file !== undefined),
+      }),
+    ),
+  };
 }
 
 export async function prepareSharedChatSession({
@@ -45,17 +77,17 @@ export async function prepareSharedChatSession({
   inviteCode,
   entityType,
   entityId,
-  expiresAt,
   initialMessage,
   clientMessages,
+  fileIds,
 }: {
   sharedSessionId?: string;
   inviteCode: string;
   entityType: 'character' | 'learningScenario';
   entityId: string;
-  expiresAt: Date;
   initialMessage?: string | null;
   clientMessages: ChatMessage[];
+  fileIds?: string[];
 }) {
   if (sharedSessionId === undefined || sharedSessionId.trim() === '') {
     throw new ForbiddenError('Not authorized to access this shared chat session');
@@ -66,31 +98,37 @@ export async function prepareSharedChatSession({
     throw new InvalidArgumentError('A user message is required');
   }
 
-  const session = await dbGetOrCreateSharedChatSession({
-    sessionId: sharedSessionId,
+  const session = await dbGetOrCreateSharedChatConversation({
+    conversationId: sharedSessionId,
     inviteCode,
     entityType,
     entityId,
-    expiresAt,
   });
   if (session === undefined) {
     throw new ForbiddenError('Not authorized to access this shared chat session');
   }
 
-  const storedMessages: ChatMessage[] = (await dbGetSharedChatSessionMessages(sharedSessionId)).map(
-    (message) => ({
-      id: message.id,
-      role: message.role,
-      content: message.content,
-      toolCalls: message.toolCalls ?? undefined,
-      toolCallId: message.toolCallId ?? undefined,
-    }),
+  const storedSessionMessages = await dbGetSharedChatConversationMessages(sharedSessionId);
+  const storedFileIds = (await dbGetSharedChatConversationMessageFileIds(sharedSessionId)).map(
+    (mapping) => mapping.fileId,
   );
+  const storedMessages: ChatMessage[] = storedSessionMessages.map((message) => ({
+    id: message.id,
+    role: message.role,
+    content: message.content,
+    toolCalls: message.toolCalls ?? undefined,
+    toolCallId: message.toolCallId ?? undefined,
+  }));
   const repeatedMessageIndex = storedMessages.findIndex(
     (message) => message.id === currentUserMessage.id,
   );
   const previousMessages =
     repeatedMessageIndex === -1 ? storedMessages : storedMessages.slice(0, repeatedMessageIndex);
+  await dbPrepareSharedChatConversation({
+    conversationId: sharedSessionId,
+    userMessage: currentUserMessage,
+    fileIds,
+  });
   const turnMessages: ChatMessage[] = [];
 
   if (previousMessages.length === 0 && initialMessage) {
@@ -100,6 +138,7 @@ export async function prepareSharedChatSession({
 
   return {
     messages: [...previousMessages, ...turnMessages],
+    fileIds: [...new Set([...(fileIds ?? []), ...storedFileIds])],
     persistResponse: async ({
       assistantMessageId,
       fullText,
@@ -110,26 +149,28 @@ export async function prepareSharedChatSession({
       agentLoopMessages: AiCoreMessage[];
     }) => {
       const messagesToPersist = [
-        ...turnMessages,
         ...agentLoopMessages.map((message) => ({
           id: crypto.randomUUID(),
-          ...message,
-        })),
-        { id: assistantMessageId, role: 'assistant' as const, content: fullText },
-      ];
-
-      await dbReplaceSharedChatSessionMessages({
-        sessionId: sharedSessionId,
-        fromOrderNumber: previousMessages.length,
-        messages: messagesToPersist.map((message, index) => ({
-          id: message.id,
           sessionId: sharedSessionId,
+          ...message,
           content: message.content,
           role: message.role,
-          orderNumber: previousMessages.length + index,
           toolCalls: message.toolCalls ?? null,
           toolCallId: message.toolCallId ?? null,
         })),
+        {
+          id: assistantMessageId,
+          sessionId: sharedSessionId,
+          role: 'assistant' as const,
+          content: fullText,
+          toolCalls: null,
+          toolCallId: null,
+        },
+      ];
+
+      await dbAppendSharedChatConversationMessages({
+        conversationId: sharedSessionId,
+        messages: messagesToPersist,
       });
     },
   };

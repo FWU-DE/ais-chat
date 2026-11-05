@@ -1048,16 +1048,14 @@ export type SharedLearningScenarioInsertModel = z.infer<typeof sharedLearningSce
 export type SharedLearningScenarioUpdateModel = z.infer<typeof sharedLearningScenarioUpdateSchema>;
 
 /**
- * Message history for shared-chat browser session.
+ * Message history for an anonymous shared-chat conversation.
  */
-export const sharedChatSessionTable = pgTable(
-  'shared_chat_session',
+export const sharedChatConversationTable = pgTable(
+  'shared_chat_conversation',
   {
     id: text('id').primaryKey(),
-    inviteCode: text('invite_code').notNull(),
     entityType: text('entity_type').$type<'character' | 'learningScenario'>().notNull(),
     entityId: uuid('entity_id').notNull(),
-    expiresAt: timestamp('expires_at', { mode: 'date', withTimezone: true }).notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
       .defaultNow()
@@ -1066,20 +1064,17 @@ export const sharedChatSessionTable = pgTable(
   },
   (table) => [
     check(
-      'shared_chat_session_entity_type_check',
+      'shared_chat_conversation_entity_type_check',
       sql`${table.entityType} in ('character', 'learningScenario')`,
     ),
-    index().on(table.expiresAt),
   ],
 );
 
-export const sharedChatSessionMessageTable = pgTable(
-  'shared_chat_session_message',
+export const sharedChatConversationMessageTable = pgTable(
+  'shared_chat_conversation_message',
   {
     id: text('id').notNull(),
-    sessionId: text('session_id')
-      .references(() => sharedChatSessionTable.id, { onDelete: 'cascade' })
-      .notNull(),
+    sessionId: text('session_id').notNull(),
     content: text('content').notNull(),
     role: conversationRoleEnum('role').notNull(),
     orderNumber: integer('order_number').notNull(),
@@ -1089,10 +1084,12 @@ export const sharedChatSessionMessageTable = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.sessionId, table.id] }),
-    uniqueIndex('shared_chat_session_message_session_id_order_number_unique').on(
-      table.sessionId,
-      table.orderNumber,
-    ),
+    uniqueIndex('shared_chat_message_order_unique').on(table.sessionId, table.orderNumber),
+    foreignKey({
+      columns: [table.sessionId],
+      foreignColumns: [sharedChatConversationTable.id],
+      name: 'shared_chat_conversation_fk',
+    }).onDelete('cascade'),
   ],
 );
 
@@ -1658,6 +1655,44 @@ export type FileUpdateModel = z.infer<typeof fileUpdateSchema>;
 // Keep existing extended types
 export type FileModel = typeof fileTable.$inferSelect;
 export type FileModelAndUrl = FileModel & { signedUrl: string };
+
+export const SharedChatConversationMessageFileMappingTable = pgTable(
+  'shared_chat_conversation_message_file_mapping',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    fileId: text('file_id').notNull(),
+    conversationMessageId: text('conversation_message_id').notNull(),
+    conversationId: text('conversation_id').notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('shared_chat_message_file_message_idx').on(table.conversationMessageId),
+    index('shared_chat_message_file_conversation_idx').on(table.conversationId),
+    unique('shared_chat_message_file_unique').on(
+      table.conversationMessageId,
+      table.conversationId,
+      table.fileId,
+    ),
+    foreignKey({
+      columns: [table.fileId],
+      foreignColumns: [fileTable.id],
+      name: 'shared_chat_message_file_file_fk',
+    }),
+    foreignKey({
+      columns: [table.conversationId, table.conversationMessageId],
+      foreignColumns: [
+        sharedChatConversationMessageTable.sessionId,
+        sharedChatConversationMessageTable.id,
+      ],
+      name: 'shared_chat_message_file_message_fk',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.conversationId],
+      foreignColumns: [sharedChatConversationTable.id],
+      name: 'shared_chat_message_file_conversation_fk',
+    }).onDelete('cascade'),
+  ],
+);
 
 /**
  * Schema for table conversation_message_file_mapping

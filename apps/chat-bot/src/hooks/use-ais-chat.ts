@@ -1,7 +1,7 @@
 'use client';
 
 import { logError } from '@shared/logging';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { AiActivityStep } from '@/types/ai-activity';
 import {
@@ -90,6 +90,10 @@ export function useAisChat({
   // Seed from the actual initial state (which may have been restored from
   // storage by the caller), so reload() works after a page refresh.
   const lastUserMessageRef = useRef<ChatMessage | null>(lastUserMessage(messages));
+
+  useEffect(() => {
+    lastUserMessageRef.current = lastUserMessage(messages);
+  }, [messages]);
 
   const isLoading = status === 'submitted' || status === 'streaming';
 

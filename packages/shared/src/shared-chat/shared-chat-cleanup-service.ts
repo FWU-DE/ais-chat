@@ -4,7 +4,7 @@ import {
   dbGetExpiredLearningScenarioShares,
   dbGetSharedChatFileCandidates,
 } from '@shared/db/functions/shared-chat-files';
-import { dbDeleteExpiredSharedChatSessions } from '@shared/db/functions/shared-chat-sessions';
+import { dbDeleteExpiredSharedChatConversations } from '@shared/db/functions/shared-chat-sessions';
 import { deleteMessageAttachments } from '@shared/files/fileService';
 import { isSharedChatFileMetadata, SharedChatFileMetadata } from '@shared/shared-chat';
 import { addDays } from '@shared/utils/date';
@@ -23,7 +23,7 @@ type SharedFileCandidate = {
  */
 export async function cleanupExpiredSharedChatFiles(): Promise<number> {
   const cutoffDate = addDays(new Date(), EXPIRATION_OFFSET_IN_DAYS);
-  await dbDeleteExpiredSharedChatSessions(cutoffDate);
+  await dbDeleteExpiredSharedChatConversations(cutoffDate);
 
   const maybeSharedFiles = await dbGetSharedChatFileCandidates();
 

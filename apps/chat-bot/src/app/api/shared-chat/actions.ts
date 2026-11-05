@@ -1,8 +1,7 @@
 'use server';
 
-import { requireValidInviteCode } from '@/auth/requireValidInviteCode';
-import type { ChatMessage } from '@/types/chat';
-import { SharedChatExpiredError } from '@ais-chat/ai-core/errors';
+import { runServerAction } from '@shared/actions/run-server-action';
+import { checkInviteCodeForExport } from '@shared/conversation/conversation-service';
 import { loadSharedChatSessionMessages } from './shared-chat-session-service';
 
 export async function loadSharedChatSessionMessagesAction({
@@ -15,17 +14,15 @@ export async function loadSharedChatSessionMessagesAction({
   inviteCode: string;
   entityType: 'character' | 'learningScenario';
   entityId: string;
-}): Promise<ChatMessage[]> {
-  try {
-    await requireValidInviteCode(inviteCode);
-  } catch {
-    throw new SharedChatExpiredError();
-  }
-
-  return loadSharedChatSessionMessages({
+}) {
+  const params = {
     sharedSessionId,
     inviteCode,
     entityType,
     entityId,
-  });
+  };
+
+  return checkInviteCodeForExport({ inviteCode }).then(() =>
+    runServerAction('loadSharedChatSessionMessagesAction', loadSharedChatSessionMessages)(params),
+  );
 }

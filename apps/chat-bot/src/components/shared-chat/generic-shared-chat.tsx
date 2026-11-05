@@ -262,10 +262,38 @@ export default function GenericSharedChat({
       entityType: sharedEntityType,
       entityId: entity.id,
     })
-      .then((storedMessages) => {
-        if (storedMessages.length > 0) {
-          setMessages(storedMessages);
+      .then((result) => {
+        if (!result.success) {
+          logError('Failed to load shared chat history', new Error(result.error.message));
+          return;
         }
+
+        if (result.value.messages.length > 0) {
+          setMessages(result.value.messages);
+        }
+
+        const restoredFileMapping = new Map<string, MessageFileModel[]>();
+        for (const { messageId, files: restoredFiles } of result.value.filesByMessageId) {
+          restoredFileMapping.set(
+            messageId,
+            restoredFiles.map((file) => ({
+              ...file,
+              createdAt: new Date(),
+              metadata: null,
+              userId: null,
+              localUrl: isImageFile(file.name)
+                ? getSharedChatImageUrl({
+                    fileId: file.id,
+                    inviteCode,
+                    entityType: sharedEntityType,
+                    entityId: entity.id,
+                    sharedSessionId,
+                  })
+                : undefined,
+            })),
+          );
+        }
+        setMessageFileMapping(restoredFileMapping);
       })
       .catch((error) => {
         logError('Failed to load shared chat history', error);
