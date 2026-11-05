@@ -7,6 +7,7 @@ import {
   deleteCharacterFromDetailPage,
 } from '../../utils/character';
 import { regenerateMessage, sendMessage } from '../../utils/chat';
+import { verifyLicenseInformation } from '../../utils/license-information';
 import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
 import { stopShare, waitForAutosave, waitForToast, waitForToastDisappear } from '../../utils/utils';
 
@@ -204,6 +205,9 @@ test('data is autosaved on blur', async ({ page }) => {
   await expect(page.getByTestId('character-initial-message-input')).toHaveValue(
     'New Initial Message',
   );
+
+  // License information
+  await verifyLicenseInformation(page, '/characters');
 
   // cleanup
   await deleteCharacterFromDetailPage(page);

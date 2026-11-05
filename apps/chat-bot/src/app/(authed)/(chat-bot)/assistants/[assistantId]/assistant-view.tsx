@@ -19,6 +19,7 @@ import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-link
 import { CustomChatCreateSuspensionRequestButton } from '@/components/custom-chat/custom-chat-create-suspension-request-button';
 import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-author-info';
 import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-chat-filter-display-section';
+import { CustomChatLicenseInformationView } from '@/components/custom-chat/license-information/custom-chat-license-information-view';
 import { extractFilterValues } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import { FieldGroup } from '@ui/components/field';
 import { CustomChatWebSearchView } from '@/components/custom-chat/web-search/custom-chat-web-search-view';
@@ -107,6 +108,7 @@ export function AssistantView({
               />
             ))}
             <FilterDisplaySection values={filterValues} />
+            <CustomChatLicenseInformationView licenseInformation={assistant.licenseInformation} />
           </FieldGroup>
         </CardContent>
       </Card>
