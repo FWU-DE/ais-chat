@@ -28,7 +28,7 @@ export async function seedProviderKeysForModels(models: SeedModel[]): Promise<vo
   for (const model of models) {
     if (!BIFROST_UPSTREAM_PROVIDERS.has(model.setting.provider)) continue;
     const providerKeySettings = getProviderKeySettings(model);
-    const groupKey = `${model.organizationId}:${stableStringify(providerKeySettings)}`;
+    const groupKey = stableStringify(providerKeySettings);
     groupedModels.set(groupKey, [...(groupedModels.get(groupKey) ?? []), model]);
   }
 
@@ -44,10 +44,9 @@ export async function seedProviderKeysForModels(models: SeedModel[]): Promise<vo
         name,
         provider,
         settings,
-        organizationId: firstModel.organizationId,
       })
       .onConflictDoUpdate({
-        target: [llmProviderKeyTable.organizationId, llmProviderKeyTable.name],
+        target: llmProviderKeyTable.name,
         set: { provider, settings },
       })
       .returning();

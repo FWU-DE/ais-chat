@@ -1,13 +1,11 @@
 import { db as localDb } from './index';
 import {
-  organizationTable,
   projectTable,
   apiKeyTable,
   llmModelTable,
   llmModelApiKeyMappingTable,
   llmModelProviderKeyMappingTable,
   llmProviderKeyTable,
-  OrganizationModel,
   ProjectModel,
   LlmModel,
   ApiKeyModel,
@@ -20,7 +18,7 @@ import { Pool } from 'pg';
 import { normalizeSeedModelsForBifrost, syncSeedModelsToBifrost } from './seed-bifrost';
 
 // Loads all required data from the staging database into the local database
-// including organizations, projects, api keys, llm models and mappings.
+// including projects, api keys, llm models and mappings.
 // Does not copy over user data or usage data.
 // Useful for local development to have the same models and api keys as staging.
 
@@ -33,10 +31,6 @@ const pool = new Pool({
   max: 12,
 });
 const stageDb = drizzle({ client: pool });
-
-async function getOrganizations(): Promise<OrganizationModel[]> {
-  return await stageDb.select().from(organizationTable);
-}
 
 async function getProjects(): Promise<ProjectModel[]> {
   return await stageDb.select().from(projectTable);
@@ -68,31 +62,24 @@ export async function seedDatabase() {
   try {
     const models = normalizeSeedModelsForBifrost(await getModels());
 
-    // 1. Create organization
-    await localDb
-      .insert(organizationTable)
-      .values(await getOrganizations())
-      .onConflictDoNothing()
-      .returning();
-
-    // 2. Create project
+    // 1. Create project
     await localDb
       .insert(projectTable)
       .values(await getProjects())
       .onConflictDoNothing()
       .returning();
 
-    // 3. Create API keys
+    // 2. Create API keys
     await localDb
       .insert(apiKeyTable)
       .values(await getApiKeys())
       .onConflictDoNothing()
       .returning();
 
-    // 4. Create LLM models
+    // 3. Create LLM models
     for (const model of models) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id: _id, organizationId: _orgId, createdAt: _createdAt, ...conflictSet } = model;
+      const { id: _id, createdAt: _createdAt, ...conflictSet } = model;
       await localDb
         .insert(llmModelTable)
         .values(model)
@@ -109,7 +96,7 @@ export async function seedDatabase() {
         .insert(llmProviderKeyTable)
         .values({ ...providerKey, name: providerKey.name.toLowerCase() })
         .onConflictDoUpdate({
-          target: [llmProviderKeyTable.organizationId, llmProviderKeyTable.name],
+          target: llmProviderKeyTable.name,
           set: {
             provider: providerKey.provider,
             settings: providerKey.settings,
@@ -132,7 +119,7 @@ export async function seedDatabase() {
         .onConflictDoNothing();
     }
 
-    // 5. Create model-key mappings
+    // 4. Create model-key mappings
     await localDb
       .insert(llmModelApiKeyMappingTable)
       .values(await getModelKeyMappings())
@@ -141,7 +128,7 @@ export async function seedDatabase() {
 
     await syncSeedModelsToBifrost();
 
-    // 6. Summary
+    // 5. Summary
     console.log('Database seeding completed successfully!');
   } catch (error) {
     console.error('Error seeding database:', error);

@@ -3,27 +3,19 @@ import { TemplateTypes } from '@shared/templates/template';
 export const ROUTES = {
   home: '/',
   api: {
-    apiKeyDetails: (organizationId: string, projectId: string, apiKeyId: string) =>
-      `/organizations/${organizationId}/projects/${projectId}/api-keys/${apiKeyId}`,
-    apiKeyNew: (organizationId: string, projectId: string) =>
-      `/organizations/${organizationId}/projects/${projectId}/api-keys/new`,
-    apiKeyModelMappings: (organizationId: string, projectId: string, apiKeyId: string) =>
-      `/organizations/${organizationId}/projects/${projectId}/api-keys/${apiKeyId}/model-mappings`,
-    llms: (organizationId: string) => `/organizations/${organizationId}/llms`,
-    llmDetails: (organizationId: string, llmId: string) =>
-      `/organizations/${organizationId}/llms/${llmId}`,
-    llmNew: (organizationId: string) => `/organizations/${organizationId}/llms/new`,
-    providerKeys: (organizationId: string) => `/organizations/${organizationId}/provider-keys`,
-    providerKeyDetails: (organizationId: string, providerKeyId: string) =>
-      `/organizations/${organizationId}/provider-keys/${providerKeyId}`,
-    providerKeyNew: (organizationId: string) =>
-      `/organizations/${organizationId}/provider-keys/new`,
-    models: (organizationId: string) => `/organizations/${organizationId}/models`,
-    organizations: '/organizations',
-    organizationDetails: (organizationId: string) => `/organizations/${organizationId}`,
-    projects: (organizationId: string) => `/organizations/${organizationId}/projects`,
-    projectDetails: (organizationId: string, projectId: string) =>
-      `/organizations/${organizationId}/projects/${projectId}`,
+    apiKeyDetails: (projectId: string, apiKeyId: string) =>
+      `/projects/${projectId}/api-keys/${apiKeyId}`,
+    apiKeyNew: (projectId: string) => `/projects/${projectId}/api-keys/new`,
+    apiKeyModelMappings: (projectId: string, apiKeyId: string) =>
+      `/projects/${projectId}/api-keys/${apiKeyId}/model-mappings`,
+    llms: '/llms',
+    llmDetails: (llmId: string) => `/llms/${llmId}`,
+    llmNew: '/llms/new',
+    providerKeys: '/provider-keys',
+    providerKeyDetails: (providerKeyId: string) => `/provider-keys/${providerKeyId}`,
+    providerKeyNew: '/provider-keys/new',
+    projects: '/projects',
+    projectDetails: (projectId: string) => `/projects/${projectId}`,
   },
   app: {
     apiKey: (federalStateId: string) => `/ais-chat-app/federal-states/${federalStateId}/api-key`,

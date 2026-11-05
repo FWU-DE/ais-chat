@@ -9,8 +9,6 @@ import {
   llmModelProviderKeyMappingTable,
   llmModelTable,
   llmProviderKeyTable,
-  type OrganizationInsertModel,
-  organizationTable,
   type ProjectInsertModel,
   projectTable,
 } from './schema';
@@ -20,7 +18,6 @@ import {
   syncSeedModelsToBifrost,
 } from './seed-bifrost';
 
-const ORGANIZATION_ID = 'cfeb82c6-396a-4c2d-954b-53e77acbbe7e';
 const PROJECT_ID = 'DE-TEST';
 const API_KEY_NAME = 'Test API Key';
 
@@ -50,7 +47,6 @@ const llamaGuardEndpointHost = seedEnv.LLM_LLAMA_GUARD_ENDPOINT_HOST;
 // Echoes prompts or drives deterministic tool calls — no real API calls.
 // See services/mock-llm/ for the server implementation.
 const mockLlm: LlmInsertModel = {
-  organizationId: ORGANIZATION_ID,
   provider: 'bifrost',
   name: 'mock-echo',
   displayName: 'Mock LLM',
@@ -70,7 +66,6 @@ const mockLlm: LlmInsertModel = {
 
 const mockSpeech: LlmInsertModel = {
   id: 'f53e4a77-1a3e-4d62-a3b6-6b74e7f4a1f0',
-  organizationId: ORGANIZATION_ID,
   provider: 'google',
   name: 'mock-speech',
   displayName: 'Mock Speech',
@@ -121,7 +116,6 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
   // model — the mock LLM server generates a solid-color placeholder image for it.
   {
     id: 'd3f8a8e2-5c1a-4b7a-9f2e-3a6b8c4d9e1f',
-    organizationId: ORGANIZATION_ID,
     provider: 'bifrost',
     name: 'mock-image',
     displayName: 'Mock LLM (Image)',
@@ -150,7 +144,6 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     : [
         {
           id: '2d6a6f8e-6a3f-4a2a-9c3d-7f1b2e8a4c5d',
-          organizationId: ORGANIZATION_ID,
           provider: 'bifrost',
           name: 'BAAI/bge-m3',
           displayName: 'Mock Embedding Model',
@@ -169,7 +162,6 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
   // Realm LLMs
   {
     id: 'b870b74d-7458-4dcf-99f6-ace83ef514f4',
-    organizationId: ORGANIZATION_ID,
     provider: 'ionos',
     name: 'BAAI/bge-m3',
     displayName: 'Standard Embedding Model',
@@ -185,7 +177,6 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
   },
   {
     id: '4f8a2c1e-93d7-4b6a-a5e0-d2f1c8b7e3a9',
-    organizationId: ORGANIZATION_ID,
     provider: 'azure',
     name: 'gpt-4o-mini',
     displayName: 'GPT-4o-mini',
@@ -204,7 +195,6 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
   },
   {
     id: 'e7b3d9f2-1a4c-4e8b-b6d5-f0c2a9e8d1b7',
-    organizationId: ORGANIZATION_ID,
     provider: 'azure',
     name: 'gpt-5-nano',
     displayName: 'GPT-5 nano',
@@ -229,7 +219,6 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
   },
   {
     id: '1a3d7a04-351d-4a09-a490-db256994a1b8',
-    organizationId: ORGANIZATION_ID,
     provider: 'azure',
     name: 'gpt-image-1.5',
     displayName: 'GPT-Image-1.5',
@@ -250,7 +239,6 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
   },
   {
     id: 'f1c2d3e4-5b6a-7c8d-9e0f-1a2b3c4d5e6f',
-    organizationId: ORGANIZATION_ID,
     provider: 'azure',
     name: 'gpt-5-mini',
     displayName: 'GPT-5 mini',
@@ -291,7 +279,6 @@ const llamaGuardModel: LlmInsertModel | undefined =
   llamaGuardEndpointHost.trim().length > 0
     ? {
         id: '08e5d73f-e582-44fe-a6e0-75350f8b1617',
-        organizationId: ORGANIZATION_ID,
         provider: 'google',
         name: 'meta-llama/Llama-Guard-4-12B',
         displayName: 'Llama Guard',
@@ -320,29 +307,17 @@ export async function seedDatabase() {
   console.log('Starting api database seeding...');
 
   try {
-    // 1. Create/update test organization
-    // Since there's no unique constraint on name, we'll check if one exists first
-    await db
-      .insert(organizationTable)
-      .values({
-        id: ORGANIZATION_ID,
-        name: 'Test Organization',
-      } satisfies OrganizationInsertModel)
-      .onConflictDoNothing()
-      .returning();
-
-    // 2. Create/update test project (using primary key for upsert)
+    // 1. Create/update test project (using primary key for upsert)
     await db
       .insert(projectTable)
       .values({
         id: PROJECT_ID,
         name: 'Test Project',
-        organizationId: ORGANIZATION_ID,
       } satisfies ProjectInsertModel)
       .onConflictDoNothing()
       .returning();
 
-    // 3. Create/update test API key
+    // 2. Create/update test API key
     // Since keyId doesn't have a unique constraint, we'll check first
 
     let apiKey;
@@ -494,13 +469,7 @@ export async function seedDatabase() {
         .select({ id: apiKeyTable.id })
         .from(apiKeyTable)
         .innerJoin(projectTable, eq(apiKeyTable.projectId, projectTable.id))
-        .where(
-          and(
-            eq(apiKeyTable.projectId, PROJECT_ID),
-            eq(projectTable.organizationId, ORGANIZATION_ID),
-            ne(apiKeyTable.state, 'deleted'),
-          ),
-        );
+        .where(and(eq(apiKeyTable.projectId, PROJECT_ID), ne(apiKeyTable.state, 'deleted')));
 
       await db
         .delete(llmModelApiKeyMappingTable)
@@ -574,7 +543,6 @@ export async function seedDatabase() {
     // Summary
     console.log('Database seeding completed successfully!');
     console.log('\nSummary:');
-    console.log(`   Organization: Test Organization`);
     console.log(`   Project: Test Project (ID: ${PROJECT_ID})`);
     console.log(`   LLM Models: ${DEFAULT_MODELS.map((m) => m.name).join(', ')}`);
     console.log(`   Model-Key Mapping: configured`);

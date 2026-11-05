@@ -65,7 +65,6 @@ function createBifrostModel(settingProvider: 'azure' | 'openai' | 'ionos' | 'goo
     isDeleted: false,
     useBifrost: true,
     isNew: false,
-    organizationId: 'organization-id',
     priceMetadata: {
       type: 'text',
       completionTokenPrice: 1,

@@ -388,10 +388,7 @@ services:
         echo '=== Creating S3 bucket: ais-chat ==='
         s3cmd --access_key=rustfsadmin --secret_key=RustFS-Admin-123456 --host=localhost:9000 --host-bucket='localhost:9000/%(bucket)' --region=eu-de --no-ssl --no-check-certificate mb s3://ais-chat
 
-        echo '=== Seeding api_db ==='
-        apk add --no-cache postgresql-client
-        PGPASSWORD=test1234 psql -h postgres -U admin -d api_db -c \"INSERT INTO organization (name) SELECT 'LOCAL' WHERE NOT EXISTS (SELECT 1 FROM organization);\"
-        # Remaining seeding is done manually via ais-chat-admin interface
+        # Models, provider keys and projects are configured manually via ais-chat-admin interface
 
         echo '=== AIS.chat initialization completed successfully ==='
       "

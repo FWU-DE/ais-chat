@@ -17,13 +17,13 @@ function stripSensitiveFields<T extends { keyId?: string; secretHash?: string }>
   return rest;
 }
 
-export async function getApiKeys(organizationId: string, projectId: string) {
-  const apiKeys = await dbGetAllApiKeysByProjectId(organizationId, projectId);
+export async function getApiKeys(projectId: string) {
+  const apiKeys = await dbGetAllApiKeysByProjectId(projectId);
   return apiKeys.map(stripSensitiveFields);
 }
 
-export async function getSingleApiKey(organizationId: string, projectId: string, apiKeyId: string) {
-  const apiKey = await dbGetApiKey(organizationId, projectId, apiKeyId);
+export async function getSingleApiKey(projectId: string, apiKeyId: string) {
+  const apiKey = await dbGetApiKey(projectId, apiKeyId);
   if (!apiKey) throw new Error('API key not found');
   return stripSensitiveFields(apiKey);
 }
@@ -39,21 +39,16 @@ export async function createApiKey(projectId: string, apiKeyData: CreateApiKey) 
   return result;
 }
 
-export async function updateApiKey(
-  organizationId: string,
-  projectId: string,
-  apiKeyId: string,
-  apiKeyData: UpdateApiKey,
-) {
-  const result = await dbUpdateApiKey(organizationId, projectId, apiKeyId, apiKeyData);
+export async function updateApiKey(projectId: string, apiKeyId: string, apiKeyData: UpdateApiKey) {
+  const result = await dbUpdateApiKey(projectId, apiKeyId, apiKeyData);
 
   logInfo('API Key was updated successfully', { projectId, apiKeyId, apiKeyData });
 
   return result;
 }
 
-export async function deleteApiKey(organizationId: string, projectId: string, apiKeyId: string) {
-  const apiKey = await dbGetApiKey(organizationId, projectId, apiKeyId);
+export async function deleteApiKey(projectId: string, apiKeyId: string) {
+  const apiKey = await dbGetApiKey(projectId, apiKeyId);
   if (!apiKey) throw new Error('API key not found');
 
   await runDeleteOrThrowError(
@@ -61,5 +56,5 @@ export async function deleteApiKey(organizationId: string, projectId: string, ap
     'API-Schlüssel kann nicht gelöscht werden, da er noch verwendet wird.',
   );
 
-  logInfo('API Key was deleted successfully', { organizationId, projectId, apiKeyId });
+  logInfo('API Key was deleted successfully', { projectId, apiKeyId });
 }

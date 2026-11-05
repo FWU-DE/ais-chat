@@ -168,4 +168,4 @@ export const FEDERAL_STATES = FEDERAL_STATE_DEFINITIONS.filter((state) => {
     isWebSearchEnabled: true,
     isSpeechModelEnabled: true,
   },
-})) satisfies Array<Omit<FederalStateInsertModel, 'organizationId'>>;
+})) satisfies Array<FederalStateInsertModel>;

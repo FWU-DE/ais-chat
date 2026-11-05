@@ -8,7 +8,6 @@ export type LargeLanguageModel = {
   description: string;
   setting: object;
   priceMetadata: LlmModelPriceMetadata;
-  organizationId: string;
   createdAt: Date;
   supportedImageFormats: string[];
   imageGenerationConfig: object | null;

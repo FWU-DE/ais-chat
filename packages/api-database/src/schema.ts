@@ -16,61 +16,40 @@ import { ImageGenerationConfig, LlmModelPriceMetadata, SpeechConfig } from './ty
 import { LlmModelProviderSettings, LlmProviderKeySettings } from './llm-model';
 import { createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 
-export const organizationTable = pgTable('organization', {
-  id: uuid('id').primaryKey().defaultRandom(),
+export const projectTable = pgTable('project', {
+  id: text('id').primaryKey(),
   name: text('name').notNull(),
   createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
 });
-export type OrganizationInsertModel = typeof organizationTable.$inferInsert;
-export type OrganizationModel = typeof organizationTable.$inferSelect;
-
-export const projectTable = pgTable(
-  'project',
-  {
-    id: text('id').primaryKey(),
-    name: text('name').notNull(),
-    organizationId: uuid('organization_id').notNull(),
-    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [index().on(table.organizationId)],
-);
 export const projectInsertSchema = createInsertSchema(projectTable);
 export type ProjectInsertModel = typeof projectTable.$inferInsert;
 export type ProjectModel = typeof projectTable.$inferSelect;
 export const projectUpdateSchema = createUpdateSchema(projectTable);
 
-export const llmModelTable = pgTable(
-  'llm_model',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    provider: text('provider').notNull().default('bifrost'),
-    name: text('name').notNull(),
-    displayName: text('display_name').notNull(),
-    description: text('description').notNull().default(''),
-    setting: json('settings').$type<LlmModelProviderSettings>().notNull(),
-    useBifrost: boolean('use_bifrost').notNull().default(true),
-    priceMetadata: jsonb('price_metadata').$type<LlmModelPriceMetadata>().notNull(),
-    organizationId: uuid('organization_id')
-      .references(() => organizationTable.id)
-      .notNull(),
-    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-    supportedImageFormats: json('supported_image_formats').$type<string[]>().notNull().default([]),
-    imageGenerationConfig: jsonb('image_generation_config').$type<ImageGenerationConfig>(),
-    modelConfig: jsonb('model_config').$type<SpeechConfig>(),
-    additionalParameters: json('additional_parameters')
-      .$type<Record<string, unknown>>()
-      .notNull()
-      .default({}),
-    isNew: boolean('is_new').notNull().default(false),
-    isDeleted: boolean('is_deleted').notNull().default(false),
-    safetyFilterEnabled: boolean('safety_filter_enabled').notNull().default(true),
-  },
-  (table) => [index().on(table.organizationId)],
-);
+export const llmModelTable = pgTable('llm_model', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  provider: text('provider').notNull().default('bifrost'),
+  name: text('name').notNull(),
+  displayName: text('display_name').notNull(),
+  description: text('description').notNull().default(''),
+  setting: json('settings').$type<LlmModelProviderSettings>().notNull(),
+  useBifrost: boolean('use_bifrost').notNull().default(true),
+  priceMetadata: jsonb('price_metadata').$type<LlmModelPriceMetadata>().notNull(),
+  createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  supportedImageFormats: json('supported_image_formats').$type<string[]>().notNull().default([]),
+  imageGenerationConfig: jsonb('image_generation_config').$type<ImageGenerationConfig>(),
+  modelConfig: jsonb('model_config').$type<SpeechConfig>(),
+  additionalParameters: json('additional_parameters')
+    .$type<Record<string, unknown>>()
+    .notNull()
+    .default({}),
+  isNew: boolean('is_new').notNull().default(false),
+  isDeleted: boolean('is_deleted').notNull().default(false),
+  safetyFilterEnabled: boolean('safety_filter_enabled').notNull().default(true),
+});
 export const llmInsertModelSchema = createInsertSchema(llmModelTable);
 export const llmUpdateModelSchema = createUpdateSchema(llmModelTable).omit({
   id: true,
-  organizationId: true,
   createdAt: true,
 });
 export type LlmInsertModel = typeof llmModelTable.$inferInsert;
@@ -85,23 +64,13 @@ export const llmProviderKeyTable = pgTable(
     settings: json('settings').$type<LlmProviderKeySettings>().notNull(),
     weight: doublePrecision('weight').notNull().default(1),
     isEnabled: boolean('is_enabled').notNull().default(true),
-    organizationId: uuid('organization_id')
-      .references(() => organizationTable.id)
-      .notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [
-    index().on(table.organizationId),
-    uniqueIndex('llm_provider_key_organization_id_name_unique').on(
-      table.organizationId,
-      table.name,
-    ),
-  ],
+  (table) => [uniqueIndex('llm_provider_key_name_unique').on(table.name)],
 );
 export const llmProviderKeyInsertSchema = createInsertSchema(llmProviderKeyTable);
 export const llmProviderKeyUpdateSchema = createUpdateSchema(llmProviderKeyTable).omit({
   id: true,
-  organizationId: true,
   createdAt: true,
 });
 export type LlmProviderKeyInsertModel = typeof llmProviderKeyTable.$inferInsert;

@@ -18,16 +18,8 @@ export async function dbGetAllProviderKeysWithModels(): Promise<LlmProviderKeyWi
   return getProviderKeysWithModels();
 }
 
-export async function dbGetProviderKeysWithModelsByOrganizationId(
-  organizationId: string,
-): Promise<LlmProviderKeyWithModels[]> {
-  return getProviderKeysWithModels(organizationId);
-}
-
-async function getProviderKeysWithModels(
-  organizationId?: string,
-): Promise<LlmProviderKeyWithModels[]> {
-  const query = db
+async function getProviderKeysWithModels(): Promise<LlmProviderKeyWithModels[]> {
+  const rows = await db
     .select({
       providerKey: llmProviderKeyTable,
       model: llmModelTable,
@@ -40,9 +32,6 @@ async function getProviderKeysWithModels(
     )
     .leftJoin(llmModelTable, eq(llmModelTable.id, llmModelProviderKeyMappingTable.llmModelId))
     .orderBy(llmProviderKeyTable.createdAt);
-  const rows = organizationId
-    ? await query.where(eq(llmProviderKeyTable.organizationId, organizationId))
-    : await query;
   const keys = new Map<string, LlmProviderKeyWithModels>();
 
   for (const row of rows) {
@@ -65,11 +54,7 @@ export async function dbCreateProviderKey(providerKey: LlmProviderKeyInsertModel
   )[0];
 }
 
-export async function dbUpdateProviderKey(
-  id: string,
-  organizationId: string,
-  providerKey: Partial<LlmProviderKeyModel>,
-) {
+export async function dbUpdateProviderKey(id: string, providerKey: Partial<LlmProviderKeyModel>) {
   return (
     await db
       .update(llmProviderKeyTable)
@@ -77,21 +62,17 @@ export async function dbUpdateProviderKey(
         ...providerKey,
         ...(providerKey.name ? { name: providerKey.name.toLowerCase() } : {}),
       })
-      .where(
-        and(eq(llmProviderKeyTable.id, id), eq(llmProviderKeyTable.organizationId, organizationId)),
-      )
+      .where(eq(llmProviderKeyTable.id, id))
       .returning()
   )[0];
 }
 
-export async function dbDeleteProviderKey(id: string, organizationId: string): Promise<boolean> {
+export async function dbDeleteProviderKey(id: string): Promise<boolean> {
   return db.transaction(async (tx) => {
     const [providerKey] = await tx
       .select({ id: llmProviderKeyTable.id })
       .from(llmProviderKeyTable)
-      .where(
-        and(eq(llmProviderKeyTable.id, id), eq(llmProviderKeyTable.organizationId, organizationId)),
-      )
+      .where(eq(llmProviderKeyTable.id, id))
       .limit(1);
     if (!providerKey) return false;
 
@@ -105,33 +86,23 @@ export async function dbDeleteProviderKey(id: string, organizationId: string): P
 
 export async function dbReplaceProviderKeyModelMappings({
   providerKeyId,
-  organizationId,
   models,
 }: {
   providerKeyId: string;
-  organizationId: string;
   models: Array<{ modelId: string; upstreamModelName: string }>;
 }) {
   await db.transaction(async (tx) => {
     const [providerKey] = await tx
       .select({ id: llmProviderKeyTable.id })
       .from(llmProviderKeyTable)
-      .where(
-        and(
-          eq(llmProviderKeyTable.id, providerKeyId),
-          eq(llmProviderKeyTable.organizationId, organizationId),
-        ),
-      )
+      .where(eq(llmProviderKeyTable.id, providerKeyId))
       .limit(1);
     if (!providerKey) throw new Error('Provider key not found');
 
-    const organizationModels = await tx
-      .select({ id: llmModelTable.id })
-      .from(llmModelTable)
-      .where(eq(llmModelTable.organizationId, organizationId));
-    const organizationModelIds = new Set(organizationModels.map(({ id }) => id));
-    if (models.some(({ modelId }) => !organizationModelIds.has(modelId))) {
-      throw new Error('Provider keys can only be assigned to models in the same organization');
+    const existingModels = await tx.select({ id: llmModelTable.id }).from(llmModelTable);
+    const existingModelIds = new Set(existingModels.map(({ id }) => id));
+    if (models.some(({ modelId }) => !existingModelIds.has(modelId))) {
+      throw new Error('Provider keys can only be assigned to existing models');
     }
 
     await tx
@@ -151,28 +122,25 @@ export async function dbReplaceProviderKeyModelMappings({
 
 export async function dbReplaceModelProviderKeyMappings({
   modelId,
-  organizationId,
   providerKeys,
 }: {
   modelId: string;
-  organizationId: string;
   providerKeys: Array<{ providerKeyId: string; upstreamModelName: string }>;
 }) {
   await db.transaction(async (tx) => {
     const [model] = await tx
       .select({ id: llmModelTable.id })
       .from(llmModelTable)
-      .where(and(eq(llmModelTable.id, modelId), eq(llmModelTable.organizationId, organizationId)))
+      .where(eq(llmModelTable.id, modelId))
       .limit(1);
     if (!model) throw new Error('Model not found');
 
-    const organizationProviderKeys = await tx
+    const existingProviderKeys = await tx
       .select({ id: llmProviderKeyTable.id })
-      .from(llmProviderKeyTable)
-      .where(eq(llmProviderKeyTable.organizationId, organizationId));
-    const providerKeyIds = new Set(organizationProviderKeys.map(({ id }) => id));
+      .from(llmProviderKeyTable);
+    const providerKeyIds = new Set(existingProviderKeys.map(({ id }) => id));
     if (providerKeys.some(({ providerKeyId }) => !providerKeyIds.has(providerKeyId))) {
-      throw new Error('Models can only be assigned to provider keys in the same organization');
+      throw new Error('Models can only be assigned to existing provider keys');
     }
 
     await tx

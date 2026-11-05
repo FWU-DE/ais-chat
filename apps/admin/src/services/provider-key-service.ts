@@ -1,18 +1,17 @@
 import {
   dbCreateProviderKey,
   dbDeleteProviderKey,
-  dbGetOrganizationById,
-  dbGetProviderKeysWithModelsByOrganizationId,
+  dbGetAllProviderKeysWithModels,
   dbUpdateProviderKey,
 } from '@ais-chat/api-database';
 import { llmModelSettingsSchema, isLlmProvider } from '@ais-chat/api-database/llm-model';
 import { logInfo } from '@shared/logging';
 import type { SaveProviderKey } from '@/types/provider-key';
-import { syncBifrostProvidersForOrganizationOrThrow } from './bifrost-provider-sync-service';
+import { syncBifrostProvidersOrThrow } from './bifrost-provider-sync-service';
 import { runDeleteOrThrowError } from '@/utils/run-delete-or-throw-error';
 
-export async function getProviderKeys(organizationId: string) {
-  return dbGetProviderKeysWithModelsByOrganizationId(organizationId);
+export async function getProviderKeys() {
+  return dbGetAllProviderKeysWithModels();
 }
 
 function parseSettings(provider: string, value: string) {
@@ -24,12 +23,8 @@ function parseSettings(provider: string, value: string) {
   return { ...settings, baseUrl: new URL(settings.baseUrl).origin };
 }
 
-export async function createProviderKey(organizationId: string, data: SaveProviderKey) {
-  const organization = await dbGetOrganizationById(organizationId);
-  if (!organization) throw new Error('Organization not found');
-
+export async function createProviderKey(data: SaveProviderKey) {
   const providerKey = await dbCreateProviderKey({
-    organizationId,
     name: data.name,
     provider: data.provider,
     settings: parseSettings(data.provider, data.settings),
@@ -38,25 +33,18 @@ export async function createProviderKey(organizationId: string, data: SaveProvid
   });
   if (!providerKey) throw new Error('Failed to create provider key');
 
-  await syncBifrostProvidersForOrganizationOrThrow(organizationId);
-  logInfo('Provider key was created successfully', {
-    organizationId,
-    providerKeyId: providerKey.id,
-  });
+  await syncBifrostProvidersOrThrow();
+  logInfo('Provider key was created successfully', { providerKeyId: providerKey.id });
   return providerKey;
 }
 
-export async function updateProviderKey(
-  organizationId: string,
-  providerKeyId: string,
-  data: SaveProviderKey,
-) {
-  const providerKeys = await getProviderKeys(organizationId);
+export async function updateProviderKey(providerKeyId: string, data: SaveProviderKey) {
+  const providerKeys = await getProviderKeys();
   if (!providerKeys.some(({ id }) => id === providerKeyId)) {
     throw new Error('Provider key not found');
   }
 
-  const providerKey = await dbUpdateProviderKey(providerKeyId, organizationId, {
+  const providerKey = await dbUpdateProviderKey(providerKeyId, {
     name: data.name,
     provider: data.provider,
     settings: parseSettings(data.provider, data.settings),
@@ -65,18 +53,18 @@ export async function updateProviderKey(
   });
   if (!providerKey) throw new Error('Failed to update provider key');
 
-  await syncBifrostProvidersForOrganizationOrThrow(organizationId);
-  logInfo('Provider key was updated successfully', { organizationId, providerKeyId });
+  await syncBifrostProvidersOrThrow();
+  logInfo('Provider key was updated successfully', { providerKeyId });
   return providerKey;
 }
 
-export async function deleteProviderKey(organizationId: string, providerKeyId: string) {
+export async function deleteProviderKey(providerKeyId: string) {
   const deleted = await runDeleteOrThrowError(
-    () => dbDeleteProviderKey(providerKeyId, organizationId),
+    () => dbDeleteProviderKey(providerKeyId),
     'Provider-Key kann nicht gelöscht werden, da noch Daten damit verknüpft sind.',
   );
   if (!deleted) throw new Error('Provider key not found');
 
-  await syncBifrostProvidersForOrganizationOrThrow(organizationId);
-  logInfo('Provider key was deleted successfully', { organizationId, providerKeyId });
+  await syncBifrostProvidersOrThrow();
+  logInfo('Provider key was deleted successfully', { providerKeyId });
 }
