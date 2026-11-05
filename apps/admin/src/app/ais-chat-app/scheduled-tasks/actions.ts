@@ -22,16 +22,6 @@ class TaskError extends BusinessError {
 async function runCleanup(input: z.infer<typeof cleanupInputSchema>) {
   const { deleteUnusedS3Files } = cleanupInputSchema.parse(input);
 
-  let deletedConversations;
-  try {
-    deletedConversations = await deleteOutdatedConversations({ deleteUnusedS3Files });
-  } catch (error) {
-    logError('Cleanup step deleteOutdatedConversations failed', error);
-    throw new TaskError(
-      `Schritt "deleteOutdatedConversations" ist fehlgeschlagen: ${getErrorMessage(error)}.`,
-    );
-  }
-
   let cleanedResources;
   try {
     cleanedResources = await cleanupResources();
@@ -45,6 +35,16 @@ async function runCleanup(input: z.infer<typeof cleanupInputSchema>) {
   if (cleanedResources.failedSteps.length > 0) {
     const steps = cleanedResources.failedSteps.map(({ step }) => `"${step}"`).join(', ');
     throw new TaskError(`Schritte ${steps} sind fehlgeschlagen.`);
+  }
+
+  let deletedConversations;
+  try {
+    deletedConversations = await deleteOutdatedConversations({ deleteUnusedS3Files });
+  } catch (error) {
+    logError('Cleanup step deleteOutdatedConversations failed', error);
+    throw new TaskError(
+      `Schritt "deleteOutdatedConversations" ist fehlgeschlagen: ${getErrorMessage(error)}.`,
+    );
   }
 
   return {

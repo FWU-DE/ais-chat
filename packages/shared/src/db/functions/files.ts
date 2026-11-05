@@ -512,6 +512,8 @@ export async function dbDeleteDanglingFiles() {
           isNull(CharacterFileMapping.fileId),
           isNull(AssistantFileMapping.fileId),
           isNull(LearningScenarioFileMapping.fileId),
+          // shared-chat uploads (userId null + metadata set) are cleaned up by cleanupExpiredSharedChatFiles
+          or(isNotNull(fileTable.userId), isNull(fileTable.metadata)),
         ),
       );
     const fileIdsToDelete = fileIds.map((f) => f.fileId);
