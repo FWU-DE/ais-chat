@@ -320,9 +320,6 @@ describe('sendLearningScenarioMessage', () => {
     expect(mocks.combineSharedRelatedFilesMock).toHaveBeenCalledWith({
       relatedFileEntities: [],
       fileIds: ['file-1', 'file-2'],
-      inviteCode: 'invite-code',
-      entityType: 'learningScenario',
-      entityId: learningScenario.id,
       sharedSessionId: 'session-1',
       userMessageId: 'message-1',
     });

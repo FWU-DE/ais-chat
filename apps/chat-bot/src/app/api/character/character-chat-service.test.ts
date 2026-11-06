@@ -319,9 +319,6 @@ describe('sendCharacterMessage', () => {
     expect(mocks.combineSharedRelatedFilesMock).toHaveBeenCalledWith({
       relatedFileEntities: [],
       fileIds: ['file-1', 'file-2'],
-      inviteCode: 'invite-code',
-      entityType: 'character',
-      entityId: character.id,
       sharedSessionId: 'session-1',
       userMessageId: 'message-1',
     });

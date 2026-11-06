@@ -92,7 +92,6 @@ describe('uploadSharedChatFile', () => {
       inviteCode: 'invite',
       entityType: 'character',
       entityId: 'character-1',
-      sharedSessionId: 'session-1',
     });
 
     expect(fileId).toBe('file_abc123');
@@ -107,12 +106,7 @@ describe('uploadSharedChatFile', () => {
       expect.objectContaining({
         id: 'file_abc123',
         userId: null,
-        metadata: expect.objectContaining({
-          inviteCode: 'invite',
-          entityType: 'character',
-          entityId: 'character-1',
-          sessionId: 'session-1',
-        }),
+        metadata: { width: 10, height: 10 },
       }),
       [],
     );
@@ -135,7 +129,6 @@ describe('uploadSharedChatFile', () => {
       inviteCode: 'invite',
       entityType: 'learningScenario',
       entityId: 'learning-scenario-1',
-      sharedSessionId: 'session-1',
     });
 
     expect(mocks.fileExtractionXbergMock).toHaveBeenCalled();
@@ -149,12 +142,7 @@ describe('uploadSharedChatFile', () => {
       expect.objectContaining({
         id: 'file_abc123',
         userId: null,
-        metadata: expect.objectContaining({
-          inviteCode: 'invite',
-          entityType: 'learningScenario',
-          entityId: 'learning-scenario-1',
-          sessionId: 'session-1',
-        }),
+        metadata: {},
       }),
       expect.any(Array),
     );
@@ -175,7 +163,6 @@ describe('uploadSharedChatFile', () => {
         inviteCode: 'invite',
         entityType: 'character',
         entityId: 'character-1',
-        sharedSessionId: 'session-1',
       }),
     ).rejects.toThrow(InvalidArgumentError);
 
@@ -197,7 +184,6 @@ describe('uploadSharedChatFile', () => {
         inviteCode: 'invite',
         entityType: 'character',
         entityId: 'character-1',
-        sharedSessionId: 'session-1',
       }),
     ).rejects.toThrow(InvalidArgumentError);
 
