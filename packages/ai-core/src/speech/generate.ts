@@ -1,6 +1,6 @@
 import { AiGenerationError } from '../errors';
 import { getSpeechModelById } from '../models';
-import { constructGoogleSpeechGenerationFn } from './providers/google';
+import { getSpeechGenerationFn } from './providers';
 import type { SpeechResponse } from './types';
 
 const SPEECH_TIMEOUT_MS = 30_000;
@@ -17,7 +17,7 @@ export async function generateSpeechById({
   abortSignal?: AbortSignal;
 }): Promise<SpeechResponse> {
   const model = await getSpeechModelById(modelId);
-  const generateSpeech = constructGoogleSpeechGenerationFn(model);
+  const generateSpeech = getSpeechGenerationFn(model);
   const timeoutSignal = AbortSignal.timeout(SPEECH_TIMEOUT_MS);
   const abortSignal = externalAbortSignal
     ? AbortSignal.any([externalAbortSignal, timeoutSignal])
