@@ -1057,10 +1057,6 @@ export const sharedChatConversationTable = pgTable(
     entityType: text('entity_type').$type<'character' | 'learningScenario'>().notNull(),
     shareId: uuid('share_id').notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
-      .defaultNow()
-      .notNull()
-      .$onUpdateFn(() => new Date()),
   },
   (table) => [
     check(

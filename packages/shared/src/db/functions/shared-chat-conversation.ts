@@ -15,10 +15,10 @@ async function lockSharedChatConversation(
   conversationId: string,
 ): Promise<void> {
   const [conversation] = await tx
-    .update(sharedChatConversationTable)
-    .set({ updatedAt: new Date() })
+    .select({ id: sharedChatConversationTable.id })
+    .from(sharedChatConversationTable)
     .where(eq(sharedChatConversationTable.id, conversationId))
-    .returning({ id: sharedChatConversationTable.id });
+    .for('update');
 
   if (conversation === undefined) {
     throw new Error('Shared chat conversation no longer exists');
