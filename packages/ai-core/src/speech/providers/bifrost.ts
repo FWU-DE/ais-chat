@@ -6,18 +6,12 @@ import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import {
   type AiModel,
   MP3_MIME_TYPE,
-  PCM_STREAM_AUDIO_FORMAT,
   type SpeechGenerationFn,
   type SpeechStreamGenerationFn,
   type SpeechUsage,
 } from '../types';
 
-/**
- * Azure AI Speech synthesizes 24 kHz 16-bit mono PCM for `response_format: 'pcm'`, which is
- * exactly `PCM_STREAM_AUDIO_FORMAT`, so streamed chunks need no conversion downstream.
- */
-const STREAM_RESPONSE_FORMAT = 'pcm';
-const NON_STREAM_RESPONSE_FORMAT = 'mp3';
+const RESPONSE_FORMAT = 'mp3';
 
 function createBifrostClient(model: AiModel): { client: OpenAI; modelName: string } {
   if (model.provider !== 'bifrost') {
@@ -49,7 +43,7 @@ type BifrostSpeechUsage = {
 
 type BifrostSpeechEvent = {
   type?: string;
-  /** Base64-encoded audio in the requested `response_format`. */
+  /** Base64-encoded MP3 audio. */
   audio?: string;
   usage?: BifrostSpeechUsage;
 };
@@ -113,14 +107,12 @@ async function requestSpeechStream({
   modelName,
   text,
   voice,
-  responseFormat,
   abortSignal,
 }: {
   client: OpenAI;
   modelName: string;
   text: string;
   voice: string;
-  responseFormat: typeof STREAM_RESPONSE_FORMAT | typeof NON_STREAM_RESPONSE_FORMAT;
   abortSignal: AbortSignal;
 }): Promise<ReadableStream<Uint8Array>> {
   let response: Response;
@@ -130,7 +122,7 @@ async function requestSpeechStream({
         model: modelName,
         voice,
         input: text,
-        response_format: responseFormat,
+        response_format: RESPONSE_FORMAT,
         stream_format: 'sse',
       },
       { signal: abortSignal },
@@ -157,7 +149,6 @@ export function constructBifrostSpeechGenerationFn(model: AiModel): SpeechGenera
       modelName,
       text,
       voice,
-      responseFormat: NON_STREAM_RESPONSE_FORMAT,
       abortSignal,
     });
 
@@ -189,7 +180,6 @@ export function constructBifrostStreamingSpeechGenerationFn(
       modelName,
       text,
       voice,
-      responseFormat: STREAM_RESPONSE_FORMAT,
       abortSignal,
     });
 
@@ -221,6 +211,6 @@ export function constructBifrostStreamingSpeechGenerationFn(
       }
     }
 
-    return { chunks: readChunks(), usage, format: PCM_STREAM_AUDIO_FORMAT };
+    return { chunks: readChunks(), usage, mimeType: MP3_MIME_TYPE };
   };
 }

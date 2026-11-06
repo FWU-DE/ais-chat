@@ -2,7 +2,7 @@ import { useTranslations } from 'next-intl';
 import React from 'react';
 
 import { useToast } from '@/components/common/toast';
-import { PcmStreamPlayer } from '@/utils/audio/pcm-stream-player';
+import { Mp3StreamPlayer } from '@/utils/audio/mp3-stream-player';
 import { readableStreamToAsyncIterable } from '@/utils/audio/readable-stream-to-async-iterable';
 
 import { useAudioPlaybackCoordinator } from './audio-playback-coordinator';
@@ -11,7 +11,7 @@ import { GenerateSpeechStreamFn } from './types';
 export type AudioPlayerStatus = 'idle' | 'loading' | 'playing' | 'paused';
 
 /**
- * Drives a `PcmStreamPlayer` from React, exposing play/pause/resume controls and status.
+ * Drives an `Mp3StreamPlayer` from React, exposing play/pause/resume controls and status.
  * Starting or resuming playback pauses all other `AudioPlayer` instances registered with the
  * nearest `AudioPlaybackCoordinatorProvider`, keeping their state and position intact.
  */
@@ -27,7 +27,7 @@ export function useAudioStream(
   const [duration, setDuration] = React.useState<number | null>(null);
   const [currentTime, setCurrentTime] = React.useState(0);
   const [playbackRate, setPlaybackRateState] = React.useState(1);
-  const playerRef = React.useRef<PcmStreamPlayer | null>(null);
+  const playerRef = React.useRef<Mp3StreamPlayer | null>(null);
   const abortControllerRef = React.useRef<AbortController | null>(null);
 
   React.useEffect(() => {
@@ -38,7 +38,7 @@ export function useAudioStream(
     };
   }, []);
 
-  // Web Audio has no time-update event, so the playback position is polled while playing.
+  // `timeupdate` only fires a few times per second, so the position is polled while playing.
   React.useEffect(() => {
     if (status !== 'playing') {
       return;
@@ -67,9 +67,9 @@ export function useAudioStream(
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
-      // The AudioContext must be created and unlocked synchronously within the user gesture
-      // (click handler), before any `await`, otherwise browsers like Safari leave it suspended.
-      const player = new PcmStreamPlayer({
+      // The audio element must be created and unlocked synchronously within the user gesture
+      // (click handler), before any `await`, otherwise browsers like Safari block playback.
+      const player = new Mp3StreamPlayer({
         onStateChange: (next) => {
           if (next === 'ended' || next === 'error') {
             setStatus('idle');
@@ -85,10 +85,10 @@ export function useAudioStream(
         },
         onDurationKnown: setDuration,
       });
-      player.unlockAudioContext();
       playerRef.current = player;
 
       try {
+        player.unlockPlayback();
         const body = await generateSpeechStreamFn(text, isInitialMessage, {
           signal: abortController.signal,
         });

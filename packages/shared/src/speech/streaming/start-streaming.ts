@@ -22,7 +22,7 @@ export const startStream = async (
       ? params.voice
       : firstVoice.name;
 
-  const { chunks, usage, format } = await streamSpeechById({
+  const { chunks, usage, mimeType } = await streamSpeechById({
     modelId: model.id,
     text: params.input,
     voice: selectedVoice,
@@ -31,8 +31,7 @@ export const startStream = async (
 
   const result: ChatSpeechStreamResult = {
     chunks,
-    contentType: 'application/octet-stream',
-    format,
+    contentType: mimeType,
     costsInCent: usage.then((resolvedUsage) => calculateSpeechCostsInCent(model, resolvedUsage)),
     modelId: model.id,
     provider: model.provider,
@@ -53,7 +52,6 @@ export const startStream = async (
   return {
     chunks: chunksWithUsageReporting(),
     contentType: result.contentType,
-    format: result.format,
     costsInCent: result.costsInCent,
     modelId: result.modelId,
     modelName: result.modelName,
