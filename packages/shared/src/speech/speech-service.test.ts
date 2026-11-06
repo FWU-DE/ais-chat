@@ -15,7 +15,7 @@ vi.mock('@shared/speech/speech-cache', () => ({
 }));
 vi.mock('@ais-chat/ai-core', () => ({
   generateSpeechById: mocks.generateSpeechById,
-  getSpeechMimeType: (provider: string) => (provider === 'google' ? 'audio/wav' : 'audio/mpeg'),
+  MP3_MIME_TYPE: 'audio/mpeg',
 }));
 vi.mock('@shared/db/functions/llm-model', () => ({ dbGetSpeechModel: mocks.dbGetSpeechModel }));
 
@@ -23,20 +23,20 @@ import { generateSpeechPreview } from './speech-service';
 
 const speechModel = {
   id: 'speech-model-id',
-  provider: 'google',
+  provider: 'bifrost',
   name: 'speech-model',
   priceMetadata: { type: 'speech', inputTextTokenPrice: 1, outputAudioTokenPrice: 1 },
   modelConfig: { voices: [{ name: 'alloy' }, { name: 'nova' }] },
 } as unknown as LlmModelSelectModel;
 
-const wavBuffer = Buffer.from('wav-data');
+const mp3Buffer = Buffer.from('mp3-data');
 
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.dbGetSpeechModel.mockResolvedValue(speechModel);
   mocks.generateSpeechById.mockResolvedValue({
-    audioBuffer: wavBuffer,
-    mimeType: 'audio/wav',
+    audioBuffer: mp3Buffer,
+    mimeType: 'audio/mpeg',
     usage: { inputTextTokens: 10, outputAudioTokens: 20 },
   });
 });
@@ -56,7 +56,7 @@ describe('generateSpeechPreview', () => {
 
     const result = await generateSpeechPreview({ text: 'Hello', voice: 'nova' });
 
-    expect(result).toEqual({ buffer: cachedBuffer, contentType: 'audio/wav' });
+    expect(result).toEqual({ buffer: cachedBuffer, contentType: 'audio/mpeg' });
     expect(mocks.generateSpeechById).not.toHaveBeenCalled();
     expect(mocks.setCachedSpeechPreview).not.toHaveBeenCalled();
   });
@@ -75,8 +75,8 @@ describe('generateSpeechPreview', () => {
       speechModel.id,
       'nova',
       'Hello',
-      wavBuffer,
+      mp3Buffer,
     );
-    expect(result).toEqual({ buffer: wavBuffer, contentType: 'audio/wav' });
+    expect(result).toEqual({ buffer: mp3Buffer, contentType: 'audio/mpeg' });
   });
 });
