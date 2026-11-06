@@ -90,7 +90,8 @@ export default function TasksView() {
           <CardDescription>
             Löscht Unterhaltungen nach Ablauf der Aufbewahrungszeit, leere Entitäten und alte
             Webseiten-Chunks. Die zweite Variante löscht zusätzlich ungenutzte S3-Dateien und sollte
-            nicht verwendet werden, wenn mehrere Deployments denselben S3-Speicher teilen.
+            nicht verwendet werden, wenn derselbe S3-Speicher von mehreren AIS.chat-Instanzen
+            genutzt wird (z. B. lokale Entwicklung mit geteiltem S3-Bucket).
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -52,8 +52,6 @@ export async function deleteOutdatedConversations({
 
 type FailedStep = { step: string; error: string };
 
-// Waits for all steps to settle, so one rejection doesn't leave the others running.
-// Failed steps are logged and returned instead of thrown, the results of the other steps are kept.
 async function settleAll<T extends Record<string, Promise<unknown>>>(
   steps: T,
 ): Promise<{ results: { [K in keyof T]?: Awaited<T[K]> }; failedSteps: FailedStep[] }> {
