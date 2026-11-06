@@ -2,9 +2,9 @@
 
 import { runServerAction } from '@shared/actions/run-server-action';
 import { checkInviteCodeForExport } from '@shared/conversation/conversation-service';
-import { loadSharedChatSessionMessages } from './shared-chat-session-service';
+import { loadSharedChatConversationMessages } from './shared-chat-conversation-service';
 
-export async function loadSharedChatSessionMessagesAction({
+export async function loadSharedChatConversationMessagesAction({
   sharedSessionId,
   inviteCode,
   entityType,
@@ -23,6 +23,9 @@ export async function loadSharedChatSessionMessagesAction({
   };
 
   return checkInviteCodeForExport({ inviteCode }).then(() =>
-    runServerAction('loadSharedChatSessionMessagesAction', loadSharedChatSessionMessages)(params),
+    runServerAction(
+      'loadSharedChatConversationMessagesAction',
+      loadSharedChatConversationMessages,
+    )(params),
   );
 }

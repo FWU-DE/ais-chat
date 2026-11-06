@@ -14,14 +14,14 @@ async function lockSharedChatConversation(
   tx: PgTransactionObject,
   conversationId: string,
 ): Promise<void> {
-  const [session] = await tx
+  const [conversation] = await tx
     .update(sharedChatConversationTable)
     .set({ updatedAt: new Date() })
     .where(eq(sharedChatConversationTable.id, conversationId))
     .returning({ id: sharedChatConversationTable.id });
 
-  if (session === undefined) {
-    throw new Error('Shared chat session no longer exists');
+  if (conversation === undefined) {
+    throw new Error('Shared chat conversation no longer exists');
   }
 }
 
@@ -32,7 +32,7 @@ async function getNextMessageOrderNumber(
   const [lastMessage] = await tx
     .select({ orderNumber: max(sharedChatConversationMessageTable.orderNumber) })
     .from(sharedChatConversationMessageTable)
-    .where(eq(sharedChatConversationMessageTable.sessionId, conversationId));
+    .where(eq(sharedChatConversationMessageTable.conversationId, conversationId));
 
   return (lastMessage?.orderNumber ?? -1) + 1;
 }
@@ -86,16 +86,20 @@ export async function dbGetOrCreateSharedChatConversation({
     .values({ id: conversationId, entityType, entityId })
     .onConflictDoNothing();
 
-  const [session] = await db
+  const [conversation] = await db
     .select()
     .from(sharedChatConversationTable)
     .where(eq(sharedChatConversationTable.id, conversationId));
 
-  if (session === undefined || session.entityType !== entityType || session.entityId !== entityId) {
+  if (
+    conversation === undefined ||
+    conversation.entityType !== entityType ||
+    conversation.entityId !== entityId
+  ) {
     return undefined;
   }
 
-  return session;
+  return conversation;
 }
 
 export async function dbGetSharedChatConversation({
@@ -108,23 +112,27 @@ export async function dbGetSharedChatConversation({
     return undefined;
   }
 
-  const [session] = await db
+  const [conversation] = await db
     .select()
     .from(sharedChatConversationTable)
     .where(eq(sharedChatConversationTable.id, conversationId));
 
-  if (session === undefined || session.entityType !== entityType || session.entityId !== entityId) {
+  if (
+    conversation === undefined ||
+    conversation.entityType !== entityType ||
+    conversation.entityId !== entityId
+  ) {
     return undefined;
   }
 
-  return session;
+  return conversation;
 }
 
 export async function dbGetSharedChatConversationMessages(conversationId: string) {
   return db
     .select()
     .from(sharedChatConversationMessageTable)
-    .where(eq(sharedChatConversationMessageTable.sessionId, conversationId))
+    .where(eq(sharedChatConversationMessageTable.conversationId, conversationId))
     .orderBy(sharedChatConversationMessageTable.orderNumber);
 }
 
@@ -150,20 +158,22 @@ export async function dbPrepareSharedChatConversation({
   return db.transaction(async (tx) => {
     await lockSharedChatConversation(tx, conversationId);
 
-    const sessionMessages = await tx
+    const conversationMessages = await tx
       .select()
       .from(sharedChatConversationMessageTable)
-      .where(eq(sharedChatConversationMessageTable.sessionId, conversationId))
+      .where(eq(sharedChatConversationMessageTable.conversationId, conversationId))
       .orderBy(sharedChatConversationMessageTable.orderNumber);
 
-    const existingUserMessage = sessionMessages.find((message) => message.id === userMessage.id);
+    const existingUserMessage = conversationMessages.find(
+      (message) => message.id === userMessage.id,
+    );
 
     if (existingUserMessage !== undefined) {
       await tx
         .delete(sharedChatConversationMessageTable)
         .where(
           and(
-            eq(sharedChatConversationMessageTable.sessionId, conversationId),
+            eq(sharedChatConversationMessageTable.conversationId, conversationId),
             gte(
               sharedChatConversationMessageTable.orderNumber,
               existingUserMessage.orderNumber + 1,
@@ -180,7 +190,7 @@ export async function dbPrepareSharedChatConversation({
     const userOrderNumber = await getNextMessageOrderNumber(tx, conversationId);
     await tx.insert(sharedChatConversationMessageTable).values({
       id: userMessage.id,
-      sessionId: conversationId,
+      conversationId: conversationId,
       content: userMessage.content,
       role: 'user',
       orderNumber: userOrderNumber,

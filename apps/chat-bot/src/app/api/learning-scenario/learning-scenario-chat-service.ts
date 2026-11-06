@@ -41,7 +41,7 @@ import {
 import { isWebSearchEnabledForEntity } from '../chat/websearch';
 import { ingestWebContent } from '../rag/ingestWebContent';
 import { combineSharedRelatedFiles } from '../shared-chat/shared-chat-file-service';
-import { prepareSharedChatSession } from '../shared-chat/shared-chat-session-service';
+import { prepareSharedChatConversation } from '../shared-chat/shared-chat-conversation-service';
 import { resolveAgentNameForTracing } from '../utils/agent-name';
 import { extractUrls } from '../utils/extract-urls';
 import { getChatModelSelection } from '../utils/model-circuit-breaker';
@@ -109,7 +109,7 @@ export async function sendLearningScenarioMessage({
     return createErrorResult(new SharedChatExpiredError());
   }
 
-  const sharedChatSession = await prepareSharedChatSession({
+  const sharedChatConversation = await prepareSharedChatConversation({
     sharedSessionId,
     inviteCode,
     entityType: 'learningScenario',
@@ -138,7 +138,7 @@ export async function sendLearningScenarioMessage({
   // Get related files and web sources
   const relatedFileEntities = await combineSharedRelatedFiles({
     relatedFileEntities: await dbGetRelatedLearningScenarioFiles(learningScenario.id),
-    fileIds: sharedChatSession.fileIds ?? fileIds,
+    fileIds: sharedChatConversation.fileIds ?? fileIds,
     inviteCode,
     entityType: 'learningScenario',
     entityId: learningScenarioId,
@@ -160,7 +160,7 @@ export async function sendLearningScenarioMessage({
 
   // Prune messages
   const prunedMessages = limitChatHistory(
-    annotateMessageAttachmentNames(sharedChatSession.messages, relatedFileEntities),
+    annotateMessageAttachmentNames(sharedChatConversation.messages, relatedFileEntities),
   );
 
   let messagesWithImages: ChatMessage[];
@@ -269,7 +269,7 @@ export async function sendLearningScenarioMessage({
       try {
         try {
           aiActivity.finish();
-          await sharedChatSession.persistResponse({
+          await sharedChatConversation.persistResponse({
             assistantMessageId,
             fullText,
             agentLoopMessages,

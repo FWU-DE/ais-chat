@@ -1060,7 +1060,7 @@ export const sharedChatConversationMessageTable = pgTable(
   'shared_chat_conversation_message',
   {
     id: text('id').notNull(),
-    sessionId: text('session_id').notNull(),
+    conversationId: text('conversation_id').notNull(),
     content: text('content').notNull(),
     role: conversationRoleEnum('role').notNull(),
     orderNumber: integer('order_number').notNull(),
@@ -1069,10 +1069,10 @@ export const sharedChatConversationMessageTable = pgTable(
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.sessionId, table.id] }),
-    uniqueIndex('shared_chat_message_order_unique').on(table.sessionId, table.orderNumber),
+    primaryKey({ columns: [table.conversationId, table.id] }),
+    uniqueIndex('shared_chat_message_order_unique').on(table.conversationId, table.orderNumber),
     foreignKey({
-      columns: [table.sessionId],
+      columns: [table.conversationId],
       foreignColumns: [sharedChatConversationTable.id],
       name: 'shared_chat_conversation_fk',
     }).onDelete('cascade'),
@@ -1626,7 +1626,7 @@ export const SharedChatConversationMessageFileMappingTable = pgTable(
     foreignKey({
       columns: [table.conversationId, table.conversationMessageId],
       foreignColumns: [
-        sharedChatConversationMessageTable.sessionId,
+        sharedChatConversationMessageTable.conversationId,
         sharedChatConversationMessageTable.id,
       ],
       name: 'shared_chat_message_file_message_fk',
