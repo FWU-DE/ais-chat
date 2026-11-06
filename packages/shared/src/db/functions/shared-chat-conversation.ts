@@ -1,41 +1,14 @@
-import { and, eq, exists, gte, inArray, lt, max, or } from 'drizzle-orm';
+import { and, eq, exists, gt, inArray, lt, or } from 'drizzle-orm';
 
 import { db } from '..';
 import {
+  InsertSharedChatConversationMessageModel,
   sharedCharacter,
   SharedChatConversationMessageFileMappingTable,
   sharedChatConversationMessageTable,
   sharedChatConversationTable,
   sharedLearningScenarioTable,
 } from '../schema';
-import type { PgTransactionObject } from '../types';
-
-async function lockSharedChatConversation(
-  tx: PgTransactionObject,
-  conversationId: string,
-): Promise<void> {
-  const [conversation] = await tx
-    .select({ id: sharedChatConversationTable.id })
-    .from(sharedChatConversationTable)
-    .where(eq(sharedChatConversationTable.id, conversationId))
-    .for('update');
-
-  if (conversation === undefined) {
-    throw new Error('Shared chat conversation no longer exists');
-  }
-}
-
-async function getNextMessageOrderNumber(
-  tx: PgTransactionObject,
-  conversationId: string,
-): Promise<number> {
-  const [lastMessage] = await tx
-    .select({ orderNumber: max(sharedChatConversationMessageTable.orderNumber) })
-    .from(sharedChatConversationMessageTable)
-    .where(eq(sharedChatConversationMessageTable.conversationId, conversationId));
-
-  return (lastMessage?.orderNumber ?? -1) + 1;
-}
 
 async function findShareId({
   inviteCode,
@@ -148,107 +121,61 @@ export async function dbGetSharedChatConversationMessageFileIds(conversationId: 
     .where(eq(SharedChatConversationMessageFileMappingTable.conversationId, conversationId));
 }
 
-export async function dbPrepareSharedChatConversation({
+export async function dbDeleteRegeneratedSharedChatMessages({
   conversationId,
-  userMessage,
-  fileIds,
+  orderNumber,
 }: {
   conversationId: string;
-  userMessage: { id: string; content: string };
-  fileIds?: string[];
+  orderNumber: number;
 }) {
-  return db.transaction(async (tx) => {
-    await lockSharedChatConversation(tx, conversationId);
-
-    const conversationMessages = await tx
-      .select()
-      .from(sharedChatConversationMessageTable)
-      .where(eq(sharedChatConversationMessageTable.conversationId, conversationId))
-      .orderBy(sharedChatConversationMessageTable.orderNumber);
-
-    const existingUserMessage = conversationMessages.find(
-      (message) => message.id === userMessage.id,
+  await db
+    .delete(sharedChatConversationMessageTable)
+    .where(
+      and(
+        eq(sharedChatConversationMessageTable.conversationId, conversationId),
+        gt(sharedChatConversationMessageTable.orderNumber, orderNumber),
+      ),
     );
+}
 
-    if (existingUserMessage !== undefined) {
-      await tx
-        .delete(sharedChatConversationMessageTable)
-        .where(
-          and(
-            eq(sharedChatConversationMessageTable.conversationId, conversationId),
-            gte(
-              sharedChatConversationMessageTable.orderNumber,
-              existingUserMessage.orderNumber + 1,
-            ),
-          ),
-        );
+export async function dbInsertSharedChatContent(
+  chatContent: InsertSharedChatConversationMessageModel,
+) {
+  const [insertedMessage] = await db
+    .insert(sharedChatConversationMessageTable)
+    .values(chatContent)
+    .onConflictDoNothing()
+    .returning();
 
-      return {
-        userOrderNumber: existingUserMessage.orderNumber,
-        isRetry: true,
-      };
-    }
-
-    const userOrderNumber = await getNextMessageOrderNumber(tx, conversationId);
-    await tx.insert(sharedChatConversationMessageTable).values({
-      id: userMessage.id,
-      conversationId: conversationId,
-      content: userMessage.content,
-      role: 'user',
-      orderNumber: userOrderNumber,
-      toolCalls: null,
-      toolCallId: null,
-    });
-    if (fileIds !== undefined && fileIds.length > 0) {
-      await tx.insert(SharedChatConversationMessageFileMappingTable).values(
-        fileIds.map((fileId) => ({
-          fileId,
-          conversationMessageId: userMessage.id,
-          conversationId,
-        })),
-      );
-    }
-
-    return {
-      userOrderNumber,
-      isRetry: false,
-    };
-  });
+  return insertedMessage;
 }
 
 function isUniqueViolation(error: unknown): boolean {
-  const code = (error as { code?: unknown; cause?: { code?: unknown } } | null)?.code;
+  const code = (error as { code?: unknown } | null)?.code;
   const causeCode = (error as { cause?: { code?: unknown } } | null)?.cause?.code;
   return code === '23505' || causeCode === '23505';
 }
 
 /**
- * Appends messages at the order numbers reserved when the turn was prepared.
- * Returns false if those positions were taken in the meantime (a retry or a newer turn),
- * in which case nothing is written.
+ * Inserts all messages or none. Returns an empty array if one of the reserved order numbers
+ * was taken in the meantime (a retry or a newer turn), so a stale completion writes nothing.
  */
-export async function dbAppendSharedChatConversationMessages({
-  firstOrderNumber,
-  messages,
-}: {
-  firstOrderNumber: number;
-  messages: Array<Omit<typeof sharedChatConversationMessageTable.$inferInsert, 'orderNumber'>>;
-}): Promise<boolean> {
-  if (messages.length === 0) {
-    return true;
+export async function dbInsertSharedChatContentBatch(
+  chatContents: InsertSharedChatConversationMessageModel[],
+) {
+  if (chatContents.length === 0) {
+    return [];
   }
 
   try {
-    await db.insert(sharedChatConversationMessageTable).values(
-      messages.map((message, index) => ({
-        ...message,
-        orderNumber: firstOrderNumber + index,
-      })),
-    );
-    return true;
+    return await db.insert(sharedChatConversationMessageTable).values(chatContents).returning({
+      id: sharedChatConversationMessageTable.id,
+      conversationId: sharedChatConversationMessageTable.conversationId,
+      orderNumber: sharedChatConversationMessageTable.orderNumber,
+    });
   } catch (error) {
     if (isUniqueViolation(error)) {
-      return false;
+      return [];
     }
     throw error;
   }

@@ -1089,6 +1089,9 @@ export const sharedChatConversationMessageTable = pgTable(
   ],
 );
 
+export type InsertSharedChatConversationMessageModel =
+  typeof sharedChatConversationMessageTable.$inferInsert;
+
 // Type for learning scenario with sharing data (from JOIN with sharedLearningScenario)
 const sharedLearningScenarioTransformedSchema = sharedLearningScenarioSelectSchema
   .omit({ id: true, learningScenarioId: true, userId: true })

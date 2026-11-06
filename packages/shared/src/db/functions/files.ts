@@ -54,6 +54,22 @@ export async function linkFilesToConversation({
     });
 }
 
+export async function linkFilesToSharedChatMessage({
+  conversationMessageId,
+  conversationId,
+  fileIds,
+}: {
+  conversationMessageId: string;
+  conversationId: string;
+  fileIds: string[];
+}) {
+  if (fileIds.length === 0) return;
+  await db
+    .insert(SharedChatConversationMessageFileMappingTable)
+    .values(fileIds.map((fileId) => ({ conversationMessageId, fileId, conversationId })))
+    .onConflictDoNothing();
+}
+
 export async function dbDetachFilesFromConversationMessages(messageIds: string[]) {
   if (messageIds.length === 0) return;
 
