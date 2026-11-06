@@ -443,6 +443,25 @@ describe('character-service', () => {
 
       expect(mockDbSet).toHaveBeenCalledWith({ id: characterId, hasLinkAccess: true, updatedAt });
     });
+
+    it('ignores a popularity value sent by the owner', async () => {
+      const userId = generateUUID();
+      const characterId = generateUUID();
+      const character = { id: characterId, userId, name: 'old', popularity: 3 };
+
+      vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
+      mockDbReturning.mockResolvedValue([{ ...character, name: 'new' }]);
+
+      await updateCharacter({
+        id: characterId,
+        user: { id: userId },
+        name: 'new',
+        popularity: 999,
+      } as never);
+
+      expect(mockDbSet).toHaveBeenCalledTimes(1);
+      expect(mockDbSet).toHaveBeenCalledWith({ id: characterId, name: 'new' });
+    });
   });
 
   describe('ForbiddenError scenarios - role restrictions', () => {
@@ -1515,6 +1534,7 @@ describe('character-service', () => {
         updatedAt: NOW,
         attachedLinks: [],
         suspended: false,
+        popularity: 0,
         isDeleted: false,
         ownerSchoolIds: [],
         specifications: null,

@@ -156,6 +156,23 @@ describe('template-service', () => {
       });
     });
 
+    it('should not inherit the popularity of the source', async () => {
+      (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue({
+        id: 'assistant-origin',
+        name: 'Original assistant',
+        popularity: 42,
+      } as never);
+      (dbUpsertAssistant as MockedFunction<typeof dbUpsertAssistant>).mockResolvedValue({
+        id: 'assistant-copy',
+      } as never);
+
+      await copyAssistant('assistant-origin', false, { id: 'user-1' });
+
+      expect(dbUpsertAssistant).toHaveBeenCalledWith({
+        assistant: expect.objectContaining({ popularity: 0 }),
+      });
+    });
+
     it('should use duplicateAssistantName when provided', async () => {
       const originalId = 'assistant-origin';
       const sourceAssistant = {
@@ -295,6 +312,21 @@ describe('template-service', () => {
           didacticCommentary: 'Character teaching notes',
         }),
       );
+    });
+
+    it('should not inherit the popularity of the source', async () => {
+      (dbGetCharacterById as MockedFunction<typeof dbGetCharacterById>).mockResolvedValue({
+        id: 'character-origin',
+        name: 'Original character',
+        popularity: 42,
+      } as never);
+      (dbCreateCharacter as MockedFunction<typeof dbCreateCharacter>).mockResolvedValue([
+        { id: 'character-copy' },
+      ] as never);
+
+      await copyCharacter('character-origin', false, { id: 'user-1' });
+
+      expect(dbCreateCharacter).toHaveBeenCalledWith(expect.objectContaining({ popularity: 0 }));
     });
 
     it('should use duplicateCharacterName when provided', async () => {
