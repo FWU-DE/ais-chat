@@ -802,6 +802,7 @@
     "sort-date-asc": "Älteste zuerst",
     "sort-name-asc": "Alphabetisch A-Z",
     "sort-name-desc": "Alphabetisch Z-A",
+    "sort-popularity": "Beliebteste zuerst",
     "hits-for": "{count} Treffer zu",
     "close": "Schließen",
     "chat": "Chatten"

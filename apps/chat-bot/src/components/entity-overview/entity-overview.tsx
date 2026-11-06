@@ -197,6 +197,7 @@ export default function EntityOverview({
                     <SelectItem value="date-asc">{t('sort-date-asc')}</SelectItem>
                     <SelectItem value="name-asc">{t('sort-name-asc')}</SelectItem>
                     <SelectItem value="name-desc">{t('sort-name-desc')}</SelectItem>
+                    <SelectItem value="popularity">{t('sort-popularity')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

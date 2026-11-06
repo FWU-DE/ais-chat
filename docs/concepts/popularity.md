@@ -26,6 +26,11 @@ Entities that dropped out of the window are reset to 0. Soft-deleted entities ar
 Code that writes to these tables must not set `popularity`, and copies of an entity start at 0. Any new bulk update must keep
 `updated_at`, otherwise the "newest first" order breaks.
 
+## Reading
+
+The overview actions return `popularity` with each entity. The client sorts by it descending, ties
+by `updatedAt` descending; the default order stays newest first.
+
 ## Scheduling
 
 The application schedules nothing itself. The scheduled jobs must be triggered externally:
