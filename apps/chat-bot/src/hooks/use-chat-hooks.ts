@@ -73,7 +73,7 @@ export function useCharacterChat(options: {
       return sendCharacterMessageAction({
         characterId,
         inviteCode,
-        messages,
+        messages: messages.slice(-1),
         fileIds,
         sharedSessionId,
       });
@@ -105,7 +105,7 @@ export function useLearningScenarioChat(options: {
       return sendLearningScenarioMessageAction({
         learningScenarioId,
         inviteCode,
-        messages,
+        messages: messages.slice(-1),
         fileIds,
         sharedSessionId,
       });
