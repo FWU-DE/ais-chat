@@ -8,6 +8,7 @@ import {
   type SpeechGenerationFn,
   type SpeechStreamGenerationFn,
   type SpeechUsage,
+  WAV_MIME_TYPE,
 } from '../types';
 
 function pcmToWav(pcm: Buffer): Buffer {
@@ -83,7 +84,7 @@ export function constructGoogleSpeechGenerationFn(model: AiModel): SpeechGenerat
       outputAudioTokens: usageMetadata?.candidatesTokenCount ?? 0,
     };
 
-    return { wavBuffer, usage };
+    return { audioBuffer: wavBuffer, mimeType: WAV_MIME_TYPE, usage };
   };
 }
 
