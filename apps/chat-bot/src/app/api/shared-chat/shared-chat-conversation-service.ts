@@ -1,13 +1,14 @@
 import type { Message as AiCoreMessage } from '@ais-chat/ai-core';
-import { dbGetFilesInIds } from '@shared/db/functions/files';
+import { dbGetFilesInIds, linkFilesToSharedChatMessage } from '@shared/db/functions/files';
 import {
-  dbAppendSharedChatConversationMessages,
+  dbDeleteRegeneratedSharedChatMessages,
   dbGetOrCreateSharedChatConversation,
   dbGetSharedChatConversation,
   dbGetSharedChatConversationMessageFileIds,
   dbGetSharedChatConversationMessages,
   dbGetSharedChatFileConversationIds,
-  dbPrepareSharedChatConversation,
+  dbInsertSharedChatContent,
+  dbInsertSharedChatContentBatch,
 } from '@shared/db/functions/shared-chat-conversation';
 import { ForbiddenError, InvalidArgumentError } from '@shared/error';
 import { verify } from '@shared/shared-chat';
@@ -126,23 +127,10 @@ export async function prepareSharedChatConversation({
     }
   }
 
-  const storedConversationMessages = await dbGetSharedChatConversationMessages(sharedSessionId);
   const storedFileIds = (await dbGetSharedChatConversationMessageFileIds(sharedSessionId)).map(
     (mapping) => mapping.fileId,
   );
-  const storedMessages: ChatMessage[] = storedConversationMessages.map((message) => ({
-    id: message.id,
-    role: message.role,
-    content: message.content,
-    toolCalls: message.toolCalls ?? undefined,
-    toolCallId: message.toolCallId ?? undefined,
-  }));
-  const repeatedMessageIndex = storedMessages.findIndex(
-    (message) => message.id === currentUserMessage.id,
-  );
-  const previousMessages =
-    repeatedMessageIndex === -1 ? storedMessages : storedMessages.slice(0, repeatedMessageIndex);
-  const { userOrderNumber } = await dbPrepareSharedChatConversation({
+  const { previousMessages, userMessageOrderNumber } = await prepareSharedChatMessageForProcessing({
     conversationId: sharedSessionId,
     userMessage: currentUserMessage,
     fileIds: currentFileIds,
@@ -185,10 +173,71 @@ export async function prepareSharedChatConversation({
         },
       ];
 
-      await dbAppendSharedChatConversationMessages({
-        firstOrderNumber: userOrderNumber + 1,
-        messages: messagesToPersist,
-      });
+      await dbInsertSharedChatContentBatch(
+        messagesToPersist.map((message, index) => ({
+          ...message,
+          orderNumber: userMessageOrderNumber + 1 + index,
+        })),
+      );
     },
   };
+}
+
+/**
+ * Handles a regeneration of an already stored user message, stores a new one and links its files.
+ */
+async function prepareSharedChatMessageForProcessing({
+  conversationId,
+  userMessage,
+  fileIds,
+}: {
+  conversationId: string;
+  userMessage: ChatMessage;
+  fileIds: string[];
+}): Promise<{ previousMessages: ChatMessage[]; userMessageOrderNumber: number }> {
+  const storedMessages = await dbGetSharedChatConversationMessages(conversationId);
+  const storedUserMessage = storedMessages.find(
+    (message) => message.id === userMessage.id && message.role === 'user',
+  );
+
+  let userMessageOrderNumber: number;
+  if (storedUserMessage !== undefined) {
+    userMessageOrderNumber = storedUserMessage.orderNumber;
+    await dbDeleteRegeneratedSharedChatMessages({
+      conversationId,
+      orderNumber: userMessageOrderNumber,
+    });
+  } else {
+    userMessageOrderNumber = (storedMessages.at(-1)?.orderNumber ?? -1) + 1;
+    const insertedMessage = await dbInsertSharedChatContent({
+      conversationId,
+      id: userMessage.id,
+      content: userMessage.content,
+      role: 'user',
+      orderNumber: userMessageOrderNumber,
+      toolCalls: null,
+      toolCallId: null,
+    });
+    if (insertedMessage === undefined) {
+      throw new InvalidArgumentError('The message could not be stored, please try again');
+    }
+  }
+
+  await linkFilesToSharedChatMessage({
+    conversationMessageId: userMessage.id,
+    conversationId,
+    fileIds,
+  });
+
+  const previousMessages: ChatMessage[] = storedMessages
+    .filter((message) => message.orderNumber < userMessageOrderNumber)
+    .map((message) => ({
+      id: message.id,
+      role: message.role,
+      content: message.content,
+      toolCalls: message.toolCalls ?? undefined,
+      toolCallId: message.toolCallId ?? undefined,
+    }));
+
+  return { previousMessages, userMessageOrderNumber };
 }
