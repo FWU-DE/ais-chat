@@ -1,4 +1,4 @@
-import { and, eq, exists, gt, inArray, lt, or } from 'drizzle-orm';
+import { and, eq, exists, gt, inArray, lt, notExists, or } from 'drizzle-orm';
 
 import { db } from '..';
 import {
@@ -112,13 +112,18 @@ export async function dbGetSharedChatConversationMessages(conversationId: string
 }
 
 export async function dbGetSharedChatConversationMessageFileIds(conversationId: string) {
-  return db
+  const mappings = await db
     .select({
       messageId: SharedChatConversationMessageFileMappingTable.conversationMessageId,
       fileId: SharedChatConversationMessageFileMappingTable.fileId,
     })
     .from(SharedChatConversationMessageFileMappingTable)
     .where(eq(SharedChatConversationMessageFileMappingTable.conversationId, conversationId));
+
+  // Files that are uploaded but not attached to a message yet have no message id
+  return mappings.flatMap(({ messageId, fileId }) =>
+    messageId === null ? [] : [{ messageId, fileId }],
+  );
 }
 
 export async function dbDeleteRegeneratedSharedChatMessages({
@@ -203,30 +208,48 @@ export async function dbDeleteExpiredSharedChatConversations(
   const expiredCondition = or(
     and(
       eq(sharedChatConversationTable.entityType, 'character'),
-      exists(
-        db
-          .select({ id: sharedCharacter.id })
-          .from(sharedCharacter)
-          .where(
-            and(
-              eq(sharedCharacter.id, sharedChatConversationTable.shareId),
-              lt(sharedCharacter.expiredAt, cutoffDate),
+      or(
+        exists(
+          db
+            .select({ id: sharedCharacter.id })
+            .from(sharedCharacter)
+            .where(
+              and(
+                eq(sharedCharacter.id, sharedChatConversationTable.shareId),
+                lt(sharedCharacter.expiredAt, cutoffDate),
+              ),
             ),
-          ),
+        ),
+        // The share was deleted together with its character
+        notExists(
+          db
+            .select({ id: sharedCharacter.id })
+            .from(sharedCharacter)
+            .where(eq(sharedCharacter.id, sharedChatConversationTable.shareId)),
+        ),
       ),
     ),
     and(
       eq(sharedChatConversationTable.entityType, 'learningScenario'),
-      exists(
-        db
-          .select({ id: sharedLearningScenarioTable.id })
-          .from(sharedLearningScenarioTable)
-          .where(
-            and(
-              eq(sharedLearningScenarioTable.id, sharedChatConversationTable.shareId),
-              lt(sharedLearningScenarioTable.expiredAt, cutoffDate),
+      or(
+        exists(
+          db
+            .select({ id: sharedLearningScenarioTable.id })
+            .from(sharedLearningScenarioTable)
+            .where(
+              and(
+                eq(sharedLearningScenarioTable.id, sharedChatConversationTable.shareId),
+                lt(sharedLearningScenarioTable.expiredAt, cutoffDate),
+              ),
             ),
-          ),
+        ),
+        // The share was deleted together with its learning scenario
+        notExists(
+          db
+            .select({ id: sharedLearningScenarioTable.id })
+            .from(sharedLearningScenarioTable)
+            .where(eq(sharedLearningScenarioTable.id, sharedChatConversationTable.shareId)),
+        ),
       ),
     ),
   );

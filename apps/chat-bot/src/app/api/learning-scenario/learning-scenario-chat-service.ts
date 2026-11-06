@@ -109,15 +109,6 @@ export async function sendLearningScenarioMessage({
     return createErrorResult(new SharedChatExpiredError());
   }
 
-  const sharedChatConversation = await prepareSharedChatConversation({
-    sharedSessionId,
-    inviteCode,
-    entityType: 'learningScenario',
-    entityId: learningScenario.id,
-    clientMessages: messages,
-    fileIds,
-  });
-
   // Check limits
   const [sharedChatLimitReached, tokenPointsLimitReached] = await Promise.all([
     sharedLearningScenarioChatHasReachedTokenPointsLimit({
@@ -134,6 +125,15 @@ export async function sendLearningScenarioMessage({
   if (sharedChatLimitReached || tokenPointsLimitReached) {
     return createErrorResult(new TokenPointsExceededError());
   }
+
+  const sharedChatConversation = await prepareSharedChatConversation({
+    sharedSessionId,
+    inviteCode,
+    entityType: 'learningScenario',
+    entityId: learningScenario.id,
+    clientMessages: messages,
+    fileIds,
+  });
 
   // Get related files and web sources
   const relatedFileEntities = await combineSharedRelatedFiles({

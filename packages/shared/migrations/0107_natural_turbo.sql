@@ -1,7 +1,7 @@
 CREATE TABLE "shared_chat_conversation_message_file_mapping" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"file_id" text NOT NULL,
-	"conversation_message_id" text NOT NULL,
+	"conversation_message_id" text,
 	"conversation_id" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "shared_chat_message_file_unique" UNIQUE("conversation_message_id","conversation_id","file_id")

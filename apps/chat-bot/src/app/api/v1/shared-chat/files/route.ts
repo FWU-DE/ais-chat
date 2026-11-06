@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
       inviteCode: parseResult.inviteCode,
       entityType: parseResult.entityType,
       entityId: parseResult.entityId,
+      sharedSessionId: parseResult.sharedSessionId,
     });
 
     return NextResponse.json({

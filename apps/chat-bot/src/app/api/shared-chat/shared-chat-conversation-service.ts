@@ -119,22 +119,24 @@ export async function prepareSharedChatConversation({
       throw new ForbiddenError('Not authorized to access this file');
     }
     verify.filesDoNotBelongToAnyUser(uploadedFiles);
-    const mappedElsewhere = (await dbGetSharedChatFileConversationIds(currentFileIds)).some(
-      (mapping) => mapping.conversationId !== sharedSessionId,
+    const mappedHere = new Set(
+      (await dbGetSharedChatFileConversationIds(currentFileIds))
+        .filter((mapping) => mapping.conversationId === sharedSessionId)
+        .map((mapping) => mapping.fileId),
     );
-    if (mappedElsewhere) {
+    if (currentFileIds.some((fileId) => !mappedHere.has(fileId))) {
       throw new ForbiddenError('Not authorized to access this file');
     }
   }
 
-  const storedFileIds = (await dbGetSharedChatConversationMessageFileIds(sharedSessionId)).map(
-    (mapping) => mapping.fileId,
-  );
   const { previousMessages, userMessageOrderNumber } = await prepareSharedChatMessageForProcessing({
     conversationId: sharedSessionId,
     userMessage: currentUserMessage,
     fileIds: currentFileIds,
   });
+  const storedFileIds = (await dbGetSharedChatConversationMessageFileIds(sharedSessionId)).map(
+    (mapping) => mapping.fileId,
+  );
 
   // The opener is not stored in the conversation; it always comes from the entity.
   const openingMessages: ChatMessage[] = initialMessage

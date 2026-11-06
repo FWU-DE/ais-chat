@@ -54,6 +54,17 @@ export async function linkFilesToConversation({
     });
 }
 
+/** Ties an uploaded file to a shared chat conversation before it is attached to a message. */
+export async function linkFileToSharedChatConversation({
+  fileId,
+  conversationId,
+}: {
+  fileId: string;
+  conversationId: string;
+}) {
+  await db.insert(SharedChatConversationMessageFileMappingTable).values({ fileId, conversationId });
+}
+
 export async function linkFilesToSharedChatMessage({
   conversationMessageId,
   conversationId,
@@ -65,9 +76,15 @@ export async function linkFilesToSharedChatMessage({
 }) {
   if (fileIds.length === 0) return;
   await db
-    .insert(SharedChatConversationMessageFileMappingTable)
-    .values(fileIds.map((fileId) => ({ conversationMessageId, fileId, conversationId })))
-    .onConflictDoNothing();
+    .update(SharedChatConversationMessageFileMappingTable)
+    .set({ conversationMessageId })
+    .where(
+      and(
+        eq(SharedChatConversationMessageFileMappingTable.conversationId, conversationId),
+        inArray(SharedChatConversationMessageFileMappingTable.fileId, fileIds),
+        isNull(SharedChatConversationMessageFileMappingTable.conversationMessageId),
+      ),
+    );
 }
 
 export async function dbDetachFilesFromConversationMessages(messageIds: string[]) {
