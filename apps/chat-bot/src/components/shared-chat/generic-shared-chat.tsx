@@ -18,7 +18,7 @@ import { SharedChatHeader } from '@/components/chat/shared-header-bar';
 import ExpiredChatModal from '@/components/common/expired-chat-modal';
 import { getErrorMessageByType } from '@/error/get-error-message-by-type';
 import { useAutoScroll } from '@/hooks/use-auto-scroll';
-import type { UseChatReturn } from '@/hooks/use-chat-hooks';
+import type { ChatMessage, UseChatReturn } from '@/hooks/use-chat-hooks';
 import { getFileExtension, isImageFile } from '@/utils/files/generic';
 import { getSharedChatImageUrl } from '@/utils/shared-chat-files';
 import {
@@ -97,6 +97,11 @@ export type SharedChatViewProps = {
   isSpeechModelEnabled: boolean;
   speechOnly: boolean;
   generateSpeechStreamFn: GenerateSpeechStreamFn;
+  /**
+   * Opening messages specified by the user in the entity. They are not stored with the conversation,
+   * so they are put in front of the restored history.
+   */
+  initialMessages?: ChatMessage[];
 };
 
 /**
@@ -123,6 +128,7 @@ export default function GenericSharedChat({
   isSpeechModelEnabled,
   speechOnly,
   generateSpeechStreamFn,
+  initialMessages = [],
 }: SharedChatViewProps) {
   const tCommon = useTranslations('common');
   const tCustomChat = useTranslations('custom-chat.shared');
@@ -165,16 +171,6 @@ export default function GenericSharedChat({
   const dialogStarted =
     messages.length > 0 || (dialogStartMode === 'explicit' && explicitDialogStarted);
 
-  function getMessageFileIds() {
-    return [
-      ...new Set(
-        Array.from(messageFileMapping.values())
-          .flatMap((messageFiles) => messageFiles.map((messageFile) => messageFile.id))
-          .filter((id): id is string => id.trim() !== ''),
-      ),
-    ];
-  }
-
   async function customHandleSubmit(e: SyntheticEvent) {
     e.preventDefault();
 
@@ -182,11 +178,13 @@ export default function GenericSharedChat({
       reactivateAutoScrolling();
 
       const currentFiles = Array.from(files);
-      const previousFileIds = getMessageFileIds();
-      const currentFileIds = currentFiles
-        .map(([, file]) => file.fileId)
-        .filter((id): id is string => id !== undefined && id.trim() !== '');
-      const fileIds = [...new Set([...previousFileIds, ...currentFileIds])];
+      const fileIds = [
+        ...new Set(
+          currentFiles
+            .map(([, file]) => file.fileId)
+            .filter((id): id is string => id !== undefined && id.trim() !== ''),
+        ),
+      ];
       const userMessageId = crypto.randomUUID();
 
       const messageFiles: MessageFileModel[] = currentFiles.reduce<MessageFileModel[]>(
@@ -283,7 +281,7 @@ export default function GenericSharedChat({
         }
 
         if (result.value.messages.length > 0) {
-          setMessages(result.value.messages);
+          setMessages([...initialMessages, ...result.value.messages]);
           recoveryPending.current = true;
         }
 
@@ -330,7 +328,7 @@ export default function GenericSharedChat({
     if (!chatUsable || messages.at(-1)?.role !== 'user') return;
 
     reactivateAutoScrolling();
-    void reload({ fileIds: getMessageFileIds(), sharedSessionId });
+    void reload({ sharedSessionId });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyLoading]);
 
@@ -342,7 +340,7 @@ export default function GenericSharedChat({
   }, [inviteCode, sharedSessionId, status]);
 
   function handleReload() {
-    void reload({ fileIds: getMessageFileIds(), sharedSessionId });
+    void reload({ sharedSessionId });
   }
 
   function handleRetry() {

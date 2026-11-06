@@ -40,8 +40,8 @@ import {
 } from '../chat/utils';
 import { isWebSearchEnabledForEntity } from '../chat/websearch';
 import { ingestWebContent } from '../rag/ingestWebContent';
-import { combineSharedRelatedFiles } from '../shared-chat/shared-chat-file-service';
 import { prepareSharedChatConversation } from '../shared-chat/shared-chat-conversation-service';
+import { combineSharedRelatedFiles } from '../shared-chat/shared-chat-file-service';
 import { resolveAgentNameForTracing } from '../utils/agent-name';
 import { extractUrls } from '../utils/extract-urls';
 import { getChatModelSelection } from '../utils/model-circuit-breaker';

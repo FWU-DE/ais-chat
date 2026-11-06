@@ -30,6 +30,7 @@ import {
   fileTable,
   LearningScenarioFileMapping,
   learningScenarioTable,
+  SharedChatConversationMessageFileMappingTable,
 } from '../schema';
 
 export async function linkFilesToConversation({
@@ -513,13 +514,17 @@ export async function dbDeleteDanglingFiles() {
       .leftJoin(CharacterFileMapping, eq(fileTable.id, CharacterFileMapping.fileId))
       .leftJoin(AssistantFileMapping, eq(fileTable.id, AssistantFileMapping.fileId))
       .leftJoin(LearningScenarioFileMapping, eq(fileTable.id, LearningScenarioFileMapping.fileId))
+      .leftJoin(
+        SharedChatConversationMessageFileMappingTable,
+        eq(fileTable.id, SharedChatConversationMessageFileMappingTable.fileId),
+      )
       .where(
         and(
           isNull(ConversationMessageFileMappingTable.fileId),
           isNull(CharacterFileMapping.fileId),
           isNull(AssistantFileMapping.fileId),
           isNull(LearningScenarioFileMapping.fileId),
-          not(isSharedChatFileCondition),
+          isNull(SharedChatConversationMessageFileMappingTable.fileId),
         ),
       );
     const fileIdsToDelete = fileIds.map((f) => f.fileId);

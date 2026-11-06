@@ -48,7 +48,7 @@ async function getNextMessageOrderNumber(
   return (lastMessage?.orderNumber ?? -1) + 1;
 }
 
-async function sharedChatInviteMatches({
+async function findShareId({
   inviteCode,
   entityType,
   entityId,
@@ -60,7 +60,7 @@ async function sharedChatInviteMatches({
       .where(
         and(eq(sharedCharacter.characterId, entityId), eq(sharedCharacter.inviteCode, inviteCode)),
       );
-    return share !== undefined;
+    return share?.id;
   }
 
   const [share] = await db
@@ -72,7 +72,7 @@ async function sharedChatInviteMatches({
         eq(sharedLearningScenarioTable.inviteCode, inviteCode),
       ),
     );
-  return share !== undefined;
+  return share?.id;
 }
 
 export type SharedChatConversationIdentity = {
@@ -88,13 +88,14 @@ export async function dbGetOrCreateSharedChatConversation({
   entityType,
   entityId,
 }: SharedChatConversationIdentity) {
-  if (!(await sharedChatInviteMatches({ inviteCode, entityType, entityId }))) {
+  const shareId = await findShareId({ inviteCode, entityType, entityId });
+  if (shareId === undefined) {
     return undefined;
   }
 
   await db
     .insert(sharedChatConversationTable)
-    .values({ id: conversationId, entityType, entityId })
+    .values({ id: conversationId, entityType, shareId })
     .onConflictDoNothing();
 
   const [conversation] = await db
@@ -105,7 +106,7 @@ export async function dbGetOrCreateSharedChatConversation({
   if (
     conversation === undefined ||
     conversation.entityType !== entityType ||
-    conversation.entityId !== entityId
+    conversation.shareId !== shareId
   ) {
     return undefined;
   }
@@ -119,7 +120,8 @@ export async function dbGetSharedChatConversation({
   entityType,
   entityId,
 }: SharedChatConversationIdentity) {
-  if (!(await sharedChatInviteMatches({ inviteCode, entityType, entityId }))) {
+  const shareId = await findShareId({ inviteCode, entityType, entityId });
+  if (shareId === undefined) {
     return undefined;
   }
 
@@ -131,7 +133,7 @@ export async function dbGetSharedChatConversation({
   if (
     conversation === undefined ||
     conversation.entityType !== entityType ||
-    conversation.entityId !== entityId
+    conversation.shareId !== shareId
   ) {
     return undefined;
   }
@@ -275,7 +277,7 @@ export async function dbDeleteExpiredSharedChatConversations(cutoffDate: Date): 
               .from(sharedCharacter)
               .where(
                 and(
-                  eq(sharedCharacter.characterId, sharedChatConversationTable.entityId),
+                  eq(sharedCharacter.id, sharedChatConversationTable.shareId),
                   lt(sharedCharacter.expiredAt, cutoffDate),
                 ),
               ),
@@ -289,10 +291,7 @@ export async function dbDeleteExpiredSharedChatConversations(cutoffDate: Date): 
               .from(sharedLearningScenarioTable)
               .where(
                 and(
-                  eq(
-                    sharedLearningScenarioTable.learningScenarioId,
-                    sharedChatConversationTable.entityId,
-                  ),
+                  eq(sharedLearningScenarioTable.id, sharedChatConversationTable.shareId),
                   lt(sharedLearningScenarioTable.expiredAt, cutoffDate),
                 ),
               ),

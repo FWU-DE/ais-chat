@@ -6,7 +6,6 @@ import { z } from 'zod';
 
 import { type ChatMessage, useCharacterChat } from '@/hooks/use-chat-hooks';
 import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
-import { loadSharedChat } from '@/utils/shared-chat-storage';
 import { reductionBreakpoint } from '@/utils/tailwind/layout';
 
 import { AssistantIcon } from '../chat/assistant-icon';
@@ -91,6 +90,7 @@ export default function CharacterSharedChat({
       headerT={t}
       entity={character}
       inviteCode={inviteCode}
+      initialMessages={initialMessages}
       sharedEntityType="character"
       avatarPictureUrl={avatarPictureUrl}
       chat={chat}

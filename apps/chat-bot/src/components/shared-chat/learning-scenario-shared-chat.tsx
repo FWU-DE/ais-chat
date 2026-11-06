@@ -6,7 +6,6 @@ import { z } from 'zod';
 
 import { type ChatMessage, useLearningScenarioChat } from '@/hooks/use-chat-hooks';
 import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
-import { loadSharedChat } from '@/utils/shared-chat-storage';
 
 import GenericSharedChat from './generic-shared-chat';
 

@@ -1,5 +1,5 @@
 {
-  "id": "53c2f228-ba5a-4535-b573-05706b6d18af",
+  "id": "8610cb16-1532-4c0a-8fa9-67c96d1fb2de",
   "prevId": "7ccb837c-eaaf-44cc-bf45-58f7ca11fae7",
   "version": "7",
   "dialect": "postgresql",
@@ -711,7 +711,7 @@
             "conversation_message_id"
           ],
           "columnsTo": [
-            "session_id",
+            "conversation_id",
             "id"
           ],
           "onDelete": "cascade",
@@ -3397,8 +3397,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "session_id": {
-          "name": "session_id",
+        "conversation_id": {
+          "name": "conversation_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -3446,7 +3446,7 @@
           "name": "shared_chat_message_order_unique",
           "columns": [
             {
-              "expression": "session_id",
+              "expression": "conversation_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3470,7 +3470,7 @@
           "tableFrom": "shared_chat_conversation_message",
           "tableTo": "shared_chat_conversation",
           "columnsFrom": [
-            "session_id"
+            "conversation_id"
           ],
           "columnsTo": [
             "id"
@@ -3480,10 +3480,10 @@
         }
       },
       "compositePrimaryKeys": {
-        "shared_chat_conversation_message_session_id_id_pk": {
-          "name": "shared_chat_conversation_message_session_id_id_pk",
+        "shared_chat_conversation_message_conversation_id_id_pk": {
+          "name": "shared_chat_conversation_message_conversation_id_id_pk",
           "columns": [
-            "session_id",
+            "conversation_id",
             "id"
           ]
         }
@@ -3509,11 +3509,18 @@
           "primaryKey": false,
           "notNull": true
         },
-        "entity_id": {
-          "name": "entity_id",
+        "share_id": {
+          "name": "share_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "generation": {
+          "name": "generation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "created_at": {
           "name": "created_at",

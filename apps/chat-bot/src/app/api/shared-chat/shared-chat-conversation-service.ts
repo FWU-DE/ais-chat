@@ -1,4 +1,3 @@
-import type { ChatMessage } from '@/types/chat';
 import type { Message as AiCoreMessage } from '@ais-chat/ai-core';
 import { dbGetFilesInIds } from '@shared/db/functions/files';
 import {
@@ -10,7 +9,10 @@ import {
   dbPrepareSharedChatConversation,
 } from '@shared/db/functions/shared-chat-conversation';
 import { ForbiddenError, InvalidArgumentError } from '@shared/error';
+import { verify } from '@shared/shared-chat';
 import { isToolRelatedMessage } from '@shared/utils/tool-related-message';
+
+import type { ChatMessage } from '@/types/chat';
 
 type SharedChatFile = { id: string; name: string; type: string; size: number };
 
@@ -43,7 +45,17 @@ export async function loadSharedChatConversationMessages({
   const messages = await dbGetSharedChatConversationMessages(conversation.id);
   const messageFileIds = await dbGetSharedChatConversationMessageFileIds(conversation.id);
   const fileIds = messageFileIds.map((mapping) => mapping.fileId);
-  const files = await dbGetFilesInIds([...new Set(fileIds)]);
+  const files = (await dbGetFilesInIds([...new Set(fileIds)])).filter(
+    (file) =>
+      file.userId === null &&
+      verify.sharedChatFileIsOwnedBySession({
+        metadata: file.metadata,
+        inviteCode,
+        entityType,
+        entityId,
+        sharedSessionId,
+      }),
+  );
   const filesById = new Map(
     files.map((file) => [
       file.id,
@@ -108,6 +120,22 @@ export async function prepareSharedChatConversation({
     throw new ForbiddenError('Not authorized to access this shared chat conversation');
   }
 
+  const currentFileIds = [...new Set(fileIds ?? [])];
+  if (currentFileIds.length > 0) {
+    const uploadedFiles = await dbGetFilesInIds(currentFileIds);
+    if (uploadedFiles.length !== currentFileIds.length) {
+      throw new ForbiddenError('Not authorized to access this file');
+    }
+    verify.filesDoNotBelongToAnyUser(uploadedFiles);
+    verify.sharedChatFileOwnershipBySession({
+      files: uploadedFiles,
+      inviteCode,
+      entityType,
+      entityId,
+      sharedSessionId,
+    });
+  }
+
   const storedConversationMessages = await dbGetSharedChatConversationMessages(sharedSessionId);
   const storedFileIds = (await dbGetSharedChatConversationMessageFileIds(sharedSessionId)).map(
     (mapping) => mapping.fileId,
@@ -127,18 +155,17 @@ export async function prepareSharedChatConversation({
   const { generation } = await dbPrepareSharedChatConversation({
     conversationId: sharedSessionId,
     userMessage: currentUserMessage,
-    fileIds,
+    fileIds: currentFileIds,
   });
-  const turnMessages: ChatMessage[] = [];
 
-  if (previousMessages.length === 0 && initialMessage) {
-    turnMessages.push({ id: 'initial-message', role: 'assistant', content: initialMessage });
-  }
-  turnMessages.push(currentUserMessage);
+  // The opener is not stored in the conversation; it always comes from the entity.
+  const openingMessages: ChatMessage[] = initialMessage
+    ? [{ id: 'initial-message', role: 'assistant', content: initialMessage }]
+    : [];
 
   return {
-    messages: [...previousMessages, ...turnMessages],
-    fileIds: [...new Set([...(fileIds ?? []), ...storedFileIds])],
+    messages: [...openingMessages, ...previousMessages, currentUserMessage],
+    fileIds: [...new Set([...currentFileIds, ...storedFileIds])],
     persistResponse: async ({
       assistantMessageId,
       fullText,
