@@ -272,10 +272,11 @@ export function useAisChat({
 
   const reload = useCallback(
     async (context?: ChatRequestContext) => {
-      if (!lastUserMessageRef.current) return;
-      const messageContent = lastUserMessageRef.current;
+      // Derived from the current messages, as the ref is only updated after a render commit.
+      const messageContent = lastUserMessage(messages) ?? lastUserMessageRef.current;
+      if (!messageContent) return;
 
-      const lastUserIndex = messages.findIndex((msg) => msg.id === lastUserMessageRef.current!.id);
+      const lastUserIndex = messages.findIndex((msg) => msg.id === messageContent.id);
 
       // Sadly this is needed, so we don't need to wait for a re-render between updating the messages and submitting
       // Otherwise, i'd use setMessages with a function update. (Also note: function updates to not allow you to update surrounding variables / it happens unreliably)

@@ -104,16 +104,6 @@ export async function sendCharacterMessage({
     return createErrorResult(new SharedChatExpiredError());
   }
 
-  const sharedChatConversation = await prepareSharedChatConversation({
-    sharedSessionId,
-    inviteCode,
-    entityType: 'character',
-    entityId: character.id,
-    initialMessage: character.initialMessage,
-    clientMessages: messages,
-    fileIds,
-  });
-
   // Check limits
   const [sharedChatLimitReached, tokenPointsLimitReached] = await Promise.all([
     sharedCharacterChatHasReachedTokenPointsLimit({
@@ -130,6 +120,16 @@ export async function sendCharacterMessage({
   if (sharedChatLimitReached || tokenPointsLimitReached) {
     return createErrorResult(new TokenPointsExceededError());
   }
+
+  const sharedChatConversation = await prepareSharedChatConversation({
+    sharedSessionId,
+    inviteCode,
+    entityType: 'character',
+    entityId: character.id,
+    initialMessage: character.initialMessage,
+    clientMessages: messages,
+    fileIds,
+  });
 
   // Get related files and web sources
   const relatedFileEntities = await combineSharedRelatedFiles({

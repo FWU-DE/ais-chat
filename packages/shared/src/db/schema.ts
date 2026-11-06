@@ -1605,7 +1605,8 @@ export const SharedChatConversationMessageFileMappingTable = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     fileId: text('file_id').notNull(),
-    conversationMessageId: text('conversation_message_id').notNull(),
+    // Null while the file is uploaded to the conversation but not yet attached to a message.
+    conversationMessageId: text('conversation_message_id'),
     conversationId: text('conversation_id').notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   },

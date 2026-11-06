@@ -10,13 +10,11 @@ export const sharedChatCommonRequestSchema = z.object({
   entityId: requiredNonEmptyString('entityId is required'),
 });
 
-export const sharedChatUploadFormSchema = sharedChatCommonRequestSchema
-  .omit({ sharedSessionId: true })
-  .extend({
-    file: z.custom<File>((value) => value instanceof File, {
-      error: 'Invalid or missing file in form data',
-    }),
-  });
+export const sharedChatUploadFormSchema = sharedChatCommonRequestSchema.extend({
+  file: z.custom<File>((value) => value instanceof File, {
+    error: 'Invalid or missing file in form data',
+  }),
+});
 
 export const sharedChatImageRequestSchema = sharedChatCommonRequestSchema.extend({
   fileId: requiredNonEmptyString('fileId is required'),
