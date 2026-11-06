@@ -20,8 +20,8 @@
     "@opentelemetry/exporter-metrics-otlp-http": "0.300.0",
     "@opentelemetry/resources": "3.0.0",
     "@opentelemetry/sdk-metrics": "3.0.0",
-    "@opentelemetry/semantic-conventions": "1.43.0",
-    "@sentry/core": "11.9.0",
+    "@opentelemetry/semantic-conventions": "1.44.0",
+    "@sentry/core": "11.10.0",
     "zod": "4.6.7"
   },
   "devDependencies": {
