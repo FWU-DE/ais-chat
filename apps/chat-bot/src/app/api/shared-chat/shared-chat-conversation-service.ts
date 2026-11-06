@@ -152,7 +152,7 @@ export async function prepareSharedChatConversation({
   );
   const previousMessages =
     repeatedMessageIndex === -1 ? storedMessages : storedMessages.slice(0, repeatedMessageIndex);
-  const { generation } = await dbPrepareSharedChatConversation({
+  const { userOrderNumber } = await dbPrepareSharedChatConversation({
     conversationId: sharedSessionId,
     userMessage: currentUserMessage,
     fileIds: currentFileIds,
@@ -196,8 +196,7 @@ export async function prepareSharedChatConversation({
       ];
 
       await dbAppendSharedChatConversationMessages({
-        conversationId: sharedSessionId,
-        expectedGeneration: generation,
+        firstOrderNumber: userOrderNumber + 1,
         messages: messagesToPersist,
       });
     },
