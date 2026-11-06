@@ -1,103 +1,26 @@
+import { dbDeleteFilesByIds } from '@shared/db/functions/files';
 import { dbDeleteExpiredSharedChatConversations } from '@shared/db/functions/shared-chat-conversation';
-import {
-  dbDeleteFilesByIds,
-  dbGetExpiredCharacterShares,
-  dbGetExpiredLearningScenarioShares,
-  dbGetSharedChatFileCandidates,
-} from '@shared/db/functions/shared-chat-files';
 import { deleteMessageAttachments } from '@shared/files/fileService';
-import { isSharedChatFileMetadata, SharedChatFileMetadata } from '@shared/shared-chat';
 import { addDays } from '@shared/utils/date';
 
 const EXPIRATION_OFFSET_IN_DAYS = -1;
 
-type SharedFileCandidate = {
-  id: string;
-  metadata: Pick<SharedChatFileMetadata, 'inviteCode' | 'entityType' | 'entityId'>;
-};
-
 /**
- * Cleans up files uploaded in shared chats whose linked shared entity expired more than one day ago.
+ * Deletes shared chat conversations whose share expired more than one day ago, together with
+ * the files attached to them (database rows, chunks and S3 objects).
  *
- * The function removes files and chunks from database, then deletes corresponding S3 objects.
+ * @returns The number of deleted files.
  */
 export async function cleanupExpiredSharedChatFiles(): Promise<number> {
   const cutoffDate = addDays(new Date(), EXPIRATION_OFFSET_IN_DAYS);
-  await dbDeleteExpiredSharedChatConversations(cutoffDate);
+  const { fileIds } = await dbDeleteExpiredSharedChatConversations(cutoffDate);
 
-  const maybeSharedFiles = await dbGetSharedChatFileCandidates();
-
-  const sharedFiles: SharedFileCandidate[] = maybeSharedFiles
-    .map((file) => {
-      if (isSharedChatFileMetadata(file.metadata)) {
-        return file;
-      }
-      return undefined;
-    })
-    .filter((file): file is SharedFileCandidate => file !== undefined);
-
-  if (sharedFiles.length === 0) {
+  if (fileIds.length === 0) {
     return 0;
   }
 
-  const characterInviteCodes = [
-    ...new Set(
-      sharedFiles
-        .filter((file) => file.metadata.entityType === 'character')
-        .map((file) => file.metadata.inviteCode),
-    ),
-  ];
+  await dbDeleteFilesByIds(fileIds);
+  await deleteMessageAttachments(fileIds);
 
-  const learningScenarioInviteCodes = [
-    ...new Set(
-      sharedFiles
-        .filter((file) => file.metadata.entityType === 'learningScenario')
-        .map((file) => file.metadata.inviteCode),
-    ),
-  ];
-
-  const [expiredCharacterShares, expiredLearningScenarioShares] = await Promise.all([
-    dbGetExpiredCharacterShares(characterInviteCodes, cutoffDate),
-    dbGetExpiredLearningScenarioShares(learningScenarioInviteCodes, cutoffDate),
-  ]);
-
-  const expiredCharacterKeys = new Set(
-    expiredCharacterShares.map((share) => `${share.inviteCode}:${share.entityId}`),
-  );
-  const expiredLearningScenarioKeys = new Set(
-    expiredLearningScenarioShares.map((share) => `${share.inviteCode}:${share.entityId}`),
-  );
-
-  const fileIdsToDelete = getExpiredSharedChatFileIds(
-    sharedFiles,
-    expiredCharacterKeys,
-    expiredLearningScenarioKeys,
-  );
-
-  if (fileIdsToDelete.length === 0) {
-    return 0;
-  }
-
-  await dbDeleteFilesByIds(fileIdsToDelete);
-  await deleteMessageAttachments(fileIdsToDelete);
-
-  return fileIdsToDelete.length;
-}
-
-function getExpiredSharedChatFileIds(
-  sharedFiles: SharedFileCandidate[],
-  expiredCharacterKeys: Set<string>,
-  expiredLearningScenarioKeys: Set<string>,
-) {
-  return sharedFiles
-    .filter((file) => {
-      const key = `${file.metadata.inviteCode}:${file.metadata.entityId}`;
-
-      if (file.metadata.entityType === 'character') {
-        return expiredCharacterKeys.has(key);
-      }
-
-      return expiredLearningScenarioKeys.has(key);
-    })
-    .map((file) => file.id);
+  return fileIds.length;
 }

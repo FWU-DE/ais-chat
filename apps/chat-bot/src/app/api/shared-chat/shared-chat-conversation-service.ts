@@ -6,6 +6,7 @@ import {
   dbGetSharedChatConversation,
   dbGetSharedChatConversationMessageFileIds,
   dbGetSharedChatConversationMessages,
+  dbGetSharedChatFileConversationIds,
   dbPrepareSharedChatConversation,
 } from '@shared/db/functions/shared-chat-conversation';
 import { ForbiddenError, InvalidArgumentError } from '@shared/error';
@@ -45,17 +46,7 @@ export async function loadSharedChatConversationMessages({
   const messages = await dbGetSharedChatConversationMessages(conversation.id);
   const messageFileIds = await dbGetSharedChatConversationMessageFileIds(conversation.id);
   const fileIds = messageFileIds.map((mapping) => mapping.fileId);
-  const files = (await dbGetFilesInIds([...new Set(fileIds)])).filter(
-    (file) =>
-      file.userId === null &&
-      verify.sharedChatFileIsOwnedBySession({
-        metadata: file.metadata,
-        inviteCode,
-        entityType,
-        entityId,
-        sharedSessionId,
-      }),
-  );
+  const files = await dbGetFilesInIds([...new Set(fileIds)]);
   const filesById = new Map(
     files.map((file) => [
       file.id,
@@ -127,13 +118,12 @@ export async function prepareSharedChatConversation({
       throw new ForbiddenError('Not authorized to access this file');
     }
     verify.filesDoNotBelongToAnyUser(uploadedFiles);
-    verify.sharedChatFileOwnershipBySession({
-      files: uploadedFiles,
-      inviteCode,
-      entityType,
-      entityId,
-      sharedSessionId,
-    });
+    const mappedElsewhere = (await dbGetSharedChatFileConversationIds(currentFileIds)).some(
+      (mapping) => mapping.conversationId !== sharedSessionId,
+    );
+    if (mappedElsewhere) {
+      throw new ForbiddenError('Not authorized to access this file');
+    }
   }
 
   const storedConversationMessages = await dbGetSharedChatConversationMessages(sharedSessionId);

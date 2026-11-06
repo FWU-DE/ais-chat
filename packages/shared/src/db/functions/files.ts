@@ -495,6 +495,11 @@ export async function dbDeleteFileAndDetachFromConversation(filesToDelete: strin
   });
 }
 
+export async function dbDeleteFilesByIds(ids: string[]) {
+  // chunks are deleted via delete cascade on files table
+  return db.delete(fileTable).where(inArray(fileTable.id, ids));
+}
+
 export async function dbDeleteDanglingFiles() {
   return await db.transaction(async (tx) => {
     const fileIds = await tx
