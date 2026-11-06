@@ -14,10 +14,9 @@ export const PCM_STREAM_AUDIO_FORMAT = {
 
 export type AudioFormat = typeof PCM_STREAM_AUDIO_FORMAT;
 
-export const WAV_MIME_TYPE = 'audio/wav';
 export const MP3_MIME_TYPE = 'audio/mpeg';
 
-export type SpeechMimeType = typeof WAV_MIME_TYPE | typeof MP3_MIME_TYPE;
+export type SpeechMimeType = typeof MP3_MIME_TYPE;
 
 export type SpeechUsage = {
   inputTextTokens: number;
