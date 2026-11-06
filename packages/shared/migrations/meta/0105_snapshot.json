@@ -1,5 +1,5 @@
 {
-  "id": "8610cb16-1532-4c0a-8fa9-67c96d1fb2de",
+  "id": "cf041c25-9de9-4aff-b3eb-e0236b26bbf1",
   "prevId": "7ccb837c-eaaf-44cc-bf45-58f7ca11fae7",
   "version": "7",
   "dialect": "postgresql",
@@ -3514,13 +3514,6 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
-        },
-        "generation": {
-          "name": "generation",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
         },
         "created_at": {
           "name": "created_at",

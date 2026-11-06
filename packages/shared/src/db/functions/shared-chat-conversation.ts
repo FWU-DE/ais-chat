@@ -1,4 +1,4 @@
-import { and, eq, exists, gte, lt, max, or, sql } from 'drizzle-orm';
+import { and, eq, exists, gte, lt, max, or } from 'drizzle-orm';
 
 import { db } from '..';
 import {
@@ -10,30 +10,19 @@ import {
 } from '../schema';
 import type { PgTransactionObject } from '../types';
 
-/**
- * Takes the row lock for the conversation and returns its current generation.
- * With `bumpGeneration`, the generation is incremented so that earlier in-flight
- * generations can no longer append their results.
- */
 async function lockSharedChatConversation(
   tx: PgTransactionObject,
   conversationId: string,
-  { bumpGeneration = false }: { bumpGeneration?: boolean } = {},
-): Promise<number> {
+): Promise<void> {
   const [conversation] = await tx
     .update(sharedChatConversationTable)
-    .set({
-      updatedAt: new Date(),
-      ...(bumpGeneration ? { generation: sql`${sharedChatConversationTable.generation} + 1` } : {}),
-    })
+    .set({ updatedAt: new Date() })
     .where(eq(sharedChatConversationTable.id, conversationId))
-    .returning({ generation: sharedChatConversationTable.generation });
+    .returning({ id: sharedChatConversationTable.id });
 
   if (conversation === undefined) {
     throw new Error('Shared chat conversation no longer exists');
   }
-
-  return conversation.generation;
 }
 
 async function getNextMessageOrderNumber(
@@ -169,9 +158,7 @@ export async function dbPrepareSharedChatConversation({
   fileIds?: string[];
 }) {
   return db.transaction(async (tx) => {
-    const generation = await lockSharedChatConversation(tx, conversationId, {
-      bumpGeneration: true,
-    });
+    await lockSharedChatConversation(tx, conversationId);
 
     const conversationMessages = await tx
       .select()
@@ -199,7 +186,6 @@ export async function dbPrepareSharedChatConversation({
       return {
         userOrderNumber: existingUserMessage.orderNumber,
         isRetry: true,
-        generation,
       };
     }
 
@@ -226,42 +212,46 @@ export async function dbPrepareSharedChatConversation({
     return {
       userOrderNumber,
       isRetry: false,
-      generation,
     };
   });
 }
 
+function isUniqueViolation(error: unknown): boolean {
+  const code = (error as { code?: unknown; cause?: { code?: unknown } } | null)?.code;
+  const causeCode = (error as { cause?: { code?: unknown } } | null)?.cause?.code;
+  return code === '23505' || causeCode === '23505';
+}
+
 /**
- * Appends messages unless a newer turn was prepared since `expectedGeneration` was issued.
- * Returns false if the completion was stale and nothing was written.
+ * Appends messages at the order numbers reserved when the turn was prepared.
+ * Returns false if those positions were taken in the meantime (a retry or a newer turn),
+ * in which case nothing is written.
  */
 export async function dbAppendSharedChatConversationMessages({
-  conversationId,
-  expectedGeneration,
+  firstOrderNumber,
   messages,
 }: {
-  conversationId: string;
-  expectedGeneration: number;
+  firstOrderNumber: number;
   messages: Array<Omit<typeof sharedChatConversationMessageTable.$inferInsert, 'orderNumber'>>;
 }): Promise<boolean> {
-  return db.transaction(async (tx) => {
-    const generation = await lockSharedChatConversation(tx, conversationId);
-    if (generation !== expectedGeneration) {
+  if (messages.length === 0) {
+    return true;
+  }
+
+  try {
+    await db.insert(sharedChatConversationMessageTable).values(
+      messages.map((message, index) => ({
+        ...message,
+        orderNumber: firstOrderNumber + index,
+      })),
+    );
+    return true;
+  } catch (error) {
+    if (isUniqueViolation(error)) {
       return false;
     }
-    const firstOrderNumber = await getNextMessageOrderNumber(tx, conversationId);
-
-    if (messages.length > 0) {
-      await tx.insert(sharedChatConversationMessageTable).values(
-        messages.map((message, index) => ({
-          ...message,
-          orderNumber: firstOrderNumber + index,
-        })),
-      );
-    }
-
-    return true;
-  });
+    throw error;
+  }
 }
 
 export async function dbDeleteExpiredSharedChatConversations(cutoffDate: Date): Promise<number> {

@@ -1042,8 +1042,6 @@ export const sharedChatConversationTable = pgTable(
     id: text('id').primaryKey(),
     entityType: text('entity_type').$type<'character' | 'learningScenario'>().notNull(),
     shareId: uuid('share_id').notNull(),
-    // Bumped on every prepared turn so completions of superseded generations can be rejected.
-    generation: integer('generation').default(0).notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
       .defaultNow()

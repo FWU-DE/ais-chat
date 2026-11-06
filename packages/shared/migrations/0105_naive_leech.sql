@@ -23,7 +23,6 @@ CREATE TABLE "shared_chat_conversation" (
 	"id" text PRIMARY KEY NOT NULL,
 	"entity_type" text NOT NULL,
 	"share_id" uuid NOT NULL,
-	"generation" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "shared_chat_conversation_entity_type_check" CHECK ("shared_chat_conversation"."entity_type" in ('character', 'learningScenario'))
