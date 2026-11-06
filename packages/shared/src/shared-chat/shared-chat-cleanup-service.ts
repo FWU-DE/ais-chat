@@ -1,14 +1,16 @@
 import {
   dbDeleteFilesByIds,
-  dbGetExpiredCharacterShares,
-  dbGetExpiredLearningScenarioShares,
+  dbGetCharacterSharesByInviteCodes,
+  dbGetLearningScenarioSharesByInviteCodes,
   dbGetSharedChatFileCandidates,
 } from '@shared/db/functions/shared-chat-files';
 import { deleteMessageAttachments } from '@shared/files/fileService';
 import { isSharedChatFileMetadata, SharedChatFileMetadata } from '@shared/shared-chat';
-import { addDays } from '@shared/utils/date';
-
-const EXPIRATION_OFFSET_IN_DAYS = -1;
+import {
+  calculateShareSessionState,
+  ShareSessionState,
+} from '@shared/sharing/calculate-share-session-state';
+import { SHARE_EXTENSION_WINDOW_MS, SHARE_FILE_CLEANUP_DELAY_MS } from '@shared/sharing/const';
 
 type SharedFileCandidate = {
   id: string;
@@ -16,7 +18,10 @@ type SharedFileCandidate = {
 };
 
 /**
- * Cleans up files uploaded in shared chats whose linked shared entity expired more than one day ago.
+ * Cleans up files uploaded in shared chats whose linked share has been resolved (expired past
+ * its extension window, manually stopped, or deleted along with its entity, e.g. cascade-deleted
+ * on entity removal) for at least `SHARE_FILE_CLEANUP_DELAY_MS`, reusing the same share-state
+ * logic the UI uses (`calculateShareSessionState`) evaluated as of that many milliseconds ago.
  *
  * The function removes files and chunks from database, then deletes corresponding S3 objects.
  */
@@ -36,7 +41,13 @@ export async function cleanupExpiredSharedChatFiles(): Promise<number> {
     return 0;
   }
 
-  const cutoffDate = addDays(new Date(), EXPIRATION_OFFSET_IN_DAYS);
+  // calculateShareSessionState already adds SHARE_EXTENSION_WINDOW_MS on top of expiredAt when
+  // deciding EXPIRED_PERMANENTLY, so shifting its reference date by only the remainder of
+  // SHARE_FILE_CLEANUP_DELAY_MS gives a total delay of exactly SHARE_FILE_CLEANUP_DELAY_MS since
+  // expiredAt (or since manuallyStoppedAt, handled below).
+  const referenceDate = new Date(
+    Date.now() - (SHARE_FILE_CLEANUP_DELAY_MS - SHARE_EXTENSION_WINDOW_MS),
+  );
 
   const characterInviteCodes = [
     ...new Set(
@@ -54,22 +65,18 @@ export async function cleanupExpiredSharedChatFiles(): Promise<number> {
     ),
   ];
 
-  const [expiredCharacterShares, expiredLearningScenarioShares] = await Promise.all([
-    dbGetExpiredCharacterShares(characterInviteCodes, cutoffDate),
-    dbGetExpiredLearningScenarioShares(learningScenarioInviteCodes, cutoffDate),
+  const [characterShares, learningScenarioShares] = await Promise.all([
+    dbGetCharacterSharesByInviteCodes(characterInviteCodes),
+    dbGetLearningScenarioSharesByInviteCodes(learningScenarioInviteCodes),
   ]);
 
-  const expiredCharacterKeys = new Set(
-    expiredCharacterShares.map((share) => `${share.inviteCode}:${share.entityId}`),
-  );
-  const expiredLearningScenarioKeys = new Set(
-    expiredLearningScenarioShares.map((share) => `${share.inviteCode}:${share.entityId}`),
-  );
+  const activeCharacterKeys = getActiveShareKeys(characterShares, referenceDate);
+  const activeLearningScenarioKeys = getActiveShareKeys(learningScenarioShares, referenceDate);
 
   const fileIdsToDelete = getExpiredSharedChatFileIds(
     sharedFiles,
-    expiredCharacterKeys,
-    expiredLearningScenarioKeys,
+    activeCharacterKeys,
+    activeLearningScenarioKeys,
   );
 
   if (fileIdsToDelete.length === 0) {
@@ -82,20 +89,59 @@ export async function cleanupExpiredSharedChatFiles(): Promise<number> {
   return fileIdsToDelete.length;
 }
 
+// Shares whose state (evaluated as of `referenceDate`) is still RUNNING or EXPIRED_RECENTLY are
+// considered active; a STOPPED or EXPIRED_PERMANENTLY state (or a missing share, which
+// calculateShareSessionState also treats as EXPIRED_PERMANENTLY) means the share has been
+// resolved for at least SHARE_FILE_CLEANUP_DELAY_MS and its files become eligible for cleanup.
+//
+// calculateShareSessionState treats any manuallyStoppedAt as an immediate, un-delayed STOPPED
+// state, so a manual stop is only passed through once it is itself older than referenceDate;
+// otherwise the share falls back to its expiredAt, keeping a just-stopped share's files around
+// for the same delay as a naturally expiring one.
+function getActiveShareKeys(
+  shares: {
+    inviteCode: string;
+    entityId: string;
+    expiredAt: Date;
+    manuallyStoppedAt: Date | null;
+  }[],
+  referenceDate: Date,
+) {
+  return new Set(
+    shares
+      .filter((share) => {
+        const stoppedBeforeReference =
+          share.manuallyStoppedAt !== null && share.manuallyStoppedAt <= referenceDate;
+        const { shareSessionState } = calculateShareSessionState(
+          {
+            expiredAt: share.expiredAt,
+            manuallyStoppedAt: stoppedBeforeReference ? share.manuallyStoppedAt : null,
+          },
+          referenceDate,
+        );
+        return (
+          shareSessionState === ShareSessionState.RUNNING ||
+          shareSessionState === ShareSessionState.EXPIRED_RECENTLY
+        );
+      })
+      .map((share) => `${share.inviteCode}:${share.entityId}`),
+  );
+}
+
 function getExpiredSharedChatFileIds(
   sharedFiles: SharedFileCandidate[],
-  expiredCharacterKeys: Set<string>,
-  expiredLearningScenarioKeys: Set<string>,
+  activeCharacterKeys: Set<string>,
+  activeLearningScenarioKeys: Set<string>,
 ) {
   return sharedFiles
     .filter((file) => {
       const key = `${file.metadata.inviteCode}:${file.metadata.entityId}`;
 
       if (file.metadata.entityType === 'character') {
-        return expiredCharacterKeys.has(key);
+        return !activeCharacterKeys.has(key);
       }
 
-      return expiredLearningScenarioKeys.has(key);
+      return !activeLearningScenarioKeys.has(key);
     })
     .map((file) => file.id);
 }

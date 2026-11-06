@@ -1,6 +1,16 @@
 import test, { expect } from '@playwright/test';
 import { db } from '@shared/db';
-import { federalStateTable } from '@shared/db/schema';
+import {
+  characterTable,
+  federalStateTable,
+  fileTable,
+  llmModelTable,
+  sharedCharacter,
+  userTable,
+} from '@shared/db/schema';
+import { generateInviteCode } from '@shared/sharing/generate-invite-code';
+import { addDays } from '@shared/utils/date';
+import { generateUUID } from '@shared/utils/uuid';
 import { eq } from 'drizzle-orm';
 import type { Page } from 'playwright-core';
 
@@ -56,6 +66,69 @@ test(
     expect(response.status()).toBe(403);
   },
 );
+
+test('should not delete an uploaded file belonging to an active shared chat', async ({
+  request,
+}) => {
+  const [user] = await db
+    .insert(userTable)
+    .values({ schoolIds: [], userRole: 'teacher' })
+    .returning();
+  if (!user) throw new Error('Failed to create user');
+
+  const [model] = await db.select().from(llmModelTable).limit(1);
+  if (!model) throw new Error('Failed to find model');
+
+  const [character] = await db
+    .insert(characterTable)
+    .values({
+      name: 'E2E shared character',
+      userId: user.id,
+      description: '',
+      modelId: model.id,
+    })
+    .returning();
+  if (!character) throw new Error('Failed to create character');
+
+  const inviteCode = generateInviteCode();
+  await db.insert(sharedCharacter).values({
+    characterId: character.id,
+    userId: user.id,
+    tokenPointsLimit: 1000,
+    maxUsageTimeLimit: 1000,
+    inviteCode,
+    expiredAt: addDays(new Date(), 1),
+  });
+
+  const fileId = generateUUID();
+  await db.insert(fileTable).values({
+    id: fileId,
+    name: 'shared-chat-upload.txt',
+    size: 0,
+    type: 'plain/text',
+    metadata: {
+      sessionId: generateUUID(),
+      inviteCode,
+      entityType: 'character',
+      entityId: character.id,
+    },
+  });
+
+  try {
+    const response = await request.delete(deleteConversationRoute, {
+      headers: authorizationHeader,
+    });
+    expect(response.ok()).toBeTruthy();
+
+    const remainingFile = await db.select().from(fileTable).where(eq(fileTable.id, fileId));
+    expect(remainingFile).toHaveLength(1);
+  } finally {
+    await db.delete(fileTable).where(eq(fileTable.id, fileId));
+    await db.delete(sharedCharacter).where(eq(sharedCharacter.characterId, character.id));
+    await db.delete(characterTable).where(eq(characterTable.id, character.id));
+    await db.delete(userTable).where(eq(userTable.id, user.id));
+  }
+});
 
 async function createGenericChatWithFileAttachment(page: Page) {
   await login(page, 'teacher');

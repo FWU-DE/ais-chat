@@ -204,6 +204,21 @@ describe('calculateShareSessionState', () => {
       expect(result.timeLeftInSeconds).toBe(-10 * 60); // -600 seconds
       expect(result.isExtendable).toBe(true);
     });
+
+    it('evaluates state as of an explicit reference date instead of the current time', () => {
+      const expiredAt = new Date(now.getTime() - 30 * 60_000); // expired 30 minutes before `now`
+
+      // As of the real current time, still within the grace window
+      expect(calculateShareSessionState({ expiredAt }).shareSessionState).toBe(
+        ShareSessionState.EXPIRED_RECENTLY,
+      );
+
+      // As of a reference date 3 hours after `now`, the grace window has long passed
+      const referenceDate = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+      expect(calculateShareSessionState({ expiredAt }, referenceDate).shareSessionState).toBe(
+        ShareSessionState.EXPIRED_PERMANENTLY,
+      );
+    });
   });
 
   describe('calculateGracePeriodTimeLeftInSeconds', () => {

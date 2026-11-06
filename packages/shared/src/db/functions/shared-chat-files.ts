@@ -1,4 +1,4 @@
-import { and, inArray, isNotNull, isNull, lt } from 'drizzle-orm';
+import { and, inArray, isNotNull, isNull } from 'drizzle-orm';
 
 import { db } from '..';
 import { fileTable, sharedCharacter, sharedLearningScenarioTable } from '../schema';
@@ -10,38 +10,32 @@ export async function dbGetSharedChatFileCandidates() {
     .where(and(isNull(fileTable.userId), isNotNull(fileTable.metadata)));
 }
 
-export async function dbGetExpiredCharacterShares(inviteCodes: string[], cutoffDate: Date) {
+export async function dbGetCharacterSharesByInviteCodes(inviteCodes: string[]) {
   if (inviteCodes.length === 0) return [];
 
   return db
     .select({
       inviteCode: sharedCharacter.inviteCode,
       entityId: sharedCharacter.characterId,
+      expiredAt: sharedCharacter.expiredAt,
+      manuallyStoppedAt: sharedCharacter.manuallyStoppedAt,
     })
     .from(sharedCharacter)
-    .where(
-      and(
-        inArray(sharedCharacter.inviteCode, inviteCodes),
-        lt(sharedCharacter.expiredAt, cutoffDate),
-      ),
-    );
+    .where(inArray(sharedCharacter.inviteCode, inviteCodes));
 }
 
-export async function dbGetExpiredLearningScenarioShares(inviteCodes: string[], cutoffDate: Date) {
+export async function dbGetLearningScenarioSharesByInviteCodes(inviteCodes: string[]) {
   if (inviteCodes.length === 0) return [];
 
   return db
     .select({
       inviteCode: sharedLearningScenarioTable.inviteCode,
       entityId: sharedLearningScenarioTable.learningScenarioId,
+      expiredAt: sharedLearningScenarioTable.expiredAt,
+      manuallyStoppedAt: sharedLearningScenarioTable.manuallyStoppedAt,
     })
     .from(sharedLearningScenarioTable)
-    .where(
-      and(
-        inArray(sharedLearningScenarioTable.inviteCode, inviteCodes),
-        lt(sharedLearningScenarioTable.expiredAt, cutoffDate),
-      ),
-    );
+    .where(inArray(sharedLearningScenarioTable.inviteCode, inviteCodes));
 }
 
 export async function dbDeleteFilesByIds(ids: string[]) {

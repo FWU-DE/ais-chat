@@ -7,9 +7,11 @@ import {
   inArray,
   isNotNull,
   isNull,
+  not,
   notExists,
   or,
   type SQL,
+  sql,
 } from 'drizzle-orm';
 
 import { db } from '..';
@@ -494,6 +496,17 @@ export async function dbDeleteFileAndDetachFromConversation(filesToDelete: strin
   });
 }
 
+// Matches the JSON shape of SharedChatFileMetadata (see `isSharedChatFileMetadata`), scoped to
+// the fields `dbDeleteDanglingFiles` needs to exclude shared-chat uploads from its generic sweep.
+function isSharedChatFileMetadataCondition(): SQL {
+  return and(
+    isNotNull(sql`${fileTable.metadata}->>'sessionId'`),
+    isNotNull(sql`${fileTable.metadata}->>'inviteCode'`),
+    isNotNull(sql`${fileTable.metadata}->>'entityId'`),
+    inArray(sql`${fileTable.metadata}->>'entityType'`, ['character', 'learningScenario']),
+  ) as SQL;
+}
+
 export async function dbDeleteDanglingFiles() {
   return await db.transaction(async (tx) => {
     const fileIds = await tx
@@ -512,6 +525,8 @@ export async function dbDeleteDanglingFiles() {
           isNull(CharacterFileMapping.fileId),
           isNull(AssistantFileMapping.fileId),
           isNull(LearningScenarioFileMapping.fileId),
+          // shared-chat uploads are cleaned up by cleanupExpiredSharedChatFiles once their share expires
+          or(isNotNull(fileTable.userId), not(isSharedChatFileMetadataCondition())),
         ),
       );
     const fileIdsToDelete = fileIds.map((f) => f.fileId);
