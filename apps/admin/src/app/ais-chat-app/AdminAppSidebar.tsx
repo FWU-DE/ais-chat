@@ -16,6 +16,7 @@ export async function AdminAppSidebar() {
           <SidebarItem label="Tool Call Kosten" href={ROUTES.app.toolCallCosts} />
           <SidebarItem label="Statische Modelle" href={ROUTES.app.staticModels} />
           <SidebarItem label="Webseitenpakete" href={ROUTES.app.urlPresets} />
+          <SidebarItem label="Aufgaben" href={ROUTES.app.scheduledTasks} />
         </>
       )}
       {canAccessApp && <SidebarItem label="Vorlagen" href={ROUTES.app.templates} />}
