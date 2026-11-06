@@ -496,11 +496,10 @@ export async function dbDeleteFileAndDetachFromConversation(filesToDelete: strin
   });
 }
 
-/** Shared chat uploads have no user and carry shared chat metadata. */
-export const isSharedChatFileCondition = and(
-  isNull(fileTable.userId),
-  isNotNull(fileTable.metadata),
-) as SQL;
+export async function dbDeleteFilesByIds(ids: string[]) {
+  // chunks are deleted via delete cascade on files table
+  return db.delete(fileTable).where(inArray(fileTable.id, ids));
+}
 
 export async function dbDeleteDanglingFiles() {
   return await db.transaction(async (tx) => {

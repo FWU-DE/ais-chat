@@ -1,4 +1,4 @@
-import { and, eq, exists, gte, lt, max, or } from 'drizzle-orm';
+import { and, eq, exists, gte, inArray, lt, max, or } from 'drizzle-orm';
 
 import { db } from '..';
 import {
@@ -254,42 +254,80 @@ export async function dbAppendSharedChatConversationMessages({
   }
 }
 
-export async function dbDeleteExpiredSharedChatConversations(cutoffDate: Date): Promise<number> {
-  const deletedSessions = await db
-    .delete(sharedChatConversationTable)
-    .where(
-      or(
-        and(
-          eq(sharedChatConversationTable.entityType, 'character'),
-          exists(
-            db
-              .select({ id: sharedCharacter.id })
-              .from(sharedCharacter)
-              .where(
-                and(
-                  eq(sharedCharacter.id, sharedChatConversationTable.shareId),
-                  lt(sharedCharacter.expiredAt, cutoffDate),
-                ),
-              ),
-          ),
-        ),
-        and(
-          eq(sharedChatConversationTable.entityType, 'learningScenario'),
-          exists(
-            db
-              .select({ id: sharedLearningScenarioTable.id })
-              .from(sharedLearningScenarioTable)
-              .where(
-                and(
-                  eq(sharedLearningScenarioTable.id, sharedChatConversationTable.shareId),
-                  lt(sharedLearningScenarioTable.expiredAt, cutoffDate),
-                ),
-              ),
-          ),
-        ),
-      ),
-    )
-    .returning({ id: sharedChatConversationTable.id });
+export async function dbGetSharedChatFileConversationIds(fileIds: string[]) {
+  if (fileIds.length === 0) return [];
 
-  return deletedSessions.length;
+  return db
+    .selectDistinct({
+      fileId: SharedChatConversationMessageFileMappingTable.fileId,
+      conversationId: SharedChatConversationMessageFileMappingTable.conversationId,
+    })
+    .from(SharedChatConversationMessageFileMappingTable)
+    .where(inArray(SharedChatConversationMessageFileMappingTable.fileId, fileIds));
+}
+
+/**
+ * Deletes conversations whose share expired before the cutoff and returns the ids of the
+ * files that were attached to them. The files are no longer referenced afterwards.
+ */
+export async function dbDeleteExpiredSharedChatConversations(
+  cutoffDate: Date,
+): Promise<{ deletedConversations: number; fileIds: string[] }> {
+  const expiredCondition = or(
+    and(
+      eq(sharedChatConversationTable.entityType, 'character'),
+      exists(
+        db
+          .select({ id: sharedCharacter.id })
+          .from(sharedCharacter)
+          .where(
+            and(
+              eq(sharedCharacter.id, sharedChatConversationTable.shareId),
+              lt(sharedCharacter.expiredAt, cutoffDate),
+            ),
+          ),
+      ),
+    ),
+    and(
+      eq(sharedChatConversationTable.entityType, 'learningScenario'),
+      exists(
+        db
+          .select({ id: sharedLearningScenarioTable.id })
+          .from(sharedLearningScenarioTable)
+          .where(
+            and(
+              eq(sharedLearningScenarioTable.id, sharedChatConversationTable.shareId),
+              lt(sharedLearningScenarioTable.expiredAt, cutoffDate),
+            ),
+          ),
+      ),
+    ),
+  );
+
+  return db.transaction(async (tx) => {
+    const expired = await tx
+      .select({ id: sharedChatConversationTable.id })
+      .from(sharedChatConversationTable)
+      .where(expiredCondition);
+    const conversationIds = expired.map((conversation) => conversation.id);
+    if (conversationIds.length === 0) {
+      return { deletedConversations: 0, fileIds: [] };
+    }
+
+    const files = await tx
+      .selectDistinct({ fileId: SharedChatConversationMessageFileMappingTable.fileId })
+      .from(SharedChatConversationMessageFileMappingTable)
+      .where(
+        inArray(SharedChatConversationMessageFileMappingTable.conversationId, conversationIds),
+      );
+
+    await tx
+      .delete(sharedChatConversationTable)
+      .where(inArray(sharedChatConversationTable.id, conversationIds));
+
+    return {
+      deletedConversations: conversationIds.length,
+      fileIds: files.map((file) => file.fileId),
+    };
+  });
 }

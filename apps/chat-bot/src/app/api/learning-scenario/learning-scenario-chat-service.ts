@@ -139,9 +139,6 @@ export async function sendLearningScenarioMessage({
   const relatedFileEntities = await combineSharedRelatedFiles({
     relatedFileEntities: await dbGetRelatedLearningScenarioFiles(learningScenario.id),
     fileIds: sharedChatConversation.fileIds ?? fileIds,
-    inviteCode,
-    entityType: 'learningScenario',
-    entityId: learningScenarioId,
     sharedSessionId,
     userMessageId: getMostRecentUserMessage(messages)?.id,
   });

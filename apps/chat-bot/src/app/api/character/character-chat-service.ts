@@ -135,9 +135,6 @@ export async function sendCharacterMessage({
   const relatedFileEntities = await combineSharedRelatedFiles({
     relatedFileEntities: await dbGetRelatedCharacterFiles(character.id),
     fileIds: sharedChatConversation.fileIds ?? fileIds,
-    inviteCode,
-    entityType: 'character',
-    entityId: characterId,
     sharedSessionId,
     userMessageId: getMostRecentUserMessage(messages)?.id,
   });

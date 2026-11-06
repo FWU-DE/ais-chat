@@ -1,4 +1,8 @@
 import { dbGetFilesInIds } from '@shared/db/functions/files';
+import {
+  dbGetSharedChatConversation,
+  dbGetSharedChatFileConversationIds,
+} from '@shared/db/functions/shared-chat-conversation';
 import { ForbiddenError, NotFoundError } from '@shared/error';
 import { verify } from '@shared/shared-chat';
 
@@ -45,11 +49,18 @@ export async function verifySharedChatImageAccess({
   }
 
   verify.filesDoNotBelongToAnyUser([file]);
-  verify.sharedChatFileOwnershipBySession({
-    files: [file],
+
+  const conversation = await dbGetSharedChatConversation({
+    conversationId: sharedSessionId,
     inviteCode,
     entityType,
     entityId,
-    sharedSessionId,
   });
+  const fileMappings = await dbGetSharedChatFileConversationIds([fileId]);
+  if (
+    conversation === undefined ||
+    !fileMappings.some((mapping) => mapping.conversationId === conversation.id)
+  ) {
+    throw new ForbiddenError('Not authorized to access this file');
+  }
 }

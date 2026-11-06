@@ -1,16 +1,16 @@
-import { dbDeleteExpiredSharedChatConversations } from '@shared/db/functions/shared-chat-conversation';
 import {
   dbDeleteFilesByIds,
   dbGetExpiredCharacterShares,
   dbGetExpiredLearningScenarioShares,
   dbGetSharedChatFileCandidates,
-} from '@shared/db/functions/shared-chat-files';
+} from '@shared/db/functions/files';
+import { dbDeleteExpiredSharedChatConversations } from '@shared/db/functions/shared-chat-conversation';
 import { deleteMessageAttachments } from '@shared/files/fileService';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { cleanupExpiredSharedChatFiles } from './shared-chat-cleanup-service';
 
-vi.mock('@shared/db/functions/shared-chat-files', () => ({
+vi.mock('@shared/db/functions/files', () => ({
   dbGetSharedChatFileCandidates: vi.fn(),
   dbGetExpiredCharacterShares: vi.fn(),
   dbGetExpiredLearningScenarioShares: vi.fn(),
