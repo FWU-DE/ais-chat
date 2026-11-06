@@ -15,6 +15,7 @@ vi.mock('@shared/speech/speech-cache', () => ({
 }));
 vi.mock('@ais-chat/ai-core', () => ({
   generateSpeechById: mocks.generateSpeechById,
+  getSpeechMimeType: (provider: string) => (provider === 'google' ? 'audio/wav' : 'audio/mpeg'),
 }));
 vi.mock('@shared/db/functions/llm-model', () => ({ dbGetSpeechModel: mocks.dbGetSpeechModel }));
 
@@ -34,7 +35,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.dbGetSpeechModel.mockResolvedValue(speechModel);
   mocks.generateSpeechById.mockResolvedValue({
-    wavBuffer,
+    audioBuffer: wavBuffer,
+    mimeType: 'audio/wav',
     usage: { inputTextTokens: 10, outputAudioTokens: 20 },
   });
 });

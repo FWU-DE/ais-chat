@@ -1,11 +1,37 @@
 import type { LlmProviderKeyWithModels } from '../../functions';
 import { DEFAULT_OPENAI_BASE_URL, isBifrostNativeSettings, isLlmProvider } from '../../llm-model';
-import type { BifrostProviderConfig } from '../types';
+import type { BifrostKey, BifrostKeyAlias, BifrostProviderConfig } from '../types';
 import {
   buildCustomOpenAiProviderId,
   buildOpenAiCompatibleProviderConfig,
 } from './openai-compatible';
-import { buildKey, getOrigin } from './utils';
+import { buildKey, getBifrostModelName, getOrigin } from './utils';
+
+/**
+ * Azure AI Speech speaks SSML at `{endpoint}/tts/cognitiveservices/v1`, not the Azure OpenAI
+ * deployment path. Azure OpenAI TTS deployments are speech models too, so the route is only
+ * switched for models that explicitly opt in via `modelConfig.useAzureSpeechEndpoint`.
+ */
+function withSpeechEndpointAliases(
+  key: BifrostKey,
+  providerKey: LlmProviderKeyWithModels,
+): BifrostKey {
+  const azureSpeechModelNames = new Set(
+    providerKey.models
+      .filter(({ model }) => model.modelConfig?.useAzureSpeechEndpoint === true)
+      .map(({ model }) => getBifrostModelName(model.name)),
+  );
+  if (azureSpeechModelNames.size === 0 || !key.aliases) return key;
+
+  const aliases: Record<string, BifrostKeyAlias> = {};
+  for (const [name, alias] of Object.entries(key.aliases)) {
+    aliases[name] =
+      azureSpeechModelNames.has(name) && typeof alias === 'string'
+        ? { model_id: alias, use_speech_endpoints: true }
+        : alias;
+  }
+  return { ...key, aliases };
+}
 
 export function buildAzureProviderConfig(
   providerKey: LlmProviderKeyWithModels,
@@ -17,9 +43,12 @@ export function buildAzureProviderConfig(
   return {
     provider: 'azure',
     keys: [
-      buildKey('azure', providerKey, settings.apiKey, {
-        azure_key_config: { endpoint },
-      }),
+      withSpeechEndpointAliases(
+        buildKey('azure', providerKey, settings.apiKey, {
+          azure_key_config: { endpoint },
+        }),
+        providerKey,
+      ),
     ],
   };
 }
