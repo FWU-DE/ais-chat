@@ -1,7 +1,6 @@
-import { UserModel } from '@shared/auth/user-model';
 import { verifySuspensionState, verifyWriteAccess } from '@shared/auth/authorization-service';
+import { UserModel } from '@shared/auth/user-model';
 import { db } from '@shared/db';
-import { PgTransactionObject } from '@shared/db/types';
 import { dbGetAssistantById } from '@shared/db/functions/assistants';
 import { dbGetCharacterById } from '@shared/db/functions/character';
 import { dbGetLearningScenarioById } from '@shared/db/functions/learning-scenario';
@@ -10,13 +9,16 @@ import {
   CommunityTemplateRequestSelectModel,
   templateRequestStatusSchema,
 } from '@shared/db/schema';
+import { PgTransactionObject } from '@shared/db/types';
+import { assertEntityType, EntityRef } from '@shared/entities/entity-types';
 import {
   checkParameterUUID,
   ForbiddenError,
   InvalidArgumentError,
   NotFoundError,
 } from '@shared/error';
-import { assertEntityType, EntityRef } from '@shared/entities/entity-types';
+
+import { isCommunitySharingActive } from './community-sharing-state';
 import {
   createCancelEvent,
   createSubmitEvent,
@@ -33,7 +35,6 @@ import {
   dbUpdateTemplateRequest,
   entityRefToInsertColumns,
 } from './db-functions';
-import { isCommunitySharingActive } from './community-sharing-state';
 
 export type CommunityTemplateRequestWithEvents = CommunityTemplateRequestSelectModel & {
   events: CommunityTemplateRequestEventSelectModel[];

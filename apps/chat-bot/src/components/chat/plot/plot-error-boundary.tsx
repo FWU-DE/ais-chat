@@ -1,7 +1,8 @@
 'use client';
 
-import { Component, type ReactNode } from 'react';
 import { logError } from '@shared/logging/logging';
+import { Component, type ReactNode } from 'react';
+
 import { PlotError } from './plot-error';
 
 // A broken plot must never take the whole chat down.

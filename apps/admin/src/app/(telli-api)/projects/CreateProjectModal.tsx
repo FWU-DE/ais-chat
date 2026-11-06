@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
 import { Button } from '@ui/components/button';
 import { Input } from '@ui/components/input';
 import { Label } from '@ui/components/label';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+
 import { createProjectAction } from './actions';
 
 type CreateProjectModalProps = {

@@ -1,13 +1,14 @@
 import { and, eq, inArray } from 'drizzle-orm';
-import { db } from '../db';
+
 import { isCustomOpenAiProviderId } from '../bifrost-provider-sync/provider-config-builder/openai-compatible';
+import { db } from '../db';
 import {
+  type LlmModel,
   llmModelProviderKeyMappingTable,
   llmModelTable,
-  llmProviderKeyTable,
-  type LlmModel,
   type LlmProviderKeyInsertModel,
   type LlmProviderKeyModel,
+  llmProviderKeyTable,
 } from '../schema';
 
 export type LlmProviderKeyWithModels = LlmProviderKeyModel & {

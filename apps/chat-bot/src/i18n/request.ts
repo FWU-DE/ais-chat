@@ -1,4 +1,5 @@
 import { getRequestConfig } from 'next-intl/server';
+
 import { loadTranslations } from './load-translations';
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from './locales';
 

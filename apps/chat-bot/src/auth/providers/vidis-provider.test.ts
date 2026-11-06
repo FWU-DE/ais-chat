@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Account, Profile } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
-import type { VidisProfile } from './vidis-schema';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { validateAndSyncVidisUser } from './validate-and-sync-vidis-user';
 import { handleVidisJWTCallback } from './vidis-provider';
+import type { VidisProfile } from './vidis-schema';
 
 vi.mock('@/env', () => ({
   env: {

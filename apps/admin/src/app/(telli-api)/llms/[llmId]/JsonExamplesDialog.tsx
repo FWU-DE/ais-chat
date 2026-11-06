@@ -1,8 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
 import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
-import { toast } from 'sonner';
 import { Button } from '@ui/components/button';
 import {
   Dialog,
@@ -11,6 +9,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@ui/components/dialog';
+import { useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 export type JsonExamplesDialogProps = {
   triggerLabel: string;

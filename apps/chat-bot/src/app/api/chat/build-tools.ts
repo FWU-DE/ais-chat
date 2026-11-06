@@ -1,9 +1,11 @@
+import type { ModelSelection } from '@ais-chat/ai-core/chat/types';
+import type { FileModel, WebSearchModel } from '@shared/db/schema';
+
 import type { UserAndContext } from '@/auth/types';
 import type { AiActivityToolName } from '@/types/ai-activity';
 import { TOOL_NAMES } from '@/types/tool-names';
 import { isImageFile } from '@/utils/files/generic';
-import type { ModelSelection } from '@ais-chat/ai-core/chat/types';
-import type { FileModel, WebSearchModel } from '@shared/db/schema';
+
 import { buildJsxgraphTool, createPlotActivity } from './tools/jsxgraph-tool';
 import { buildMathCalculateTool, mathCalculateActivity } from './tools/math-calculate-tool';
 import { buildMundoSearchTool, mundoSearchActivity } from './tools/mundo-search-tool';

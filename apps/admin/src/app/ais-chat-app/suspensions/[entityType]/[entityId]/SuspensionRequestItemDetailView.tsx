@@ -1,29 +1,31 @@
 'use client';
 
+import { SuspensionRequestSelectModel } from '@shared/db/schema';
+import { EntityRef, EntityType } from '@shared/entities/entity-types';
+import { SuspensionRequestEntityOverview } from '@shared/suspension/suspension-service';
+import { Button } from '@ui/components/button';
 import {
   Card,
+  CardAction,
+  CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardContent,
-  CardAction,
 } from '@ui/components/card';
-import { SuspensionRequestEntityOverview } from '@shared/suspension/suspension-service';
-import { EntityRef, EntityType } from '@shared/entities/entity-types';
-import { Button } from '@ui/components/button';
-import { useCallback, useEffect, useState, useTransition } from 'react';
-import { SuspensionRequestSelectModel } from '@shared/db/schema';
+import { Skeleton } from '@ui/components/skeleton';
 import Link from 'next/link';
+import { useCallback, useEffect, useState, useTransition } from 'react';
+import { toast } from 'sonner';
+
+import { mapEntityTypeToLabel } from '@/utils/mapEntityTypeToLabel';
+
 import {
   getSuspensionRequestItemWithDetailsAction,
   liftSuspensionAction,
   markSuspensionRequestAsCheckedAction,
   suspendEntityAction,
 } from '../../actions';
-import { toast } from 'sonner';
-import { Skeleton } from '@ui/components/skeleton';
 import { SuspensionRequestItem } from './SuspensionRequestItem';
-import { mapEntityTypeToLabel } from '@/utils/mapEntityTypeToLabel';
 
 type SuspendedEntityDetailViewProps = {
   entityType: EntityType;

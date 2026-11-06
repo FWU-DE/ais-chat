@@ -1,8 +1,8 @@
 'use client';
 
-import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
+import { logError } from '@shared/logging';
 import { type ColumnDef } from '@tanstack/react-table';
-import { DataTable, type DataTableFeatures } from '@ui/components/data-table';
+import { Button } from '@ui/components/button';
 import {
   Card,
   CardAction,
@@ -11,11 +11,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@ui/components/card';
-import { Button } from '@ui/components/button';
 import { Checkbox } from '@ui/components/checkbox';
-import { logError } from '@shared/logging';
-import { toast } from 'sonner';
+import { DataTable, type DataTableFeatures } from '@ui/components/data-table';
 import { ArrowUpDownIcon } from 'lucide-react';
+import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+
 import { getLlmApiKeyAssignmentsDataAction, saveApiKeysForModelAction } from './actions';
 
 export type LlmApiKeyAssignmentsViewProps = {

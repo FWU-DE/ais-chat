@@ -1,12 +1,3 @@
-import { beforeEach, describe, expect, it, MockedFunction, vi } from 'vitest';
-import {
-  copyAssistant,
-  copyCharacter,
-  copyEntityPictureIfExists,
-  copyRelatedTemplateFiles,
-  createTemplateFromUrl,
-  updateTemplateDeletedState,
-} from './template-service';
 import { dbGetAssistantById, dbUpsertAssistant } from '@shared/db/functions/assistants';
 import { dbCreateCharacter, dbGetCharacterById } from '@shared/db/functions/character';
 import {
@@ -24,6 +15,16 @@ import {
 import { logError } from '@shared/logging';
 import { copyFileInS3 } from '@shared/s3';
 import { generateUUID } from '@shared/utils/uuid';
+import { beforeEach, describe, expect, it, MockedFunction, vi } from 'vitest';
+
+import {
+  copyAssistant,
+  copyCharacter,
+  copyEntityPictureIfExists,
+  copyRelatedTemplateFiles,
+  createTemplateFromUrl,
+  updateTemplateDeletedState,
+} from './template-service';
 
 const { mockDbSet, mockDbUpdate, mockDbReturning, mockDbValues, mockDbInsert } = vi.hoisted(() => {
   const mockDbWhere = vi.fn().mockResolvedValue(undefined);

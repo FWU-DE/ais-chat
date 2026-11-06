@@ -1,11 +1,3 @@
-import { requireAuth } from '@/auth/requireAuth';
-import Chat from '@/components/chat/chat';
-import Logo from '@/components/common/logo';
-import { DefaultPageLayout } from '@/components/layout/default-page-layout';
-import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
-import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
-import { convertMessageModelToMessage } from '@/utils/chat/messages';
-import { parseSearchParams } from '@/utils/parse-search-params';
 import {
   getConversation,
   getConversationMessages,
@@ -18,6 +10,15 @@ import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-mode
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { z } from 'zod';
+
+import { requireAuth } from '@/auth/requireAuth';
+import Chat from '@/components/chat/chat';
+import Logo from '@/components/common/logo';
+import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
+import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
+import { convertMessageModelToMessage } from '@/utils/chat/messages';
+import { parseSearchParams } from '@/utils/parse-search-params';
 
 export const dynamic = 'force-dynamic';
 const searchParamsSchema = z.object({ model: z.string().optional() });

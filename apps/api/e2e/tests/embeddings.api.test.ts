@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+
 import { authorizationHeader, getEmbeddingModel } from '../utils/api.js';
 
 test.describe('POST /v1/embeddings', () => {

@@ -1,11 +1,12 @@
 'use client';
 
-import CheckIcon from '../icons/check';
-import React from 'react';
-import ClipboardLightIcon from '../icons/clipboard-light';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
 import type { ComponentProps, ReactNode } from 'react';
+import React from 'react';
+
+import CheckIcon from '../icons/check';
+import ClipboardLightIcon from '../icons/clipboard-light';
 import { useToast } from './toast';
 
 type CopyToClipboardButtonProps = {

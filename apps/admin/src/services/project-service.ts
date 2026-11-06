@@ -1,10 +1,11 @@
 import {
-  dbGetAllProjects,
-  dbGetProjectById,
   dbCreateProject,
   dbDeleteProject,
+  dbGetAllProjects,
+  dbGetProjectById,
 } from '@ais-chat/api-database';
 import { logInfo } from '@shared/logging';
+
 import { runDeleteOrThrowError } from '@/utils/run-delete-or-throw-error';
 
 export async function getProjects() {

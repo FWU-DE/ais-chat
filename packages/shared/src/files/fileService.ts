@@ -1,4 +1,3 @@
-import { eq } from 'drizzle-orm';
 import { db } from '@shared/db';
 import {
   AssistantFileMapping,
@@ -7,6 +6,7 @@ import {
   fileTable,
   LearningScenarioFileMapping,
 } from '@shared/db/schema';
+import { logError } from '@shared/logging';
 import {
   copyFileInS3,
   deleteFileFromS3,
@@ -14,8 +14,9 @@ import {
   getReadOnlySignedUrl,
   uploadFileToS3,
 } from '@shared/s3';
+import { eq } from 'drizzle-orm';
+
 import { cnanoid } from '../random/randomService';
-import { logError } from '@shared/logging';
 
 const MESSAGE_ATTACHMENTS_FOLDER_NAME = 'message_attachments';
 

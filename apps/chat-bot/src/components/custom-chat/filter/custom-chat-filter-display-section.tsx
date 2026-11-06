@@ -1,12 +1,13 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+
+import { CustomChatFieldInfo } from '../custom-chat-field-info';
 import {
+  type ActiveFilterPill,
   FilterValues,
   getActiveFilterPills,
-  type ActiveFilterPill,
 } from './custom-chat-filter-utils';
-import { CustomChatFieldInfo } from '../custom-chat-field-info';
 
 type FilterDisplaySectionProps = {
   values: FilterValues;

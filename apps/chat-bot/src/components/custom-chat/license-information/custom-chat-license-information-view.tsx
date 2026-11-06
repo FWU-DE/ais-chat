@@ -1,4 +1,5 @@
 import { useTranslations } from 'next-intl';
+
 import { CustomChatFieldInfo } from '../custom-chat-field-info';
 
 export function CustomChatLicenseInformationView({

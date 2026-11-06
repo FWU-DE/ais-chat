@@ -1,5 +1,5 @@
-import { getSpeechModelById } from '../models';
 import { AiGenerationError } from '../errors';
+import { getSpeechModelById } from '../models';
 import { constructGoogleSpeechGenerationFn } from './providers/google';
 import type { SpeechResponse } from './types';
 

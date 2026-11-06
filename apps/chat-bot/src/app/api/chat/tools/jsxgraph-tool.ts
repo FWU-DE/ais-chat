@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import { generateTextWithBilling } from '@ais-chat/ai-core';
 import type {
   Message,
@@ -6,17 +5,20 @@ import type {
   ToolCall,
   ToolHandlerOptions,
 } from '@ais-chat/ai-core/chat/types';
+import type { ToolOutcome } from '@ais-chat/ai-core/chat/types';
+import { z } from 'zod';
+
+import { TOOL_NAMES } from '@/types/tool-names';
+import { parseJsonRecord } from '@/utils/chat/tool-result-parsing';
 import {
   ALLOWED_CALLS,
   ALLOWED_ELEMENT_TYPES,
   parsePlotSpec,
   type PlotSpec,
 } from '@/utils/plot/plot-spec';
-import type { ToolActivity, ToolDefinition, ToolRegistration } from './types';
-import { TOOL_NAMES } from '@/types/tool-names';
-import type { ToolOutcome } from '@ais-chat/ai-core/chat/types';
+
 import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
-import { parseJsonRecord } from '@/utils/chat/tool-result-parsing';
+import type { ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 export const createPlotArgsSchema = z.object({
   description: z.string().trim().min(1),

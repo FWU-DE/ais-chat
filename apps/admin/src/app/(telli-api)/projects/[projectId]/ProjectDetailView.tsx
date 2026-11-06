@@ -1,9 +1,8 @@
 'use client';
 
-import { startTransition, useCallback, useEffect, useState } from 'react';
-import { getApiKeysAction, getProjectByIdAction, deleteProjectAction } from '../actions';
-import { Project } from '@/types/project';
-import { ApiKey } from '@/types/api-key';
+import { TrashSimpleIcon } from '@phosphor-icons/react';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
+import { Button } from '@ui/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/components/card';
 import {
   Table,
@@ -13,13 +12,16 @@ import {
   TableHeader,
   TableRow,
 } from '@ui/components/table';
-import { Button } from '@ui/components/button';
-import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
-import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { startTransition, useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
+
 import { ROUTES } from '@/consts/routes';
-import { TrashSimpleIcon } from '@phosphor-icons/react';
+import { ApiKey } from '@/types/api-key';
+import { Project } from '@/types/project';
+
+import { deleteProjectAction, getApiKeysAction, getProjectByIdAction } from '../actions';
 
 export type ProjectDetailViewProps = {
   projectId: string;

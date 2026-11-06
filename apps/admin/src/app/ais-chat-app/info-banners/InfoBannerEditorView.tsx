@@ -1,11 +1,14 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Control, Controller, useFieldArray, useForm, useWatch } from 'react-hook-form';
+import { FormFieldCheckbox } from '@ais-chat/ui/components/form/form-field-checkbox';
 import { zodResolver } from '@hookform/resolvers/zod';
-import z from 'zod';
-import { toast } from 'sonner';
+import type { FederalStateModel } from '@shared/federal-states/types';
+import type { InfoBanner, InfoBannerToFederalStateMapping } from '@shared/info-banners/info-banner';
+import {
+  infoBannerToFederalStateMappingSchema,
+  manageInfoBannerBaseSchema,
+  validateManageInfoBanner,
+} from '@shared/info-banners/info-banner';
 import { logError } from '@shared/logging';
 import { Button } from '@ui/components/button';
 import {
@@ -21,11 +24,10 @@ import {
   FieldDescription,
   FieldError,
   FieldLabel,
-  FieldSet,
   FieldLegend,
+  FieldSet,
 } from '@ui/components/field';
 import { FormField } from '@ui/components/form/form-field';
-import { FormFieldCheckbox } from '@ais-chat/ui/components/form/form-field-checkbox';
 import {
   Select,
   SelectContent,
@@ -33,15 +35,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/select';
-import { ROUTES } from '@/consts/routes';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { Control, Controller, useFieldArray, useForm, useWatch } from 'react-hook-form';
+import { toast } from 'sonner';
+import z from 'zod';
+
 import { FormErrorDisplay } from '@/components/FormErrorDisplay';
-import type { FederalStateModel } from '@shared/federal-states/types';
-import {
-  infoBannerToFederalStateMappingSchema,
-  manageInfoBannerBaseSchema,
-  validateManageInfoBanner,
-} from '@shared/info-banners/info-banner';
-import type { InfoBanner, InfoBannerToFederalStateMapping } from '@shared/info-banners/info-banner';
+import { ROUTES } from '@/consts/routes';
+
 import { createInfoBannerAction, deleteInfoBannerAction, updateInfoBannerAction } from './actions';
 
 const dateTimeLocalSchema = z

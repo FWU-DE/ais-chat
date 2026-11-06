@@ -1,8 +1,9 @@
+import { NextRequest, NextResponse } from 'next/server';
+
 import { createScaledImage } from '@/app/api/file-operations/scaled-image-service';
 import { verifySharedChatImageAccess } from '@/app/api/shared-chat/shared-chat-read-service';
 import { sharedChatImageRequestSchema } from '@/app/api/shared-chat/shared-chat-request-schemas';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
-import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,

@@ -1,6 +1,5 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import {
   Select,
   SelectContent,
@@ -9,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/select';
+import { useTranslations } from 'next-intl';
 
 type ImageVersionSelectProps = {
   count: number;

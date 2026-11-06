@@ -12,9 +12,10 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { ImageGenerationConfig, LlmModelPriceMetadata, SpeechConfig } from './types';
-import { LlmModelProviderSettings, LlmProviderKeySettings } from './llm-model';
 import { createInsertSchema, createUpdateSchema } from 'drizzle-zod';
+
+import { LlmModelProviderSettings, LlmProviderKeySettings } from './llm-model';
+import { ImageGenerationConfig, LlmModelPriceMetadata, SpeechConfig } from './types';
 
 export const projectTable = pgTable('project', {
   id: text('id').primaryKey(),

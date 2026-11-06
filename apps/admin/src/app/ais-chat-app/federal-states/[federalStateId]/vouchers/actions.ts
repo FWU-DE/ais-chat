@@ -1,12 +1,13 @@
 'use server';
 
-import { requireAdminAuth } from '@/auth/requireAdminAuth';
+import { type CreateVoucherParams } from '@ais-chat/shared/vouchers/voucher';
 import {
-  getVouchers,
   createVouchers,
+  getVouchers,
   revokeVoucher,
 } from '@ais-chat/shared/vouchers/voucher-service';
-import { type CreateVoucherParams } from '@ais-chat/shared/vouchers/voucher';
+
+import { requireAdminAuth } from '@/auth/requireAdminAuth';
 
 export async function getVouchersAction(federalStateId: string) {
   await requireAdminAuth();

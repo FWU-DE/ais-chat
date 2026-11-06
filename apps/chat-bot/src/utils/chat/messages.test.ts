@@ -1,7 +1,9 @@
-import type { ToolActivity } from '@/app/api/chat/tools/types';
-import { parseGenericPersistedToolResult } from '@/app/api/chat/tools/parse-persisted-tool-result';
 import type { ConversationMessageModel } from '@shared/db/types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { parseGenericPersistedToolResult } from '@/app/api/chat/tools/parse-persisted-tool-result';
+import type { ToolActivity } from '@/app/api/chat/tools/types';
+
 import { convertMessageModelToMessage } from './messages';
 
 // Mutable so each test can register exactly the activity it needs.

@@ -1,5 +1,5 @@
 import type { LlmProviderKeyWithModels } from '../../functions';
-import { DEFAULT_OPENAI_BASE_URL, isLlmProvider, isBifrostNativeSettings } from '../../llm-model';
+import { DEFAULT_OPENAI_BASE_URL, isBifrostNativeSettings, isLlmProvider } from '../../llm-model';
 import type { BifrostProviderConfig } from '../types';
 import {
   buildCustomOpenAiProviderId,

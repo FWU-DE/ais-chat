@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { domainSchema } from './types';
 
 describe('domainSchema', () => {

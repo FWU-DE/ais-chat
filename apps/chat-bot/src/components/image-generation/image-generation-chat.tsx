@@ -1,14 +1,16 @@
 'use client';
 
-import aiBadge from '@/assets/ai-badge.png';
-import { IMAGE_GENERATION_INPUT_LIMIT } from '@/configuration-text-inputs/const';
-import { bakeAiBadge } from '@/utils/images/bake-ai-badge';
 import { FileModel } from '@shared/db/schema';
 import { ConversationMessageModel } from '@shared/db/types';
 import { logError } from '@shared/logging';
-import { useTranslations } from 'next-intl';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import React, { useEffect, useRef, useState } from 'react';
+
+import aiBadge from '@/assets/ai-badge.png';
+import { IMAGE_GENERATION_INPUT_LIMIT } from '@/configuration-text-inputs/const';
+import { bakeAiBadge } from '@/utils/images/bake-ai-badge';
+
 import { ImageAttachment } from '../chat/message-image-attachment';
 import { defaultUploadFile, LocalFileState } from '../file-upload/upload-file';
 import { useImageModels } from '../providers/image-model-provider';

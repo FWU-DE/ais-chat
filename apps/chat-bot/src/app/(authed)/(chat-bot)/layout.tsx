@@ -1,15 +1,3 @@
-import SessionWatcher from '@/auth/SessionWatcher';
-import { getUser, userHasCompletedTraining } from '@/auth/utils';
-import { ApplicationLayout } from '@/components/layout/application-layout';
-import { federalStateDisclaimers, VERSION } from '@/components/modals/const';
-import ProductAccessModal from '@/components/modals/product-access';
-import TermsConditionsModal from '@/components/modals/terms-conditions-initial';
-import AppSidebar from '@/components/navigation/sidebar/app-sidebar';
-import { FederalStateProvider } from '@/components/providers/federal-state-provider';
-import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
-import { UserSettingsProvider } from '@/components/providers/user-settings-provider';
-import { checkProductAccess } from '@/utils/vidis/access';
-import { FederalStateId } from '@/utils/vidis/const';
 import { SidebarProvider } from '@ais-chat/ui/components/sidebar';
 import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
 import { getFederalStateById } from '@shared/federal-states/federal-state-service';
@@ -26,6 +14,20 @@ import {
 import { getUserSettings } from '@shared/users/user-settings-service';
 import { getTranslations } from 'next-intl/server';
 import React from 'react';
+
+import SessionWatcher from '@/auth/SessionWatcher';
+import { getUser, userHasCompletedTraining } from '@/auth/utils';
+import { ApplicationLayout } from '@/components/layout/application-layout';
+import { federalStateDisclaimers, VERSION } from '@/components/modals/const';
+import ProductAccessModal from '@/components/modals/product-access';
+import TermsConditionsModal from '@/components/modals/terms-conditions-initial';
+import AppSidebar from '@/components/navigation/sidebar/app-sidebar';
+import { FederalStateProvider } from '@/components/providers/federal-state-provider';
+import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
+import { UserSettingsProvider } from '@/components/providers/user-settings-provider';
+import { checkProductAccess } from '@/utils/vidis/access';
+import { FederalStateId } from '@/utils/vidis/const';
+
 import { setUserAcceptConditions } from './actions';
 
 export const dynamic = 'force-dynamic';

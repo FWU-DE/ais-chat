@@ -1,5 +1,7 @@
 'use client';
 
+import { ReactNode } from 'react';
+
 import { ConversationDownloadProvider } from '@/components/chat/conversation-download-context';
 import { ChatHeaderBar } from '@/components/chat/header-bar';
 import CustomChatHeader from '@/components/custom-chat/custom-chat-header';
@@ -12,7 +14,6 @@ import SelectImageModel from '@/components/image-generation/select-image-model';
 import SelectImageStyle from '@/components/image-generation/select-image-style';
 import { ApplicationHeaderContent } from '@/components/layout/application-header';
 import type { DefaultPageLayoutConfig } from '@/components/layout/default-page-layout';
-import { ReactNode } from 'react';
 
 function FormPageHeader() {
   const { formStateProps } = useCustomChatHeaderContent();

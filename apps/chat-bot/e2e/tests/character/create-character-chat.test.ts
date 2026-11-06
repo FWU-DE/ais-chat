@@ -1,5 +1,6 @@
-import { expect, test } from '../../fixtures/test';
 import { nanoid } from 'nanoid';
+
+import { expect, test } from '../../fixtures/test';
 import {
   configureCharacter,
   createCharacter,
@@ -7,9 +8,9 @@ import {
   deleteCharacterFromDetailPage,
 } from '../../utils/character';
 import { regenerateMessage, sendMessage } from '../../utils/chat';
-import { verifyLicenseInformation } from '../../utils/license-information';
-import { verifyDidacticCommentary } from '../../utils/didactic-commentary';
 import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
+import { verifyDidacticCommentary } from '../../utils/didactic-commentary';
+import { verifyLicenseInformation } from '../../utils/license-information';
 import { stopShare, waitForAutosave, waitForToast, waitForToastDisappear } from '../../utils/utils';
 
 test.use({ storageState: AUTH_FILES.teacher });

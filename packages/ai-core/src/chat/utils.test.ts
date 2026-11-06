@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { toOpenAIResponsesInput } from './utils';
+import { describe, expect, it } from 'vitest';
+
 import type { Message } from './types';
+import { toOpenAIResponsesInput } from './utils';
 
 describe('toOpenAIResponsesInput', () => {
   it('converts simple text messages', () => {

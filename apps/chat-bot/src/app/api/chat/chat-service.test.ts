@@ -1,9 +1,10 @@
-import type { UserAndContext } from '@/auth/types';
-import type { ChatMessage } from '@/types/chat';
-import { decodeChatStreamEvent } from '@/utils/streaming';
 import type { runAgentLoop } from '@ais-chat/ai-core';
 import { ForbiddenError } from '@shared/error';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { UserAndContext } from '@/auth/types';
+import type { ChatMessage } from '@/types/chat';
+import { decodeChatStreamEvent } from '@/utils/streaming';
 
 const buildToolsOutput = {
   toolRegistry: {

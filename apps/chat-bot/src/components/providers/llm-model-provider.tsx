@@ -1,8 +1,8 @@
 'use client';
 
 import { LlmModelSelectModel } from '@shared/db/schema';
-import React, { useState } from 'react';
 import { getFirstTextModel } from '@shared/llm-models/llm-model-utils';
+import React, { useState } from 'react';
 
 type LlmModelsProviderProps = {
   models: LlmModelSelectModel[];

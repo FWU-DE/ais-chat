@@ -1,7 +1,8 @@
+import { redirect } from 'next/navigation';
+
 import { auth } from '@/auth';
 import { EDITOR_ROLE } from '@/auth/roles';
 import { ROUTES } from '@/consts/routes';
-import { redirect } from 'next/navigation';
 
 export default async function Home() {
   const session = await auth();

@@ -1,5 +1,8 @@
 'use client';
 
+import { BoxArrowDownIcon } from '@phosphor-icons/react';
+import { useTranslations } from 'next-intl';
+
 import DownloadConversationButton, {
   fetchConversationDownload,
   getLastAssistantModelName,
@@ -11,8 +14,7 @@ import {
   type HeaderActionConfig,
 } from '@/components/layout/application-header';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
-import { BoxArrowDownIcon } from '@phosphor-icons/react';
-import { useTranslations } from 'next-intl';
+
 import SelectLlmModel from '../conversation/select-llm-model';
 import { NewChatButton } from '../navigation/sidebar/collapsible-sidebar';
 import { useLlmModels } from '../providers/llm-model-provider';

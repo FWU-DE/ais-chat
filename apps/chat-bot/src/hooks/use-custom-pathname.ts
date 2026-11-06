@@ -1,5 +1,6 @@
-import { useEffect, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
+import { useEffect, useSyncExternalStore } from 'react';
+
 import {
   getPathnameSnapshot,
   subscribeToPathnameStore,

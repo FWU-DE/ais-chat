@@ -1,5 +1,7 @@
 import React from 'react';
+
 import { cn } from '@/utils/tailwind';
+
 import { ParagraphWithConditionalTitleTwoLine } from '../common/paragraph-with-conditional-title-two-line';
 
 type PromptSuggestionsProps = {

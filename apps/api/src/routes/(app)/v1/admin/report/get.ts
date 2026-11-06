@@ -1,8 +1,10 @@
-import { FastifyReply, FastifyRequest } from 'fastify';
-import { validateAdminApiKey } from '../utils';
 import { dbGetProjectsWithApiKeys } from '@ais-chat/api-database';
+import { FastifyReply, FastifyRequest } from 'fastify';
 import z from 'zod';
+
 import { convertToCSV, createMonthlyCostReports } from '@/routes/(app)/v1/admin/report/utils';
+
+import { validateAdminApiKey } from '../utils';
 
 export async function handler(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const validationResult = validateAdminApiKey(request, reply);

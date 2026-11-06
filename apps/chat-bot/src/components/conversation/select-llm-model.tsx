@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
-import { useTranslations } from 'next-intl';
-import { useLlmModels } from '../providers/llm-model-provider';
 import { getFilteredTextModels } from '@shared/llm-models/llm-model-utils';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
 import ModelSelect from '../common/model-select';
+import { useLlmModels } from '../providers/llm-model-provider';
 
 type SelectLlmModelProps = {
   isStudent?: boolean;

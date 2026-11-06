@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { WorkerPool } from './pool.js';
 import type { Limits, Result } from './types.js';
 

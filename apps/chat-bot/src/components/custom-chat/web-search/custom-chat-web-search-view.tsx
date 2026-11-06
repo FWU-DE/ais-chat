@@ -1,11 +1,12 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { CheckCircleIcon, XCircleIcon } from '@phosphor-icons/react';
-import { Chip } from '@ui/components/chip';
-import { WebSearchFields } from './web-search.types';
 import { Card, CardContent } from '@ui/components/card';
+import { Chip } from '@ui/components/chip';
+import { useTranslations } from 'next-intl';
+
 import { CustomChatHeading2 } from '../custom-chat-heading2';
+import { WebSearchFields } from './web-search.types';
 
 type CustomChatWebSearchViewProps = WebSearchFields;
 

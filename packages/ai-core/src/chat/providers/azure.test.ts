@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { constructAzureResponsesGenerationFn, constructAzureResponsesStreamFn } from './azure';
+
 import type { AiModel } from '../types';
+import { constructAzureResponsesGenerationFn, constructAzureResponsesStreamFn } from './azure';
 
 const { responsesCreateMock, openAiConstructorMock, instrumentOpenAiClientMock, MockOpenAI } =
   vi.hoisted(() => {

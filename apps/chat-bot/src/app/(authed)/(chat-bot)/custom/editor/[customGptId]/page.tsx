@@ -1,9 +1,10 @@
+import { getAssistantByUser } from '@shared/assistants/assistant-service';
 import { permanentRedirect } from 'next/navigation';
 import z from 'zod';
-import { parseSearchParams } from '@/utils/parse-search-params';
-import { getAssistantByUser } from '@shared/assistants/assistant-service';
+
 import { requireAuth } from '@/auth/requireAuth';
 import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
+import { parseSearchParams } from '@/utils/parse-search-params';
 
 export const dynamic = 'force-dynamic';
 

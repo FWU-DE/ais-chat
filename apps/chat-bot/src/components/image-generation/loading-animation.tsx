@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
 import Image from 'next/image';
+import React from 'react';
+
 import loadingTransparentGif from '@/assets/loading-transparent.gif';
 import { cn } from '@/utils/tailwind';
 

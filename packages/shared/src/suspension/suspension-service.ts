@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import { verifyReadAccess } from '@shared/auth/authorization-service';
 import {
   dbGetAssistantById,
@@ -28,12 +27,13 @@ import {
   SuspensionRequestSelectModel,
 } from '@shared/db/schema';
 import {
+  assertEntityType,
   EntityRef,
   EntityType,
-  assertEntityType,
   throwEntityInvalidArgumentError,
 } from '@shared/entities/entity-types';
-import { InvalidArgumentError, NotFoundError, checkParameterUUID } from '@shared/error';
+import { checkParameterUUID, InvalidArgumentError, NotFoundError } from '@shared/error';
+import { z } from 'zod';
 
 const suspensionRequestDescriptionSchema = z.string().max(500);
 

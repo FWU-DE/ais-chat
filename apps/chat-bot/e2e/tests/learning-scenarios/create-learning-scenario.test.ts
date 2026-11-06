@@ -1,8 +1,10 @@
-import { expect, test } from '../../fixtures/test';
 import type { Page } from '@playwright/test';
-import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
-import { waitForAutosave, waitForToast, waitForToastDisappear } from '../../utils/utils';
+import { nanoid } from 'nanoid';
+
+import { expect, test } from '../../fixtures/test';
 import { sendMessage } from '../../utils/chat';
+import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
+import { verifyDidacticCommentary } from '../../utils/didactic-commentary';
 import {
   configureLearningScenario,
   createLearningScenario,
@@ -10,8 +12,7 @@ import {
   deleteLearningScenarioFromDetailPage,
 } from '../../utils/learning-scenario';
 import { verifyLicenseInformation } from '../../utils/license-information';
-import { verifyDidacticCommentary } from '../../utils/didactic-commentary';
-import { nanoid } from 'nanoid';
+import { waitForAutosave, waitForToast, waitForToastDisappear } from '../../utils/utils';
 
 test.use({ storageState: AUTH_FILES.teacher });
 

@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
 import type OpenAI from 'openai';
-import { streamOpenAICompatibleAgenticResponse } from './openai-compatible';
+import { describe, expect, it, vi } from 'vitest';
+
 import { AiGenerationError } from '../../errors';
+import { streamOpenAICompatibleAgenticResponse } from './openai-compatible';
 
 function mockResponseWithHeaders(data: unknown, headers: Record<string, string> = {}) {
   return {

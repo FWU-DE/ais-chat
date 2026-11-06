@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { ServerActionResult } from '@shared/actions/server-action-result';
 import {
   CommunityTemplateRequestWithEvents,
   EntitySharingSnapshot,
 } from '@shared/community-templates/community-template-service';
+import { useState } from 'react';
 
 export type CommunitySharingState = {
   request: CommunityTemplateRequestWithEvents | null;

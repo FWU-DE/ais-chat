@@ -1,11 +1,3 @@
-import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
-import { createBoard } from '@/components/chat/plot/jsxgraph-board';
-import { activateLivePlots } from '@/components/chat/plot/live-plots';
-import { renderPlotPng } from '@/components/chat/plot/png-export';
-import { getPlotKey, getRenderedPlot } from '@/components/chat/plot/rendered-plots';
-import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
-import { isImageFile } from '@/utils/files/generic';
-import { parsePlotSpec, type BoundingBox } from '@/utils/plot/plot-spec';
 import { logWarning } from '@shared/logging';
 import type { ParagraphChild } from 'docx';
 import {
@@ -33,6 +25,15 @@ import RemarkMathPlugin from 'remark-math-extended';
 import remarkParse from 'remark-parse';
 import { unified } from 'unified';
 import { visit } from 'unist-util-visit';
+
+import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
+import { createBoard } from '@/components/chat/plot/jsxgraph-board';
+import { activateLivePlots } from '@/components/chat/plot/live-plots';
+import { renderPlotPng } from '@/components/chat/plot/png-export';
+import { getPlotKey, getRenderedPlot } from '@/components/chat/plot/rendered-plots';
+import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
+import { isImageFile } from '@/utils/files/generic';
+import { type BoundingBox, parsePlotSpec } from '@/utils/plot/plot-spec';
 
 const PARAGRAPH_SPACER = '\u200B';
 const PLOT_IMAGE_WIDTH = 600;

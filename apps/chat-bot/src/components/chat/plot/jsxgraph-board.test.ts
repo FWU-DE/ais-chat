@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest';
 import type JXG from 'jsxgraph';
-import { applyInteractionOptions, createBoard } from './jsxgraph-board';
+import { describe, expect, it, vi } from 'vitest';
+
 import { parsePlotSpec, type PlotSpec } from '@/utils/plot/plot-spec';
+
+import { applyInteractionOptions, createBoard } from './jsxgraph-board';
 
 function spec(source: string): PlotSpec {
   const result = parsePlotSpec(source);

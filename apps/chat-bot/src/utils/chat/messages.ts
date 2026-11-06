@@ -1,3 +1,7 @@
+import type { ToolErrorResult, ToolResult } from '@ais-chat/ai-core/chat/types';
+import { ConversationMessageModel } from '@shared/db/types';
+import { logError } from '@shared/logging/logging';
+
 import { toolActivityRegistry } from '@/app/api/chat/build-tools';
 import {
   parseGenericPersistedToolResult,
@@ -10,9 +14,7 @@ import {
   isAiActivityToolName,
 } from '@/types/ai-activity';
 import { type ChatMessage } from '@/types/chat';
-import type { ToolErrorResult, ToolResult } from '@ais-chat/ai-core/chat/types';
-import { ConversationMessageModel } from '@shared/db/types';
-import { logError } from '@shared/logging/logging';
+
 import { createAiActivityCollector } from './ai-activity';
 
 // A tool's own `parsePersistedResult` isn't trusted to handle malformed/legacy persisted data

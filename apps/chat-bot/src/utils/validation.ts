@@ -1,5 +1,6 @@
-import { env } from '@/env';
 import { errorifyFn } from '@shared/utils/error';
+
+import { env } from '@/env';
 
 export const validateApiKeyByHeadersWithResult = errorifyFn(validateApiKeyByHeaders);
 export function validateApiKeyByHeaders(headers: Headers) {

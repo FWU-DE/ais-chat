@@ -1,5 +1,12 @@
 'use client';
 
+import { BoxArrowDownIcon, TrashSimpleIcon } from '@phosphor-icons/react';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
+import { Button } from '@ui/components/button';
+import Image from 'next/image';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
 import DownloadSharedConversationButton, {
   fetchSharedConversationDownload,
 } from '@/app/(unauth)/ua/download-shared-conversation-button';
@@ -8,12 +15,7 @@ import { type ChatMessage as Message } from '@/types/chat';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
 import { cn } from '@/utils/tailwind';
 import { reductionBreakpoint } from '@/utils/tailwind/layout';
-import { BoxArrowDownIcon, TrashSimpleIcon } from '@phosphor-icons/react';
-import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
-import { Button } from '@ui/components/button';
-import { useTranslations } from 'next-intl';
-import Image from 'next/image';
-import React from 'react';
+
 import useBreakpoints from '../hooks/use-breakpoints';
 import ProfileMenu from '../navigation/profile-menu';
 import {

@@ -1,11 +1,13 @@
-import { NUMBER_OF_IMAGES_LIMIT } from '@/configuration-text-inputs/const';
-import { MAX_FILE_SIZE, SUPPORTED_DOCUMENTS_EXTENSIONS, SUPPORTED_IMAGE_EXTENSIONS } from '@/const';
-import { isImageFile, validateFileExtension } from '@/utils/files/generic';
 import { logError } from '@shared/logging';
 import { nanoid } from 'nanoid';
 import { useTranslations } from 'next-intl';
 import type { Dispatch, SetStateAction } from 'react';
 import { z } from 'zod';
+
+import { NUMBER_OF_IMAGES_LIMIT } from '@/configuration-text-inputs/const';
+import { MAX_FILE_SIZE, SUPPORTED_DOCUMENTS_EXTENSIONS, SUPPORTED_IMAGE_EXTENSIONS } from '@/const';
+import { isImageFile, validateFileExtension } from '@/utils/files/generic';
+
 import type { ToastContextType } from '../common/toast';
 
 export type FileUploadResponse = {

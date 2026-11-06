@@ -1,10 +1,11 @@
-import { getVidisJwks } from '@/auth/providers/vidis-provider';
-import { sessionBlockList } from '@/auth/session';
-import { env } from '@/env';
 import { logError, logInfo, logWarning } from '@shared/logging';
 import { jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+
+import { getVidisJwks } from '@/auth/providers/vidis-provider';
+import { sessionBlockList } from '@/auth/session';
+import { env } from '@/env';
 
 const BACKCHANNEL_LOGOUT_EVENT = 'http://schemas.openid.net/event/backchannel-logout';
 const logoutTokenSchema = z.object({

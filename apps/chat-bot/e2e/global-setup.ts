@@ -1,6 +1,8 @@
-import { chromium, expect, FullConfig, Page } from '@playwright/test';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+
+import { chromium, expect, FullConfig, Page } from '@playwright/test';
+
 import { adminLogin } from './utils/admin-login';
 import { selectDifferentModel } from './utils/chat';
 import {

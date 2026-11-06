@@ -1,9 +1,10 @@
+import { nanoid } from 'nanoid';
+
 import { expect, test } from '../../fixtures/test';
-import { AUTH_FILES } from '../../utils/const';
 import { sendMessage } from '../../utils/chat';
+import { AUTH_FILES } from '../../utils/const';
 import { configureLearningScenario } from '../../utils/learning-scenario';
 import { waitForAutosave } from '../../utils/utils';
-import { nanoid } from 'nanoid';
 
 test.use({ storageState: AUTH_FILES.teacher });
 

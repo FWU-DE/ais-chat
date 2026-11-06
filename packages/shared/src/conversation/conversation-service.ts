@@ -1,3 +1,4 @@
+import { dbGetCharacterById } from '@shared/db/functions/character';
 import {
   dbGetConversationById,
   dbGetConversationMessageById,
@@ -5,14 +6,13 @@ import {
   dbGetConversations,
   dbUpdateConversationTitle,
 } from '@shared/db/functions/chat';
-import { dbGetRelatedFiles } from '@shared/db/functions/files';
 import {
   dbDeleteConversationByIdAndUserId,
   dbDoesInviteCodeExist,
 } from '@shared/db/functions/conversation';
+import { dbGetRelatedFiles } from '@shared/db/functions/files';
 import { ConversationMessageModel, ConversationModel } from '@shared/db/types';
 import { ForbiddenError, NotFoundError } from '@shared/error';
-import { dbGetCharacterById } from '@shared/db/functions/character';
 import { isToolRelatedMessage } from '@shared/utils/tool-related-message';
 
 /**

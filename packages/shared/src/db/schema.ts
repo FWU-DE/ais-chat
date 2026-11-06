@@ -1,7 +1,7 @@
 import { ToolCall } from '@ais-chat/ai-core/chat/types';
 import {
-  llmModelPriceMetadataSchema,
   type LlmModelPriceMetadata,
+  llmModelPriceMetadataSchema,
 } from '@ais-chat/shared-core/schemas/llm-model-price-metadata';
 import { logError } from '@shared/logging';
 import { isNull, sql } from 'drizzle-orm';
@@ -27,6 +27,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod';
 import { z } from 'zod';
+
 import {
   conversationRoleSchema,
   conversationTypeSchema,
@@ -41,7 +42,7 @@ export type DesignConfiguration = {
   secondaryTextColor: string;
 };
 
-export { llmModelPriceMetadataSchema, type LlmModelPriceMetadata };
+export { type LlmModelPriceMetadata, llmModelPriceMetadataSchema };
 
 // can be expanded to include other metadata of other file types
 export type FileMetadata = Record<string, unknown>;

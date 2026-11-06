@@ -7,7 +7,6 @@ import {
   verifyWriteAccess,
 } from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
-import { getUserSettings } from '@shared/users/user-settings-service';
 import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import {
   getConversation,
@@ -48,6 +47,7 @@ import { OverviewFilter } from '@shared/overview-filter';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
 import { copyAssistant, copyRelatedTemplateFiles } from '@shared/templates/template-service';
+import { getUserSettings } from '@shared/users/user-settings-service';
 import { uniqueById } from '@shared/utils/arrays';
 import { buildAssistantPictureKey } from '@shared/utils/picture-key';
 import {

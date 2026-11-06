@@ -1,11 +1,13 @@
 'use client';
 
-import { useToast } from '@/components/common/toast';
-import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
-import { createNewAssistantAction } from './actions';
-import { Button } from '@ui/components/button';
 import { PlusIcon } from '@phosphor-icons/react';
+import { Button } from '@ui/components/button';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+
+import { useToast } from '@/components/common/toast';
+
+import { createNewAssistantAction } from './actions';
 
 export default function CreateNewAssistantButton() {
   const router = useRouter();

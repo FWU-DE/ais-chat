@@ -1,6 +1,6 @@
+import { env } from '@shared/valkey/env';
 import { createStorage } from 'unstorage';
 import redisDriver, { RedisOptions } from 'unstorage/drivers/redis';
-import { env } from '@shared/valkey/env';
 
 // 1 second timeout to ensure AIS.chat remains available even if valkey is unreachable
 const COMMAND_TIMEOUT_MS = 1_000;

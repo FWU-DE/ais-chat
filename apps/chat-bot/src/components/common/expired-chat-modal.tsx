@@ -1,9 +1,5 @@
 'use client';
 
-import DownloadSharedConversationButton from '@/app/(unauth)/ua/download-shared-conversation-button';
-import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
-import StopWatchDoneIcon from '@/components/icons/stopwatch-done';
-import { type ChatMessage as Message } from '@/types/chat';
 import { ArrowClockwiseIcon } from '@phosphor-icons/react';
 import {
   AlertDialog,
@@ -15,6 +11,11 @@ import {
 } from '@ui/components/alert-dialog';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
+
+import DownloadSharedConversationButton from '@/app/(unauth)/ua/download-shared-conversation-button';
+import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
+import StopWatchDoneIcon from '@/components/icons/stopwatch-done';
+import { type ChatMessage as Message } from '@/types/chat';
 
 type ExpiredChatModalProps = {
   conversationMessages: Message[];

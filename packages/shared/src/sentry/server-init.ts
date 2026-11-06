@@ -1,6 +1,7 @@
 import { initMetrics } from '@ais-chat/shared-core/metrics/init';
 import { scrubSentryEvent } from '@ais-chat/shared-core/sentry/scrub';
 import Sentry from '@sentry/nextjs';
+
 import { registerCleanupHandler } from '../shutdown/cleanup';
 import { env } from './env';
 

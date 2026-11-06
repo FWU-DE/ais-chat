@@ -1,13 +1,14 @@
 'use client';
 
+import type { InfoBanner } from '@shared/info-banners/info-banner';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+
 import type { UserAndContext } from '@/auth/types';
-import ActiveInfoBanners from '@/components/info-banners/active-info-banners';
 import { HeaderExtensionProvider } from '@/components/hooks/use-header-extension';
+import ActiveInfoBanners from '@/components/info-banners/active-info-banners';
 import { ApplicationHeader } from '@/components/layout/application-header';
 import { ChatOverlayRootContext } from '@/components/layout/chat-overlay-root-context';
 import { useCustomPathname } from '@/hooks/use-custom-pathname';
-import type { InfoBanner } from '@shared/info-banners/info-banner';
-import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
 export function ApplicationLayout({
   children,

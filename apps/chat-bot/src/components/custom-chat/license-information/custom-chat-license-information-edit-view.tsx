@@ -1,11 +1,13 @@
 'use client';
 
-import { LICENSE_INFORMATION_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
-import { COPYRIGHT_OVERVIEW_URL } from '@/components/navigation/const';
 import { CaretRightIcon } from '@phosphor-icons/react';
-import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import type { Control, FieldPath, FieldValues } from 'react-hook-form';
+
+import { COPYRIGHT_OVERVIEW_URL } from '@/components/navigation/const';
+import { LICENSE_INFORMATION_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
+
 import { CustomChatCollapsibleTextareaField } from '../custom-chat-collapsible-textarea-field';
 
 export type LicenseInformationFields = { licenseInformation: string };

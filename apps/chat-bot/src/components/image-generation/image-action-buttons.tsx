@@ -1,13 +1,15 @@
 'use client';
 
-import React from 'react';
-import { useToast } from '../common/toast';
 import { CopyIcon, DownloadSimpleIcon } from '@phosphor-icons/react';
-import { useTranslations } from 'next-intl';
 import { logError } from '@shared/logging';
 import { Button } from '@ui/components/button';
 import { Switch } from '@ui/components/switch';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
+
+import { useToast } from '../common/toast';
 
 interface ImageActionButtonsProps {
   imageRef: React.RefObject<HTMLImageElement | null>;

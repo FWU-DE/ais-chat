@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+
 import { authorizationHeader } from '../utils/api.js';
 
 test.describe('GET /v1/usage', { tag: '@smoke' }, () => {

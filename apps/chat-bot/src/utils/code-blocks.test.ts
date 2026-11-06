@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { getCodeTitle, PLOT_LANGUAGE, replacePlotBlocks } from './code-blocks';
 
 describe('getCodeTitle', () => {

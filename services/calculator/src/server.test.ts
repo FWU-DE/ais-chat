@@ -1,5 +1,7 @@
 import { request as httpRequest } from 'node:http';
+
 import { describe, expect, it } from 'vitest';
+
 import { createCalculatorServer, createCalculatorServerWithPool } from './server.js';
 import type { Result } from './types.js';
 

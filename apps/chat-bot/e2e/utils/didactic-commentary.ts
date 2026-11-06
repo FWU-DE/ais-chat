@@ -1,4 +1,5 @@
 import { expect, Page } from '@playwright/test';
+
 import { openCollapsible, waitForAutosave } from './utils';
 
 export async function verifyDidacticCommentary(

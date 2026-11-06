@@ -1,17 +1,19 @@
 'use server';
 
-import { requireAuth } from '@/auth/requireAuth';
-import type { OverviewFilter } from '@shared/overview-filter';
+import { getAssistantsByOverviewFilter } from '@shared/assistants/assistant-service';
 import { getCharactersByOverviewFilter } from '@shared/characters/character-service';
+import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
 import {
-  getLearningScenariosByOverviewFilter,
   enrichLearningScenarioWithPictureUrl,
+  getLearningScenariosByOverviewFilter,
   type LearningScenarioWithImage,
 } from '@shared/learning-scenarios/learning-scenario-service';
-import { getAssistantsByOverviewFilter } from '@shared/assistants/assistant-service';
-import { enrichCharactersWithImage, type CharacterWithImage } from '../characters/utils';
-import { enrichAssistantsWithImage, type AssistantWithImage } from '../assistants/utils';
-import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
+import type { OverviewFilter } from '@shared/overview-filter';
+
+import { requireAuth } from '@/auth/requireAuth';
+
+import { type AssistantWithImage, enrichAssistantsWithImage } from '../assistants/utils';
+import { type CharacterWithImage, enrichCharactersWithImage } from '../characters/utils';
 
 function resolveFilter(filter: OverviewFilter, isSchoolSharingEnabled: boolean): OverviewFilter {
   return !isSchoolSharingEnabled && filter === 'school' ? 'mine' : filter;

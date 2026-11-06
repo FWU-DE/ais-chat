@@ -1,6 +1,6 @@
-import { expect, test } from '../../fixtures/test';
 import { nanoid } from 'nanoid';
-import { ADMIN_BASE_URL, AUTH_FILES, EDITOR_AUTH_FILE } from '../../utils/const';
+
+import { expect, test } from '../../fixtures/test';
 import { configureCharacter, createCharacter, deleteCharacter } from '../../utils/character';
 import {
   approveRequestInAdmin,
@@ -13,6 +13,7 @@ import {
   sendMessageToEditor,
   submitToCommunity,
 } from '../../utils/community-template';
+import { ADMIN_BASE_URL, AUTH_FILES, EDITOR_AUTH_FILE } from '../../utils/const';
 
 test.use({ storageState: AUTH_FILES.teacher });
 

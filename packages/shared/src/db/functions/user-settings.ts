@@ -1,10 +1,11 @@
 import { eq, sql } from 'drizzle-orm';
+
 import { db } from '..';
 import {
+  type UserSettings,
   userSettingsSchema,
   userSettingsSelectSchema,
   userSettingsTable,
-  type UserSettings,
 } from '../schema';
 
 export async function dbGetUserSettings({ userId }: { userId: string }) {

@@ -1,10 +1,11 @@
 'use client';
 
 import { formatDuration } from '@shared/utils/date';
-import { cn } from '@/utils/tailwind';
-import StopWatchIcon from '@/components/icons/stopwatch';
-import React from 'react';
 import { useTranslations } from 'next-intl';
+import React from 'react';
+
+import StopWatchIcon from '@/components/icons/stopwatch';
+import { cn } from '@/utils/tailwind';
 
 type CountDownTimerProps = {
   leftTimeInSeconds: number;

@@ -1,12 +1,14 @@
 'use client';
 
-import { useCharacterChat, type ChatMessage } from '@/hooks/use-chat-hooks';
-import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
-import { loadSharedChat } from '@/utils/shared-chat-storage';
-import { reductionBreakpoint } from '@/utils/tailwind/layout';
 import { CharacterWithShareDataModel } from '@shared/db/schema';
 import { useTranslations } from 'next-intl';
 import { z } from 'zod';
+
+import { type ChatMessage, useCharacterChat } from '@/hooks/use-chat-hooks';
+import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
+import { loadSharedChat } from '@/utils/shared-chat-storage';
+import { reductionBreakpoint } from '@/utils/tailwind/layout';
+
 import { AssistantIcon } from '../chat/assistant-icon';
 import useBreakpoints from '../hooks/use-breakpoints';
 import GenericSharedChat from './generic-shared-chat';

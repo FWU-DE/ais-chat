@@ -1,11 +1,13 @@
-import { NUMBER_OF_FILES_LIMIT_FOR_SHARED_CHAT } from '@/configuration-text-inputs/const';
-import { SUPPORTED_DOCUMENTS_EXTENSIONS } from '@/const';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
 import React, { useCallback, useRef, useState } from 'react';
+
+import { NUMBER_OF_FILES_LIMIT_FOR_SHARED_CHAT } from '@/configuration-text-inputs/const';
+import { SUPPORTED_DOCUMENTS_EXTENSIONS } from '@/const';
+
 import { RichText } from '../../common/rich-text';
 import { useToast } from '../../common/toast';
-import { handleSingleFile, type FileUploadProps } from '../../file-upload/upload-file';
+import { type FileUploadProps, handleSingleFile } from '../../file-upload/upload-file';
 import { FileUploadIcon } from '../../icons/file-upload-icons/file-upload-tray-icon';
 
 export function FileDrop({

@@ -1,9 +1,9 @@
 'use client';
 
 import { useSidebar } from '@ais-chat/ui/components/sidebar';
-import { useRouter } from 'next/navigation';
 import { PlusSquareIcon, SidebarSimpleIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
+import { useRouter } from 'next/navigation';
 
 export function ToggleSidebarButton({ forceVisibility = false }: { forceVisibility?: boolean }) {
   const { toggleSidebar, open, isMobile, openMobile } = useSidebar();

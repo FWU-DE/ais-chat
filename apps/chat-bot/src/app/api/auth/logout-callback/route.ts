@@ -1,6 +1,7 @@
 import { logError } from '@shared/logging';
 import { withTrustedOrigin } from '@shared/utils/with-trusted-origin';
 import { NextRequest, NextResponse } from 'next/server';
+
 import { APP_COOKIE_PREFIX } from '@/auth/cookies';
 
 /**

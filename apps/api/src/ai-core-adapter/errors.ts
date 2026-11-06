@@ -2,9 +2,9 @@ import {
   AiGenerationError,
   ApiKeyQuotaExceededError,
   InvalidModelError,
+  ProviderConfigurationError,
   ProviderRateLimitExceededError,
   ResponsibleAIError,
-  ProviderConfigurationError,
 } from '@ais-chat/ai-core/errors';
 import type { FastifyReply } from 'fastify';
 

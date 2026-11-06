@@ -1,10 +1,11 @@
 'use client';
 
+import { ServerActionResult } from '@shared/actions/server-action-result';
+import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
+import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
 import { useCallback } from 'react';
 import { UseFormSetValue } from 'react-hook-form';
-import { ServerActionResult } from '@shared/actions/server-action-result';
-import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
-import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
+
 import {
   CommunitySharingState,
   CommunityTemplateRequestMutationResult,

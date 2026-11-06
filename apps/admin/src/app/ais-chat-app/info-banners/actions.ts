@@ -1,7 +1,10 @@
 'use server';
 
-import { requireAdminAuth } from '@/auth/requireAdminAuth';
 import { getFederalStates } from '@shared/federal-states/federal-state-service';
+import type {
+  InfoBannerToFederalStateMapping,
+  ManageInfoBannerInput,
+} from '@shared/info-banners/info-banner';
 import {
   createInfoBanner,
   deleteInfoBanner,
@@ -10,10 +13,8 @@ import {
   getInfoBanners,
   updateInfoBanner,
 } from '@shared/info-banners/info-banner-service';
-import type {
-  InfoBannerToFederalStateMapping,
-  ManageInfoBannerInput,
-} from '@shared/info-banners/info-banner';
+
+import { requireAdminAuth } from '@/auth/requireAdminAuth';
 
 export async function getInfoBannersAction() {
   await requireAdminAuth();

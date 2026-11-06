@@ -1,18 +1,19 @@
+import { dbGetConfiguration, dbUpsertConfiguration } from '@shared/db/functions/configuration';
 import {
+  dbFindModelByIdAndFederalStateId,
   dbGetAllLlmModels,
   dbGetLlmModelById,
-  dbFindModelByIdAndFederalStateId,
   dbGetSpeechModel,
 } from '@shared/db/functions/llm-model';
-import { dbGetConfiguration, dbUpsertConfiguration } from '@shared/db/functions/configuration';
+import { InvalidArgumentError } from '@shared/error/invalid-argument-error';
+
 import {
   type LlmModelSelectModel,
   type SpeechVoice,
-  staticModelsConfigurationSchema,
-  type StaticModelsConfiguration,
   type StaticModelRole,
+  type StaticModelsConfiguration,
+  staticModelsConfigurationSchema,
 } from '../db/schema';
-import { InvalidArgumentError } from '@shared/error/invalid-argument-error';
 import { getFirstTextModel } from './llm-model-utils';
 
 export const STATIC_MODELS_CONFIGURATION_KEY = 'static_models';

@@ -10,13 +10,14 @@ vi.mock('@shared/users/user-budget-service', () => ({
   getUsedBudgetInCentByUser: vi.fn(),
 }));
 
-import { sharedChatHasExpired } from './usage';
-import { getMaxBudgetInCentByUser } from '@shared/users/user-budget-service';
 import {
   dbGetLearningScenarioChatUsageInCentByLearningScenarioId,
   dbGetSharedCharacterChatUsageInCentByCharacterId,
 } from '@shared/db/functions/token-points';
 import { type FederalStateModel } from '@shared/federal-states/types';
+import { getMaxBudgetInCentByUser } from '@shared/users/user-budget-service';
+
+import { sharedChatHasExpired } from './usage';
 
 type TestSharedChatUser = {
   id: string;

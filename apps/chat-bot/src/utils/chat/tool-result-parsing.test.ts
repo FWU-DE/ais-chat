@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { parseJsonRecord, toLinks, truncate } from './tool-result-parsing';
 
 describe('activity helpers', () => {

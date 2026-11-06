@@ -1,6 +1,7 @@
-import { Controller, Control, FieldPath, FieldValues } from 'react-hook-form';
-import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '../field';
+import { Control, Controller, FieldPath, FieldValues } from 'react-hook-form';
+
 import { Checkbox } from '../checkbox';
+import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '../field';
 
 type FormFieldCheckboxProps<
   TFieldValues extends FieldValues = FieldValues,

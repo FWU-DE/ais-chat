@@ -1,13 +1,15 @@
+import type { LlmModelSelectModel } from '@shared/db/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { type ChatMessage } from '@/types/chat';
+
+import { type ChatAttachmentWithMessageId } from '../file-operations/preprocess-image';
+import { env as imageAttachmentEnv } from './image-attachment-env';
 import {
   annotateMessageAttachmentNames,
-  enrichMessagesWithImageData,
   determineImageAttachmentTypeForModel,
+  enrichMessagesWithImageData,
 } from './utils';
-import { type ChatMessage } from '@/types/chat';
-import { type ChatAttachmentWithMessageId } from '../file-operations/preprocess-image';
-import type { LlmModelSelectModel } from '@shared/db/schema';
-import { env as imageAttachmentEnv } from './image-attachment-env';
 
 vi.mock('./image-attachment-env', () => ({
   env: { imageAttachmentMode: 'url' },

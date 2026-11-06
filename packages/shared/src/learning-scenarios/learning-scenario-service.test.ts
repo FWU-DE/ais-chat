@@ -1,33 +1,18 @@
+import { UserModel } from '@shared/auth/user-model';
+import { dbGetLearningScenarioChatUsageInCentByLearningScenarioId } from '@shared/db/functions/token-points';
+import { LearningScenarioSelectModel, LearningScenarioWithShareDataModel } from '@shared/db/schema';
+import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/error';
+import { FederalStateModel } from '@shared/federal-states/types';
+import { getUserSettings } from '@shared/users/user-settings-service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { dbGetFileForLearningScenario, dbGetFilesForLearningScenario } from '../db/functions/files';
 import {
-  createNewLearningScenario,
-  createNewLearningScenarioFromTemplate,
-  deleteLearningScenario,
-  downloadFileFromLearningScenario,
-  extendLearningScenarioShareExpiration,
-  getActiveLearningScenarioShareData,
-  getFilesForLearningScenario,
-  getLearningScenariosByOverviewFilter,
-  getLearningScenariosForUser,
-  getLearningScenarioForEditView,
-  getLearningScenarioForChatSession,
-  getLearningScenarioForExistingConversation,
-  getSharedLearningScenario,
-  linkFileToLearningScenario,
-  removeFileFromLearningScenario,
-  shareLearningScenario,
-  unshareLearningScenario,
-  updateLearningScenario,
-  updateLearningScenarioSchoolSharing,
-  updateLearningScenarioShareTokenPointsLimit,
-  uploadAvatarPictureForLearningScenario,
-} from './learning-scenario-service';
-import {
+  dbCreateLearningScenarioShare,
+  dbExtendSharedLearningScenarioExpiration,
   dbGetAllAccessibleLearningScenarios,
   dbGetAllLearningScenariosByUser,
   dbGetCommunityLearningScenarios,
-  dbCreateLearningScenarioShare,
-  dbExtendSharedLearningScenarioExpiration,
   dbGetGlobalLearningScenarios,
   dbGetLatestManageableLearningScenarioShare,
   dbGetLearningScenarioById,
@@ -39,19 +24,35 @@ import {
   dbStopLearningScenarioShare,
   dbUpdateLearningScenarioShareTokenPointsLimit,
 } from '../db/functions/learning-scenario';
-import { dbGetFileForLearningScenario, dbGetFilesForLearningScenario } from '../db/functions/files';
 import { getAvatarPictureUrl } from '../files/fileService';
-import { generateUUID } from '../utils/uuid';
-import { LearningScenarioSelectModel, LearningScenarioWithShareDataModel } from '@shared/db/schema';
-import { SHARE_EXTENSION_WINDOW_MS } from '../sharing/const';
-import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/error';
-import { UserModel } from '@shared/auth/user-model';
-import { FederalStateModel } from '@shared/federal-states/types';
 import { getReadOnlySignedUrl, uploadFileToS3 } from '../s3';
-import { duplicateLearningScenario } from './learning-scenario-admin-service';
+import { SHARE_EXTENSION_WINDOW_MS } from '../sharing/const';
 import { getMaxBudgetInCentByUser, getUsedBudgetInCentByUser } from '../users/user-budget-service';
-import { dbGetLearningScenarioChatUsageInCentByLearningScenarioId } from '@shared/db/functions/token-points';
-import { getUserSettings } from '@shared/users/user-settings-service';
+import { generateUUID } from '../utils/uuid';
+import { duplicateLearningScenario } from './learning-scenario-admin-service';
+import {
+  createNewLearningScenario,
+  createNewLearningScenarioFromTemplate,
+  deleteLearningScenario,
+  downloadFileFromLearningScenario,
+  extendLearningScenarioShareExpiration,
+  getActiveLearningScenarioShareData,
+  getFilesForLearningScenario,
+  getLearningScenarioForChatSession,
+  getLearningScenarioForEditView,
+  getLearningScenarioForExistingConversation,
+  getLearningScenariosByOverviewFilter,
+  getLearningScenariosForUser,
+  getSharedLearningScenario,
+  linkFileToLearningScenario,
+  removeFileFromLearningScenario,
+  shareLearningScenario,
+  unshareLearningScenario,
+  updateLearningScenario,
+  updateLearningScenarioSchoolSharing,
+  updateLearningScenarioShareTokenPointsLimit,
+  uploadAvatarPictureForLearningScenario,
+} from './learning-scenario-service';
 
 vi.mock('../db/functions/learning-scenario', () => ({
   dbGetAllAccessibleLearningScenarios: vi.fn(),

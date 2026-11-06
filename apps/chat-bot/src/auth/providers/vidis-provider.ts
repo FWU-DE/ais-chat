@@ -1,8 +1,7 @@
 import { dbGetUserById } from '@ais-chat/shared/db/functions/user';
-import { env } from '@/env';
 import { createRemoteJWKSet } from 'jose';
-import { customFetch as nextAuthCustomFetch } from 'next-auth';
 import type { Account, NextAuthConfig, Profile } from 'next-auth';
+import { customFetch as nextAuthCustomFetch } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 import {
   allowInsecureRequests,
@@ -10,6 +9,9 @@ import {
   discoveryRequest,
   processDiscoveryResponse,
 } from 'oauth4webapi';
+
+import { env } from '@/env';
+
 import { vidisAccountSchema, vidisProfileSchema } from './vidis-schema';
 export { validateAndSyncVidisUser } from './validate-and-sync-vidis-user';
 

@@ -1,15 +1,16 @@
 'use server';
 
+import { runServerAction } from '@shared/actions/run-server-action';
+
 import { requireAdminAuth } from '@/auth/requireAdminAuth';
 import {
-  getApiKeys,
   createApiKey,
-  updateApiKey,
-  getSingleApiKey,
   deleteApiKey,
+  getApiKeys,
+  getSingleApiKey,
+  updateApiKey,
 } from '@/services/api-key-service';
 import { ApiKey, ApiKeyWithPlainKey, CreateApiKey, UpdateApiKey } from '@/types/api-key';
-import { runServerAction } from '@shared/actions/run-server-action';
 
 export async function getApiKeysAction(projectId: string): Promise<ApiKey[]> {
   await requireAdminAuth();

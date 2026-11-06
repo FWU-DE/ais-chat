@@ -1,5 +1,6 @@
 import { DropdownMenuItem } from '@ui/components/dropdown-menu';
 import type { ComponentProps } from 'react';
+
 import { cn } from '@/utils/tailwind';
 
 export type HeaderMenuItemProps = ComponentProps<typeof DropdownMenuItem>;

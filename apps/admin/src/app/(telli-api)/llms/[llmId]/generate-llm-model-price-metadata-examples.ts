@@ -1,8 +1,8 @@
-import { z } from 'zod';
 import {
-  llmModelPriceMetadataSchema,
   type LlmModelPriceMetadata,
+  llmModelPriceMetadataSchema,
 } from '@ais-chat/shared-core/schemas/llm-model-price-metadata';
+import { z } from 'zod';
 
 /**
  * Generates one minimal example object per variant of

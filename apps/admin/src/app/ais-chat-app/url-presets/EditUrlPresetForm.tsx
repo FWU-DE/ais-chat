@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import z from 'zod';
 import { CheckIcon, PenIcon, XIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { FormField } from '@ui/components/form/form-field';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import z from 'zod';
 
 const editFormSchema = z.object({
   name: z.string().trim().min(1, 'Name ist erforderlich'),

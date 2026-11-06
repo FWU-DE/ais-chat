@@ -1,8 +1,9 @@
-import { PgTransaction } from 'drizzle-orm/pg-core';
-import { conversationMessageTable, conversationTable, userTable } from './schema';
-import { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
 import { ExtractTablesWithRelations } from 'drizzle-orm';
 import { NodePgQueryResultHKT } from 'drizzle-orm/node-postgres';
+import { PgTransaction } from 'drizzle-orm/pg-core';
+import { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
+
+import { conversationMessageTable, conversationTable, userTable } from './schema';
 export type User = typeof userTable.$inferSelect;
 
 export type ConversationModel = typeof conversationTable.$inferSelect;

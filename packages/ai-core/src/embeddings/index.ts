@@ -1,8 +1,8 @@
 import { isApiKeyOverQuota } from '../api-keys/billing';
-import { generateEmbeddings } from './providers';
 import { hasAccessToModel } from '../api-keys/model-access';
 import { ApiKeyQuotaExceededError, InvalidModelError, normalizeAiGenerationError } from '../errors';
 import { getEmbeddingModelById, getEmbeddingModelByName } from '../models';
+import { generateEmbeddings } from './providers';
 
 /**
  * Generates embeddings using the specified model and texts, with access control.

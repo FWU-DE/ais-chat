@@ -1,13 +1,15 @@
 'use client';
 
-import useBreakpoints from '../hooks/use-breakpoints';
 import React from 'react';
 import { createPortal } from 'react-dom';
+
 import { useChatOverlayRoot } from '@/components/layout/chat-overlay-root-context';
-import MarkdownDisplay from './markdown-display';
 import { cn } from '@/utils/tailwind';
+
+import useBreakpoints from '../hooks/use-breakpoints';
 import ChevronDownIcon from '../icons/chevron-down';
 import ChevronRightIcon from '../icons/chevron-right';
+import MarkdownDisplay from './markdown-display';
 
 export const dynamic = 'force-dynamic';
 

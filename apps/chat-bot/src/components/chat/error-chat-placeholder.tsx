@@ -1,5 +1,6 @@
-import React from 'react';
 import { useTranslations } from 'next-intl';
+import React from 'react';
+
 import ReloadIcon from '../icons/reload';
 
 export function ErrorChatPlaceholder({

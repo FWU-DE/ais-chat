@@ -1,24 +1,26 @@
 'use client';
 
-import Link from 'next/link';
-import { QRCodeSVG } from 'qrcode.react';
+import type { ServerActionResult } from '@shared/actions/server-action-result';
+import {
+  calculateShareSessionState,
+  ShareSessionState,
+} from '@shared/sharing/calculate-share-session-state';
 import { Button } from '@ui/components/button';
-import CollapseSidebar from '@/components/common/collapse-sidebar';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { QRCodeSVG } from 'qrcode.react';
+
+import { getCharacterShareDataAction } from '@/app/(authed)/(chat-bot)/characters/editor/[characterId]/actions';
+import CountDownTimer from '@/app/(authed)/(chat-bot)/learning-scenarios/_components/count-down';
+import { getLearningScenarioShareDataAction } from '@/app/(authed)/(chat-bot)/learning-scenarios/editor/[learningScenarioId]/actions';
 import CopyToClipboardButton from '@/components/common/clipboard-button';
+import CollapseSidebar from '@/components/common/collapse-sidebar';
 import SidebarCloseIcon from '@/components/icons/sidebar-close';
 import Footer from '@/components/navigation/footer';
-import CountDownTimer from '@/app/(authed)/(chat-bot)/learning-scenarios/_components/count-down';
-import CustomChatHeader from './custom-chat-header';
-import { useShareDataPolling } from '@/hooks/use-share-data-polling';
-import {
-  ShareSessionState,
-  calculateShareSessionState,
-} from '@shared/sharing/calculate-share-session-state';
-import type { ServerActionResult } from '@shared/actions/server-action-result';
 import type { SharePollingData } from '@/hooks/use-share-data-polling';
-import { getCharacterShareDataAction } from '@/app/(authed)/(chat-bot)/characters/editor/[characterId]/actions';
-import { getLearningScenarioShareDataAction } from '@/app/(authed)/(chat-bot)/learning-scenarios/editor/[learningScenarioId]/actions';
-import { useTranslations } from 'next-intl';
+import { useShareDataPolling } from '@/hooks/use-share-data-polling';
+
+import CustomChatHeader from './custom-chat-header';
 import { CustomChatShareWarning } from './share-with-learners/custom-chat-share-warning';
 
 type CustomChatSharePageContentProps = {

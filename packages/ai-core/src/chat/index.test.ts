@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { generateTextWithBilling, generateTextStreamWithBilling } from './index';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { AiGenerationError, InvalidModelError } from '../errors';
+import { generateTextStreamWithBilling, generateTextWithBilling } from './index';
 import type { AiModel, TokenUsage } from './types';
 
 // Mock all dependencies
@@ -22,10 +23,10 @@ vi.mock('../models', () => ({
   getTextModelById: vi.fn(),
 }));
 
-import { generateText, generateTextStream } from './providers';
 import { billTextGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
 import { hasAccessToModel } from '../api-keys/model-access';
 import { getTextModelById } from '../models';
+import { generateText, generateTextStream } from './providers';
 
 const mockGenerateText = vi.mocked(generateText);
 const mockGenerateTextStream = vi.mocked(generateTextStream);

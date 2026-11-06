@@ -1,20 +1,21 @@
-import { db as localDb } from './index';
-import {
-  projectTable,
-  apiKeyTable,
-  llmModelTable,
-  llmModelApiKeyMappingTable,
-  llmModelProviderKeyMappingTable,
-  llmProviderKeyTable,
-  ProjectModel,
-  LlmModel,
-  ApiKeyModel,
-  LlmModelApiKeyMappingModel,
-  LlmModelProviderKeyMappingModel,
-  LlmProviderKeyModel,
-} from './schema';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
+
+import { db as localDb } from './index';
+import {
+  ApiKeyModel,
+  apiKeyTable,
+  LlmModel,
+  LlmModelApiKeyMappingModel,
+  llmModelApiKeyMappingTable,
+  LlmModelProviderKeyMappingModel,
+  llmModelProviderKeyMappingTable,
+  llmModelTable,
+  LlmProviderKeyModel,
+  llmProviderKeyTable,
+  ProjectModel,
+  projectTable,
+} from './schema';
 import { normalizeSeedModelsForBifrost, syncSeedModelsToBifrost } from './seed-bifrost';
 
 // Loads all required data from the staging database into the local database

@@ -15,6 +15,7 @@ vi.mock('..', () => ({
 }));
 
 import { NotFoundError } from '@shared/error';
+
 import {
   dbExtendSharedCharacterExpiration,
   dbGetAllAccessibleCharacters,

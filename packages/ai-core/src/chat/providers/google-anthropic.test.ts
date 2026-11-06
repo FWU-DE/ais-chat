@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/only-throw-error */
 /* eslint-disable require-yield */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  constructGoogleAnthropicTextGenerationFn,
-  constructGoogleAnthropicTextStreamFn,
-  constructGoogleAnthropicAgenticStreamFn,
-} from './google-anthropic';
+
 import { AiGenerationError, RateLimitExceededError } from '../../errors';
 import type { AiModel, Message } from '../types';
+import {
+  constructGoogleAnthropicAgenticStreamFn,
+  constructGoogleAnthropicTextGenerationFn,
+  constructGoogleAnthropicTextStreamFn,
+} from './google-anthropic';
 
 const { createMock, streamMock, finalMessageMock, MockAnthropicVertex, constructorMock } =
   vi.hoisted(() => {

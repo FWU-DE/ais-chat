@@ -5,10 +5,11 @@ import {
   dbGetAllS3FileKeys,
   dbGetDanglingConversationFileIds,
 } from '@shared/db/functions/files';
-import { validateApiKeyByHeadersWithResult } from '@/utils/validation';
+import { logInfo } from '@shared/logging';
 import { deleteFilesFromS3, listFilesFromS3 } from '@shared/s3';
 import { NextRequest, NextResponse } from 'next/server';
-import { logInfo } from '@shared/logging';
+
+import { validateApiKeyByHeadersWithResult } from '@/utils/validation';
 
 export async function DELETE(req: NextRequest) {
   const [error] = validateApiKeyByHeadersWithResult(req.headers);

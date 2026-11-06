@@ -1,30 +1,32 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { Controller, useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
-import { z } from 'zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/components/card';
-import { Button } from '@ui/components/button';
-import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
-import { FormField } from '@ui/components/form/form-field';
+import { imageGenerationConfigSchema, speechConfigSchema } from '@ais-chat/api-database/types';
+import { llmModelPriceMetadataSchema } from '@ais-chat/shared/db/schema';
 import { FormFieldCheckbox } from '@ais-chat/ui/components/form/form-field-checkbox';
-import { LargeLanguageModel } from '@/types/large-language-model';
-import { createLLMAction, deleteLLMAction, updateLLMAction } from './actions';
-import { ROUTES } from '@/consts/routes';
-import { FormErrorDisplay } from '@/components/FormErrorDisplay';
-import type { ProviderKey } from '@/types/provider-key';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { TrashSimpleIcon } from '@phosphor-icons/react';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
+import { Button } from '@ui/components/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/components/card';
 import { Checkbox } from '@ui/components/checkbox';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@ui/components/field';
+import { FormField } from '@ui/components/form/form-field';
 import { Input } from '@ui/components/input';
-import { TrashSimpleIcon } from '@phosphor-icons/react';
-import { llmModelPriceMetadataSchema } from '@ais-chat/shared/db/schema';
-import { imageGenerationConfigSchema, speechConfigSchema } from '@ais-chat/api-database/types';
-import { PriceMetadataExamplesDialog } from './PriceMetadataExamplesDialog';
+import { useRouter } from 'next/navigation';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { toast } from 'sonner';
+import { z } from 'zod';
+
+import { FormErrorDisplay } from '@/components/FormErrorDisplay';
+import { createJsonStringSchema, jsonStringSchema } from '@/components/utils/json-schema';
+import { ROUTES } from '@/consts/routes';
+import { LargeLanguageModel } from '@/types/large-language-model';
+import type { ProviderKey } from '@/types/provider-key';
+
+import { createLLMAction, deleteLLMAction, updateLLMAction } from './actions';
 import { ImageGenerationConfigExampleDialog } from './ImageGenerationConfigExampleDialog';
 import { ModelConfigExampleDialog } from './ModelConfigExampleDialog';
-import { createJsonStringSchema, jsonStringSchema } from '@/components/utils/json-schema';
+import { PriceMetadataExamplesDialog } from './PriceMetadataExamplesDialog';
 
 const priceMetadataSchema = createJsonStringSchema(
   llmModelPriceMetadataSchema,

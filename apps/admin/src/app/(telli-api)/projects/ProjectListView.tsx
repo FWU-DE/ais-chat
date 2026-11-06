@@ -1,14 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, useTransition } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@ui/components/table';
+import { Button } from '@ui/components/button';
 import {
   Card,
   CardAction,
@@ -17,13 +9,23 @@ import {
   CardHeader,
   CardTitle,
 } from '@ui/components/card';
-import { Button } from '@ui/components/button';
-import { getProjectsAction } from './actions';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@ui/components/table';
+import { useCallback, useEffect, useState, useTransition } from 'react';
+import { toast } from 'sonner';
+
+import { ClickableTableRow } from '@/components/common/ClickableTableRow';
 import { ROUTES } from '@/consts/routes';
 import { Project } from '@/types/project';
-import { ClickableTableRow } from '@/components/common/ClickableTableRow';
+
+import { getProjectsAction } from './actions';
 import { CreateProjectModal } from './CreateProjectModal';
-import { toast } from 'sonner';
 
 export function ProjectListView() {
   const [projects, setProjects] = useState<Project[]>([]);

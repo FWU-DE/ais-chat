@@ -1,8 +1,10 @@
 'use client';
 
-import { DIDACTIC_COMMENTARY_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
 import { useTranslations } from 'next-intl';
 import type { Control, FieldPath, FieldValues } from 'react-hook-form';
+
+import { DIDACTIC_COMMENTARY_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
+
 import { CustomChatCollapsibleTextareaField } from '../custom-chat-collapsible-textarea-field';
 
 export type DidacticCommentaryFields = { didacticCommentary: string };

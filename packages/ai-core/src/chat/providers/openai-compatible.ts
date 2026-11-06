@@ -1,4 +1,5 @@
 import type OpenAI from 'openai';
+
 import { AiGenerationError } from '../../errors';
 import type { Message, StreamEvent, TokenUsage, ToolCall, ToolDefinition } from '../types';
 import { estimateTokenUsage, isAbortError, toOpenAIResponsesInput, toOpenAITools } from '../utils';

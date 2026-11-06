@@ -1,7 +1,3 @@
-import { UserAndContext } from '@/auth/types';
-import { generateRandomString } from './random';
-import { generateUUID } from '@shared/utils/uuid';
-import { E2E_FEDERAL_STATE } from './const';
 import {
   CharacterSelectModel,
   ConversationUsageTrackingSelectModel,
@@ -10,6 +6,12 @@ import {
   SharedCharacterChatUsageTrackingSelectModel,
   SharedLearningScenarioUsageTrackingSelectModel,
 } from '@shared/db/schema';
+import { generateUUID } from '@shared/utils/uuid';
+
+import { UserAndContext } from '@/auth/types';
+
+import { E2E_FEDERAL_STATE } from './const';
+import { generateRandomString } from './random';
 
 export const mockUserAndContext = (): UserAndContext => {
   const schoolId = generateUUID();

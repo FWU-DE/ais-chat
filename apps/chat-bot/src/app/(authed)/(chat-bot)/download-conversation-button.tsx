@@ -1,5 +1,10 @@
 'use client';
 
+import { BoxArrowDownIcon } from '@phosphor-icons/react';
+import { Button } from '@ui/components/button';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
 import {
   type ConversationDownloadData,
   useConversationDownload,
@@ -13,10 +18,6 @@ import {
   markdownToDocxBlob,
 } from '@/utils/files/markdown-docx';
 import { cn } from '@/utils/tailwind';
-import { BoxArrowDownIcon } from '@phosphor-icons/react';
-import { Button } from '@ui/components/button';
-import { useTranslations } from 'next-intl';
-import React from 'react';
 
 type DownloadConversationButtonProps = {
   characterName?: string;

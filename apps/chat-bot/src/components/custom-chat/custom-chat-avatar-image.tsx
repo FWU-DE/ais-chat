@@ -1,7 +1,7 @@
 'use client';
 
-import Image from 'next/image';
 import { ImageSquareIcon } from '@phosphor-icons/react';
+import Image from 'next/image';
 
 export function CustomChatAvatarImage({ pictureUrl }: { pictureUrl: string | undefined }) {
   return (

@@ -1,10 +1,13 @@
-import { cn } from '@/utils/tailwind';
-import katex from 'katex';
 import 'katex/dist/katex.min.css';
+
+import katex from 'katex';
 import Markdown, { type Components } from 'react-markdown';
 import RehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import RemarkMathPlugin from 'remark-math-extended';
+
+import { cn } from '@/utils/tailwind';
+
 import { MarkdownCode } from './markdown-code';
 import { JsxGraphPlotElement } from './plot/plot-block';
 import { JSXGRAPH_PLOT_HNAME, rehypeJsxGraphPlot } from './plot/rehype-jsxgraph-plot';
