@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from './locales';
 
 const mocks = vi.hoisted(() => ({

@@ -1,8 +1,10 @@
 'use client';
 
 import Image from 'next/image';
+
 import loadingGif from '@/assets/loading-transparent.gif';
 import type { AiActivityStep } from '@/types/ai-activity';
+
 import { useCurrentActivityLabel } from './activity/use-current-activity-label';
 
 export default function LoadingAnimation({

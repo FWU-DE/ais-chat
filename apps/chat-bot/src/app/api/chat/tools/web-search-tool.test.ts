@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { UserAndContext } from '@/auth/types';
+
 import type { WebSearchConfig } from '../websearch';
 
 const mocks = vi.hoisted(() => ({

@@ -1,5 +1,5 @@
-import { FederalStateId } from '@/utils/vidis/const';
 import disclaimerDeBw from '@/assets/disclaimer/disclaimer-de-bw.png';
+import { FederalStateId } from '@/utils/vidis/const';
 
 /**
  * The following markdown options are allowed in disclaimer texts:

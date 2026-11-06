@@ -3,6 +3,7 @@ import {
   EntityType,
   throwEntityInvalidArgumentError,
 } from '@shared/entities/entity-types';
+
 import { env } from '@/env';
 
 export function buildChatBotEntityUrl(entityType: EntityType, entityId: string) {

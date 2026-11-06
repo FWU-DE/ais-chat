@@ -1,21 +1,23 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { OverviewFilter } from '@shared/overview-filter';
-import { AssistantWithImage } from './utils';
-import EntityOverview from '@/components/entity-overview/entity-overview';
-import EntityCard from '@/components/entity-overview/entity-card';
-import CreateNewAssistantButton from './create-new-assistant-button';
-import { useOverviewFilters } from '@/components/hooks/use-overview-filters';
-import { getAssistantsByFilterAction } from '../actions/entity-filter-actions';
-import { filterAndSortEntities } from '@/components/entity-overview/utils';
+import { useTranslations } from 'next-intl';
+import React, { useCallback, useState } from 'react';
+
 import { RichText } from '@/components/common/rich-text';
 import FilterSelectSection from '@/components/custom-chat/filter/custom-chat-filter-select-section';
 import {
   extractFilterValues,
   matchesFilterValues,
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
+import EntityCard from '@/components/entity-overview/entity-card';
+import EntityOverview from '@/components/entity-overview/entity-overview';
+import { filterAndSortEntities } from '@/components/entity-overview/utils';
+import { useOverviewFilters } from '@/components/hooks/use-overview-filters';
+
+import { getAssistantsByFilterAction } from '../actions/entity-filter-actions';
+import CreateNewAssistantButton from './create-new-assistant-button';
+import { AssistantWithImage } from './utils';
 
 type AssistantOverviewProps = {
   currentUserId: string;

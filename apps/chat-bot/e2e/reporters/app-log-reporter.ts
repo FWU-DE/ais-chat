@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+
 import type { Reporter, TestCase, TestResult } from '@playwright/test/reporter';
 
 /**

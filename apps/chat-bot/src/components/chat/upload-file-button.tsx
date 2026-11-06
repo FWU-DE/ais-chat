@@ -1,7 +1,9 @@
-import { NUMBER_OF_FILES_LIMIT } from '@/configuration-text-inputs/const';
-import { cn } from '@/utils/tailwind';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+
+import { NUMBER_OF_FILES_LIMIT } from '@/configuration-text-inputs/const';
+import { cn } from '@/utils/tailwind';
+
 import type { LocalFileState } from '../file-upload/upload-file';
 import AttachFileIcon from '../icons/attach-file';
 

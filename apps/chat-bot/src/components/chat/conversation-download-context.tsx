@@ -1,7 +1,8 @@
 'use client';
 
-import type { ChatMessage } from '@/types/chat';
 import React from 'react';
+
+import type { ChatMessage } from '@/types/chat';
 
 export type ConversationDownloadFile = {
   id: string;

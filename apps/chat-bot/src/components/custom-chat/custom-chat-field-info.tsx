@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
 import { InfoTooltip } from '@ui/components/tooltip';
+import type { ReactNode } from 'react';
 
 export function CustomChatFieldInfo({
   label,

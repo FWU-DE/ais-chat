@@ -1,9 +1,10 @@
-import { expect, test } from '../../fixtures/test';
-import { login } from '../../utils/login';
 import { db } from '@shared/db';
 import { federalStateTable } from '@shared/db/schema';
 import { eq } from 'drizzle-orm';
+
+import { expect, test } from '../../fixtures/test';
 import { E2E_FEDERAL_STATE } from '../../utils/const';
+import { login } from '../../utils/login';
 
 const featureToggleDefaults = {
   isStudentAccessEnabled: true,

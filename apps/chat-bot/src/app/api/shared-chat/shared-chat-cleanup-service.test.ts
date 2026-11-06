@@ -1,4 +1,3 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   dbDeleteFilesByIds,
   dbGetExpiredCharacterShares,
@@ -6,6 +5,8 @@ import {
   dbGetSharedChatFileCandidates,
 } from '@shared/db/functions/shared-chat-files';
 import { deleteMessageAttachments } from '@shared/files/fileService';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { cleanupExpiredSharedChatFiles } from './shared-chat-cleanup-service';
 
 vi.mock('@shared/db/functions/shared-chat-files', () => ({

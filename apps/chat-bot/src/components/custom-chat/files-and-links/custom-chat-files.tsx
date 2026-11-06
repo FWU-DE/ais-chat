@@ -1,8 +1,10 @@
-import { NUMBER_OF_FILES_LIMIT_FOR_SHARED_CHAT } from '@/configuration-text-inputs/const';
 import { ServerActionResult } from '@shared/actions/server-action-result';
 import { FileModel } from '@shared/db/schema';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+
+import { NUMBER_OF_FILES_LIMIT_FOR_SHARED_CHAT } from '@/configuration-text-inputs/const';
+
 import { useToast } from '../../common/toast';
 import { LocalFileState } from '../../file-upload/upload-file';
 import { FileDrop } from './file-drop-area';

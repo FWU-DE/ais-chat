@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { billImageGenerationUsageToApiKey, isApiKeyOverQuota } from './billing';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { AiModel } from '../images/types';
+import { billImageGenerationUsageToApiKey, isApiKeyOverQuota } from './billing';
 
 // Mock the api-database functions
 vi.mock('@ais-chat/api-database', () => ({

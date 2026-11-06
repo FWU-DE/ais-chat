@@ -1,4 +1,3 @@
-import { cn } from '@/utils/tailwind';
 import { ArrowCounterClockwiseIcon, PauseIcon, PlayIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import {
@@ -11,6 +10,9 @@ import {
 import { Spinner } from '@ui/components/spinner';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+
+import { cn } from '@/utils/tailwind';
+
 import { AudioWaveform } from './audio-waveform';
 import { formatTime } from './format-time';
 import { GenerateSpeechStreamFn } from './types';

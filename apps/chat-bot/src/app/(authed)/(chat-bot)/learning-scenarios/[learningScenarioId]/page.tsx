@@ -1,11 +1,13 @@
-import { requireAuth } from '@/auth/requireAuth';
-import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
-import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 import { getLearningScenarioForEditView } from '@shared/learning-scenarios/learning-scenario-service';
-import { LearningScenarioView } from './learning-scenario-view';
-import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+
+import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
+import { requireAuth } from '@/auth/requireAuth';
+import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
+
+import { LearningScenarioView } from './learning-scenario-view';
 
 export const dynamic = 'force-dynamic';
 

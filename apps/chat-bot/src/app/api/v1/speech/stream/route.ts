@@ -1,10 +1,12 @@
-import { getUser } from '@/auth/utils';
-import { handleErrorInRoute } from '@/error/handle-error-in-route';
 import { logError } from '@shared/logging';
 import { generateChatSpeechStream } from '@shared/speech/speech-service';
 import { requiredNonEmptyString } from '@shared/utils/zod';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
+
+import { getUser } from '@/auth/utils';
+import { handleErrorInRoute } from '@/error/handle-error-in-route';
+
 import { buildSpeechStreamResponse } from '../../../utils/speech-stream-response';
 
 const speechRequestSchema = z.object({

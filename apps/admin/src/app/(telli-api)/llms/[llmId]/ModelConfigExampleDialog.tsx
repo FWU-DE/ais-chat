@@ -1,6 +1,7 @@
 'use client';
 
 import type { SpeechConfig } from '@ais-chat/api-database/types';
+
 import { JsonExamplesDialog } from './JsonExamplesDialog';
 
 // Typed as `SpeechConfig` so schema changes force this example to be

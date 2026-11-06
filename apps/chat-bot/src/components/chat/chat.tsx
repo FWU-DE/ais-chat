@@ -1,20 +1,10 @@
 'use client';
 
-import { refetchFileMapping } from '@/app/(authed)/(chat-bot)/actions';
-import { fetchClientSideConversations } from '@/app/(authed)/(chat-bot)/utils';
-import { getErrorMessageByType } from '@/error/get-error-message-by-type';
-import { useAutoScroll } from '@/hooks/use-auto-scroll';
-import { useMainChat, type ChatMessage } from '@/hooks/use-chat-hooks';
-import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
-import { getConversationPath } from '@/utils/chat/path';
-import { getFileExtension, isImageFile } from '@/utils/files/generic';
-import { navigateWithoutRefresh } from '@/utils/navigation/router';
-import { deepCopy } from '@/utils/object';
 import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
 import {
-  FileModel,
   type AssistantSelectModel,
   type CharacterSelectModel,
+  FileModel,
   type LearningScenarioSelectModel,
 } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
@@ -24,6 +14,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import React, { ReactNode, SyntheticEvent, useEffect, useState } from 'react';
+
+import { refetchFileMapping } from '@/app/(authed)/(chat-bot)/actions';
+import { fetchClientSideConversations } from '@/app/(authed)/(chat-bot)/utils';
+import { getErrorMessageByType } from '@/error/get-error-message-by-type';
+import { useAutoScroll } from '@/hooks/use-auto-scroll';
+import { type ChatMessage, useMainChat } from '@/hooks/use-chat-hooks';
+import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
+import { getConversationPath } from '@/utils/chat/path';
+import { getFileExtension, isImageFile } from '@/utils/files/generic';
+import { navigateWithoutRefresh } from '@/utils/navigation/router';
+import { deepCopy } from '@/utils/object';
+
 import { LocalFileState } from '../file-upload/upload-file';
 import RobotIcon from '../icons/robot';
 import { useFederalState } from '../providers/federal-state-provider';
@@ -36,7 +38,7 @@ import { ErrorChatPlaceholder } from './error-chat-placeholder';
 import { FloatingText } from './floating-text';
 import { InitialChatContentDisplay } from './initial-content-display';
 import MarkdownDisplay from './markdown-display';
-import { Messages, type MessageFileModel } from './messages';
+import { type MessageFileModel, Messages } from './messages';
 import PromptSuggestions from './prompt-suggestions';
 
 type ChatProps = {

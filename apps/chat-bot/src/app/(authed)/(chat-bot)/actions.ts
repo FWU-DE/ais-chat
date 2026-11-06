@@ -1,7 +1,5 @@
 'use server';
 
-import { requireAuth } from '@/auth/requireAuth';
-import { VERSION } from '@/components/modals/const';
 import { runServerAction } from '@shared/actions/run-server-action';
 import deleteConversation, {
   getConversation,
@@ -12,6 +10,9 @@ import { dbUpdateUserTermsVersion } from '@shared/db/functions/user';
 import { UserSettings, userSettingsSchema } from '@shared/db/schema';
 import { trackInfoBannerView } from '@shared/info-banners/info-banner-service';
 import { updateUserSettings } from '@shared/users/user-settings-service';
+
+import { requireAuth } from '@/auth/requireAuth';
+import { VERSION } from '@/components/modals/const';
 
 export async function deleteConversationAction({ conversationId }: { conversationId: string }) {
   const { user } = await requireAuth();

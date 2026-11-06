@@ -1,6 +1,7 @@
 import { OpenAI as OpenAIv4 } from 'openaiv4';
-import type { AiModel, EmbeddingGenerationFn } from '../types';
+
 import { ProviderConfigurationError } from '../../errors';
+import type { AiModel, EmbeddingGenerationFn } from '../types';
 import { EMBEDDING_CLIENT_MAX_RETRIES, EMBEDDING_CLIENT_TIMEOUT_MS } from './const';
 
 export function constructIonosEmbeddingGenerationFn(model: AiModel): EmbeddingGenerationFn {

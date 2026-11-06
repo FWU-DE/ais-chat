@@ -1,13 +1,14 @@
-import type { ReactNode } from 'react';
-import { useId } from 'react';
+import { CaretDownIcon } from '@phosphor-icons/react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@ui/components/dropdown-menu';
-import { CaretDownIcon } from '@phosphor-icons/react';
-import { GreenLeafIcon } from '../icons/green-leaf-icon';
+import type { ReactNode } from 'react';
+import { useId } from 'react';
+
 import { Badge } from '../common/badge';
+import { GreenLeafIcon } from '../icons/green-leaf-icon';
 
 type HeaderMainMenuItemProps = {
   caption: string;

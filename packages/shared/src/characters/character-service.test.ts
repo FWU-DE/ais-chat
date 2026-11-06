@@ -4,6 +4,7 @@ import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/err
 import { FederalStateModel } from '@shared/federal-states/types';
 import { getUserSettings } from '@shared/users/user-settings-service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import {
   dbCreateCharacterShare,
   dbExtendSharedCharacterExpiration,

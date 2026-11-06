@@ -1,7 +1,8 @@
 import type { AiActivityToolName } from '@/types/ai-activity';
+
 import { expect, test } from '../../fixtures/test';
-import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
 import { expectAiActivityStep, sendMessage, uploadFile } from '../../utils/chat';
+import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
 
 test.use({ storageState: AUTH_FILES.teacher });
 

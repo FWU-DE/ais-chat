@@ -1,5 +1,7 @@
-import { and, eq, inArray, ne } from 'drizzle-orm';
 import { isDeepStrictEqual } from 'node:util';
+
+import { and, eq, inArray, ne } from 'drizzle-orm';
+
 import { createApiKeyRecord, db } from './index';
 import {
   type ApiKeyInsertModel,

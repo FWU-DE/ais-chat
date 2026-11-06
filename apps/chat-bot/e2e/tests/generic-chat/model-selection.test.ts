@@ -1,6 +1,6 @@
 import { expect, test } from '../../fixtures/test';
-import { AUTH_FILES } from '../../utils/const';
 import { enterMessage, selectDifferentModel } from '../../utils/chat';
+import { AUTH_FILES } from '../../utils/const';
 import { LLM_MODELS } from '../../utils/llm-models';
 
 test.use({ storageState: AUTH_FILES.teacher });

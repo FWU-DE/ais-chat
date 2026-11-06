@@ -1,7 +1,8 @@
 import fs from 'node:fs';
+
 import { expect, test } from '../../fixtures/test';
-import { AUTH_FILES, IMAGE_MODELS_FILE, LLM_MODELS_FILE } from '../../utils/const';
 import { selectDifferentImageModel, selectDifferentModel, sendMessage } from '../../utils/chat';
+import { AUTH_FILES, IMAGE_MODELS_FILE, LLM_MODELS_FILE } from '../../utils/const';
 
 test.use({ storageState: AUTH_FILES.teacher });
 test.describe.configure({ mode: 'parallel' });

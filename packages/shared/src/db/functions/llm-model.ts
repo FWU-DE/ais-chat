@@ -1,7 +1,8 @@
 import { logError } from '@shared/logging';
 import { and, eq, getTableColumns, inArray } from 'drizzle-orm';
-import { db } from '..';
+
 import { fetchLlmModels } from '../../knotenpunkt';
+import { db } from '..';
 import { federalStateLlmModelMappingTable, LlmModelSelectModel, llmModelTable } from '../schema';
 import {
   dbGetFederalStates,

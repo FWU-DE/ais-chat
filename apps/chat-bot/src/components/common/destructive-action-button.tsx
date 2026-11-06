@@ -1,7 +1,8 @@
-import React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
 import { Button } from '@ui/components/button';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
 import { ConfirmationDialog } from './dialog';
 
 type DestructiveActionButtonProps = {

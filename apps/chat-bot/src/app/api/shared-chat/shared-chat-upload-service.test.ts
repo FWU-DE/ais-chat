@@ -1,6 +1,7 @@
-import { MAX_FILE_SIZE } from '@/const';
 import { InvalidArgumentError } from '@shared/error';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { MAX_FILE_SIZE } from '@/const';
 
 const mocks = vi.hoisted(() => ({
   getUserAndContextByUserIdMock: vi.fn(),

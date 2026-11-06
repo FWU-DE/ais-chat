@@ -8,10 +8,10 @@
  * a delete button, optionally wraps the label in a link (`href`), shows a loading
  * spinner (`isProcessing`) and can be wrapped in a tooltip (`tooltip`).
  */
-import * as React from 'react';
+import { XIcon } from '@phosphor-icons/react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { Slot } from 'radix-ui';
-import { XIcon } from '@phosphor-icons/react';
+import * as React from 'react';
 
 import { cn } from '../lib/utils';
 import { Spinner } from './spinner';

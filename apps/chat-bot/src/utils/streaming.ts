@@ -3,8 +3,9 @@
  * Replaces ai/rsc's createStreamableValue and readStreamableValue.
  */
 
-import type { AiActivityStep } from '@/types/ai-activity';
 import { logError } from '@shared/logging';
+
+import type { AiActivityStep } from '@/types/ai-activity';
 
 const STREAM_EVENT_PREFIX = '\u001e';
 

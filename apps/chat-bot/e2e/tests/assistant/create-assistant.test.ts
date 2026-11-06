@@ -1,11 +1,12 @@
-import { expect, test } from '../../fixtures/test';
-import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
-import { waitForAutosave, waitForToast } from '../../utils/utils';
-import { sendMessage } from '../../utils/chat';
-import { configureAssistant, createAssistant, deleteAssistant } from '../../utils/assistant';
-import { verifyLicenseInformation } from '../../utils/license-information';
-import { verifyDidacticCommentary } from '../../utils/didactic-commentary';
 import { nanoid } from 'nanoid';
+
+import { expect, test } from '../../fixtures/test';
+import { configureAssistant, createAssistant, deleteAssistant } from '../../utils/assistant';
+import { sendMessage } from '../../utils/chat';
+import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
+import { verifyDidacticCommentary } from '../../utils/didactic-commentary';
+import { verifyLicenseInformation } from '../../utils/license-information';
+import { waitForAutosave, waitForToast } from '../../utils/utils';
 
 test.use({ storageState: AUTH_FILES.teacher });
 

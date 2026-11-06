@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 export {
-  llmModelPriceMetadataSchema,
   type LlmModelPriceMetadata,
+  llmModelPriceMetadataSchema,
 } from '@ais-chat/shared-core/schemas/llm-model-price-metadata';
 
 export const imageSizeSchema = z.union([z.literal('auto'), z.string().regex(/^\d+x\d+$/)]);

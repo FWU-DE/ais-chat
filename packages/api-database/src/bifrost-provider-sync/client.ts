@@ -1,3 +1,4 @@
+import { assertBifrostResponse, bifrostFetch } from './http';
 import {
   BifrostKey,
   BifrostProvider,
@@ -5,7 +6,6 @@ import {
   BifrostProviderResponse,
   BifrostProviderSyncLogger,
 } from './types';
-import { assertBifrostResponse, bifrostFetch } from './http';
 
 // Encodes path segments so arbitrary provider/key ids can't escape `/api/providers/...`.
 function providerPath(provider: string, ...segments: string[]): string {

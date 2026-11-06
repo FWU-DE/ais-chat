@@ -1,5 +1,15 @@
 'use client';
 
+import { SharedChatExpiredError, TokenPointsExceededError } from '@ais-chat/ai-core/errors';
+import { logError } from '@shared/logging';
+import { cnanoid } from '@shared/random/randomService';
+import {
+  calculateShareSessionState,
+  ShareSessionState,
+} from '@shared/sharing/calculate-share-session-state';
+import { useTranslations } from 'next-intl';
+import { ReactNode, RefObject, SyntheticEvent, useEffect, useRef, useState } from 'react';
+
 import { ChatInputBox } from '@/components/chat/chat-input-box';
 import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
 import { InitialChatContentDisplay } from '@/components/chat/initial-content-display';
@@ -16,15 +26,7 @@ import {
   newSharedChatSessionId,
   saveSharedChat,
 } from '@/utils/shared-chat-storage';
-import { SharedChatExpiredError, TokenPointsExceededError } from '@ais-chat/ai-core/errors';
-import { logError } from '@shared/logging';
-import { cnanoid } from '@shared/random/randomService';
-import {
-  calculateShareSessionState,
-  ShareSessionState,
-} from '@shared/sharing/calculate-share-session-state';
-import { useTranslations } from 'next-intl';
-import { ReactNode, RefObject, SyntheticEvent, useEffect, useRef, useState } from 'react';
+
 import { ErrorChatPlaceholder } from '../chat/error-chat-placeholder';
 import { FloatingText } from '../chat/floating-text';
 import { MessageFileModel, Messages } from '../chat/messages';

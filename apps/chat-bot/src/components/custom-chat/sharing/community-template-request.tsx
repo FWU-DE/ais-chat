@@ -1,7 +1,5 @@
 'use client';
 
-import { useToast } from '@/components/common/toast';
-import { CommunityTemplateRequestMutationResult } from '@/hooks/use-community-template-request';
 import {
   CaretDownIcon,
   CaretUpIcon,
@@ -16,6 +14,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui/compone
 import { ScrollArea } from '@ui/components/scroll-area';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+
+import { useToast } from '@/components/common/toast';
+import { CommunityTemplateRequestMutationResult } from '@/hooks/use-community-template-request';
+
 import { CommunityTemplateMessageDialog } from './community-template-message-dialog';
 import { CommunityTemplateRequestEvent } from './community-template-request-event';
 

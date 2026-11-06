@@ -1,8 +1,10 @@
-import { auth } from '@/auth';
-import type { Session } from 'next-auth';
 import * as Sentry from '@sentry/nextjs';
 import { ForbiddenError, UnauthenticatedError } from '@shared/error';
-import { AdminRole, ADMIN_ROLE, canAccessAdminApp, canAccessEditorArea } from './roles';
+import type { Session } from 'next-auth';
+
+import { auth } from '@/auth';
+
+import { ADMIN_ROLE, AdminRole, canAccessAdminApp, canAccessEditorArea } from './roles';
 
 // Type for a validated admin session with guaranteed user id and name
 export type ValidatedSession = Session & {

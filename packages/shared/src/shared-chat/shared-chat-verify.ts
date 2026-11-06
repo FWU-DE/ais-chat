@@ -1,5 +1,6 @@
 import { FileMetadata } from '@shared/db/schema';
 import { ForbiddenError } from '@shared/error';
+
 import {
   isSharedChatFileMetadata,
   SharedChatFileMetadata,

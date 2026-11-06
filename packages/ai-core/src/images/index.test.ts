@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { generateImageWithBilling } from './index';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { AiGenerationError, InvalidModelError, ResponsibleAIError } from '../errors';
+import { generateImageWithBilling } from './index';
 import type { AiModel } from './types';
 
 // Mock all dependencies
@@ -36,11 +37,11 @@ vi.mock('../safety', () => ({
   ]),
 }));
 
-import { generateImage } from './providers';
 import { billImageGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
 import { hasAccessToModel } from '../api-keys/model-access';
 import { getImageModelById } from '../models';
 import { checkInputSafety } from '../safety';
+import { generateImage } from './providers';
 
 const mockGenerateImage = vi.mocked(generateImage);
 const mockBillImageGenerationUsageToApiKey = vi.mocked(billImageGenerationUsageToApiKey);

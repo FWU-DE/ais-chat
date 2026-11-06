@@ -1,11 +1,13 @@
 'use client';
 
-import type { PlotSpec } from '@/utils/plot/plot-spec';
 import { logError, logWarning } from '@shared/logging/logging';
 import JXG from 'jsxgraph';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import type { PlotSpec } from '@/utils/plot/plot-spec';
+
 import { createBoard, type ViewState } from './jsxgraph-board';
-import { registerLivePlot, releaseOverflow, retainLivePlot, type LivePlot } from './live-plots';
+import { type LivePlot, registerLivePlot, releaseOverflow, retainLivePlot } from './live-plots';
 import { PlotFrame } from './plot-frame';
 import { getPlotKey, registerRenderedPlot } from './rendered-plots';
 import { getSliderDefinitions } from './slider-definitions';

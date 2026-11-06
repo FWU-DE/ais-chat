@@ -1,13 +1,15 @@
 'use client';
 
-import { useToast } from '@/components/common/toast';
-import { inputFieldClassName } from '@/utils/tailwind/input';
-import React from 'react';
-import { getChatInfoByInviteCodeAction } from './actions';
-import { useRouter } from 'next/navigation';
-import { cn } from '@/utils/tailwind';
-import { useTranslations } from 'next-intl';
 import { Button } from '@ui/components/button';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
+import { useToast } from '@/components/common/toast';
+import { cn } from '@/utils/tailwind';
+import { inputFieldClassName } from '@/utils/tailwind/input';
+
+import { getChatInfoByInviteCodeAction } from './actions';
 
 export default function SharedChatLoginForm() {
   const [inviteCode, setInviteCode] = React.useState('');

@@ -1,5 +1,6 @@
-import { expect, test } from '../fixtures/test';
 import type { Page } from '@playwright/test';
+
+import { expect, test } from '../fixtures/test';
 
 async function login(page: Page, username: 'admin' | 'editor') {
   await page.goto('/');

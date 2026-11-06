@@ -1,13 +1,9 @@
-import { getUserAndContextByUserId } from '@/auth/utils';
-import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
-import { createTextStream } from '@/utils/streaming';
-import { checkProductAccess } from '@/utils/vidis/access';
 import {
+  type ModelUsage,
   ResponsibleAIError,
+  runAgentLoop,
   SharedChatExpiredError,
   TokenPointsExceededError,
-  runAgentLoop,
-  type ModelUsage,
   type TokenUsage,
 } from '@ais-chat/ai-core';
 import {
@@ -27,6 +23,12 @@ import {
   sharedChatHasExpired,
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
+
+import { getUserAndContextByUserId } from '@/auth/utils';
+import { ChatMessage, createErrorResult, SendMessageResult } from '@/types/chat';
+import { createTextStream } from '@/utils/streaming';
+import { checkProductAccess } from '@/utils/vidis/access';
+
 import { createAiActivityStream } from '../chat/ai-activity-stream';
 import { buildTools } from '../chat/build-tools';
 import { prepareAgentMessages } from '../chat/prepare-agent-messages';

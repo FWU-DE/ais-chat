@@ -1,14 +1,15 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
-import { z } from 'zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/components/card';
-import { Button } from '@ui/components/button';
+import { TrashSimpleIcon } from '@phosphor-icons/react';
+import { logError } from '@shared/logging';
 import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
+import { Button } from '@ui/components/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/components/card';
+import { Field, FieldDescription, FieldError, FieldLabel } from '@ui/components/field';
 import { FormField } from '@ui/components/form/form-field';
+import { Input } from '@ui/components/input';
+import { Label } from '@ui/components/label';
 import {
   Select,
   SelectContent,
@@ -16,16 +17,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/select';
-import { ApiKey } from '@/types/api-key';
-import { createApiKeyAction, deleteApiKeyAction, updateApiKeyAction } from './actions';
-import { ROUTES } from '@/consts/routes';
-import { logError } from '@shared/logging';
+import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
-import { Input } from '@ui/components/input';
-import { Label } from '@ui/components/label';
-import { Field, FieldDescription, FieldError, FieldLabel } from '@ui/components/field';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { toast } from 'sonner';
+import { z } from 'zod';
+
 import { FormErrorDisplay } from '@/components/FormErrorDisplay';
-import { TrashSimpleIcon } from '@phosphor-icons/react';
+import { ROUTES } from '@/consts/routes';
+import { ApiKey } from '@/types/api-key';
+
+import { createApiKeyAction, deleteApiKeyAction, updateApiKeyAction } from './actions';
 
 const apiKeyFormSchema = z.object({
   name: z.string().min(1, 'Name ist erforderlich'),

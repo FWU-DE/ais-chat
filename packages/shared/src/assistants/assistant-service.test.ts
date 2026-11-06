@@ -18,6 +18,7 @@ import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/err
 import { getUserSettings } from '@shared/users/user-settings-service';
 import { generateUUID } from '@shared/utils/uuid';
 import { beforeEach, describe, expect, it, MockedFunction, vi } from 'vitest';
+
 import { getAvatarPictureUrl } from '../files/fileService';
 import { uploadFileToS3 } from '../s3';
 import { copyAssistant, copyRelatedTemplateFiles } from '../templates/template-service';

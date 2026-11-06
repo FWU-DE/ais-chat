@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 test.describe('GET /health', { tag: '@smoke' }, () => {
   test('returns 200 OK without authentication', async ({ request }) => {

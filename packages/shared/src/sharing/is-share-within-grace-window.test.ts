@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { isShareWithinGraceWindow } from './is-share-within-grace-window';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { SHARE_EXTENSION_WINDOW_MS } from './const';
+import { isShareWithinGraceWindow } from './is-share-within-grace-window';
 
 describe('isShareWithinGraceWindow', () => {
   const NOW = new Date('2025-01-15T12:00:00Z');

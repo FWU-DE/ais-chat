@@ -1,5 +1,7 @@
 'use client';
 
+import { logError } from '@shared/logging';
+import { Button } from '@ui/components/button';
 import {
   Card,
   CardAction,
@@ -8,18 +10,18 @@ import {
   CardHeader,
   CardTitle,
 } from '@ui/components/card';
-import { Button } from '@ui/components/button';
 import { Checkbox } from '@ui/components/checkbox';
-import { FieldLabel } from '@ui/components/field';
 import { DataTable } from '@ui/components/data-table';
-import { logError } from '@shared/logging';
-import { getLargeLanguageModelsAction } from './actions';
+import { FieldLabel } from '@ui/components/field';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ROUTES } from '@/consts/routes';
 import { useMemo, useState } from 'react';
-import { getColumns } from './columns';
+
+import { ROUTES } from '@/consts/routes';
 import type { LargeLanguageModel } from '@/types/large-language-model';
+
+import { getLargeLanguageModelsAction } from './actions';
+import { getColumns } from './columns';
 
 export type LargeLanguageModelListViewProps = {
   initialData: LargeLanguageModel[];

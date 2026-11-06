@@ -1,10 +1,11 @@
-import { NotFoundError } from '@shared/error';
-import { dbGetFilesInIds } from '@shared/db/functions/files';
-import { getFileFromS3 } from '@shared/s3';
-import { LlmModelSelectModel } from '@shared/db/schema';
 import { ImageGenerationInputImage } from '@ais-chat/ai-core/images/types';
-import { getImageContentType, streamToBuffer } from '@/utils/files/image-data';
+import { dbGetFilesInIds } from '@shared/db/functions/files';
+import { LlmModelSelectModel } from '@shared/db/schema';
+import { NotFoundError } from '@shared/error';
+import { getFileFromS3 } from '@shared/s3';
+
 import { IMAGE_GENERATION_INPUT_LIMIT } from '@/configuration-text-inputs/const';
+import { getImageContentType, streamToBuffer } from '@/utils/files/image-data';
 
 export function validateInputFiles({
   model,

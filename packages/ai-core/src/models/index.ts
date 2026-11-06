@@ -1,12 +1,13 @@
-import { InvalidModelError } from '../errors';
 import {
   dbGetDirectModelConfiguration,
   dbGetModelById,
   dbGetModelByNameAndApiKeyId,
 } from '@ais-chat/api-database';
-import { AiModel } from '../images/types';
+
 import type { AiModel as TextAiModel } from '../chat/types';
 import type { AiModel as EmbeddingAiModel } from '../embeddings/types';
+import { InvalidModelError } from '../errors';
+import { AiModel } from '../images/types';
 import type { AiModel as SafetyAiModel } from '../safety/types';
 import type { AiModel as SpeechAiModel } from '../speech/types';
 

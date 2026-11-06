@@ -13,8 +13,9 @@ import { Switch } from '@ui/components/switch';
 import { InfoTooltip } from '@ui/components/tooltip';
 import { useTranslations } from 'next-intl';
 import { Control, FieldPath, FieldValues, useController } from 'react-hook-form';
-import { SpeechVoicePreviewButton } from './speech-voice-preview-button';
+
 import type { SpeechFields } from './speech.types';
+import { SpeechVoicePreviewButton } from './speech-voice-preview-button';
 
 export type SpeechEditViewProps<TFieldValues extends FieldValues = FieldValues> = {
   onCheckedChange: (checked: boolean) => void;

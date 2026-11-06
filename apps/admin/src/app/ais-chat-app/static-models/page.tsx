@@ -1,4 +1,5 @@
 import TwoColumnLayout from '@/components/layout/TwoColumnLayout';
+
 import { AdminAppSidebar } from '../AdminAppSidebar';
 import { getStaticModelConfigurationAction } from './actions';
 import StaticModelConfigurationView from './StaticModelConfigurationView';

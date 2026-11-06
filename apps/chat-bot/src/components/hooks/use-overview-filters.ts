@@ -1,18 +1,19 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
 import type { OverviewFilter } from '@shared/overview-filter';
+import { useTranslations } from 'next-intl';
+import { useCallback, useMemo, useState } from 'react';
+
 import {
-  EMPTY_FILTER_VALUES,
-  getActiveFilterPills,
   type ActiveFilterPill,
+  EMPTY_FILTER_VALUES,
   type FilterValues,
+  getActiveFilterPills,
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import {
   type EntityType,
   usePersistedOverviewFilter,
 } from '@/components/hooks/use-persisted-overview-filter';
-import { useTranslations } from 'next-intl';
 
 type UseOverviewFiltersOptions = {
   entityType: EntityType;

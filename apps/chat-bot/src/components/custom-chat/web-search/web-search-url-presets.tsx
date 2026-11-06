@@ -1,7 +1,8 @@
 import { UrlPreset } from '@shared/web-search/url-presets/types';
-import { useTranslations } from 'next-intl';
-import { WebSearchUrlPresetItem } from './web-search-url-preset-item';
 import { Separator } from '@ui/components/separator';
+import { useTranslations } from 'next-intl';
+
+import { WebSearchUrlPresetItem } from './web-search-url-preset-item';
 
 type WebSearchUrlPresetsProps = {
   availablePresets: UrlPreset[];

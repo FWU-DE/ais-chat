@@ -14,6 +14,8 @@ vi.mock('..', () => ({
   },
 }));
 
+import { NotFoundError } from '@shared/error';
+
 import {
   dbGetAssistantById,
   dbGetAssistantByIdForConversation,
@@ -29,7 +31,6 @@ import {
   dbSetAssistantSuspended,
   dbUpsertAssistant,
 } from './assistants';
-import { NotFoundError } from '@shared/error';
 
 function mockSelectChain(result: unknown[]) {
   const chain: Record<string, unknown> = {

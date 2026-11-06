@@ -1,14 +1,15 @@
 import { instrumentOpenAiClient } from '@sentry/server-utils';
 import OpenAI from 'openai';
+
+import { ProviderConfigurationError } from '../../errors';
 import type {
   AgenticStreamFn,
   AiModel,
-  ToolCall,
   TextGenerationFn,
   TextStreamFn,
   TokenUsage,
+  ToolCall,
 } from '../types';
-import { ProviderConfigurationError } from '../../errors';
 import { estimateTokenUsage, isAbortError, toOpenAIChatTools, toOpenAIMessages } from '../utils';
 
 function createIonosClient(model: AiModel): OpenAI {

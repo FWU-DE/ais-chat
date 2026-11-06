@@ -1,10 +1,11 @@
+import { dbVerifyFileOwnership } from '@shared/db/functions/files';
+import { NextRequest, NextResponse } from 'next/server';
+import z from 'zod';
+
 import { createScaledImage } from '@/app/api/file-operations/scaled-image-service';
 import { getUser } from '@/auth/utils';
 import { MAX_SCALED_IMAGE_DIMENSION } from '@/const';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
-import { dbVerifyFileOwnership } from '@shared/db/functions/files';
-import { NextRequest, NextResponse } from 'next/server';
-import z from 'zod';
 
 const imageDimensionsSchema = z.object({
   width: z.coerce.number().int().positive().max(MAX_SCALED_IMAGE_DIMENSION),

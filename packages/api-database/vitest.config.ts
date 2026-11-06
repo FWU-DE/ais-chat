@@ -1,5 +1,6 @@
-import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 import path from 'node:path';
+
+import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
   resolve: {

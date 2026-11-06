@@ -1,17 +1,19 @@
 'use client';
 
-import CheckboxWithInfo from '@ui/components/common/checkbox-with-info';
-import { useToast } from '@/components/common/toast';
-import { useTranslations } from 'next-intl';
 import { LinkIcon } from '@phosphor-icons/react';
+import { Button } from '@ui/components/button';
+import { Card, CardRow } from '@ui/components/card';
+import { Checkbox } from '@ui/components/checkbox';
+import CheckboxWithInfo from '@ui/components/common/checkbox-with-info';
+import { FieldLabel } from '@ui/components/field';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { Control, FieldValues, Path, useController, useWatch } from 'react-hook-form';
+
+import { useToast } from '@/components/common/toast';
+
 import { useFederalState } from '../providers/federal-state-provider';
 import { CustomChatHeading2 } from './custom-chat-heading2';
-import { Card, CardRow } from '@ui/components/card';
-import { Button } from '@ui/components/button';
-import { Checkbox } from '@ui/components/checkbox';
-import { FieldLabel } from '@ui/components/field';
-import { useState } from 'react';
 import { CustomShareConfirmationDialog } from './custom-share-confirmation-dialog';
 import { CustomShareRemovalConfirmationDialog } from './custom-share-removal-confirmation-dialog';
 

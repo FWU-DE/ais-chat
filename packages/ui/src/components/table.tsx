@@ -124,13 +124,13 @@ function TableCaption({ className, ...props }: React.ComponentProps<'caption'>) 
 }
 
 export {
+  ClickableTableRow,
   Table,
-  TableHeader,
   TableBody,
+  TableCaption,
+  TableCell,
   TableFooter,
   TableHead,
+  TableHeader,
   TableRow,
-  ClickableTableRow,
-  TableCell,
-  TableCaption,
 };

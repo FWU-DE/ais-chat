@@ -1,5 +1,8 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { FederalStateModel } from '@shared/federal-states/types';
+import { Button } from '@ui/components/button';
 import {
   Card,
   CardAction,
@@ -8,14 +11,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@ui/components/card';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useForm } from 'react-hook-form';
 import { FormField } from '@ui/components/form/form-field';
-import { Button } from '@ui/components/button';
+import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { FederalStateModel } from '@shared/federal-states/types';
+import { z } from 'zod';
+
 import { updateApiKeyAction } from './actions';
 
 export type FederalStateUpdateApiKeyProps = {

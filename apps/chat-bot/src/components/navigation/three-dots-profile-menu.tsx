@@ -1,7 +1,5 @@
 'use client';
 
-import { type UserAndContext } from '@/auth/types';
-import type { ApplicationHeaderMenuItem } from '@/components/layout/application-header';
 import { DotsThreeIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import {
@@ -13,6 +11,10 @@ import {
 } from '@ui/components/dropdown-menu';
 import type { RefObject } from 'react';
 import React from 'react';
+
+import { type UserAndContext } from '@/auth/types';
+import type { ApplicationHeaderMenuItem } from '@/components/layout/application-header';
+
 import { ProfileMenuContent } from './profile-menu-content';
 
 export type ThreeDotsProfileMenuItem = ApplicationHeaderMenuItem;

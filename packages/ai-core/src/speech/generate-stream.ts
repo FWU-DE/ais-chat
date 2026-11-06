@@ -1,5 +1,5 @@
-import { getSpeechModelById } from '../models';
 import { AiGenerationError } from '../errors';
+import { getSpeechModelById } from '../models';
 import { constructGoogleStreamingSpeechGenerationFn } from './providers/google';
 import type { SpeechStreamResult } from './types';
 

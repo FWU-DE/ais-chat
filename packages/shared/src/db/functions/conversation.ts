@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { db } from '..';
+
 import { deleteFilesFromS3 } from '../../s3';
+import { db } from '..';
 import {
   ConversationMessageFileMappingTable,
   conversationMessageTable,

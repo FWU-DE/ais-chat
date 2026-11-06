@@ -1,7 +1,5 @@
 'use client';
 
-import React from 'react';
-import { Button } from '@ais-chat/ui/components/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,6 +11,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@ais-chat/ui/components/alert-dialog';
+import { Button } from '@ais-chat/ui/components/button';
+import React from 'react';
 
 type ConfirmationDialogProps = {
   trigger: React.ReactElement;

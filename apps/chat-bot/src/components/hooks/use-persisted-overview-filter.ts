@@ -1,5 +1,7 @@
 'use client';
 
+import type { OverviewFilter } from '@shared/overview-filter';
+import { overviewFilterSchema } from '@shared/overview-filter';
 import {
   startTransition,
   useCallback,
@@ -9,8 +11,6 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import type { OverviewFilter } from '@shared/overview-filter';
-import { overviewFilterSchema } from '@shared/overview-filter';
 
 export type EntityType = 'characters' | 'learning-scenarios' | 'assistants';
 

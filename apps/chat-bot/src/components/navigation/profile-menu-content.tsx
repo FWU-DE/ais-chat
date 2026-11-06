@@ -1,11 +1,13 @@
 'use client';
 
-import { type UserAndContext } from '@/auth/types';
-import { SettingsMenuItem } from '@/components/settings/settings-dialog';
 import { SignOutIcon } from '@phosphor-icons/react';
 import { DropdownMenuItem } from '@ui/components/dropdown-menu';
-import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+
+import { type UserAndContext } from '@/auth/types';
+import { SettingsMenuItem } from '@/components/settings/settings-dialog';
+
 import { IMPRESSUM_URL, PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from './const';
 
 async function logout() {

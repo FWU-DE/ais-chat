@@ -1,15 +1,17 @@
 'use client';
 
-import React, { startTransition } from 'react';
 import { type LlmModelSelectModel } from '@shared/db/schema';
+import { Separator } from '@ui/components/separator';
 import { useSearchParams } from 'next/navigation';
+import React, { startTransition } from 'react';
+
 import { useCustomPathname } from '@/hooks/use-custom-pathname';
-import { Badge } from './badge';
 import { navigateWithoutRefresh } from '@/utils/navigation/router';
+
+import { GreenLeafIcon } from '../icons/green-leaf-icon';
 import { HeaderMainMenuItem } from '../layout/header-main-menu-item';
 import { HeaderMenuItem } from '../layout/header-menu-item';
-import { Separator } from '@ui/components/separator';
-import { GreenLeafIcon } from '../icons/green-leaf-icon';
+import { Badge } from './badge';
 
 type ModelSelectProps = {
   models: LlmModelSelectModel[];

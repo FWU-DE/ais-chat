@@ -1,8 +1,9 @@
+import { nanoid } from 'nanoid';
+
 import { expect, test } from '../../fixtures/test';
 import { AUTH_FILES } from '../../utils/const';
 import { configureLearningScenario, createLearningScenario } from '../../utils/learning-scenario';
 import { waitForAutosave } from '../../utils/utils';
-import { nanoid } from 'nanoid';
 
 const learningScenarioTeacher = 'Scenario by teacher - ' + nanoid(8);
 const learningScenarioTeacher2 = 'Scenario by teacher2 - ' + nanoid(8);

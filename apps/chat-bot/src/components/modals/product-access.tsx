@@ -1,7 +1,5 @@
 'use client';
 
-import React from 'react';
-import { useTranslations } from 'next-intl';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,6 +9,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@ui/components/alert-dialog';
+import { useTranslations } from 'next-intl';
+import React from 'react';
 
 const LOGOUT_URL = '/api/auth/logout';
 

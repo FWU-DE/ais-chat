@@ -1,10 +1,12 @@
-import LoginForm from './login-form';
+import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
+
 import { getMaybeUser, getSafeCallbackUrl } from '@/auth/utils';
 import Footer from '@/components/navigation/footer';
-import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
-import { redirect } from 'next/navigation';
 import { getHostByHeaders } from '@/utils/host';
+
+import LoginForm from './login-form';
 
 export const dynamic = 'force-dynamic';
 

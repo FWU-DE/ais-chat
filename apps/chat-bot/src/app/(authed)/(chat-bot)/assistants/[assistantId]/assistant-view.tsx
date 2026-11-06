@@ -1,30 +1,32 @@
 'use client';
 
+import { AssistantSelectModel, FileModel } from '@shared/db/schema';
+import { Card, CardContent } from '@ui/components/card';
+import { FieldGroup } from '@ui/components/field';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+
 import { BackButton } from '@/components/common/back-button';
+import { useToast } from '@/components/common/toast';
 import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
 import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
 import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
+import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-author-info';
+import { CustomChatAvatarImage } from '@/components/custom-chat/custom-chat-avatar-image';
+import { CustomChatCreateSuspensionRequestButton } from '@/components/custom-chat/custom-chat-create-suspension-request-button';
+import { CustomChatFieldInfo } from '@/components/custom-chat/custom-chat-field-info';
+import { CustomChatLastUpdate } from '@/components/custom-chat/custom-chat-last-update';
 import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
 import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
-import { AssistantSelectModel, FileModel } from '@shared/db/schema';
-import { useRouter } from 'next/navigation';
-import { createNewAssistantAction, downloadFileFromAssistantAction } from '../actions';
-import { useToast } from '@/components/common/toast';
-import { useTranslations } from 'next-intl';
-import { CustomChatLastUpdate } from '@/components/custom-chat/custom-chat-last-update';
-import { Card, CardContent } from '@ui/components/card';
-import { CustomChatFieldInfo } from '@/components/custom-chat/custom-chat-field-info';
-import { CustomChatAvatarImage } from '@/components/custom-chat/custom-chat-avatar-image';
-import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
-import { CustomChatCreateSuspensionRequestButton } from '@/components/custom-chat/custom-chat-create-suspension-request-button';
-import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-author-info';
-import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-chat-filter-display-section';
-import { CustomChatLicenseInformationView } from '@/components/custom-chat/license-information/custom-chat-license-information-view';
 import { CustomChatDidacticCommentaryView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-view';
+import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
+import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-chat-filter-display-section';
 import { extractFilterValues } from '@/components/custom-chat/filter/custom-chat-filter-utils';
-import { FieldGroup } from '@ui/components/field';
-import { CustomChatWebSearchView } from '@/components/custom-chat/web-search/custom-chat-web-search-view';
+import { CustomChatLicenseInformationView } from '@/components/custom-chat/license-information/custom-chat-license-information-view';
 import { CustomChatSpeechView } from '@/components/custom-chat/speech/custom-chat-speech-view';
+import { CustomChatWebSearchView } from '@/components/custom-chat/web-search/custom-chat-web-search-view';
+
+import { createNewAssistantAction, downloadFileFromAssistantAction } from '../actions';
 
 export function AssistantView({
   assistant,

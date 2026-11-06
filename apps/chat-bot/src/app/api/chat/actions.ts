@@ -1,14 +1,15 @@
 'use server';
 
 import * as Sentry from '@sentry/nextjs';
-import { requireAuth } from '@/auth/requireAuth';
-import { userHasCompletedTraining } from '@/auth/utils';
 import { NotFoundError } from '@shared/error';
 
-import { sendChatMessage } from './chat-service';
-import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
+import { requireAuth } from '@/auth/requireAuth';
+import { userHasCompletedTraining } from '@/auth/utils';
 import { SEND_CHAT_MESSAGE_ACTION_NAME } from '@/server-action-names';
+import { ChatMessage, createErrorResult, SendMessageResult } from '@/types/chat';
 import { checkProductAccess } from '@/utils/vidis/access';
+
+import { sendChatMessage } from './chat-service';
 
 export type { ChatMessage, SendMessageResult } from '@/types/chat';
 

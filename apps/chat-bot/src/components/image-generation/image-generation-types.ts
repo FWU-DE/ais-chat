@@ -1,4 +1,5 @@
 import type { ImageAspectRatioPreset } from '@shared/utils/chat';
+
 import type { ImageAttachment } from '../chat/message-image-attachment';
 
 export type { ImageAspectRatioPreset };

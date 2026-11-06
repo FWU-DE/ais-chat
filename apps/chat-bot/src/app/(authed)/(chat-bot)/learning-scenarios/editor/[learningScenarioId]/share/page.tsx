@@ -1,11 +1,12 @@
-import { getTranslations } from 'next-intl/server';
 import { getSharedLearningScenario } from '@shared/learning-scenarios/learning-scenario-service';
 import { calculateShareSessionState } from '@shared/sharing/calculate-share-session-state';
-import { requireAuth } from '@/auth/requireAuth';
-import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
-import { notFound } from 'next/navigation';
 import { type Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
+
+import { requireAuth } from '@/auth/requireAuth';
 import CustomChatSharePage from '@/components/custom-chat/custom-chat-share-page';
+import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('learning-scenarios.page-titles');

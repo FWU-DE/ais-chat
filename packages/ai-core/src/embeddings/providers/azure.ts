@@ -1,8 +1,9 @@
-import { instrumentOpenAiClient } from '@sentry/server-utils';
 import { isLlmProvider } from '@ais-chat/api-database/llm-model';
+import { instrumentOpenAiClient } from '@sentry/server-utils';
 import OpenAI from 'openai';
-import type { AiModel, EmbeddingGenerationFn } from '../types';
+
 import { ProviderConfigurationError } from '../../errors';
+import type { AiModel, EmbeddingGenerationFn } from '../types';
 import { EMBEDDING_CLIENT_MAX_RETRIES, EMBEDDING_CLIENT_TIMEOUT_MS } from './const';
 
 function createAzureClient(model: AiModel): {

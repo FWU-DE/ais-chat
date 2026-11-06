@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Session } from 'next-auth';
 import { ForbiddenError, UnauthenticatedError } from '@shared/error';
+import type { Session } from 'next-auth';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import { ADMIN_ROLE, EDITOR_ROLE } from './roles';
 
 const { authMock, setUserMock } = vi.hoisted(() => ({
@@ -11,7 +12,7 @@ const { authMock, setUserMock } = vi.hoisted(() => ({
 vi.mock('@/auth', () => ({ auth: authMock }));
 vi.mock('@sentry/nextjs', () => ({ setUser: setUserMock }));
 
-import { requireAdminOrEditorAuth, requireAdminAuth } from './requireAdminAuth';
+import { requireAdminAuth, requireAdminOrEditorAuth } from './requireAdminAuth';
 
 function createSession(adminRole: Session['adminRole']): Session {
   return {

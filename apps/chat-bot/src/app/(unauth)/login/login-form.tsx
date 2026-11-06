@@ -1,11 +1,13 @@
 'use client';
 
-import SharedChatLoginForm from '../../(authed)/(chat-bot)/learning-scenarios/_components/shared-chat-login-form';
-import { signIn } from 'next-auth/react';
-import LogoWithName from '@/assets/logo-with-name.svg';
-import { useSearchParams } from 'next/navigation';
-import { getSafeCallbackUrl } from '@/auth/callback-url';
 import { Button } from '@ui/components/button';
+import { useSearchParams } from 'next/navigation';
+import { signIn } from 'next-auth/react';
+
+import LogoWithName from '@/assets/logo-with-name.svg';
+import { getSafeCallbackUrl } from '@/auth/callback-url';
+
+import SharedChatLoginForm from '../../(authed)/(chat-bot)/learning-scenarios/_components/shared-chat-login-form';
 
 export default function LoginForm() {
   const searchParams = useSearchParams();

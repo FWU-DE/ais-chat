@@ -5,8 +5,8 @@ import {
   dbSetApiKeysForModel,
   dbUpdateModelMappingsForApiKey,
 } from '@ais-chat/api-database';
-import { logInfo } from '@shared/logging';
 import { dbUpdateLlmModelsForAllFederalStates } from '@shared/db/functions/llm-model';
+import { logInfo } from '@shared/logging';
 
 export async function getModelApiKeyMappings(projectId: string, apiKeyId: string) {
   return dbGetAllModelMappingsForApiKey(projectId, apiKeyId);

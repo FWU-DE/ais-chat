@@ -1,9 +1,11 @@
-import { type AiActivityStep } from '@/types/ai-activity';
-import { type ChatStatus, type UIMessage } from '@/types/chat';
-import { cn } from '@/utils/tailwind';
 import { TextTIcon, TextTSlashIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
+
+import { type AiActivityStep } from '@/types/ai-activity';
+import { type ChatStatus, type UIMessage } from '@/types/chat';
+import { cn } from '@/utils/tailwind';
+
 import CopyToClipboardButton from '../common/clipboard-button';
 import ReloadIcon from '../icons/reload';
 import { AiActivityDialog } from './activity/ai-activity';

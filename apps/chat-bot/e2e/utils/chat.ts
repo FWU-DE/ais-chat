@@ -1,6 +1,9 @@
-import { expect, Page, test } from '@playwright/test';
 import path from 'node:path';
+
+import { expect, Page, test } from '@playwright/test';
+
 import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
+
 import { waitForToast } from './utils';
 
 type AiActivityStepId = AiActivityToolName | Exclude<AiActivityStep['kind'], 'tool'>;

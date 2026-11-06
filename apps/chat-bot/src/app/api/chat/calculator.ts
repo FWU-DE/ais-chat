@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import { env } from '@/env';
 
 export const CALCULATOR_MAX_EXPRESSION_LENGTH = 4_096;

@@ -1,10 +1,11 @@
-import { validateApiKeyWithResult } from '@/routes/utils';
-import { handleAiCoreError } from '@/ai-core-adapter/errors';
-import { chatCompletion, chatCompletionStream } from '@/ai-core-adapter/chat';
+import { dbGetModelsByApiKeyId } from '@ais-chat/api-database';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions.js';
 import { z } from 'zod';
-import { dbGetModelsByApiKeyId } from '@ais-chat/api-database';
+
+import { chatCompletion, chatCompletionStream } from '@/ai-core-adapter/chat';
+import { handleAiCoreError } from '@/ai-core-adapter/errors';
+import { validateApiKeyWithResult } from '@/routes/utils';
 
 // Define content part schemas for image and text
 const textContentPartSchema = z.object({

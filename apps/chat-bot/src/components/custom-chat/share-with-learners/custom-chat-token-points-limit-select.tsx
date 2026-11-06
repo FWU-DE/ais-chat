@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from '@ui/components/select';
 import { useTranslations } from 'next-intl';
+
 import {
   DefaultTokenPointsPercentageLimit,
   MaxTokenPointsPercentageLimit,

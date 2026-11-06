@@ -1,6 +1,8 @@
-import { cn } from '@/utils/tailwind';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+
+import { cn } from '@/utils/tailwind';
+
 import { formatTime } from './format-time';
 
 type AudioWaveformProps = {

@@ -1,3 +1,7 @@
+import { ToolCall, type ToolResult } from '@ais-chat/ai-core';
+import { type ToolErrorResult } from '@ais-chat/ai-core/chat/types';
+import { logError } from '@shared/logging/logging';
+
 import { toolActivityRegistry } from '@/app/api/chat/build-tools';
 import type { ToolActivity } from '@/app/api/chat/tools/types';
 import {
@@ -6,9 +10,6 @@ import {
   isAiActivityToolName,
 } from '@/types/ai-activity';
 import { TOOL_NAMES } from '@/types/tool-names';
-import { ToolCall, type ToolResult } from '@ais-chat/ai-core';
-import { type ToolErrorResult } from '@ais-chat/ai-core/chat/types';
-import { logError } from '@shared/logging/logging';
 
 export type AiActivityOptions = {
   hideSensitiveDetails?: boolean;

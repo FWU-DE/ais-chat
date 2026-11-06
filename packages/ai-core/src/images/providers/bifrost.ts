@@ -1,9 +1,10 @@
 import { instrumentOpenAiClient } from '@sentry/server-utils';
 import OpenAI, { toFile } from 'openai';
+
 import { extractBifrostFieldsFromHeaders, stripBifrostProviderPrefix } from '../../bifrost-headers';
-import type { AiModel, ImageGenerationFn, ImageResponse } from '../types';
-import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { env } from '../../env';
+import { AiGenerationError, ProviderConfigurationError } from '../../errors';
+import type { AiModel, ImageGenerationFn, ImageResponse } from '../types';
 
 function createBifrostClient(model: AiModel): {
   client: OpenAI;

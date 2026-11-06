@@ -1,9 +1,10 @@
 import type { GenerateContentResponse } from '@google/genai';
+
 import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { createGoogleClient, formatGoogleError } from '../../google-client';
 import {
-  PCM_STREAM_AUDIO_FORMAT,
   type AiModel,
+  PCM_STREAM_AUDIO_FORMAT,
   type SpeechGenerationFn,
   type SpeechStreamGenerationFn,
   type SpeechUsage,

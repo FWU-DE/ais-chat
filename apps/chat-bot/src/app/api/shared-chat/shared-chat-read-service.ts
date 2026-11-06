@@ -1,6 +1,7 @@
 import { dbGetFilesInIds } from '@shared/db/functions/files';
 import { ForbiddenError, NotFoundError } from '@shared/error';
 import { verify } from '@shared/shared-chat';
+
 import { getSharedChatEntity } from './shared-chat-get-entity';
 
 export async function verifySharedChatImageAccess({

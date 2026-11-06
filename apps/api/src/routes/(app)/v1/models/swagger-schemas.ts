@@ -1,5 +1,6 @@
-import { SWAGGER_DEFAULT_RESPONSES_SCHEMA } from '@/swagger/const';
 import { FastifySchema } from 'fastify/types/schema';
+
+import { SWAGGER_DEFAULT_RESPONSES_SCHEMA } from '@/swagger/const';
 
 export const modelRequestSwaggerSchema: FastifySchema = {
   response: {

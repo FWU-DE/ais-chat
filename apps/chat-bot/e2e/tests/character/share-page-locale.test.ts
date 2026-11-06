@@ -1,8 +1,9 @@
-import { expect, test } from '../../fixtures/test';
 import type { Page } from '@playwright/test';
 import { nanoid } from 'nanoid';
-import { AUTH_FILES } from '../../utils/const';
+
+import { expect, test } from '../../fixtures/test';
 import { configureCharacter, createCharacter, deleteCharacter } from '../../utils/character';
+import { AUTH_FILES } from '../../utils/const';
 import { waitForAutosave, waitForToast } from '../../utils/utils';
 
 test.use({ storageState: AUTH_FILES.teacher });

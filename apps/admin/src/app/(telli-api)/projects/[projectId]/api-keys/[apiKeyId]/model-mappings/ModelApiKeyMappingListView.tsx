@@ -1,14 +1,8 @@
 'use client';
 
-import { startTransition, useCallback, useEffect, useState } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@ui/components/table';
+import { isBifrostProviderSyncError } from '@ais-chat/api-database/bifrost-provider-sync/error';
+import { logError } from '@shared/logging';
+import { Button } from '@ui/components/button';
 import {
   Card,
   CardAction,
@@ -17,18 +11,26 @@ import {
   CardHeader,
   CardTitle,
 } from '@ui/components/card';
-import { Button } from '@ui/components/button';
-import { logError } from '@shared/logging';
 import { Checkbox } from '@ui/components/checkbox';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@ui/components/table';
+import { startTransition, useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+
+import { LargeLanguageModel } from '@/types/large-language-model';
+import { ModelApiKeyMapping } from '@/types/model-mappings';
+
 import {
   getLargeLanguageModelsAction,
   getModelMappingsAction,
   saveModelMappingsAction,
 } from './actions';
-import { LargeLanguageModel } from '@/types/large-language-model';
-import { isBifrostProviderSyncError } from '@ais-chat/api-database/bifrost-provider-sync/error';
-import { ModelApiKeyMapping } from '@/types/model-mappings';
 
 export type ModelApiKeyMappingListViewProps = {
   projectId: string;

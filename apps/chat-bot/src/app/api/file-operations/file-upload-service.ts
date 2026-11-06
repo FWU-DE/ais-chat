@@ -1,10 +1,12 @@
-import { isSupportedImageExtension, MAX_FILE_SIZE } from '@/const';
-import { parseSupportedFileExtension } from '@/utils/files/generic';
 import { dbInsertFileWithChunks } from '@shared/db/functions/files';
 import { FileMetadata } from '@shared/db/schema';
 import { InvalidArgumentError } from '@shared/error';
 import { uploadMessageAttachment } from '@shared/files/fileService';
 import { cnanoid } from '@shared/random/randomService';
+
+import { isSupportedImageExtension, MAX_FILE_SIZE } from '@/const';
+import { parseSupportedFileExtension } from '@/utils/files/generic';
+
 import { fileExtractionXberg } from '../file-extraction/file-extraction-xberg';
 import { chunkAndEmbed } from '../rag/rag-service';
 import { preprocessImage } from './preprocess-image';

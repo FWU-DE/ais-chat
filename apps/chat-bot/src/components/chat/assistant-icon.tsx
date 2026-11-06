@@ -1,7 +1,9 @@
-import { cn } from '@/utils/tailwind';
 import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
-import RobotIcon from '../icons/robot';
+
+import { cn } from '@/utils/tailwind';
+
 import AvatarPicture from '../common/avatar-picture';
+import RobotIcon from '../icons/robot';
 
 export function AssistantIcon({
   customGptId,

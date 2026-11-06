@@ -1,10 +1,11 @@
 'use client';
 
-import { TEXT_INPUT_FIELDS_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
 import { PlusIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { Input } from '@ui/components/input';
 import { useTranslations } from 'next-intl';
+
+import { TEXT_INPUT_FIELDS_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
 
 type WebSearchWebsiteInputProps = {
   currentWebsite: string;

@@ -1,6 +1,7 @@
-import type { ChatMessage } from '@/types/chat';
 import type { runAgentLoop } from '@ais-chat/ai-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { ChatMessage } from '@/types/chat';
 
 const mocks = vi.hoisted(() => ({
   runAgentLoopMock: vi.fn(),

@@ -1,5 +1,7 @@
 'use server';
 
+import { runServerAction } from '@shared/actions/run-server-action';
+
 import { requireAdminAuth } from '@/auth/requireAdminAuth';
 import {
   createProviderKey,
@@ -7,7 +9,6 @@ import {
   updateProviderKey,
 } from '@/services/provider-key-service';
 import type { SaveProviderKey } from '@/types/provider-key';
-import { runServerAction } from '@shared/actions/run-server-action';
 
 export async function createProviderKeyAction(data: SaveProviderKey) {
   await requireAdminAuth();

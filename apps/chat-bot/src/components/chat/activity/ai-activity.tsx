@@ -1,8 +1,5 @@
 'use client';
 
-import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
-import { truncate } from '@/utils/chat/tool-result-parsing';
-import { cn } from '@/utils/tailwind';
 import {
   BooksIcon,
   CalculatorIcon,
@@ -12,10 +9,10 @@ import {
   FileMagnifyingGlassIcon,
   FileTextIcon,
   GlobeSimpleIcon,
+  type Icon,
   MagnifyingGlassIcon,
   SparkleIcon,
   XCircleIcon,
-  type Icon,
 } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import {
@@ -28,6 +25,11 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/tooltip';
 import { useTranslations } from 'next-intl';
 import { useId, useState } from 'react';
+
+import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
+import { truncate } from '@/utils/chat/tool-result-parsing';
+import { cn } from '@/utils/tailwind';
+
 import MarkdownDisplay from '../markdown-display';
 
 const TOOL_ICONS: Record<AiActivityToolName, Icon> = {

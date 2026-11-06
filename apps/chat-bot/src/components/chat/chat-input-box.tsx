@@ -1,12 +1,3 @@
-import {
-  CHAT_MESSAGE_LENGTH_LIMIT,
-  NUMBER_OF_FILES_LIMIT,
-  NUMBER_OF_IMAGES_LIMIT,
-} from '@/configuration-text-inputs/const';
-import { unlockAudioPlayback } from '@/utils/audio/unlock-audio-playback';
-import { isImageFile } from '@/utils/files/generic';
-import { cn } from '@/utils/tailwind';
-import { iconClassName } from '@/utils/tailwind/icon';
 import { useTranslations } from 'next-intl';
 import {
   ChangeEvent,
@@ -17,6 +8,17 @@ import {
   SyntheticEvent,
   useEffect,
 } from 'react';
+
+import {
+  CHAT_MESSAGE_LENGTH_LIMIT,
+  NUMBER_OF_FILES_LIMIT,
+  NUMBER_OF_IMAGES_LIMIT,
+} from '@/configuration-text-inputs/const';
+import { unlockAudioPlayback } from '@/utils/audio/unlock-audio-playback';
+import { isImageFile } from '@/utils/files/generic';
+import { cn } from '@/utils/tailwind';
+import { iconClassName } from '@/utils/tailwind/icon';
+
 import AutoResizeTextarea from '../common/auto-resize-textarea';
 import { useToast } from '../common/toast';
 import type { FileUploadResponse, LocalFileState } from '../file-upload/upload-file';

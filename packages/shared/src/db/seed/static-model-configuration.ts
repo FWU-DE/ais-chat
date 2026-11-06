@@ -1,8 +1,9 @@
-import { dbGetConfiguration, dbUpsertConfiguration } from '../functions/configuration';
-import { dbGetAllLlmModels } from '../functions/llm-model';
-import { staticModelsConfigurationSchema, StaticModelRole } from '../schema';
 import { STATIC_MODELS_CONFIGURATION_KEY } from '@shared/llm-models/llm-model-service';
 import { getFirstTextModel } from '@shared/llm-models/llm-model-utils';
+
+import { dbGetConfiguration, dbUpsertConfiguration } from '../functions/configuration';
+import { dbGetAllLlmModels } from '../functions/llm-model';
+import { StaticModelRole, staticModelsConfigurationSchema } from '../schema';
 
 const requiredModelNames: Record<Exclude<StaticModelRole, 'safety'>, string> = {
   'default-chat': 'gpt-5-mini',

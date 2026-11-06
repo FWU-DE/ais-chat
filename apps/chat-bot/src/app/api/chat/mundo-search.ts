@@ -1,5 +1,6 @@
 import { logError } from '@shared/logging';
 import { z } from 'zod';
+
 import {
   MUNDO_CLASS_LEVELS,
   MUNDO_DETAILS_URL_PREFIX,

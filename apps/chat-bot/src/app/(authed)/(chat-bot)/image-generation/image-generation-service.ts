@@ -1,7 +1,3 @@
-import { getSafetyModel } from '@/app/api/utils/utils';
-import { getUser, userHasCompletedTraining } from '@/auth/utils';
-import { ImageGenerationOptions } from '@/components/image-generation/image-generation-types';
-import { checkProductAccess } from '@/utils/vidis/access';
 import { generateImageWithBilling, TokenPointsExceededError } from '@ais-chat/ai-core';
 import { ImageGenerationRequestOptions } from '@ais-chat/ai-core/images/types';
 import {
@@ -33,6 +29,12 @@ import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
 import { ImageStyle } from '@shared/utils/chat';
 import { generateUUID } from '@shared/utils/uuid';
+
+import { getSafetyModel } from '@/app/api/utils/utils';
+import { getUser, userHasCompletedTraining } from '@/auth/utils';
+import { ImageGenerationOptions } from '@/components/image-generation/image-generation-types';
+import { checkProductAccess } from '@/utils/vidis/access';
+
 import { fetchInputImages, validateInputFiles } from './image-generation-input-files';
 
 export interface ImageGenerationParams {

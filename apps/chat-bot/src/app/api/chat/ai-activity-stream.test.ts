@@ -1,8 +1,10 @@
+import type { ToolCall, ToolResult } from '@ais-chat/ai-core/chat/types';
+import { describe, expect, it, vi } from 'vitest';
+
 import type { MathCalculateToolSuccessResponse } from '@/app/api/chat/tools/math-calculate-tool';
 import { parseGenericPersistedToolResult } from '@/app/api/chat/tools/parse-persisted-tool-result';
 import { decodeChatStreamEvent } from '@/utils/streaming';
-import type { ToolCall, ToolResult } from '@ais-chat/ai-core/chat/types';
-import { describe, expect, it, vi } from 'vitest';
+
 import { createAiActivityStream } from './ai-activity-stream';
 import type { ToolActivity } from './tools/types';
 

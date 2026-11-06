@@ -1,11 +1,13 @@
-import { describe, it, expect } from 'vitest';
-import { checkProductAccess } from './access';
-import { UserAndContext } from '@/auth/types';
-import { UserSelectModel, UserRole } from '@shared/db/schema';
-import { ObscuredFederalState } from '@/auth/utils';
-import { getFederalStateNameById } from './const';
+import { UserRole, UserSelectModel } from '@shared/db/schema';
 import { createElement, Fragment } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it } from 'vitest';
+
+import { UserAndContext } from '@/auth/types';
+import { ObscuredFederalState } from '@/auth/utils';
+
+import { checkProductAccess } from './access';
+import { getFederalStateNameById } from './const';
 
 function renderErrorMessage(result: ReturnType<typeof checkProductAccess>) {
   if (result.hasAccess) throw new Error('Expected access to be denied');

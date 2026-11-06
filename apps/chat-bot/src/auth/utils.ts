@@ -1,12 +1,13 @@
-import { type Session } from 'next-auth';
-import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
-import { auth, unstable_update } from '.';
-import { type UserAndContext } from './types';
 import { dbGetUserAndFederalStateByUserId } from '@shared/db/functions/school';
 import { FederalStateSelectModel } from '@shared/db/schema';
 import { FederalStateModel } from '@shared/federal-states/types';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { type Session } from 'next-auth';
+
+import { auth, unstable_update } from '.';
 import { getSafeCallbackUrl } from './callback-url';
+import { type UserAndContext } from './types';
 
 export { getSafeCallbackUrl };
 

@@ -1,11 +1,11 @@
 'use client';
 
-import * as React from 'react';
 import { InfoIcon } from '@phosphor-icons/react';
 import { Tooltip as TooltipPrimitive } from 'radix-ui';
+import * as React from 'react';
 
-import { DEFAULT_TOOLTIP_DELAY_DURATION, DEFAULT_SCROLLING_TOOLTIP_DELAY_DURATION } from './const';
 import { cn } from '../lib/utils';
+import { DEFAULT_SCROLLING_TOOLTIP_DELAY_DURATION, DEFAULT_TOOLTIP_DELAY_DURATION } from './const';
 
 type TooltipContextType = {
   isOpen: boolean;
@@ -216,4 +216,4 @@ function InfoTooltip({
   );
 }
 
-export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, InfoTooltip };
+export { InfoTooltip, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger };

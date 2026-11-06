@@ -2,9 +2,11 @@ import React from 'react';
 import { type ExtraProps } from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { nightOwl } from 'react-syntax-highlighter/dist/cjs/styles/prism';
-import { cn } from '@/utils/tailwind';
-import CopyToClipboardButton from '../common/clipboard-button';
+
 import { getCodeTitle } from '@/utils/code-blocks';
+import { cn } from '@/utils/tailwind';
+
+import CopyToClipboardButton from '../common/clipboard-button';
 
 export function MarkdownCode({
   className,

@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { Button } from '@ui/components/button';
 import {
   Card,
@@ -17,8 +16,10 @@ import {
   TableHeader,
   TableRow,
 } from '@ui/components/table';
-import { ROUTES } from '@/consts/routes';
+import Link from 'next/link';
+
 import { ClickableTableRow } from '@/components/common/ClickableTableRow';
+import { ROUTES } from '@/consts/routes';
 import type { ProviderKey } from '@/types/provider-key';
 
 export function ProviderKeyListView({ providerKeys }: { providerKeys: ProviderKey[] }) {

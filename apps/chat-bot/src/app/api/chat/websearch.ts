@@ -1,17 +1,19 @@
+import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
+import { dbUpdateTokenUsageByCharacterChatId } from '@shared/db/functions/character';
+import { dbUpdateTokenUsageBySharedLearningScenarioId } from '@shared/db/functions/learning-scenario';
+import { dbInsertConversationToolCallUsage } from '@shared/db/functions/token-usage';
+import { dbGetToolCallCostByName } from '@shared/db/functions/tool-call';
+import type { WebSearchModel, WebSearchResult, WebSearchScope } from '@shared/db/schema';
+import { logError } from '@shared/logging';
 import { LinkupClient, type TextSearchResult } from 'linkup-sdk';
-import { env } from './env';
+
+import { UserAndContext } from '@/auth/types';
 import {
   WEBSEARCH_RESULT_LENGTH_LIMIT,
   WEBSEARCH_RESULTS_LIMIT,
 } from '@/configuration-text-inputs/const';
-import type { WebSearchModel, WebSearchResult, WebSearchScope } from '@shared/db/schema';
-import { logError } from '@shared/logging';
-import { dbInsertConversationToolCallUsage } from '@shared/db/functions/token-usage';
-import { dbUpdateTokenUsageByCharacterChatId } from '@shared/db/functions/character';
-import { dbUpdateTokenUsageBySharedLearningScenarioId } from '@shared/db/functions/learning-scenario';
-import { dbGetToolCallCostByName } from '@shared/db/functions/tool-call';
-import { UserAndContext } from '@/auth/types';
-import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
+
+import { env } from './env';
 
 export type WebSearchConfig = {
   enabled: boolean;

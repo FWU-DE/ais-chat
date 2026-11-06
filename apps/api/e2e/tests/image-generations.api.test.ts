@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+
 import { authorizationHeader, getImageModel } from '../utils/api.js';
 
 test.describe('POST /v1/images/generations', () => {

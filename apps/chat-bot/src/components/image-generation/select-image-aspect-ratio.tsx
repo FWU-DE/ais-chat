@@ -1,10 +1,11 @@
 'use client';
 
-import { useImageAspectRatio } from './image-aspect-ratio-provider';
+import { Separator } from '@ui/components/separator';
 import { useTranslations } from 'next-intl';
+
 import { HeaderMainMenuItem } from '../layout/header-main-menu-item';
 import { HeaderMenuItem } from '../layout/header-menu-item';
-import { Separator } from '@ui/components/separator';
+import { useImageAspectRatio } from './image-aspect-ratio-provider';
 
 export default function SelectImageAspectRatio() {
   const { aspectRatio, setAspectRatio } = useImageAspectRatio();

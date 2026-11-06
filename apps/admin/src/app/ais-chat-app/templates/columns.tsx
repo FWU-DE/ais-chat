@@ -3,9 +3,10 @@
 import { TemplateModel } from '@shared/templates/template';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
 import { ColumnDef } from '@tanstack/react-table';
-import { DataTableFeatures } from '@ui/components/data-table';
 import { Button } from '@ui/components/button';
+import { DataTableFeatures } from '@ui/components/data-table';
 import { ArrowUpDownIcon } from 'lucide-react';
+
 import { getTemplateTypeName } from './templateTypeName';
 
 export const columns: ColumnDef<DataTableFeatures, TemplateModel>[] = [

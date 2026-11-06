@@ -1,4 +1,5 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+
 import { listBifrostVirtualKeys, updateBifrostVirtualKeyProviders } from './virtual-key-client';
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {

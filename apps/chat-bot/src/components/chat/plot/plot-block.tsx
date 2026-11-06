@@ -1,10 +1,12 @@
 'use client';
 
-import { parsePlotSpec } from '@/utils/plot/plot-spec';
 import { logError } from '@shared/logging/logging';
-import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 import { createContext, useContext, useEffect, useMemo } from 'react';
+
+import { parsePlotSpec } from '@/utils/plot/plot-spec';
+
 import { PlotError } from './plot-error';
 import { PlotErrorBoundary } from './plot-error-boundary';
 

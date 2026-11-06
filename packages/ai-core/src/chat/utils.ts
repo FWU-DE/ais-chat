@@ -1,5 +1,6 @@
 import { getEncoding, type Tiktoken } from 'js-tiktoken';
 import type OpenAI from 'openai';
+
 import type { Message, TokenUsage, ToolDefinition } from './types';
 
 /**

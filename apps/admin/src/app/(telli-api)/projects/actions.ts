@@ -1,15 +1,16 @@
 'use server';
+import { runServerAction } from '@shared/actions/run-server-action';
+
 import { requireAdminAuth } from '@/auth/requireAdminAuth';
+import { getApiKeys } from '@/services/api-key-service';
 import {
-  getProjects,
-  getSingleProject,
   createProject,
   deleteProject,
+  getProjects,
+  getSingleProject,
 } from '@/services/project-service';
-import { getApiKeys } from '@/services/api-key-service';
-import { Project } from '@/types/project';
 import { ApiKey } from '@/types/api-key';
-import { runServerAction } from '@shared/actions/run-server-action';
+import { Project } from '@/types/project';
 
 export async function getProjectsAction() {
   await requireAdminAuth();

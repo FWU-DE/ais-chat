@@ -1,6 +1,7 @@
 import { asc, eq } from 'drizzle-orm';
+
 import { db } from '..';
-import { type ToolCallName, toolCallCostTable } from '../schema';
+import { toolCallCostTable, type ToolCallName } from '../schema';
 
 export async function dbGetToolCallCosts() {
   return db.select().from(toolCallCostTable).orderBy(asc(toolCallCostTable.toolCallName));

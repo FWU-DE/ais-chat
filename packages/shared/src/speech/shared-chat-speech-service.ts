@@ -12,6 +12,7 @@ import {
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
 import { getUserWithFederalState } from '@shared/users/user-service';
+
 import { getSharedChatEntity } from './shared-chat-get-entity';
 import {
   SharedChatCharacter,

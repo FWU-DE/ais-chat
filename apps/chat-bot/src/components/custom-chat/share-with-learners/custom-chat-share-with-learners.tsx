@@ -1,39 +1,41 @@
 'use client';
 
-import { useToast } from '@/components/common/toast';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { useTranslations } from 'next-intl';
+import { ShareFatIcon } from '@phosphor-icons/react';
+import { ServerActionResult } from '@shared/actions/server-action-result';
 import {
   calculateShareSessionState,
   ShareSessionState,
 } from '@shared/sharing/calculate-share-session-state';
-import { CustomChatHeading2 } from '@/components/custom-chat/custom-chat-heading2';
-import { Card, CardContent } from '@ui/components/card';
 import { Button } from '@ui/components/button';
-import { ShareFatIcon } from '@phosphor-icons/react';
+import { Card, CardContent } from '@ui/components/card';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
+import { useToast } from '@/components/common/toast';
+import { CustomChatHeading2 } from '@/components/custom-chat/custom-chat-heading2';
+import { SharePollingData, useShareDataPolling } from '@/hooks/use-share-data-polling';
+
 import CountDownTimer from '../../../app/(authed)/(chat-bot)/learning-scenarios/_components/count-down';
 import { RichText } from '../../common/rich-text';
-import { z } from 'zod';
+import { CustomChatAdjustTokenLimitDialog } from './custom-chat-adjust-token-limit-dialog';
+import { CustomChatExtendShareExpirationDialog } from './custom-chat-extend-share-expiration-dialog';
+import { CustomChatGraceWindowNote } from './custom-chat-grace-window-note';
+import { CustomChatShareWarning } from './custom-chat-share-warning';
+import {
+  tokenPointsPercentageValues,
+  usageTimeValuesInMinutes,
+} from './custom-chat-share-with-learners-limit-params';
+import { CustomChatStopShareButton } from './custom-chat-stop-share-button';
+import { TimeLimitSelect } from './custom-chat-time-limit-select';
+import { TokenPointsLeftRing } from './custom-chat-token-points-left-ring';
 import {
   getMaxAvailablePercentage,
   resolveTokenPointsPercentageLimit,
 } from './custom-chat-token-points-limit-select';
 import { TokenPointsLimitSelect } from './custom-chat-token-points-limit-select';
-import {
-  tokenPointsPercentageValues,
-  usageTimeValuesInMinutes,
-} from './custom-chat-share-with-learners-limit-params';
-import { TimeLimitSelect } from './custom-chat-time-limit-select';
-import { TokenPointsLeftRing } from './custom-chat-token-points-left-ring';
-import { CustomChatAdjustTokenLimitDialog } from './custom-chat-adjust-token-limit-dialog';
-import { CustomChatExtendShareExpirationDialog } from './custom-chat-extend-share-expiration-dialog';
-import { useShareDataPolling, SharePollingData } from '@/hooks/use-share-data-polling';
-import { ServerActionResult } from '@shared/actions/server-action-result';
-import { CustomChatStopShareButton } from './custom-chat-stop-share-button';
-import { CustomChatGraceWindowNote } from './custom-chat-grace-window-note';
-import { CustomChatShareWarning } from './custom-chat-share-warning';
 
 const shareFormSchema = z.object({
   tokenPointsPercentageLimit: z.number(),

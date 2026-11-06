@@ -2,23 +2,34 @@
 
 import { CharacterOptionalShareDataModel, FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
-import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
-
-import { useLlmModels } from '@/components/providers/llm-model-provider';
-import { BackButton } from '@/components/common/back-button';
-import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
-import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
-import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
-import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
-import { CustomChatHeading2 } from '@/components/custom-chat/custom-chat-heading2';
-import { CustomChatLastUpdate } from '@/components/custom-chat/custom-chat-last-update';
-import { CustomChatFieldInfo } from '@/components/custom-chat/custom-chat-field-info';
-import { CustomChatAvatarImage } from '@/components/custom-chat/custom-chat-avatar-image';
-import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
 import { Card, CardContent } from '@ui/components/card';
 import { FieldGroup } from '@ui/components/field';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+
+import { BackButton } from '@/components/common/back-button';
 import { useToast } from '@/components/common/toast';
+import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
+import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
+import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
+import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-author-info';
+import { CustomChatAvatarImage } from '@/components/custom-chat/custom-chat-avatar-image';
+import { CustomChatCreateSuspensionRequestButton } from '@/components/custom-chat/custom-chat-create-suspension-request-button';
+import { CustomChatFieldInfo } from '@/components/custom-chat/custom-chat-field-info';
+import { CustomChatHeading2 } from '@/components/custom-chat/custom-chat-heading2';
+import { CustomChatLastUpdate } from '@/components/custom-chat/custom-chat-last-update';
+import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
+import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
+import { CustomChatDidacticCommentaryView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-view';
+import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
+import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-chat-filter-display-section';
+import { extractFilterValues } from '@/components/custom-chat/filter/custom-chat-filter-utils';
+import { CustomChatLicenseInformationView } from '@/components/custom-chat/license-information/custom-chat-license-information-view';
+import { CustomChatShareWithLearners } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners';
+import { CustomChatSpeechView } from '@/components/custom-chat/speech/custom-chat-speech-view';
+import { CustomChatWebSearchView } from '@/components/custom-chat/web-search/custom-chat-web-search-view';
+import { useLlmModels } from '@/components/providers/llm-model-provider';
+
 import { createNewCharacterAction } from '../actions';
 import {
   downloadFileFromCharacterAction,
@@ -28,16 +39,6 @@ import {
   unshareCharacterAction,
   updateCharacterShareTokenPointsLimitAction,
 } from '../editor/[characterId]/actions';
-import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
-import { CustomChatShareWithLearners } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners';
-import { CustomChatCreateSuspensionRequestButton } from '@/components/custom-chat/custom-chat-create-suspension-request-button';
-import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-author-info';
-import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-chat-filter-display-section';
-import { CustomChatLicenseInformationView } from '@/components/custom-chat/license-information/custom-chat-license-information-view';
-import { CustomChatDidacticCommentaryView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-view';
-import { extractFilterValues } from '@/components/custom-chat/filter/custom-chat-filter-utils';
-import { CustomChatWebSearchView } from '@/components/custom-chat/web-search/custom-chat-web-search-view';
-import { CustomChatSpeechView } from '@/components/custom-chat/speech/custom-chat-speech-view';
 
 export function CharacterView({
   character,

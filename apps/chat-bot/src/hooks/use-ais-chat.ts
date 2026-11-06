@@ -1,17 +1,18 @@
 'use client';
 
-import type { AiActivityStep } from '@/types/ai-activity';
-import {
-  deserializeError,
-  toUIMessages,
-  UIMessage,
-  type ChatMessage,
-  type ChatStatus,
-  type SendMessageResult,
-} from '@/types/chat';
-import { decodeChatStreamEvent, readTextStream } from '@/utils/streaming';
 import { logError } from '@shared/logging';
 import { useCallback, useRef, useState } from 'react';
+
+import type { AiActivityStep } from '@/types/ai-activity';
+import {
+  type ChatMessage,
+  type ChatStatus,
+  deserializeError,
+  type SendMessageResult,
+  toUIMessages,
+  UIMessage,
+} from '@/types/chat';
+import { decodeChatStreamEvent, readTextStream } from '@/utils/streaming';
 
 // Re-export for consumers
 export type { ChatMessage, ChatStatus };

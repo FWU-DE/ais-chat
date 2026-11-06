@@ -1,19 +1,20 @@
-import { db as localDb } from '..';
-import {
-  federalStateTable,
-  llmModelTable,
-  federalStateLlmModelMappingTable,
-  FederalStateSelectModel,
-  LlmModelSelectModel,
-  FederalStateLlmModelMappingSelectModel,
-  configurationTable,
-  Configuration,
-} from '../schema';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
+
+import { db as localDb } from '..';
 import {
-  insertTemplateCharacters,
+  Configuration,
+  configurationTable,
+  FederalStateLlmModelMappingSelectModel,
+  federalStateLlmModelMappingTable,
+  FederalStateSelectModel,
+  federalStateTable,
+  LlmModelSelectModel,
+  llmModelTable,
+} from '../schema';
+import {
   insertTemplateAssistant,
+  insertTemplateCharacters,
   insertTemplateLearningScenarios,
 } from './default-templates';
 import { insertHelpModeGpt } from './help-mode';

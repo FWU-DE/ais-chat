@@ -1,13 +1,8 @@
 'use client';
 
-import React from 'react';
-import { OverviewFilter, overviewFilterSchema } from '@shared/overview-filter';
-import { useTranslations } from 'next-intl';
-import { Input } from '@ais-chat/ui/components/input';
-import { MagnifyingGlassIcon, InfoIcon, XCircleIcon, CaretDownIcon } from '@phosphor-icons/react';
-import { useFederalState } from '@/components/providers/federal-state-provider';
 import { Button } from '@ais-chat/ui/components/button';
 import { FilterTabs } from '@ais-chat/ui/components/filter-tabs';
+import { Input } from '@ais-chat/ui/components/input';
 import {
   Select,
   SelectContent,
@@ -15,9 +10,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ais-chat/ui/components/select';
-import { InfoDialog } from '@/components/common/dialog';
-import { isSortOption, SortOption } from './utils';
+import { CaretDownIcon, InfoIcon, MagnifyingGlassIcon, XCircleIcon } from '@phosphor-icons/react';
+import { OverviewFilter, overviewFilterSchema } from '@shared/overview-filter';
 import { Chip } from '@ui/components/chip';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
+import { InfoDialog } from '@/components/common/dialog';
+import { useFederalState } from '@/components/providers/federal-state-provider';
+
+import { isSortOption, SortOption } from './utils';
 
 type EntityOverviewProps = {
   title: string;
