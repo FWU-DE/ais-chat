@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     await requireValidInviteCode(parsed.inviteCode);
 
-    const { chunks, contentType, format } = await generateSharedChatSpeechStream({
+    const { chunks, contentType } = await generateSharedChatSpeechStream({
       inviteCode: parsed.inviteCode,
       entityType: parsed.entityType,
       entityId: parsed.entityId,
@@ -55,7 +55,6 @@ export async function POST(req: NextRequest) {
     return buildSpeechStreamResponse({
       body,
       contentType,
-      format,
     });
   } catch (error) {
     return handleErrorInRoute(error);
