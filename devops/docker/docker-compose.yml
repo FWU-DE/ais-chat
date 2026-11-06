@@ -308,6 +308,23 @@ services:
       calculator:
         condition: service_healthy
 
+  # Periodic admin calls (popularity refresh, cleanup), see scheduled-tasks.sh
+  scheduled-tasks:
+    image: curlimages/curl:8.23.0
+    restart: unless-stopped
+    environment:
+      APP_HOSTNAME: localhost
+      PORT: 3000
+      API_KEY: ais-chat-app_api-key
+    # Shares keycloak's netns like ais-chat-app, so the app is reachable on localhost:3000
+    network_mode: service:keycloak
+    entrypoint: ['/bin/sh', '/scheduled-tasks.sh']
+    volumes:
+      - ./scheduled-tasks.sh:/scheduled-tasks.sh:ro
+    depends_on:
+      ais-chat-app:
+        condition: service_healthy
+
   # AIS.chat Admin - Administration interface
   ais-chat-admin:
     image: ghcr.io/fwu-de/ais-chat-admin:latest
