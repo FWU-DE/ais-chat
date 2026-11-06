@@ -28,6 +28,22 @@ function isSharedChatFileOwnedBySession({
   );
 }
 
+export function sharedChatFileIsOwnedBySession({
+  metadata,
+  ...context
+}: {
+  metadata: FileMetadata | null;
+  inviteCode: string;
+  entityType: 'character' | 'learningScenario';
+  entityId: string;
+  sharedSessionId: SharedSessionId;
+}): boolean {
+  return (
+    isSharedChatFileMetadata(metadata) &&
+    isSharedChatFileOwnedBySession({ fileMetadata: metadata, ...context })
+  );
+}
+
 export function sharedChatFileOwnershipBySession({
   files,
   inviteCode,
