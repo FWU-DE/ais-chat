@@ -1,4 +1,4 @@
-import { and, eq, exists, gte, lt, max, or } from 'drizzle-orm';
+import { and, eq, exists, gte, lt, max, or, sql } from 'drizzle-orm';
 
 import { db } from '..';
 import {
@@ -10,19 +10,30 @@ import {
 } from '../schema';
 import type { PgTransactionObject } from '../types';
 
+/**
+ * Takes the row lock for the conversation and returns its current generation.
+ * With `bumpGeneration`, the generation is incremented so that earlier in-flight
+ * generations can no longer append their results.
+ */
 async function lockSharedChatConversation(
   tx: PgTransactionObject,
   conversationId: string,
-): Promise<void> {
+  { bumpGeneration = false }: { bumpGeneration?: boolean } = {},
+): Promise<number> {
   const [conversation] = await tx
     .update(sharedChatConversationTable)
-    .set({ updatedAt: new Date() })
+    .set({
+      updatedAt: new Date(),
+      ...(bumpGeneration ? { generation: sql`${sharedChatConversationTable.generation} + 1` } : {}),
+    })
     .where(eq(sharedChatConversationTable.id, conversationId))
-    .returning({ id: sharedChatConversationTable.id });
+    .returning({ generation: sharedChatConversationTable.generation });
 
   if (conversation === undefined) {
     throw new Error('Shared chat conversation no longer exists');
   }
+
+  return conversation.generation;
 }
 
 async function getNextMessageOrderNumber(
@@ -156,7 +167,9 @@ export async function dbPrepareSharedChatConversation({
   fileIds?: string[];
 }) {
   return db.transaction(async (tx) => {
-    await lockSharedChatConversation(tx, conversationId);
+    const generation = await lockSharedChatConversation(tx, conversationId, {
+      bumpGeneration: true,
+    });
 
     const conversationMessages = await tx
       .select()
@@ -184,6 +197,7 @@ export async function dbPrepareSharedChatConversation({
       return {
         userOrderNumber: existingUserMessage.orderNumber,
         isRetry: true,
+        generation,
       };
     }
 
@@ -210,19 +224,29 @@ export async function dbPrepareSharedChatConversation({
     return {
       userOrderNumber,
       isRetry: false,
+      generation,
     };
   });
 }
 
+/**
+ * Appends messages unless a newer turn was prepared since `expectedGeneration` was issued.
+ * Returns false if the completion was stale and nothing was written.
+ */
 export async function dbAppendSharedChatConversationMessages({
   conversationId,
+  expectedGeneration,
   messages,
 }: {
   conversationId: string;
+  expectedGeneration: number;
   messages: Array<Omit<typeof sharedChatConversationMessageTable.$inferInsert, 'orderNumber'>>;
-}) {
-  await db.transaction(async (tx) => {
-    await lockSharedChatConversation(tx, conversationId);
+}): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const generation = await lockSharedChatConversation(tx, conversationId);
+    if (generation !== expectedGeneration) {
+      return false;
+    }
     const firstOrderNumber = await getNextMessageOrderNumber(tx, conversationId);
 
     if (messages.length > 0) {
@@ -233,6 +257,8 @@ export async function dbAppendSharedChatConversationMessages({
         })),
       );
     }
+
+    return true;
   });
 }
 
