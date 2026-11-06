@@ -10,7 +10,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { ReactNode, RefObject, SyntheticEvent, useEffect, useRef, useState } from 'react';
 
-import { loadSharedChatSessionMessagesAction } from '@/app/api/shared-chat/actions';
+import { loadSharedChatConversationMessagesAction } from '@/app/api/shared-chat/actions';
 import { ChatInputBox } from '@/components/chat/chat-input-box';
 import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
 import { InitialChatContentDisplay } from '@/components/chat/initial-content-display';
@@ -256,7 +256,7 @@ export default function GenericSharedChat({
     if (historyLoaded.current) return;
     historyLoaded.current = true;
 
-    void loadSharedChatSessionMessagesAction({
+    void loadSharedChatConversationMessagesAction({
       sharedSessionId,
       inviteCode,
       entityType: sharedEntityType,

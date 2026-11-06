@@ -33,7 +33,7 @@ const mocks = vi.hoisted(() => ({
   ingestWebContentMock: vi.fn(),
   resolveAgentNameForTracingMock: vi.fn(),
   combineSharedRelatedFilesMock: vi.fn(),
-  prepareSharedChatSessionMock: vi.fn(),
+  prepareSharedChatConversationMock: vi.fn(),
   persistSharedChatResponseMock: vi.fn(),
   isWebSearchEnabledForEntityMock: vi.fn(),
 }));
@@ -142,8 +142,8 @@ vi.mock('../shared-chat/shared-chat-file-service', () => ({
   combineSharedRelatedFiles: mocks.combineSharedRelatedFilesMock,
 }));
 
-vi.mock('../shared-chat/shared-chat-session-service', () => ({
-  prepareSharedChatSession: mocks.prepareSharedChatSessionMock,
+vi.mock('../shared-chat/shared-chat-conversation-service', () => ({
+  prepareSharedChatConversation: mocks.prepareSharedChatConversationMock,
 }));
 
 vi.mock('../chat/websearch', () => ({
@@ -225,7 +225,7 @@ beforeEach(() => {
   mocks.dbGetRelatedLearningScenarioFilesMock.mockResolvedValue([]);
   mocks.combineSharedRelatedFilesMock.mockResolvedValue([]);
   mocks.persistSharedChatResponseMock.mockResolvedValue(undefined);
-  mocks.prepareSharedChatSessionMock.mockImplementation(
+  mocks.prepareSharedChatConversationMock.mockImplementation(
     ({ clientMessages }: { clientMessages: ChatMessage[] }) => ({
       messages: clientMessages,
       persistResponse: mocks.persistSharedChatResponseMock,

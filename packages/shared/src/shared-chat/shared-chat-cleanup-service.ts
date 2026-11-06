@@ -4,7 +4,7 @@ import {
   dbGetExpiredLearningScenarioShares,
   dbGetSharedChatFileCandidates,
 } from '@shared/db/functions/shared-chat-files';
-import { dbDeleteExpiredSharedChatConversations } from '@shared/db/functions/shared-chat-sessions';
+import { dbDeleteExpiredSharedChatConversations } from '@shared/db/functions/shared-chat-conversation';
 import { deleteMessageAttachments } from '@shared/files/fileService';
 import { isSharedChatFileMetadata, SharedChatFileMetadata } from '@shared/shared-chat';
 import { addDays } from '@shared/utils/date';

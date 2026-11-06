@@ -8,18 +8,18 @@ import {
   dbGetSharedChatConversationMessageFileIds,
   dbGetSharedChatConversationMessages,
   dbPrepareSharedChatConversation,
-} from '@shared/db/functions/shared-chat-sessions';
+} from '@shared/db/functions/shared-chat-conversation';
 import { ForbiddenError, InvalidArgumentError } from '@shared/error';
 import { isToolRelatedMessage } from '@shared/utils/tool-related-message';
 
 type SharedChatFile = { id: string; name: string; type: string; size: number };
 
-export type SharedChatSessionHistory = {
+export type SharedChatConversationHistory = {
   messages: ChatMessage[];
   filesByMessageId: Array<{ messageId: string; files: SharedChatFile[] }>;
 };
 
-export async function loadSharedChatSessionMessages({
+export async function loadSharedChatConversationMessages({
   sharedSessionId,
   inviteCode,
   entityType,
@@ -29,19 +29,19 @@ export async function loadSharedChatSessionMessages({
   inviteCode: string;
   entityType: 'character' | 'learningScenario';
   entityId: string;
-}): Promise<SharedChatSessionHistory> {
-  const session = await dbGetSharedChatConversation({
+}): Promise<SharedChatConversationHistory> {
+  const conversation = await dbGetSharedChatConversation({
     conversationId: sharedSessionId,
     inviteCode,
     entityType,
     entityId,
   });
-  if (session === undefined) {
+  if (conversation === undefined) {
     return { messages: [], filesByMessageId: [] };
   }
 
-  const messages = await dbGetSharedChatConversationMessages(session.id);
-  const messageFileIds = await dbGetSharedChatConversationMessageFileIds(session.id);
+  const messages = await dbGetSharedChatConversationMessages(conversation.id);
+  const messageFileIds = await dbGetSharedChatConversationMessageFileIds(conversation.id);
   const fileIds = messageFileIds.map((mapping) => mapping.fileId);
   const files = await dbGetFilesInIds([...new Set(fileIds)]);
   const filesById = new Map(
@@ -72,7 +72,7 @@ export async function loadSharedChatSessionMessages({
   };
 }
 
-export async function prepareSharedChatSession({
+export async function prepareSharedChatConversation({
   sharedSessionId,
   inviteCode,
   entityType,
@@ -90,7 +90,7 @@ export async function prepareSharedChatSession({
   fileIds?: string[];
 }) {
   if (sharedSessionId === undefined || sharedSessionId.trim() === '') {
-    throw new ForbiddenError('Not authorized to access this shared chat session');
+    throw new ForbiddenError('Not authorized to access this shared chat conversation');
   }
 
   const currentUserMessage = clientMessages.findLast((message) => message.role === 'user');
@@ -98,21 +98,21 @@ export async function prepareSharedChatSession({
     throw new InvalidArgumentError('A user message is required');
   }
 
-  const session = await dbGetOrCreateSharedChatConversation({
+  const conversation = await dbGetOrCreateSharedChatConversation({
     conversationId: sharedSessionId,
     inviteCode,
     entityType,
     entityId,
   });
-  if (session === undefined) {
-    throw new ForbiddenError('Not authorized to access this shared chat session');
+  if (conversation === undefined) {
+    throw new ForbiddenError('Not authorized to access this shared chat conversation');
   }
 
-  const storedSessionMessages = await dbGetSharedChatConversationMessages(sharedSessionId);
+  const storedConversationMessages = await dbGetSharedChatConversationMessages(sharedSessionId);
   const storedFileIds = (await dbGetSharedChatConversationMessageFileIds(sharedSessionId)).map(
     (mapping) => mapping.fileId,
   );
-  const storedMessages: ChatMessage[] = storedSessionMessages.map((message) => ({
+  const storedMessages: ChatMessage[] = storedConversationMessages.map((message) => ({
     id: message.id,
     role: message.role,
     content: message.content,
@@ -151,7 +151,7 @@ export async function prepareSharedChatSession({
       const messagesToPersist = [
         ...agentLoopMessages.map((message) => ({
           id: crypto.randomUUID(),
-          sessionId: sharedSessionId,
+          conversationId: sharedSessionId,
           ...message,
           content: message.content,
           role: message.role,
@@ -160,7 +160,7 @@ export async function prepareSharedChatSession({
         })),
         {
           id: assistantMessageId,
-          sessionId: sharedSessionId,
+          conversationId: sharedSessionId,
           role: 'assistant' as const,
           content: fullText,
           toolCalls: null,
