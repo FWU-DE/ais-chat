@@ -1,10 +1,18 @@
-export const VALID_SORT_OPTIONS = ['date-desc', 'date-asc', 'name-asc', 'name-desc'] as const;
+export const VALID_SORT_OPTIONS = [
+  'date-desc',
+  'date-asc',
+  'name-asc',
+  'name-desc',
+  'popularity',
+] as const;
 
 export type SortOption = (typeof VALID_SORT_OPTIONS)[number];
 
 type SortableEntity = {
   name: string;
   updatedAt: Date;
+  // Higher is more popular.
+  popularity: number;
 };
 
 export function isSortOption(value: string): value is SortOption {
@@ -27,6 +35,8 @@ export function filterAndSortEntities<T extends SortableEntity>(
         return a.name.localeCompare(b.name);
       case 'name-desc':
         return b.name.localeCompare(a.name);
+      case 'popularity':
+        return b.popularity - a.popularity || b.updatedAt.getTime() - a.updatedAt.getTime();
       case 'date-asc':
         return a.updatedAt.getTime() - b.updatedAt.getTime();
       case 'date-desc':
