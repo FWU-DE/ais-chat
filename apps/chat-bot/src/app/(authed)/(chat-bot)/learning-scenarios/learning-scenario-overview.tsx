@@ -14,9 +14,9 @@ import {
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import EntityCard from '@/components/entity-overview/entity-card';
 import EntityOverview from '@/components/entity-overview/entity-overview';
-import { applyFavoriteChange, filterAndSortEntities } from '@/components/entity-overview/utils';
+import { filterAndSortEntities } from '@/components/entity-overview/utils';
+import { useOverviewFavoriteToggle } from '@/components/hooks/use-overview-favorite-toggle';
 import { useOverviewFilters } from '@/components/hooks/use-overview-filters';
-import { useSetFavorite } from '@/components/hooks/use-set-favorite';
 
 import { getLearningScenariosByFilterAction } from '../actions/entity-filter-actions';
 import { CreateNewLearningScenarioButton } from './create-new-learning-scenario-button';
@@ -28,7 +28,6 @@ type LearningScenarioOverviewProps = {
 export default function LearningScenarioOverview({ currentUserId }: LearningScenarioOverviewProps) {
   const t = useTranslations('learning-scenarios');
   const tCommon = useTranslations();
-  const setFavorite = useSetFavorite();
   const [visibleLearningScenarios, setVisibleLearningScenarios] = useState<
     WithFavorite<LearningScenarioWithImage>[]
   >([]);
@@ -58,16 +57,12 @@ export default function LearningScenarioOverview({ currentUserId }: LearningScen
     await setActiveFilter(filter);
   }
 
-  async function handleToggleFavorite(learningScenarioId: string, isFavorite: boolean) {
-    setVisibleLearningScenarios((previous) =>
-      applyFavoriteChange(previous, learningScenarioId, isFavorite, activeFilter),
-    );
-    const success = await setFavorite(
-      { entityType: 'learningScenario', entityId: learningScenarioId },
-      isFavorite,
-    );
-    if (!success) await fetchLearningScenarios(activeFilter);
-  }
+  const handleToggleFavorite = useOverviewFavoriteToggle({
+    entityType: 'learningScenario',
+    activeFilter,
+    setEntities: setVisibleLearningScenarios,
+    reload: fetchLearningScenarios,
+  });
 
   const infoContent = (
     <div className="whitespace-pre-line">

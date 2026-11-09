@@ -13,9 +13,9 @@ import {
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import EntityCard from '@/components/entity-overview/entity-card';
 import EntityOverview from '@/components/entity-overview/entity-overview';
-import { applyFavoriteChange, filterAndSortEntities } from '@/components/entity-overview/utils';
+import { filterAndSortEntities } from '@/components/entity-overview/utils';
+import { useOverviewFavoriteToggle } from '@/components/hooks/use-overview-favorite-toggle';
 import { useOverviewFilters } from '@/components/hooks/use-overview-filters';
-import { useSetFavorite } from '@/components/hooks/use-set-favorite';
 
 import { getCharactersByFilterAction } from '../actions/entity-filter-actions';
 import { CreateNewCharacterButton } from './create-new-character-button';
@@ -28,7 +28,6 @@ type CharacterOverviewProps = {
 export default function CharacterOverview({ currentUserId }: CharacterOverviewProps) {
   const t = useTranslations('characters');
   const tCommon = useTranslations();
-  const setFavorite = useSetFavorite();
   const [visibleCharacters, setVisibleCharacters] = useState<WithFavorite<CharacterWithImage>[]>(
     [],
   );
@@ -58,16 +57,12 @@ export default function CharacterOverview({ currentUserId }: CharacterOverviewPr
     await setActiveFilter(filter);
   }
 
-  async function handleToggleFavorite(characterId: string, isFavorite: boolean) {
-    setVisibleCharacters((previous) =>
-      applyFavoriteChange(previous, characterId, isFavorite, activeFilter),
-    );
-    const success = await setFavorite(
-      { entityType: 'character', entityId: characterId },
-      isFavorite,
-    );
-    if (!success) await fetchCharacters(activeFilter);
-  }
+  const handleToggleFavorite = useOverviewFavoriteToggle({
+    entityType: 'character',
+    activeFilter,
+    setEntities: setVisibleCharacters,
+    reload: fetchCharacters,
+  });
 
   const infoContent = (
     <div className="whitespace-pre-line">

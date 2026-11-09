@@ -14,9 +14,14 @@ export function useSetFavorite() {
 
   return useCallback(
     async (entityRef: EntityRef, isFavorite: boolean): Promise<boolean> => {
-      const result = await setFavoriteAction({ ...entityRef, isFavorite });
-      if (!result.success) toast.error(t('favorite-error'));
-      return result.success;
+      try {
+        const result = await setFavoriteAction({ ...entityRef, isFavorite });
+        if (result.success) return true;
+      } catch {
+        // A rejected request is treated like a failed save.
+      }
+      toast.error(t('favorite-error'));
+      return false;
     },
     [toast, t],
   );

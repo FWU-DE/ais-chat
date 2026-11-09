@@ -13,9 +13,9 @@ import {
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import EntityCard from '@/components/entity-overview/entity-card';
 import EntityOverview from '@/components/entity-overview/entity-overview';
-import { applyFavoriteChange, filterAndSortEntities } from '@/components/entity-overview/utils';
+import { filterAndSortEntities } from '@/components/entity-overview/utils';
+import { useOverviewFavoriteToggle } from '@/components/hooks/use-overview-favorite-toggle';
 import { useOverviewFilters } from '@/components/hooks/use-overview-filters';
-import { useSetFavorite } from '@/components/hooks/use-set-favorite';
 
 import { getAssistantsByFilterAction } from '../actions/entity-filter-actions';
 import CreateNewAssistantButton from './create-new-assistant-button';
@@ -28,7 +28,6 @@ type AssistantOverviewProps = {
 export default function AssistantOverview({ currentUserId }: AssistantOverviewProps) {
   const t = useTranslations('assistants');
   const tCommon = useTranslations();
-  const setFavorite = useSetFavorite();
   const [visibleAssistants, setVisibleAssistants] = useState<WithFavorite<AssistantWithImage>[]>(
     [],
   );
@@ -58,16 +57,12 @@ export default function AssistantOverview({ currentUserId }: AssistantOverviewPr
     await setActiveFilter(filter);
   }
 
-  async function handleToggleFavorite(assistantId: string, isFavorite: boolean) {
-    setVisibleAssistants((previous) =>
-      applyFavoriteChange(previous, assistantId, isFavorite, activeFilter),
-    );
-    const success = await setFavorite(
-      { entityType: 'assistant', entityId: assistantId },
-      isFavorite,
-    );
-    if (!success) await fetchAssistants(activeFilter);
-  }
+  const handleToggleFavorite = useOverviewFavoriteToggle({
+    entityType: 'assistant',
+    activeFilter,
+    setEntities: setVisibleAssistants,
+    reload: fetchAssistants,
+  });
 
   const infoContent = (
     <div className="whitespace-pre-line">
