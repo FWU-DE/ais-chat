@@ -1,13 +1,14 @@
-import { logError } from '@shared/logging';
+import { getModelsByApiKeyId } from '@ais-chat/ai-core/api-keys/projects';
 import { and, eq, getTableColumns, inArray } from 'drizzle-orm';
 
-import { fetchLlmModels } from '../../knotenpunkt';
 import { db } from '..';
-import { federalStateLlmModelMappingTable, LlmModelSelectModel, llmModelTable } from '../schema';
 import {
-  dbGetFederalStates,
-  dbGetFederalStateWithDecryptedApiKeyWithResult,
-} from './federal-state';
+  federalStateLlmModelMappingTable,
+  LlmModelSelectModel,
+  llmModelSelectSchema,
+  llmModelTable,
+} from '../schema';
+import { dbGetFederalStates } from './federal-state';
 
 export async function dbGetLlmModelById({ modelId }: { modelId: string | undefined }) {
   if (modelId === undefined) return undefined;
@@ -85,19 +86,16 @@ export async function dbFindModelByIdAndFederalStateId({
 
 export async function dbFindModelsToUpdate({
   federalStateId,
+  apiKeyId,
 }: {
   federalStateId: string;
+  apiKeyId: string;
 }): Promise<{ models: LlmModelSelectModel[]; modelIdsToAdd: string[]; modelsToRemove: string[] }> {
-  const [error, result] = await dbGetFederalStateWithDecryptedApiKeyWithResult({ federalStateId });
-  if (error !== null) {
-    logError('Error getting federal state with decrypted API key', error, { federalStateId });
-    return { models: [], modelIdsToAdd: [], modelsToRemove: [] };
-  }
-  // Fetch models from Knotenpunkt and load existing models in parallel
-  const [models, existingModels] = await Promise.all([
-    fetchLlmModels({ apiKey: result.decryptedApiKey }),
+  const [apiKeyModels, existingModels] = await Promise.all([
+    getModelsByApiKeyId(apiKeyId),
     dbGetLlmModelsByFederalStateId({ federalStateId }),
   ]);
+  const models = llmModelSelectSchema.array().parse(apiKeyModels);
 
   // Determine models to remove
   const modelsToRemove = existingModels
@@ -114,12 +112,13 @@ export async function dbFindModelsToUpdate({
 }
 
 export async function dbUpdateLlmModelsForAllFederalStates() {
-  const states = (await dbGetFederalStates()).filter((state) => state.encryptedApiKey !== null);
+  const states = (await dbGetFederalStates()).filter((state) => state.apiKeyId !== null);
 
   const stateUpdates = await Promise.all(
     states.map(async (state) => {
       const { models, modelIdsToAdd, modelsToRemove } = await dbFindModelsToUpdate({
         federalStateId: state.id,
+        apiKeyId: state.apiKeyId!,
       });
 
       return {
