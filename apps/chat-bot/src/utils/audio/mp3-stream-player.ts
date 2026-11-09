@@ -69,6 +69,9 @@ export class Mp3StreamPlayer {
   // started first), so the request keeps buffering in the background but never starts audible
   // playback once its first chunk is appended; cleared once consumed or on `resume()`.
   private pausedBeforePlaying = false;
+  // Latches an 'ended' media event that fired before finalization published the duration, so the
+  // state is only reported once replaying the buffered audio is actually possible.
+  private endedBeforeStreamDone = false;
   private disposed = false;
   private streamDone = false;
   private duration = 0;
@@ -291,9 +294,14 @@ export class Mp3StreamPlayer {
     audio.preservesPitch = true;
     audio.src = objectUrl;
     audio.addEventListener('ended', () => {
-      if (!this.disposed) {
-        this.setState('ended');
+      if (this.disposed) {
+        return;
       }
+      if (!this.streamDone) {
+        this.endedBeforeStreamDone = true;
+        return;
+      }
+      this.setState('ended');
     });
 
     this.mediaSource = mediaSource;
@@ -360,6 +368,11 @@ export class Mp3StreamPlayer {
         : (decodedDuration ?? 0);
     this.streamDone = true;
     this.callbacks.onDurationKnown?.(this.duration);
+
+    if (this.endedBeforeStreamDone) {
+      this.endedBeforeStreamDone = false;
+      this.setState('ended');
+    }
   }
 
   /**

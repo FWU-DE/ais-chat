@@ -64,13 +64,19 @@ export function useAudioStream(
       setStatus('loading');
       setDuration(null);
       setCurrentTime(0);
+      abortControllerRef.current?.abort();
+      playerRef.current?.dispose();
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
       // The audio element must be created and unlocked synchronously within the user gesture
       // (click handler), before any `await`, otherwise browsers like Safari block playback.
-      const player = new Mp3StreamPlayer({
+      const player: Mp3StreamPlayer = new Mp3StreamPlayer({
         onStateChange: (next) => {
+          // A superseded player must not drive the UI of the one that replaced it.
+          if (playerRef.current !== player) {
+            return;
+          }
           if (next === 'ended' || next === 'error') {
             setStatus('idle');
             return;
@@ -83,7 +89,11 @@ export function useAudioStream(
           }
           setStatus(next);
         },
-        onDurationKnown: setDuration,
+        onDurationKnown: (next) => {
+          if (playerRef.current === player) {
+            setDuration(next);
+          }
+        },
       });
       playerRef.current = player;
 
@@ -94,10 +104,10 @@ export function useAudioStream(
         });
         await player.start(readableStreamToAsyncIterable(body));
       } catch {
-        if (abortController.signal.aborted) {
+        if (abortController.signal.aborted || playerRef.current !== player) {
           return;
         }
-        playerRef.current?.dispose();
+        player.dispose();
         playerRef.current = null;
         toast.error(tCommon('read-aloud-error'));
         setStatus('idle');
