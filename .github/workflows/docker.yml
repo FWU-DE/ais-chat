@@ -27,7 +27,7 @@ jobs:
   # Each image is built natively per platform (no QEMU emulation) and pushed by digest only.
   # The merge job below combines the platform digests into one multi-arch manifest with the tags.
   build_push_docker_images:
-    name: Docker image ${{ matrix.image.image_name }} (${{ matrix.platform.slug }})
+    name: Image ${{ matrix.image.image_name }} (${{ matrix.platform.slug }})
     runs-on: ${{ matrix.platform.runner }}
     timeout-minutes: 20
     if: >
@@ -48,11 +48,11 @@ jobs:
         platform:
           - name: linux/amd64
             slug: amd64
-            runner: ubuntu-latest
+            runner: ubuntu-26.04
           - name: linux/arm64
             slug: arm64
-            runner: ubuntu-24.04-arm
-        image:
+            runner: ubuntu-26.04-arm
+        image: &images
           - image_name: ais-chat-api
             package_name: ais-chat-api
             dockerfile: apps/api/Dockerfile
@@ -107,13 +107,9 @@ jobs:
 
       - name: Determine last built commit for image
         id: last-built
-        # `latest` is a multi-arch index (labels per platform); the fallback reads a single-arch image
         run: |
-          image="${{ matrix.image.image_ref }}:latest"
-          revision=$(docker buildx imagetools inspect "$image" \
-            --format '{{ index (index .Image "linux/amd64").Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null ||
-            docker buildx imagetools inspect "$image" \
-            --format '{{ index .Image.Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)
+          revision=$(docker buildx imagetools inspect '${{ matrix.image.image_ref }}:latest' \
+            --format '{{ index (index .Image "linux/amd64").Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)
           if [ -n "$revision" ] && [ "$revision" != "<no value>" ] && git cat-file -e "${revision}^{commit}" 2>/dev/null; then
             echo "sha=$revision" >> "$GITHUB_OUTPUT"
           else
@@ -190,9 +186,9 @@ jobs:
           retention-days: 1
 
   merge_docker_manifests:
-    name: Docker manifest ${{ matrix.image_name }}
+    name: Manifest ${{ matrix.image.image_name }}
     needs: build_push_docker_images
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     # Runs even if another image failed; an image is only tagged when both platforms were built
     if: >
@@ -206,22 +202,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - image_name: ais-chat-api
-            image_ref: ghcr.io/fwu-de/ais-chat-api
-          - image_name: ais-chat-app
-            image_ref: ghcr.io/fwu-de/ais-chat-app
-          - image_name: ais-chat-admin
-            image_ref: ghcr.io/fwu-de/ais-chat-admin
-          - image_name: ais-chat-calculator
-            image_ref: ghcr.io/fwu-de/ais-chat-calculator
+        image: *images
 
     steps:
       - name: Download digests
         uses: actions/download-artifact@v8
         with:
           path: ${{ runner.temp }}/digests
-          pattern: digests-${{ matrix.image_name }}-*
+          pattern: digests-${{ matrix.image.image_name }}-*
           merge-multiple: true
 
       - name: Check digests
@@ -229,10 +217,10 @@ jobs:
         run: |
           count=$(find "${{ runner.temp }}/digests" -type f 2>/dev/null | wc -l)
           if [ "$count" -eq 0 ]; then
-            echo "No build needed for ${{ matrix.image_name }}."
+            echo "No build needed for ${{ matrix.image.image_name }}."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           elif [ "$count" -ne 2 ]; then
-            echo "::error::Expected 2 platform digests for ${{ matrix.image_name }}, found $count."
+            echo "::error::Expected 2 platform digests for ${{ matrix.image.image_name }}, found $count."
             exit 1
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
@@ -255,7 +243,7 @@ jobs:
         id: manifest
         working-directory: ${{ runner.temp }}/digests
         run: |
-          image="${{ matrix.image_ref }}"
+          image="${{ matrix.image.image_ref }}"
           sources=()
           for digest in *; do sources+=("$image@sha256:$digest"); done
           docker buildx imagetools create \
@@ -269,6 +257,6 @@ jobs:
         if: steps.digests.outputs.skip == 'false'
         uses: actions/attest@v4.2.2
         with:
-          subject-name: ${{ matrix.image_ref }}
+          subject-name: ${{ matrix.image.image_ref }}
           subject-digest: ${{ steps.manifest.outputs.digest }}
           push-to-registry: true

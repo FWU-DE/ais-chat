@@ -17,7 +17,7 @@ env:
 
 jobs:
   check_node_version_sync:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -40,7 +40,7 @@ jobs:
           done
 
   install:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -55,7 +55,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
   check_formatting:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: install
     steps:
       - name: Checkout code
@@ -73,7 +73,7 @@ jobs:
         run: pnpm run format:check
 
   check_types:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: install
     steps:
       - name: Checkout code
@@ -98,7 +98,7 @@ jobs:
         run: pnpm run check-types
 
   check_linter:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: install
     steps:
       - name: Checkout code
@@ -123,7 +123,7 @@ jobs:
         run: pnpm run lint
 
   check_unit_tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: install
     env:
       API_DATABASE_URL: postgresql://admin:test1234@localhost:5432/api_db
