@@ -7,6 +7,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  not,
   notExists,
   or,
   type SQL,
@@ -494,6 +495,12 @@ export async function dbDeleteFileAndDetachFromConversation(filesToDelete: strin
   });
 }
 
+/** Shared chat uploads have no user and carry shared chat metadata. */
+export const isSharedChatFileCondition = and(
+  isNull(fileTable.userId),
+  isNotNull(fileTable.metadata),
+) as SQL;
+
 export async function dbDeleteDanglingFiles() {
   return await db.transaction(async (tx) => {
     const fileIds = await tx
@@ -512,6 +519,7 @@ export async function dbDeleteDanglingFiles() {
           isNull(CharacterFileMapping.fileId),
           isNull(AssistantFileMapping.fileId),
           isNull(LearningScenarioFileMapping.fileId),
+          not(isSharedChatFileCondition),
         ),
       );
     const fileIdsToDelete = fileIds.map((f) => f.fileId);
