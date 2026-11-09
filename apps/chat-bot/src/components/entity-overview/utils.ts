@@ -34,6 +34,16 @@ export function applyFavoriteChange<T extends { id: string; isFavorite: boolean 
   return entities.map((entity) => (entity.id === entityId ? { ...entity, isFavorite } : entity));
 }
 
+/** Restores an entity to its state before {@link applyFavoriteChange}, re-adding it if it was removed. */
+export function revertFavoriteChange<T extends { id: string }>(
+  entities: T[],
+  previousEntity: T,
+): T[] {
+  return entities.some((entity) => entity.id === previousEntity.id)
+    ? entities.map((entity) => (entity.id === previousEntity.id ? previousEntity : entity))
+    : [...entities, previousEntity];
+}
+
 export function filterAndSortEntities<T extends SortableEntity>(
   entities: T[],
   searchQuery: string,

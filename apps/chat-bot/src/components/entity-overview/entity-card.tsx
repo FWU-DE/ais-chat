@@ -29,6 +29,7 @@ type EntityCardProps = {
   chatHref?: string;
   shareInfo?: ShareInfo;
   isFavorite: boolean;
+  isSuspended: boolean;
   onToggleFavorite: (isFavorite: boolean) => Promise<void>;
 };
 
@@ -41,6 +42,7 @@ export default function EntityCard({
   chatHref,
   shareInfo,
   isFavorite,
+  isSuspended,
   onToggleFavorite,
 }: EntityCardProps) {
   const { timeLeftInSeconds, isExtendable } = shareInfo
@@ -106,6 +108,7 @@ export default function EntityCard({
 
       <FavoriteButton
         isFavorite={isFavorite}
+        disabled={isSuspended && !isFavorite}
         onToggle={onToggleFavorite}
         className={cn('shrink-0', !chatHref && 'mr-4')}
       />

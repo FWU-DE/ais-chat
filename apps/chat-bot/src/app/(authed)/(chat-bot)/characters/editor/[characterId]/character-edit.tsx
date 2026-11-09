@@ -403,12 +403,11 @@ export function CharacterEdit({
         modalTitle={t('delete-modal-title')}
         modalDescription={t('delete-modal-description')}
       />
-      {!character.suspended && (
-        <CustomChatActionFavorite
-          entityRef={{ entityType: 'character', entityId: character.id }}
-          initialIsFavorite={initialIsFavorite}
-        />
-      )}
+      <CustomChatActionFavorite
+        entityRef={{ entityType: 'character', entityId: character.id }}
+        initialIsFavorite={initialIsFavorite}
+        isSuspended={character.suspended}
+      />
     </CustomChatActions>
   );
 

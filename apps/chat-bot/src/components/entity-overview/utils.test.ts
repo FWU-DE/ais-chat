@@ -1,6 +1,34 @@
 import { describe, expect, it } from 'vitest';
 
-import { applyFavoriteChange, filterAndSortEntities, isSortOption } from './utils';
+import {
+  applyFavoriteChange,
+  filterAndSortEntities,
+  isSortOption,
+  revertFavoriteChange,
+} from './utils';
+
+describe('revertFavoriteChange', () => {
+  it('restores the previous flag of an entity that is still listed', () => {
+    const entities = [
+      { id: 'a', isFavorite: true },
+      { id: 'b', isFavorite: true },
+    ];
+
+    expect(revertFavoriteChange(entities, { id: 'b', isFavorite: false })).toEqual([
+      { id: 'a', isFavorite: true },
+      { id: 'b', isFavorite: false },
+    ]);
+  });
+
+  it('re-adds an entity that was removed from the list', () => {
+    const entities = [{ id: 'a', isFavorite: true }];
+
+    expect(revertFavoriteChange(entities, { id: 'b', isFavorite: true })).toEqual([
+      { id: 'a', isFavorite: true },
+      { id: 'b', isFavorite: true },
+    ]);
+  });
+});
 
 describe('applyFavoriteChange', () => {
   const entities = [

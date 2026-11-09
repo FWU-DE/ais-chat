@@ -394,12 +394,11 @@ export function AssistantEdit({
         modalTitle={t('delete-modal-title')}
         modalDescription={t('delete-modal-description')}
       />
-      {!assistant.suspended && (
-        <CustomChatActionFavorite
-          entityRef={{ entityType: 'assistant', entityId: assistant.id }}
-          initialIsFavorite={initialIsFavorite}
-        />
-      )}
+      <CustomChatActionFavorite
+        entityRef={{ entityType: 'assistant', entityId: assistant.id }}
+        initialIsFavorite={initialIsFavorite}
+        isSuspended={assistant.suspended}
+      />
     </CustomChatActions>
   );
 

@@ -425,12 +425,11 @@ export function LearningScenarioEdit({
         modalTitle={t('delete-modal-title')}
         modalDescription={t('delete-modal-description')}
       />
-      {!learningScenario.suspended && (
-        <CustomChatActionFavorite
-          entityRef={{ entityType: 'learningScenario', entityId: learningScenario.id }}
-          initialIsFavorite={initialIsFavorite}
-        />
-      )}
+      <CustomChatActionFavorite
+        entityRef={{ entityType: 'learningScenario', entityId: learningScenario.id }}
+        initialIsFavorite={initialIsFavorite}
+        isSuspended={learningScenario.suspended}
+      />
     </CustomChatActions>
   );
 

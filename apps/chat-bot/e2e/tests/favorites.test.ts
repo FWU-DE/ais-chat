@@ -45,10 +45,13 @@ const entities: FavoriteTestEntity[] = [
   },
 ];
 
+// Wait for the tab's list to load, otherwise a late response can overwrite optimistic changes.
 async function openOverviewTab(page: Page, overviewPath: string, tab: 'mine' | 'favorites') {
   await page.goto(overviewPath);
   await page.waitForURL(overviewPath);
+  await page.waitForLoadState('networkidle');
   await page.getByTestId(`filter-tab-${tab}`).click();
+  await page.waitForLoadState('networkidle');
 }
 
 function cardByName(page: Page, name: string) {
@@ -101,6 +104,7 @@ for (const entity of entities) {
 
           await openOverviewTab(page, entity.overviewPath, 'mine');
           await cardByName(page, name).first().getByTestId('entity-link').click();
+          await page.waitForURL(`${entity.overviewPath}/editor/**`);
           const detailHeart = page.getByTestId('favorite-button');
           await expect(detailHeart).toHaveAttribute('aria-pressed', 'false');
           await clickAndWaitForSave(page, detailHeart);

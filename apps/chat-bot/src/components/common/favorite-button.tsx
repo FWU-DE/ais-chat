@@ -10,10 +10,16 @@ import { cn } from '@/utils/tailwind';
 type FavoriteButtonProps = {
   isFavorite: boolean;
   onToggle: (isFavorite: boolean) => Promise<void>;
+  disabled?: boolean;
   className?: string;
 };
 
-export function FavoriteButton({ isFavorite, onToggle, className }: FavoriteButtonProps) {
+export function FavoriteButton({
+  isFavorite,
+  onToggle,
+  disabled = false,
+  className,
+}: FavoriteButtonProps) {
   const t = useTranslations('common');
   const [isPending, setIsPending] = useState(false);
 
@@ -34,7 +40,7 @@ export function FavoriteButton({ isFavorite, onToggle, className }: FavoriteButt
       className={cn(className)}
       aria-label={t('favorite')}
       aria-pressed={isFavorite}
-      disabled={isPending}
+      disabled={isPending || disabled}
       onClick={handleClick}
       data-testid="favorite-button"
     >

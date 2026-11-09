@@ -61,7 +61,7 @@ export default function CharacterOverview({ currentUserId }: CharacterOverviewPr
     entityType: 'character',
     activeFilter,
     setEntities: setVisibleCharacters,
-    reload: fetchCharacters,
+    entities: visibleCharacters,
   });
 
   const infoContent = (
@@ -119,6 +119,7 @@ export default function CharacterOverview({ currentUserId }: CharacterOverviewPr
               chatHref={`/characters/d/${character.id}`}
               shareInfo={character}
               isFavorite={character.isFavorite}
+              isSuspended={character.suspended}
               onToggleFavorite={(isFavorite) => handleToggleFavorite(character.id, isFavorite)}
             />
           );
