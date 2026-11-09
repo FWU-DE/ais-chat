@@ -5,7 +5,8 @@ import { useCallback, useSyncExternalStore } from 'react';
 const SESSION_STORAGE_CHANGE_EVENT = 'ais-chat:session-storage-change';
 const SERVER_SNAPSHOT = Symbol('server-snapshot');
 
-// Keeps values usable for the current page load when sessionStorage access is blocked.
+// Holds values whose sessionStorage write failed (blocked or full); they take precedence on reads
+// until a write succeeds.
 const memoryFallback = new Map<string, string>();
 
 function subscribe(callback: () => void) {
@@ -14,10 +15,14 @@ function subscribe(callback: () => void) {
 }
 
 export function readSessionStorage(key: string): string | null {
+  const pendingValue = memoryFallback.get(key);
+  if (pendingValue !== undefined) {
+    return pendingValue;
+  }
   try {
     return window.sessionStorage.getItem(key);
   } catch {
-    return memoryFallback.get(key) ?? null;
+    return null;
   }
 }
 
@@ -25,6 +30,7 @@ export function readSessionStorage(key: string): string | null {
 export function writeSessionStorage(key: string, value: string) {
   try {
     window.sessionStorage.setItem(key, value);
+    memoryFallback.delete(key);
   } catch {
     memoryFallback.set(key, value);
   }
