@@ -6,6 +6,7 @@ import {
 import {
   dbGetAssistantById,
   dbGetAssistantByIdForConversation,
+  dbGetAssistantsByIds,
   dbGetAssistantsByUserId,
   dbGetCommunityGpts,
   dbGetGlobalGpts,
@@ -15,6 +16,7 @@ import {
 import { dbGetRelatedAssistantFiles } from '@shared/db/functions/files';
 import { AssistantSelectModel } from '@shared/db/schema';
 import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/error';
+import { getFavoriteEntityIds } from '@shared/favorites/favorite-service';
 import { getUserSettings } from '@shared/users/user-settings-service';
 import { generateUUID } from '@shared/utils/uuid';
 import { beforeEach, describe, expect, it, MockedFunction, vi } from 'vitest';
@@ -41,6 +43,7 @@ import {
 
 vi.mock('../db/functions/assistants', () => ({
   dbGetAssistantsByUserId: vi.fn(),
+  dbGetAssistantsByIds: vi.fn(),
   dbGetAssistantById: vi.fn(),
   dbGetAssistantByIdForConversation: vi.fn(),
   dbGetCommunityGpts: vi.fn(),
@@ -50,6 +53,9 @@ vi.mock('../db/functions/assistants', () => ({
 }));
 vi.mock('../db/functions/files', () => ({
   dbGetRelatedAssistantFiles: vi.fn(),
+}));
+vi.mock('@shared/favorites/favorite-service', () => ({
+  getFavoriteEntityIds: vi.fn(),
 }));
 vi.mock('../conversation/conversation-service', () => ({
   getConversation: vi.fn(),
@@ -1276,6 +1282,56 @@ describe('assistant-service', () => {
 
       expect(result).toEqual(assistants);
       expect(expectedMock).toHaveBeenCalledWith({ user });
+    });
+
+    it('routes filter=favorites to the favorite assistants that are still readable', async () => {
+      const readableAssistant = {
+        id: generateUUID(),
+        userId: generateUUID(),
+        isSchoolShared: false,
+        isCommunityShared: true,
+        isGlobal: false,
+        hasLinkAccess: false,
+        suspended: false,
+        ownerSchoolIds: [],
+      } as unknown as AssistantSelectModel;
+      const noLongerSharedAssistant = {
+        ...readableAssistant,
+        id: generateUUID(),
+        isCommunityShared: false,
+      } as AssistantSelectModel;
+      const suspendedAssistant = {
+        ...readableAssistant,
+        id: generateUUID(),
+        suspended: true,
+      } as AssistantSelectModel;
+      const assistantIds = [
+        readableAssistant.id,
+        noLongerSharedAssistant.id,
+        suspendedAssistant.id,
+      ];
+
+      vi.mocked(getFavoriteEntityIds).mockResolvedValue(assistantIds);
+      vi.mocked(dbGetAssistantsByIds).mockResolvedValue([
+        readableAssistant,
+        noLongerSharedAssistant,
+        suspendedAssistant,
+      ] as never);
+
+      const result = await getAssistantsByOverviewFilter({ filter: 'favorites', user });
+
+      expect(getFavoriteEntityIds).toHaveBeenCalledWith({ entityType: 'assistant', user });
+      expect(dbGetAssistantsByIds).toHaveBeenCalledWith({ assistantIds });
+      expect(result).toEqual([readableAssistant]);
+    });
+
+    it('returns no assistants for filter=favorites without favorites', async () => {
+      vi.mocked(getFavoriteEntityIds).mockResolvedValue([]);
+      vi.mocked(dbGetAssistantsByIds).mockResolvedValue([]);
+
+      const result = await getAssistantsByOverviewFilter({ filter: 'favorites', user });
+
+      expect(result).toEqual([]);
     });
 
     it('returns an empty list for unsupported overview filters', async () => {

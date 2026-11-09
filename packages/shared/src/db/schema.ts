@@ -1501,6 +1501,45 @@ export type SuspensionRequestInsertModel = z.infer<typeof suspensionRequestInser
 export type SuspensionRequestUpdateModel = z.infer<typeof suspensionRequestUpdateSchema>;
 
 /**
+ * Schema for table user_favorite. Exactly one of the entity columns is set per row.
+ */
+export const userFavoriteTable = pgTable(
+  'user_favorite',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => userTable.id, { onDelete: 'cascade' }),
+    assistantId: uuid('assistant_id').references(() => assistantTable.id, { onDelete: 'cascade' }),
+    characterId: uuid('character_id').references(() => characterTable.id, { onDelete: 'cascade' }),
+    learningScenarioId: uuid('learning_scenario_id').references(() => learningScenarioTable.id, {
+      onDelete: 'cascade',
+    }),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    check(
+      'user_favorite_exactly_one_target_ck',
+      sql`((${table.assistantId} IS NOT NULL)::int + (${table.characterId} IS NOT NULL)::int + (${table.learningScenarioId} IS NOT NULL)::int) = 1`,
+    ),
+    uniqueIndex('user_favorite_user_assistant_uq')
+      .on(table.userId, table.assistantId)
+      .where(sql`${table.assistantId} IS NOT NULL`),
+    uniqueIndex('user_favorite_user_character_uq')
+      .on(table.userId, table.characterId)
+      .where(sql`${table.characterId} IS NOT NULL`),
+    uniqueIndex('user_favorite_user_learning_scenario_uq')
+      .on(table.userId, table.learningScenarioId)
+      .where(sql`${table.learningScenarioId} IS NOT NULL`),
+    index().on(table.assistantId),
+    index().on(table.characterId),
+    index().on(table.learningScenarioId),
+  ],
+);
+
+export type UserFavoriteSelectModel = typeof userFavoriteTable.$inferSelect;
+
+/**
  * Schema for table assistant_template_mappings
  */
 export const assistantTemplateMappingTable = pgTable(

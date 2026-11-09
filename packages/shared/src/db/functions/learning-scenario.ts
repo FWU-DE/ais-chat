@@ -370,6 +370,30 @@ export async function dbGetLearningScenariosByIds({
   );
 }
 
+export async function dbGetLearningScenariosByIdsOptionalShareData({
+  learningScenarioIds,
+  user,
+  includeDeleted,
+}: {
+  learningScenarioIds: string[];
+  user: Pick<UserModel, 'id'>;
+} & IncludeDeletedOption): Promise<LearningScenarioOptionalShareDataModel[]> {
+  if (learningScenarioIds.length === 0) {
+    return [];
+  }
+
+  const activeShare = latestActiveLearningScenarioShare(user);
+  return baseLearningScenarioWithShareQuery(activeShare)
+    .leftJoin(activeShare, eq(activeShare.learningScenarioId, learningScenarioTable.id))
+    .where(
+      and(
+        inArray(learningScenarioTable.id, learningScenarioIds),
+        excludeDeletedLearningScenarios({ includeDeleted }),
+      ),
+    )
+    .orderBy(desc(learningScenarioTable.createdAt));
+}
+
 /**
  * Needs userId because the metadata for shared learning scenarios is both tied to the user and learning scenario,
  * this is especially important for shared learning scenarios (school wide or global).

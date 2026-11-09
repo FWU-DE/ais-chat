@@ -2,6 +2,7 @@ import { UserModel } from '@shared/auth/user-model';
 import { dbGetLearningScenarioChatUsageInCentByLearningScenarioId } from '@shared/db/functions/token-points';
 import { LearningScenarioSelectModel, LearningScenarioWithShareDataModel } from '@shared/db/schema';
 import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/error';
+import { getFavoriteEntityIds } from '@shared/favorites/favorite-service';
 import { FederalStateModel } from '@shared/federal-states/types';
 import { getUserSettings } from '@shared/users/user-settings-service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -20,6 +21,7 @@ import {
   dbGetLearningScenarioByIdOptionalShareData,
   dbGetLearningScenarioByIdWithShareData,
   dbGetLearningScenariosByAssociatedSchools,
+  dbGetLearningScenariosByIdsOptionalShareData,
   dbGetLearningScenariosByUser,
   dbStopLearningScenarioShare,
   dbUpdateLearningScenarioShareTokenPointsLimit,
@@ -55,6 +57,7 @@ import {
 } from './learning-scenario-service';
 
 vi.mock('../db/functions/learning-scenario', () => ({
+  dbGetLearningScenariosByIdsOptionalShareData: vi.fn(),
   dbGetAllAccessibleLearningScenarios: vi.fn(),
   dbGetAllLearningScenariosByUser: vi.fn(),
   dbGetCommunityLearningScenarios: vi.fn(),
@@ -76,6 +79,9 @@ vi.mock('@shared/users/user-settings-service', () => ({
 }));
 vi.mock('./learning-scenario-admin-service', () => ({
   duplicateLearningScenario: vi.fn(),
+}));
+vi.mock('@shared/favorites/favorite-service', () => ({
+  getFavoriteEntityIds: vi.fn(),
 }));
 vi.mock('../db/functions/files', () => ({
   dbGetFileForLearningScenario: vi.fn(),
@@ -1527,6 +1533,48 @@ describe('learning-scenario-service', () => {
       const result = await getLearningScenariosByOverviewFilter({ filter: 'school', user });
 
       expect(result).toEqual([schoolAndCommunityScenario]);
+    });
+
+    it('routes filter=favorites to the favorite learning scenarios that are still readable', async () => {
+      const readableScenario = {
+        id: generateUUID(),
+        userId: generateUUID(),
+        isCommunityShared: true,
+        hasLinkAccess: false,
+        suspended: false,
+        ownerSchoolIds: [],
+      } as unknown as LearningScenarioSelectModel;
+      const noLongerSharedScenario = {
+        ...readableScenario,
+        id: generateUUID(),
+        isCommunityShared: false,
+      } as LearningScenarioSelectModel;
+      const suspendedScenario = {
+        ...readableScenario,
+        id: generateUUID(),
+        suspended: true,
+      } as LearningScenarioSelectModel;
+      const learningScenarioIds = [
+        readableScenario.id,
+        noLongerSharedScenario.id,
+        suspendedScenario.id,
+      ];
+
+      vi.mocked(getFavoriteEntityIds).mockResolvedValue(learningScenarioIds);
+      vi.mocked(dbGetLearningScenariosByIdsOptionalShareData).mockResolvedValue([
+        readableScenario,
+        noLongerSharedScenario,
+        suspendedScenario,
+      ] as never);
+
+      const result = await getLearningScenariosByOverviewFilter({ filter: 'favorites', user });
+
+      expect(getFavoriteEntityIds).toHaveBeenCalledWith({ entityType: 'learningScenario', user });
+      expect(dbGetLearningScenariosByIdsOptionalShareData).toHaveBeenCalledWith({
+        learningScenarioIds,
+        user,
+      });
+      expect(result).toEqual([readableScenario]);
     });
 
     it('returns an empty list for unsupported overview filters', async () => {

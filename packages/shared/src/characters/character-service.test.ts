@@ -1,6 +1,7 @@
 import { dbGetSharedCharacterChatUsageInCentByCharacterId } from '@shared/db/functions/token-points';
 import { CharacterSelectModel, CharacterWithShareDataModel } from '@shared/db/schema';
 import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/error';
+import { getFavoriteEntityIds } from '@shared/favorites/favorite-service';
 import { FederalStateModel } from '@shared/federal-states/types';
 import { getUserSettings } from '@shared/users/user-settings-service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,6 +16,7 @@ import {
   dbGetCharacterByIdOptionalShareData,
   dbGetCharacterByIdWithShareData,
   dbGetCharactersByAssociatedSchools,
+  dbGetCharactersByIdsOptionalShareData,
   dbGetCommunityCharacters,
   dbGetGlobalCharacters,
   dbGetLatestManageableCharacterShare,
@@ -52,6 +54,7 @@ import {
 } from './character-service';
 
 vi.mock('../db/functions/character', () => ({
+  dbGetCharactersByIdsOptionalShareData: vi.fn(),
   dbGetAllAccessibleCharacters: vi.fn(),
   dbGetAllCharactersByUser: vi.fn(),
   dbGetCharacterById: vi.fn(),
@@ -72,6 +75,9 @@ vi.mock('../db/functions/character', () => ({
 }));
 vi.mock('../db/functions/files', () => ({
   dbGetRelatedCharacterFiles: vi.fn(),
+}));
+vi.mock('@shared/favorites/favorite-service', () => ({
+  getFavoriteEntityIds: vi.fn(),
 }));
 vi.mock('../s3', () => ({
   getReadOnlySignedUrl: vi.fn(),
@@ -1453,6 +1459,45 @@ describe('character-service', () => {
       const result = await getCharactersByOverviewFilter({ filter: 'school', user });
 
       expect(result).toEqual([schoolAndCommunityCharacter]);
+    });
+
+    it('routes filter=favorites to the favorite characters that are still readable', async () => {
+      const readableCharacter = {
+        id: generateUUID(),
+        userId: generateUUID(),
+        isCommunityShared: true,
+        hasLinkAccess: false,
+        suspended: false,
+        ownerSchoolIds: [],
+      } as unknown as CharacterSelectModel;
+      const noLongerSharedCharacter = {
+        ...readableCharacter,
+        id: generateUUID(),
+        isCommunityShared: false,
+      } as CharacterSelectModel;
+      const suspendedCharacter = {
+        ...readableCharacter,
+        id: generateUUID(),
+        suspended: true,
+      } as CharacterSelectModel;
+      const characterIds = [
+        readableCharacter.id,
+        noLongerSharedCharacter.id,
+        suspendedCharacter.id,
+      ];
+
+      vi.mocked(getFavoriteEntityIds).mockResolvedValue(characterIds);
+      vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([
+        readableCharacter,
+        noLongerSharedCharacter,
+        suspendedCharacter,
+      ] as never);
+
+      const result = await getCharactersByOverviewFilter({ filter: 'favorites', user });
+
+      expect(getFavoriteEntityIds).toHaveBeenCalledWith({ entityType: 'character', user });
+      expect(dbGetCharactersByIdsOptionalShareData).toHaveBeenCalledWith({ characterIds, user });
+      expect(result).toEqual([readableCharacter]);
     });
 
     it('returns an empty list for unsupported overview filters', async () => {

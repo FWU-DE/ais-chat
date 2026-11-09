@@ -30,6 +30,7 @@ import {
   dbGetLearningScenarioByIdOptionalShareData,
   dbGetLearningScenarioByIdWithShareData,
   dbGetLearningScenariosByAssociatedSchools,
+  dbGetLearningScenariosByIdsOptionalShareData,
   dbGetLearningScenariosByUser,
   dbStopLearningScenarioShare,
   dbUpdateLearningScenarioShareTokenPointsLimit,
@@ -50,6 +51,7 @@ import {
   InvalidArgumentError,
   NotFoundError,
 } from '@shared/error';
+import { getFavoriteEntityIds } from '@shared/favorites/favorite-service';
 import { FederalStateModel } from '@shared/federal-states/types';
 import {
   deleteAvatarPicture,
@@ -140,6 +142,17 @@ export async function getLearningScenariosByOverviewFilter({
         ...schoolLearningScenarios,
         ...filterCommunitySharedByAssociatedSchool({ items: communityLearningScenarios, user }),
       ]);
+      break;
+    }
+    case 'favorites': {
+      const learningScenarioIds = await getFavoriteEntityIds({
+        entityType: 'learningScenario',
+        user,
+      });
+      learningScenarios = await dbGetLearningScenariosByIdsOptionalShareData({
+        learningScenarioIds,
+        user,
+      });
       break;
     }
     default:

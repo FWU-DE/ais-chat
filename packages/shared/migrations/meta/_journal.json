@@ -743,6 +743,13 @@
       "when": 1793962856446,
       "tag": "0105_fearless_lethal_legion",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1794220077240,
+      "tag": "0106_chief_talos",
+      "breakpoints": true
     }
   ]
 }

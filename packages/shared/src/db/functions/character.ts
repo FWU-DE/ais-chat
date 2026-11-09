@@ -259,6 +259,27 @@ export async function dbGetCharactersByIds({
   );
 }
 
+export async function dbGetCharactersByIdsOptionalShareData({
+  characterIds,
+  user,
+  includeDeleted,
+}: {
+  characterIds: string[];
+  user: Pick<UserModel, 'id'>;
+} & IncludeDeletedOption): Promise<CharacterOptionalShareDataModel[]> {
+  if (characterIds.length === 0) {
+    return [];
+  }
+
+  const activeShare = latestActiveCharacterShare(user);
+  return baseCharacterWithShareQuery(activeShare)
+    .leftJoin(activeShare, eq(activeShare.characterId, characterTable.id))
+    .where(
+      and(inArray(characterTable.id, characterIds), excludeDeletedCharacters({ includeDeleted })),
+    )
+    .orderBy(desc(characterTable.createdAt));
+}
+
 export async function dbGetCopyTemplateCharacter({
   templateId,
   characterId,

@@ -22,6 +22,7 @@ import {
   dbGetCharacterByIdWithShareData,
   dbGetCharacters,
   dbGetCharactersByAssociatedSchools,
+  dbGetCharactersByIdsOptionalShareData,
   dbGetCommunityCharacters,
   dbGetGlobalCharacters,
   dbGetLatestManageableCharacterShare,
@@ -47,6 +48,7 @@ import {
 } from '@shared/db/schema';
 import { checkParameterUUID, ForbiddenError, InvalidArgumentError } from '@shared/error';
 import { NotFoundError } from '@shared/error/not-found-error';
+import { getFavoriteEntityIds } from '@shared/favorites/favorite-service';
 import { FederalStateModel } from '@shared/federal-states/types';
 import {
   deleteAvatarPicture,
@@ -887,6 +889,11 @@ export async function getCharactersByOverviewFilter({
         ...schoolCharacters,
         ...filterCommunitySharedByAssociatedSchool({ items: communityCharacters, user }),
       ]);
+      break;
+    }
+    case 'favorites': {
+      const characterIds = await getFavoriteEntityIds({ entityType: 'character', user });
+      characters = await dbGetCharactersByIdsOptionalShareData({ characterIds, user });
       break;
     }
     default:

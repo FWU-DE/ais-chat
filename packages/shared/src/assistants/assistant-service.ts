@@ -17,6 +17,7 @@ import {
   dbDeleteAssistantByIdAndUser,
   dbGetAssistantById,
   dbGetAssistantByIdForConversation,
+  dbGetAssistantsByIds,
   dbGetAssistantsByUserId,
   dbGetCommunityGpts,
   dbGetGlobalGpts,
@@ -38,6 +39,7 @@ import {
   FileModel,
 } from '@shared/db/schema';
 import { checkParameterUUID, ForbiddenError, NotFoundError } from '@shared/error';
+import { getFavoriteEntityIds } from '@shared/favorites/favorite-service';
 import {
   deleteAvatarPicture,
   deleteMessageAttachments,
@@ -224,6 +226,11 @@ export async function getAssistantsByOverviewFilter({
         ...schoolAssistants,
         ...filterCommunitySharedByAssociatedSchool({ items: communityAssistants, user }),
       ]);
+      break;
+    }
+    case 'favorites': {
+      const assistantIds = await getFavoriteEntityIds({ entityType: 'assistant', user });
+      assistants = await dbGetAssistantsByIds({ assistantIds });
       break;
     }
     default:
