@@ -389,17 +389,17 @@ export function AssistantEdit({
     <CustomChatActions>
       <CustomChatActionUse onClick={handleUseChat} />
       {!assistant.suspended && <CustomChatActionDuplicate onClick={handleDuplicateAssistant} />}
+      <CustomChatActionDelete
+        onClick={handleDeleteAssistant}
+        modalTitle={t('delete-modal-title')}
+        modalDescription={t('delete-modal-description')}
+      />
       {!assistant.suspended && (
         <CustomChatActionFavorite
           entityRef={{ entityType: 'assistant', entityId: assistant.id }}
           initialIsFavorite={initialIsFavorite}
         />
       )}
-      <CustomChatActionDelete
-        onClick={handleDeleteAssistant}
-        modalTitle={t('delete-modal-title')}
-        modalDescription={t('delete-modal-description')}
-      />
     </CustomChatActions>
   );
 

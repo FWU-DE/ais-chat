@@ -1,6 +1,6 @@
 'use client';
 
-import { HeartIcon } from '@phosphor-icons/react';
+import { HeartStraightIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -38,7 +38,7 @@ export function FavoriteButton({ isFavorite, onToggle, className }: FavoriteButt
       onClick={handleClick}
       data-testid="favorite-button"
     >
-      <HeartIcon
+      <HeartStraightIcon
         aria-hidden="true"
         className="size-6 text-primary"
         weight={isFavorite ? 'fill' : 'regular'}

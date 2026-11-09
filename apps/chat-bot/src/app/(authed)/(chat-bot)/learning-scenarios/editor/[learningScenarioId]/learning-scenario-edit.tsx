@@ -420,17 +420,17 @@ export function LearningScenarioEdit({
       {!learningScenario.suspended && (
         <CustomChatActionDuplicate onClick={handleDuplicateLearningScenario} />
       )}
+      <CustomChatActionDelete
+        onClick={handleDeleteLearningScenario}
+        modalTitle={t('delete-modal-title')}
+        modalDescription={t('delete-modal-description')}
+      />
       {!learningScenario.suspended && (
         <CustomChatActionFavorite
           entityRef={{ entityType: 'learningScenario', entityId: learningScenario.id }}
           initialIsFavorite={initialIsFavorite}
         />
       )}
-      <CustomChatActionDelete
-        onClick={handleDeleteLearningScenario}
-        modalTitle={t('delete-modal-title')}
-        modalDescription={t('delete-modal-description')}
-      />
     </CustomChatActions>
   );
 

@@ -398,17 +398,17 @@ export function CharacterEdit({
     <CustomChatActions>
       <CustomChatActionUse onClick={handleUseChat} />
       {!character.suspended && <CustomChatActionDuplicate onClick={handleDuplicateCharacter} />}
+      <CustomChatActionDelete
+        onClick={handleDeleteCharacter}
+        modalTitle={t('delete-modal-title')}
+        modalDescription={t('delete-modal-description')}
+      />
       {!character.suspended && (
         <CustomChatActionFavorite
           entityRef={{ entityType: 'character', entityId: character.id }}
           initialIsFavorite={initialIsFavorite}
         />
       )}
-      <CustomChatActionDelete
-        onClick={handleDeleteCharacter}
-        modalTitle={t('delete-modal-title')}
-        modalDescription={t('delete-modal-description')}
-      />
     </CustomChatActions>
   );
 
