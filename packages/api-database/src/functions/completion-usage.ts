@@ -35,6 +35,8 @@ export async function dbCreateCompletionUsage(completionUsage: CompletionUsageIn
       priceMetadata: modelData.priceMetadata,
       promptTokens: completionUsage.promptTokens,
     });
+  } else if (modelData.priceMetadata.type === 'speech') {
+    costsInCent = completionUsage.costsInCent ?? 0;
   }
 
   const insertedCompletionUsage = (
