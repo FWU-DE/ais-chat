@@ -1,4 +1,21 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { config as dotenvConfig } from '@dotenvx/dotenvx';
 import { defineConfig, devices } from '@playwright/test';
+
+// PORT comes from the same env files the admin dev server loads (.env.local overrides .env.development).
+const appDir = path.dirname(fileURLToPath(import.meta.url));
+const env: Record<string, string> = {};
+dotenvConfig({
+  path: ['.env.local', '.env.development'].map((file) => path.join(appDir, file)),
+  processEnv: env,
+  quiet: true,
+  ignore: ['MISSING_ENV_FILE'],
+});
+const port = env.PORT;
+if (!port) throw new Error('PORT is not set in apps/admin/.env.development or .env.local');
+const baseURL = `http://localhost:${port}`;
 
 export default defineConfig({
   // The monorepo root, shared with the chat-bot/api configs, so merged smart-reporter
@@ -17,7 +34,7 @@ export default defineConfig({
   ],
   timeout: 60_000,
   use: {
-    baseURL: 'http://localhost:3001',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -25,7 +42,7 @@ export default defineConfig({
   webServer: {
     command: 'pnpm dev',
     timeout: 60_000,
-    url: 'http://localhost:3001/api/healthz',
+    url: `${baseURL}/api/healthz`,
     reuseExistingServer: true,
     stdout: 'pipe',
   },

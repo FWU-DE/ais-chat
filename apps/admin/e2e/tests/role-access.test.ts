@@ -41,10 +41,10 @@ test.describe('admin role access', { tag: '@smoke' }, () => {
     await expect(page.getByRole('link', { name: 'Sperrungen' })).toBeVisible();
   });
 
-  test('redirects the logout callback to the application root', async ({ request }) => {
+  test('redirects the logout callback to the application root', async ({ request, baseURL }) => {
     const response = await request.get('/api/auth/logout-callback', { maxRedirects: 0 });
 
     expect(response.status()).toBe(307);
-    expect(response.headers().location).toBe('http://localhost:3001/');
+    expect(response.headers().location).toBe(`${baseURL}/`);
   });
 });

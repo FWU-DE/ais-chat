@@ -26,3 +26,17 @@ chat-bot and admin run `dotenvx run -f .env.local -f .env.development -- next de
 ## Scheduled tasks
 
 The local `scheduled-tasks` container reads `API_KEY` and `PORT` from `apps/chat-bot/.env.development`, overridden by `.env.local`.
+
+## Local ports
+
+`pnpm dev:ports` writes free, OS-assigned ports into `apps/*/.env.local`, e.g. for a second git worktree: `PORT` and `API_URL` for chat-bot, `PORT`, `API_URL` and `CHAT_BOT_BASE_URL` for admin, `PORT` for api. Other lines are untouched. Delete the keys to return to 3000 / 3001 / 3002.
+
+Without it, Playwright uses the `.env.development` ports and reuses any server already listening there.
+
+Known limitations:
+
+- Worktrees share one docker stack and the `app_db` / `api_db` databases.
+- Keycloak backchannel logout is pinned to port 3000.
+- Auth cookies are not port-scoped on `localhost`, so a login in one copy replaces the session of another.
+- The single `scheduled-tasks` container targets the chat-bot named in `.env.development` / `.env.local`.
+- RustFS allows any CORS origin locally.

@@ -1,7 +1,9 @@
 import { Page } from '@playwright/test';
 
+import { ADMIN_BASE_URL } from './const';
+
 /**
- * Logs into the admin app (port 3001) via Keycloak.
+ * Logs into the admin app via Keycloak.
  *
  * The admin app does not use the VIDIS IDP hint flow of the chat-bot; it shows a
  * Keycloak login button and a standard username/password form. After a successful
@@ -22,5 +24,9 @@ export async function adminLogin(
   await page.getByRole('textbox', { name: 'Password' }).fill(password);
   await page.locator('button[type="submit"]').click();
 
-  await page.waitForURL(user === 'editor' ? '**/ais-chat-app' : /localhost:3001\/$/);
+  await page.waitForURL(
+    user === 'editor'
+      ? '**/ais-chat-app'
+      : (url) => url.pathname === '/' && url.origin === ADMIN_BASE_URL,
+  );
 }
