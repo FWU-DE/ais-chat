@@ -26,7 +26,7 @@ export async function streamSpeechById({
     ? AbortSignal.any([timeoutSignal, abortSignal])
     : timeoutSignal;
 
-  const { chunks, usage, format } = await generateSpeechStream({
+  const { chunks, usage, mimeType } = await generateSpeechStream({
     text,
     voice,
     abortSignal: combinedSignal,
@@ -45,5 +45,5 @@ export async function streamSpeechById({
     }
   }
 
-  return { chunks: chunksWithTimeoutHandling(), usage, format };
+  return { chunks: chunksWithTimeoutHandling(), usage, mimeType };
 }
