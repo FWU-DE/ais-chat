@@ -1,5 +1,6 @@
 import { instrumentOpenAiClient } from '@sentry/server-utils';
 import OpenAI from 'openai';
+import { z } from 'zod';
 
 import { env } from '../../env';
 import { AiGenerationError, ProviderConfigurationError } from '../../errors';
@@ -40,21 +41,24 @@ function createBifrostClient(model: AiModel): { client: OpenAI; modelName: strin
   };
 }
 
-type BifrostSpeechUsage = {
-  input_tokens?: number;
-  output_tokens?: number;
+const speechUsageSchema = z.object({
+  input_tokens: z.number().nullish(),
+  output_tokens: z.number().nullish(),
   /** Azure AI Speech bills characters rather than tokens. */
-  input_chars?: number;
-};
+  input_chars: z.number().nullish(),
+});
 
-type BifrostSpeechEvent = {
-  type?: string;
+const speechEventSchema = z.object({
+  type: z.string().nullish(),
   /** Base64-encoded audio in the requested `response_format`. */
-  audio?: string;
-  usage?: BifrostSpeechUsage;
-};
+  audio: z.string().nullish(),
+  usage: speechUsageSchema.nullish(),
+});
 
-function toSpeechUsage(usage: BifrostSpeechUsage | undefined): SpeechUsage {
+type BifrostSpeechUsage = z.infer<typeof speechUsageSchema>;
+type BifrostSpeechEvent = z.infer<typeof speechEventSchema>;
+
+function toSpeechUsage(usage: BifrostSpeechUsage | null | undefined): SpeechUsage {
   return {
     inputTextTokens: usage?.input_tokens ?? usage?.input_chars ?? 0,
     outputAudioTokens: usage?.output_tokens ?? 0,
@@ -68,7 +72,7 @@ function parseSpeechEvent(line: string): BifrostSpeechEvent | undefined {
   if (payload === '' || payload === '[DONE]') return undefined;
 
   try {
-    return JSON.parse(payload) as BifrostSpeechEvent;
+    return speechEventSchema.parse(JSON.parse(payload));
   } catch {
     throw new AiGenerationError('Received a malformed event from the Bifrost speech stream');
   }
