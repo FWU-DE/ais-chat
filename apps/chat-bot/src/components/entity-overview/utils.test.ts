@@ -1,6 +1,33 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterAndSortEntities, isSortOption } from './utils';
+import { applyFavoriteChange, filterAndSortEntities, isSortOption } from './utils';
+
+describe('applyFavoriteChange', () => {
+  const entities = [
+    { id: 'a', isFavorite: true },
+    { id: 'b', isFavorite: false },
+  ];
+
+  it('updates the favorite flag of the entity', () => {
+    expect(applyFavoriteChange(entities, 'b', true, 'all')).toEqual([
+      { id: 'a', isFavorite: true },
+      { id: 'b', isFavorite: true },
+    ]);
+  });
+
+  it('removes an unfavorited entity in the favorites tab', () => {
+    expect(applyFavoriteChange(entities, 'a', false, 'favorites')).toEqual([
+      { id: 'b', isFavorite: false },
+    ]);
+  });
+
+  it('keeps an unfavorited entity in other tabs', () => {
+    expect(applyFavoriteChange(entities, 'a', false, 'mine')).toEqual([
+      { id: 'a', isFavorite: false },
+      { id: 'b', isFavorite: false },
+    ]);
+  });
+});
 
 function entity(name: string, updatedAt: string, popularity = 0) {
   return { name, updatedAt: new Date(updatedAt), popularity };

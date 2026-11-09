@@ -30,6 +30,7 @@ import { RichText, stripRichTextTags } from '@/components/common/rich-text';
 import { useToast } from '@/components/common/toast';
 import { CustomChatActionDelete } from '@/components/custom-chat/custom-chat-action-delete';
 import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
+import { CustomChatActionFavorite } from '@/components/custom-chat/custom-chat-action-favorite';
 import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
 import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
 import { CustomChatHeaderContent } from '@/components/custom-chat/custom-chat-header-content';
@@ -157,6 +158,7 @@ export function AssistantEdit({
   isWebSearchAvailable,
   isSpeechAvailable,
   speechVoices,
+  initialIsFavorite,
 }: {
   assistant: AssistantSelectModel;
   relatedFiles: FileModel[];
@@ -166,6 +168,7 @@ export function AssistantEdit({
   isWebSearchAvailable: boolean;
   isSpeechAvailable: boolean;
   speechVoices: SpeechVoice[];
+  initialIsFavorite: boolean;
 }) {
   useForceReloadOnBrowserBackButton();
   const router = useRouter();
@@ -386,6 +389,12 @@ export function AssistantEdit({
     <CustomChatActions>
       <CustomChatActionUse onClick={handleUseChat} />
       {!assistant.suspended && <CustomChatActionDuplicate onClick={handleDuplicateAssistant} />}
+      {!assistant.suspended && (
+        <CustomChatActionFavorite
+          entityRef={{ entityType: 'assistant', entityId: assistant.id }}
+          initialIsFavorite={initialIsFavorite}
+        />
+      )}
       <CustomChatActionDelete
         onClick={handleDeleteAssistant}
         modalTitle={t('delete-modal-title')}

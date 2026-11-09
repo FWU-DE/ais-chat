@@ -1,5 +1,6 @@
 import { getAssistantByUser } from '@shared/assistants/assistant-service';
 import { getCommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
+import { isFavorite } from '@shared/favorites/favorite-service';
 import { getSpeechModelVoices } from '@shared/llm-models/llm-model-service';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
@@ -24,10 +25,12 @@ export default async function Page(props: PageProps<'/assistants/editor/[assista
   const { assistantId } = await props.params;
   const { user, federalState } = await requireAuth();
 
-  const { assistant, fileMappings, pictureUrl } = await getAssistantByUser({
-    assistantId: assistantId,
-    user,
-  }).catch(handleErrorInServerComponent);
+  const [{ assistant, fileMappings, pictureUrl }, initialIsFavorite] = await Promise.all([
+    getAssistantByUser({ assistantId, user }).catch(handleErrorInServerComponent),
+    isFavorite({ entityType: 'assistant', entityId: assistantId, user }).catch(
+      handleErrorInServerComponent,
+    ),
+  ]);
 
   const communityTemplateRequest = await getCommunityTemplateRequestWithEvents({
     entityRef: { entityType: 'assistant', entityId: assistantId },
@@ -48,6 +51,7 @@ export default async function Page(props: PageProps<'/assistants/editor/[assista
         relatedFiles={fileMappings}
         initialLinks={initialLinks}
         avatarPictureUrl={pictureUrl}
+        initialIsFavorite={initialIsFavorite}
         initialCommunityTemplateRequest={communityTemplateRequest}
         isWebSearchAvailable={isWebSearchAvailableForFederalState(federalState.featureToggles)}
         isSpeechAvailable={isSpeechAvailable}

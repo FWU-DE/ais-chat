@@ -1,5 +1,6 @@
 'use client';
 
+import type { WithFavorite } from '@shared/favorites/favorite-service';
 import { OverviewFilter } from '@shared/overview-filter';
 import { useTranslations } from 'next-intl';
 import React, { useCallback, useState } from 'react';
@@ -12,8 +13,9 @@ import {
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import EntityCard from '@/components/entity-overview/entity-card';
 import EntityOverview from '@/components/entity-overview/entity-overview';
-import { filterAndSortEntities } from '@/components/entity-overview/utils';
+import { applyFavoriteChange, filterAndSortEntities } from '@/components/entity-overview/utils';
 import { useOverviewFilters } from '@/components/hooks/use-overview-filters';
+import { useSetFavorite } from '@/components/hooks/use-set-favorite';
 
 import { getCharactersByFilterAction } from '../actions/entity-filter-actions';
 import { CreateNewCharacterButton } from './create-new-character-button';
@@ -26,7 +28,10 @@ type CharacterOverviewProps = {
 export default function CharacterOverview({ currentUserId }: CharacterOverviewProps) {
   const t = useTranslations('characters');
   const tCommon = useTranslations();
-  const [visibleCharacters, setVisibleCharacters] = useState<CharacterWithImage[]>([]);
+  const setFavorite = useSetFavorite();
+  const [visibleCharacters, setVisibleCharacters] = useState<WithFavorite<CharacterWithImage>[]>(
+    [],
+  );
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
   const fetchCharacters = useCallback(async (filter: OverviewFilter) => {
@@ -51,6 +56,17 @@ export default function CharacterOverview({ currentUserId }: CharacterOverviewPr
 
   async function handleFilterChange(filter: OverviewFilter) {
     await setActiveFilter(filter);
+  }
+
+  async function handleToggleFavorite(characterId: string, isFavorite: boolean) {
+    setVisibleCharacters((previous) =>
+      applyFavoriteChange(previous, characterId, isFavorite, activeFilter),
+    );
+    const success = await setFavorite(
+      { entityType: 'character', entityId: characterId },
+      isFavorite,
+    );
+    if (!success) await fetchCharacters(activeFilter);
   }
 
   const infoContent = (
@@ -107,6 +123,8 @@ export default function CharacterOverview({ currentUserId }: CharacterOverviewPr
               href={isOwned ? `/characters/editor/${character.id}` : `/characters/${character.id}`}
               chatHref={`/characters/d/${character.id}`}
               shareInfo={character}
+              isFavorite={character.isFavorite}
+              onToggleFavorite={(isFavorite) => handleToggleFavorite(character.id, isFavorite)}
             />
           );
         });

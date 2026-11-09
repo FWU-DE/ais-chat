@@ -1,5 +1,6 @@
 import { getCommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
 import { WebSource } from '@shared/db/types';
+import { isFavorite } from '@shared/favorites/favorite-service';
 import { getLearningScenarioForEditView } from '@shared/learning-scenarios/learning-scenario-service';
 import { getSpeechModelVoices } from '@shared/llm-models/llm-model-service';
 import { type Metadata } from 'next';
@@ -28,18 +29,24 @@ export default async function Page(
   const { learningScenarioId } = await props.params;
   const { user, federalState } = await requireAuth();
 
-  const {
-    learningScenario,
-    relatedFiles,
-    avatarPictureUrl,
-    maxBudget,
-    usedBudget,
-    budgetUsedBySharedChat,
-  } = await getLearningScenarioForEditView({
-    learningScenarioId: learningScenarioId,
-    user,
-    federalState,
-  }).catch(handleErrorInServerComponent);
+  const [
+    {
+      learningScenario,
+      relatedFiles,
+      avatarPictureUrl,
+      maxBudget,
+      usedBudget,
+      budgetUsedBySharedChat,
+    },
+    initialIsFavorite,
+  ] = await Promise.all([
+    getLearningScenarioForEditView({ learningScenarioId, user, federalState }).catch(
+      handleErrorInServerComponent,
+    ),
+    isFavorite({ entityType: 'learningScenario', entityId: learningScenarioId, user }).catch(
+      handleErrorInServerComponent,
+    ),
+  ]);
 
   const readOnly = user.id !== learningScenario.userId;
 
@@ -72,6 +79,7 @@ export default async function Page(
         relatedFiles={relatedFiles}
         initialLinks={initialLinks}
         avatarPictureUrl={avatarPictureUrl}
+        initialIsFavorite={initialIsFavorite}
         initialCommunityTemplateRequest={communityTemplateRequest}
         usedBudget={usedBudget ?? 0}
         maxBudget={maxBudget ?? 500}

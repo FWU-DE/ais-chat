@@ -1,5 +1,6 @@
 import { getCharacterForEditView } from '@shared/characters/character-service';
 import { WebSource } from '@shared/db/types';
+import { isFavorite } from '@shared/favorites/favorite-service';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
@@ -23,18 +24,24 @@ export default async function Page(props: PageProps<'/characters/[characterId]'>
   const { characterId } = await props.params;
   const { user, federalState } = await requireAuth();
 
-  const {
-    character,
-    relatedFiles,
-    maybeSignedPictureUrl,
-    maxBudget,
-    usedBudget,
-    budgetUsedBySharedChat,
-  } = await getCharacterForEditView({
-    characterId,
-    user,
-    federalState,
-  }).catch(handleErrorInServerComponent);
+  const [
+    {
+      character,
+      relatedFiles,
+      maybeSignedPictureUrl,
+      maxBudget,
+      usedBudget,
+      budgetUsedBySharedChat,
+    },
+    initialIsFavorite,
+  ] = await Promise.all([
+    getCharacterForEditView({ characterId, user, federalState }).catch(
+      handleErrorInServerComponent,
+    ),
+    isFavorite({ entityType: 'character', entityId: characterId, user }).catch(
+      handleErrorInServerComponent,
+    ),
+  ]);
 
   const initialLinks = character.attachedLinks
     .filter((l) => l !== '')
@@ -53,6 +60,7 @@ export default async function Page(props: PageProps<'/characters/[characterId]'>
         relatedFiles={relatedFiles}
         initialLinks={initialLinks}
         avatarPictureUrl={maybeSignedPictureUrl}
+        initialIsFavorite={initialIsFavorite}
         usedBudget={usedBudget ?? 0}
         maxBudget={maxBudget ?? 500}
         budgetUsedBySharedChat={budgetUsedBySharedChat}

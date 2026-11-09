@@ -1,5 +1,6 @@
 'use client';
 
+import type { WithFavorite } from '@shared/favorites/favorite-service';
 import { OverviewFilter } from '@shared/overview-filter';
 import { useTranslations } from 'next-intl';
 import React, { useCallback, useState } from 'react';
@@ -12,8 +13,9 @@ import {
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import EntityCard from '@/components/entity-overview/entity-card';
 import EntityOverview from '@/components/entity-overview/entity-overview';
-import { filterAndSortEntities } from '@/components/entity-overview/utils';
+import { applyFavoriteChange, filterAndSortEntities } from '@/components/entity-overview/utils';
 import { useOverviewFilters } from '@/components/hooks/use-overview-filters';
+import { useSetFavorite } from '@/components/hooks/use-set-favorite';
 
 import { getAssistantsByFilterAction } from '../actions/entity-filter-actions';
 import CreateNewAssistantButton from './create-new-assistant-button';
@@ -26,7 +28,10 @@ type AssistantOverviewProps = {
 export default function AssistantOverview({ currentUserId }: AssistantOverviewProps) {
   const t = useTranslations('assistants');
   const tCommon = useTranslations();
-  const [visibleAssistants, setVisibleAssistants] = useState<AssistantWithImage[]>([]);
+  const setFavorite = useSetFavorite();
+  const [visibleAssistants, setVisibleAssistants] = useState<WithFavorite<AssistantWithImage>[]>(
+    [],
+  );
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
   const fetchAssistants = useCallback(async (filter: OverviewFilter) => {
@@ -51,6 +56,17 @@ export default function AssistantOverview({ currentUserId }: AssistantOverviewPr
 
   async function handleFilterChange(filter: OverviewFilter) {
     await setActiveFilter(filter);
+  }
+
+  async function handleToggleFavorite(assistantId: string, isFavorite: boolean) {
+    setVisibleAssistants((previous) =>
+      applyFavoriteChange(previous, assistantId, isFavorite, activeFilter),
+    );
+    const success = await setFavorite(
+      { entityType: 'assistant', entityId: assistantId },
+      isFavorite,
+    );
+    if (!success) await fetchAssistants(activeFilter);
   }
 
   const infoContent = (
@@ -108,6 +124,8 @@ export default function AssistantOverview({ currentUserId }: AssistantOverviewPr
                 : `/assistants/${assistant.id}`
             }
             chatHref={`/assistants/d/${assistant.id}`}
+            isFavorite={assistant.isFavorite}
+            onToggleFavorite={(isFavorite) => handleToggleFavorite(assistant.id, isFavorite)}
           />
         ));
       }}

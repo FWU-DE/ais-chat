@@ -1,5 +1,6 @@
 'use client';
 
+import type { WithFavorite } from '@shared/favorites/favorite-service';
 import { LearningScenarioWithImage } from '@shared/learning-scenarios/learning-scenario-service';
 import { OverviewFilter } from '@shared/overview-filter';
 import { useTranslations } from 'next-intl';
@@ -13,8 +14,9 @@ import {
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 import EntityCard from '@/components/entity-overview/entity-card';
 import EntityOverview from '@/components/entity-overview/entity-overview';
-import { filterAndSortEntities } from '@/components/entity-overview/utils';
+import { applyFavoriteChange, filterAndSortEntities } from '@/components/entity-overview/utils';
 import { useOverviewFilters } from '@/components/hooks/use-overview-filters';
+import { useSetFavorite } from '@/components/hooks/use-set-favorite';
 
 import { getLearningScenariosByFilterAction } from '../actions/entity-filter-actions';
 import { CreateNewLearningScenarioButton } from './create-new-learning-scenario-button';
@@ -26,8 +28,9 @@ type LearningScenarioOverviewProps = {
 export default function LearningScenarioOverview({ currentUserId }: LearningScenarioOverviewProps) {
   const t = useTranslations('learning-scenarios');
   const tCommon = useTranslations();
+  const setFavorite = useSetFavorite();
   const [visibleLearningScenarios, setVisibleLearningScenarios] = useState<
-    LearningScenarioWithImage[]
+    WithFavorite<LearningScenarioWithImage>[]
   >([]);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
@@ -53,6 +56,17 @@ export default function LearningScenarioOverview({ currentUserId }: LearningScen
 
   async function handleFilterChange(filter: OverviewFilter) {
     await setActiveFilter(filter);
+  }
+
+  async function handleToggleFavorite(learningScenarioId: string, isFavorite: boolean) {
+    setVisibleLearningScenarios((previous) =>
+      applyFavoriteChange(previous, learningScenarioId, isFavorite, activeFilter),
+    );
+    const success = await setFavorite(
+      { entityType: 'learningScenario', entityId: learningScenarioId },
+      isFavorite,
+    );
+    if (!success) await fetchLearningScenarios(activeFilter);
   }
 
   const infoContent = (
@@ -113,6 +127,8 @@ export default function LearningScenarioOverview({ currentUserId }: LearningScen
               }
               chatHref={`/learning-scenarios/d/${scenario.id}`}
               shareInfo={scenario}
+              isFavorite={scenario.isFavorite}
+              onToggleFavorite={(isFavorite) => handleToggleFavorite(scenario.id, isFavorite)}
             />
           );
         });

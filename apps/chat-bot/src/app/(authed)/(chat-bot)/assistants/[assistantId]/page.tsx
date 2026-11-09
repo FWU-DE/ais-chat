@@ -1,4 +1,5 @@
 import { getAssistantByUser } from '@shared/assistants/assistant-service';
+import { isFavorite } from '@shared/favorites/favorite-service';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
@@ -22,10 +23,12 @@ export default async function Page(props: PageProps<'/assistants/[assistantId]'>
   const { assistantId } = await props.params;
   const { user, federalState } = await requireAuth();
 
-  const { assistant, fileMappings, pictureUrl } = await getAssistantByUser({
-    assistantId: assistantId,
-    user,
-  }).catch(handleErrorInServerComponent);
+  const [{ assistant, fileMappings, pictureUrl }, initialIsFavorite] = await Promise.all([
+    getAssistantByUser({ assistantId, user }).catch(handleErrorInServerComponent),
+    isFavorite({ entityType: 'assistant', entityId: assistantId, user }).catch(
+      handleErrorInServerComponent,
+    ),
+  ]);
 
   return (
     <DefaultPageLayout>
@@ -33,6 +36,7 @@ export default async function Page(props: PageProps<'/assistants/[assistantId]'>
         assistant={assistant}
         fileMappings={fileMappings}
         pictureUrl={pictureUrl}
+        initialIsFavorite={initialIsFavorite}
         isWebSearchAvailable={isWebSearchAvailableForFederalState(federalState.featureToggles)}
         isSpeechAvailable={federalState.featureToggles.isSpeechModelEnabled === true}
       />

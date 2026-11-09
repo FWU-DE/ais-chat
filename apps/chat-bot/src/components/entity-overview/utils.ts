@@ -1,3 +1,5 @@
+import type { OverviewFilter } from '@shared/overview-filter';
+
 export const VALID_SORT_OPTIONS = [
   'date-desc',
   'date-asc',
@@ -17,6 +19,19 @@ type SortableEntity = {
 
 export function isSortOption(value: string): value is SortOption {
   return (VALID_SORT_OPTIONS as readonly string[]).includes(value);
+}
+
+/** Applies a favorite change locally; in the favorites tab an unfavorited entity disappears. */
+export function applyFavoriteChange<T extends { id: string; isFavorite: boolean }>(
+  entities: T[],
+  entityId: string,
+  isFavorite: boolean,
+  activeFilter: OverviewFilter,
+): T[] {
+  if (activeFilter === 'favorites' && !isFavorite) {
+    return entities.filter((entity) => entity.id !== entityId);
+  }
+  return entities.map((entity) => (entity.id === entityId ? { ...entity, isFavorite } : entity));
 }
 
 export function filterAndSortEntities<T extends SortableEntity>(
