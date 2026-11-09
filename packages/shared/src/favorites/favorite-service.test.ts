@@ -172,6 +172,12 @@ describe('favorite-service', () => {
         isFavorite({ entityType: 'assistant', entityId: 'not-a-uuid', user }),
       ).rejects.toThrow(InvalidArgumentError);
     });
+
+    it('rejects an unsupported entity type', async () => {
+      await expect(
+        isFavorite({ entityType: 'foo' as never, entityId: generateUUID(), user }),
+      ).rejects.toThrow(InvalidArgumentError);
+    });
   });
 
   describe('getFavoriteEntityIds', () => {
@@ -186,6 +192,12 @@ describe('favorite-service', () => {
         userId: user.id,
         entityType: 'character',
       });
+    });
+
+    it('rejects an unsupported entity type', async () => {
+      await expect(getFavoriteEntityIds({ entityType: 'foo' as never, user })).rejects.toThrow(
+        InvalidArgumentError,
+      );
     });
   });
 });

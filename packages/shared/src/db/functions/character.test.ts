@@ -30,6 +30,7 @@ import {
   dbGetCharacters,
   dbGetCharactersByAssociatedSchools,
   dbGetCharactersByIds,
+  dbGetCharactersByIdsOptionalShareData,
   dbGetCharactersByUser,
   dbGetCommunityCharacters,
   dbGetGlobalCharacterByName,
@@ -146,6 +147,28 @@ describe('db character sharing helpers', () => {
       mockSelectChain(characters);
 
       const result = await dbGetCharactersByIds({ characterIds: ['character-1'] });
+
+      expect(result).toBe(characters);
+    });
+
+    it('dbGetCharactersByIdsOptionalShareData returns an empty array without querying the db when given no ids', async () => {
+      const result = await dbGetCharactersByIdsOptionalShareData({
+        characterIds: [],
+        user: { id: 'user-1' },
+      });
+
+      expect(result).toEqual([]);
+      expect(mocks.select).not.toHaveBeenCalled();
+    });
+
+    it('dbGetCharactersByIdsOptionalShareData queries the db when given ids', async () => {
+      const characters = [{ id: 'character-1' }];
+      mockSelectChain(characters);
+
+      const result = await dbGetCharactersByIdsOptionalShareData({
+        characterIds: ['character-1'],
+        user: { id: 'user-1' },
+      });
 
       expect(result).toBe(characters);
     });

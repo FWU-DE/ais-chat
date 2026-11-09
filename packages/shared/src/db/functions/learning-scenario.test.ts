@@ -29,6 +29,7 @@ import {
   dbGetLearningScenarioByIdWithShareData,
   dbGetLearningScenariosByAssociatedSchools,
   dbGetLearningScenariosByIds,
+  dbGetLearningScenariosByIdsOptionalShareData,
   dbGetLearningScenariosByUser,
   dbLiftSuspensionOnLearningScenario,
   dbSetLearningScenarioSuspended,
@@ -202,6 +203,28 @@ describe('db learning scenario sharing helpers', () => {
       mockSelectChain(learningScenarios);
 
       const result = await dbGetLearningScenariosByIds({ learningScenarioIds: ['scenario-1'] });
+
+      expect(result).toBe(learningScenarios);
+    });
+
+    it('dbGetLearningScenariosByIdsOptionalShareData returns an empty array without querying the db when given no ids', async () => {
+      const result = await dbGetLearningScenariosByIdsOptionalShareData({
+        learningScenarioIds: [],
+        user: { id: 'user-1' },
+      });
+
+      expect(result).toEqual([]);
+      expect(mocks.select).not.toHaveBeenCalled();
+    });
+
+    it('dbGetLearningScenariosByIdsOptionalShareData queries the db when given ids', async () => {
+      const learningScenarios = [{ id: 'scenario-1' }];
+      mockSelectChain(learningScenarios);
+
+      const result = await dbGetLearningScenariosByIdsOptionalShareData({
+        learningScenarioIds: ['scenario-1'],
+        user: { id: 'user-1' },
+      });
 
       expect(result).toBe(learningScenarios);
     });
