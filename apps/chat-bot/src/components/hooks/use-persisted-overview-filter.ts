@@ -1,5 +1,6 @@
 'use client';
 
+import type { EntityType } from '@shared/entities/entity-types';
 import type { OverviewFilter } from '@shared/overview-filter';
 import { overviewFilterSchema } from '@shared/overview-filter';
 import { startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -9,8 +10,6 @@ import {
   useSessionStorageState,
   writeSessionStorage,
 } from '@/hooks/use-session-storage-state';
-
-export type EntityType = 'characters' | 'learning-scenarios' | 'assistants';
 
 function parseFilter(value: string | null): OverviewFilter | null {
   const result = overviewFilterSchema.safeParse(value);
