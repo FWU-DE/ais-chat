@@ -192,6 +192,9 @@ export class Mp3StreamPlayer {
         }
         this.mp3Chunks.push(chunk);
         await appendChunk(sourceBuffer, chunk);
+        if (this.disposed) {
+          return;
+        }
         if (this.state === 'loading') {
           if (this.pausedBeforePlaying) {
             audio.pause();
