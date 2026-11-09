@@ -33,7 +33,8 @@ export default function SessionClearer() {
         void queryClient.resetQueries();
       }
     } catch {
-      // Ignore storage failures.
+      // Without working storage we cannot tell whether the session changed, so reset to be safe.
+      void queryClient.resetQueries();
     }
   }, [session?.sessionId, status, queryClient]);
 
