@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AiGenerationError, InvalidModelError } from '../errors';
+import { AiGenerationError, ApiKeyUnusableError, InvalidModelError } from '../errors';
 import { generateTextStreamWithBilling, generateTextWithBilling } from './index';
 import type { AiModel, TokenUsage } from './types';
 
@@ -12,7 +12,10 @@ vi.mock('./providers', () => ({
 
 vi.mock('../api-keys/billing', () => ({
   billTextGenerationUsageToApiKey: vi.fn(),
-  isApiKeyOverQuota: vi.fn(),
+}));
+
+vi.mock('../api-keys/access', () => ({
+  assertApiKeyCanUseModel: vi.fn(),
 }));
 
 vi.mock('../api-keys/model-access', () => ({
@@ -23,16 +26,15 @@ vi.mock('../models', () => ({
   getTextModelById: vi.fn(),
 }));
 
-import { billTextGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
-import { hasAccessToModel } from '../api-keys/model-access';
+import { assertApiKeyCanUseModel } from '../api-keys/access';
+import { billTextGenerationUsageToApiKey } from '../api-keys/billing';
 import { getTextModelById } from '../models';
 import { generateText, generateTextStream } from './providers';
 
 const mockGenerateText = vi.mocked(generateText);
 const mockGenerateTextStream = vi.mocked(generateTextStream);
 const mockBillTextGenerationUsageToApiKey = vi.mocked(billTextGenerationUsageToApiKey);
-const mockIsApiKeyOverQuota = vi.mocked(isApiKeyOverQuota);
-const mockHasAccessToModel = vi.mocked(hasAccessToModel);
+const mockAssertApiKeyCanUseModel = vi.mocked(assertApiKeyCanUseModel);
 const mockGetTextModelById = vi.mocked(getTextModelById);
 
 describe('generateTextWithBilling', () => {
@@ -69,16 +71,13 @@ describe('generateTextWithBilling', () => {
 
   it('should successfully generate text with billing', async () => {
     mockGetTextModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
     mockGenerateText.mockResolvedValue(mockTextResponse);
     mockBillTextGenerationUsageToApiKey.mockResolvedValue(50);
 
     const result = await generateTextWithBilling('model-123', mockMessages, 'api-key-123');
 
     expect(mockGetTextModelById).toHaveBeenCalledWith('model-123');
-    expect(mockHasAccessToModel).toHaveBeenCalledWith('api-key-123', mockModel);
-    expect(mockIsApiKeyOverQuota).toHaveBeenCalledWith('api-key-123');
+    expect(mockAssertApiKeyCanUseModel).toHaveBeenCalledWith('api-key-123', mockModel, 'text');
     expect(mockGenerateText).toHaveBeenCalledWith(mockModel, mockMessages, undefined);
     expect(mockBillTextGenerationUsageToApiKey).toHaveBeenCalledWith(
       'api-key-123',
@@ -95,58 +94,22 @@ describe('generateTextWithBilling', () => {
     });
   });
 
-  it('should throw InvalidModelError when API key does not have access', async () => {
+  it('should not generate when the API key check fails', async () => {
     mockGetTextModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(false);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
-
-    await expect(generateTextWithBilling('model-123', mockMessages, 'api-key-123')).rejects.toThrow(
-      InvalidModelError,
+    mockAssertApiKeyCanUseModel.mockRejectedValueOnce(
+      new ApiKeyUnusableError({ apiKeyId: 'api-key-123', reason: 'Api key is expired' }),
     );
 
     await expect(generateTextWithBilling('model-123', mockMessages, 'api-key-123')).rejects.toThrow(
-      'API key does not have access to the text model: test-model',
+      ApiKeyUnusableError,
     );
 
     expect(mockGenerateText).not.toHaveBeenCalled();
     expect(mockBillTextGenerationUsageToApiKey).not.toHaveBeenCalled();
-  });
-
-  it('should throw AiGenerationError when API key is over quota', async () => {
-    mockGetTextModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(true);
-
-    await expect(generateTextWithBilling('model-123', mockMessages, 'api-key-123')).rejects.toThrow(
-      AiGenerationError,
-    );
-
-    await expect(generateTextWithBilling('model-123', mockMessages, 'api-key-123')).rejects.toThrow(
-      'API key has exceeded its monthly quota',
-    );
-
-    expect(mockGenerateText).not.toHaveBeenCalled();
-    expect(mockBillTextGenerationUsageToApiKey).not.toHaveBeenCalled();
-  });
-
-  it('should run access check and quota check in parallel', async () => {
-    mockGetTextModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
-    mockGenerateText.mockResolvedValue(mockTextResponse);
-    mockBillTextGenerationUsageToApiKey.mockResolvedValue(50);
-
-    await generateTextWithBilling('model-123', mockMessages, 'api-key-123');
-
-    // Both should be called
-    expect(mockHasAccessToModel).toHaveBeenCalledTimes(1);
-    expect(mockIsApiKeyOverQuota).toHaveBeenCalledTimes(1);
   });
 
   it('should wrap non-AiGenerationError errors', async () => {
     mockGetTextModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
     mockGenerateText.mockRejectedValue(new Error('Network error'));
 
     await expect(generateTextWithBilling('model-123', mockMessages, 'api-key-123')).rejects.toThrow(
@@ -162,8 +125,6 @@ describe('generateTextWithBilling', () => {
 
   it('should not wrap AiGenerationError errors', async () => {
     mockGetTextModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
     const originalError = new InvalidModelError('Original error');
     mockGenerateText.mockRejectedValue(originalError);
 
@@ -176,8 +137,6 @@ describe('generateTextWithBilling', () => {
 
   it('should handle string errors during generation', async () => {
     mockGetTextModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
     mockGenerateText.mockRejectedValue('String error');
 
     await expect(generateTextWithBilling('model-123', mockMessages, 'api-key-123')).rejects.toThrow(
@@ -215,8 +174,6 @@ describe('generateTextStreamWithBilling', () => {
 
   it('should successfully generate text stream with billing', async () => {
     mockGetTextModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
 
     // Create a mock that will call the callback
     mockGenerateTextStream.mockImplementation((model, messages, onComplete) => {
@@ -248,8 +205,7 @@ describe('generateTextStreamWithBilling', () => {
     }
 
     expect(mockGetTextModelById).toHaveBeenCalledWith('model-123');
-    expect(mockHasAccessToModel).toHaveBeenCalledWith('api-key-123', mockModel);
-    expect(mockIsApiKeyOverQuota).toHaveBeenCalledWith('api-key-123');
+    expect(mockAssertApiKeyCanUseModel).toHaveBeenCalledWith('api-key-123', mockModel, 'text');
     expect(mockGenerateTextStream).toHaveBeenCalled();
     expect(chunks).toEqual(['chunk1', 'chunk2', 'chunk3']);
     expect(mockBillTextGenerationUsageToApiKey).toHaveBeenCalled();
@@ -260,19 +216,11 @@ describe('generateTextStreamWithBilling', () => {
     });
   });
 
-  it('should throw InvalidModelError when API key does not have access', async () => {
+  it('should not stream when the API key check fails', async () => {
     mockGetTextModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(false);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
-
-    const generator = generateTextStreamWithBilling('model-123', mockMessages, 'api-key-123');
-
-    await expect(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      for await (const _chunk of generator) {
-        // Should not reach here
-      }
-    }).rejects.toThrow(InvalidModelError);
+    mockAssertApiKeyCanUseModel.mockRejectedValueOnce(
+      new ApiKeyUnusableError({ apiKeyId: 'api-key-123', reason: 'Api key is expired' }),
+    );
 
     await expect(async () => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -283,73 +231,14 @@ describe('generateTextStreamWithBilling', () => {
       )) {
         // Should not reach here
       }
-    }).rejects.toThrow('API key does not have access to the text model: test-model');
+    }).rejects.toThrow(ApiKeyUnusableError);
 
     expect(mockGenerateTextStream).not.toHaveBeenCalled();
     expect(mockBillTextGenerationUsageToApiKey).not.toHaveBeenCalled();
-  });
-
-  it('should throw AiGenerationError when API key is over quota', async () => {
-    mockGetTextModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(true);
-
-    const generator = generateTextStreamWithBilling('model-123', mockMessages, 'api-key-123');
-
-    await expect(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      for await (const _chunk of generator) {
-        // Should not reach here
-      }
-    }).rejects.toThrow(AiGenerationError);
-
-    await expect(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      for await (const _chunk of generateTextStreamWithBilling(
-        'model-123',
-        mockMessages,
-        'api-key-123',
-      )) {
-        // Should not reach here
-      }
-    }).rejects.toThrow('API key has exceeded its monthly quota');
-
-    expect(mockGenerateTextStream).not.toHaveBeenCalled();
-    expect(mockBillTextGenerationUsageToApiKey).not.toHaveBeenCalled();
-  });
-
-  it('should run access check and quota check in parallel', async () => {
-    mockGetTextModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
-
-    mockGenerateTextStream.mockImplementation((model, messages, onComplete) => {
-      return (async function* () {
-        yield 'chunk1';
-        if (onComplete) {
-          await onComplete(mockUsage);
-        }
-      })();
-    });
-
-    mockBillTextGenerationUsageToApiKey.mockResolvedValue(75);
-
-    const generator = generateTextStreamWithBilling('model-123', mockMessages, 'api-key-123');
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for await (const _chunk of generator) {
-      // Consume stream
-    }
-
-    // Both should be called
-    expect(mockHasAccessToModel).toHaveBeenCalledTimes(1);
-    expect(mockIsApiKeyOverQuota).toHaveBeenCalledTimes(1);
   });
 
   it('should work without onComplete callback', async () => {
     mockGetTextModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
 
     mockGenerateTextStream.mockImplementation((model, messages, onComplete) => {
       return (async function* () {
@@ -376,8 +265,6 @@ describe('generateTextStreamWithBilling', () => {
 
   it('should wrap non-AiGenerationError errors', async () => {
     mockGetTextModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
 
     // eslint-disable-next-line require-yield -- Generator intentionally throws error without yielding to test error handling
     const mockStreamGenerator = (async function* (): AsyncGenerator<string, TokenUsage> {
@@ -400,8 +287,6 @@ describe('generateTextStreamWithBilling', () => {
 
   it('should not wrap AiGenerationError errors', async () => {
     mockGetTextModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
 
     const originalError = new InvalidModelError('Original error');
     // eslint-disable-next-line require-yield -- Generator intentionally throws error without yielding to test error handling
