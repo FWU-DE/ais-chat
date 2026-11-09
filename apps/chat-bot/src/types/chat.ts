@@ -1,9 +1,4 @@
-import type { ChatAttachment } from '@ais-chat/ai-core';
-import {
-  CONVERSATION_ROLES,
-  type ConversationRole,
-  type ToolCall,
-} from '@ais-chat/ai-core/chat/types';
+import { CONVERSATION_ROLES } from '@ais-chat/ai-core/chat/types';
 import type {
   ResponsibleAIError,
   SharedChatExpiredError,
@@ -12,7 +7,8 @@ import type {
 import type { NotFoundError } from '@shared/error';
 import { isToolRelatedMessage } from '@shared/utils/tool-related-message';
 import z from 'zod';
-import { aiActivityStepSchema, type AiActivityStep } from './ai-activity';
+
+import { aiActivityStepSchema } from './ai-activity';
 
 /**
  * Serialized error that can be safely transmitted across the Server Action boundary.
@@ -26,27 +22,17 @@ export type SerializedError = {
  * Status of a chat conversation.
  * - 'ready': Chat is ready for input
  * - 'submitted': Message has been submitted, waiting for response
- * - 'reasoning': Model is reasoning (for reasoning models like o1/o3)
  * - 'streaming': Response is being streamed
  * - 'error': An error occurred
  */
-export type ChatStatus = 'ready' | 'submitted' | 'reasoning' | 'streaming' | 'error';
-
-/**
- * Generates speech audio for a message. Receives a flag indicating whether this is an
- * initial message (e.g. a character's initial message), in order to route it to a non-billed endpoint.
- */
-export type GenerateSpeechFn = (
-  text: string,
-  isInitialMessage: boolean,
-  signal?: AbortSignal,
-) => Promise<Blob>;
+export type ChatStatus = 'ready' | 'submitted' | 'streaming' | 'error';
 
 export const chatMessageSchema = z.object({
   id: z.string(),
   role: z.enum(CONVERSATION_ROLES),
   content: z.string(),
   createdAt: z.coerce.date().optional(),
+  modelName: z.string().optional(),
   attachments: z.array(z.any()).optional(),
   activitySteps: z.array(aiActivityStepSchema).optional(),
   toolCalls: z.array(z.any()).optional(),
@@ -57,16 +43,7 @@ export const chatMessageSchema = z.object({
  * Basic chat message type used throughout the application.
  * This replaces the Message type from the 'ai' package.
  */
-export type ChatMessage = {
-  id: string;
-  role: ConversationRole;
-  content: string;
-  createdAt?: Date;
-  attachments?: ChatAttachment[];
-  activitySteps?: AiActivityStep[];
-  toolCalls?: ToolCall[];
-  toolCallId?: string;
-};
+export type ChatMessage = z.infer<typeof chatMessageSchema>;
 
 /**
  * Result returned when sending a chat message.

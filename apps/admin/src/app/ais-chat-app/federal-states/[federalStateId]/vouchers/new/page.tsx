@@ -1,6 +1,8 @@
 import React from 'react';
-import VoucherCreateView from './VoucherCreateView';
+
 import { auth } from '@/auth';
+
+import VoucherCreateView from './VoucherCreateView';
 
 export default async function Page(
   props: PageProps<'/ais-chat-app/federal-states/[federalStateId]/vouchers/new'>,

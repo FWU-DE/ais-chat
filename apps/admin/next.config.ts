@@ -1,5 +1,5 @@
-import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs/config';
+import type { NextConfig } from 'next';
 
 const isDevBuild = process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development';
 

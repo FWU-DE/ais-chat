@@ -1,11 +1,12 @@
-import { desc, eq, getTableColumns, sql } from 'drizzle-orm';
-import { NotFoundError } from '@shared/error';
 import {
   assertEntityType,
   EntityRef,
   EntityType,
   throwEntityInvalidArgumentError,
 } from '@shared/entities/entity-types';
+import { NotFoundError } from '@shared/error';
+import { desc, eq, getTableColumns, sql } from 'drizzle-orm';
+
 import { db } from '..';
 import {
   assistantTable,

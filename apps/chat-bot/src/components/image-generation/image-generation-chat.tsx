@@ -1,14 +1,16 @@
 'use client';
 
-import aiBadge from '@/assets/ai-badge.png';
-import { IMAGE_GENERATION_INPUT_LIMIT } from '@/configuration-text-inputs/const';
-import { bakeAiBadge } from '@/utils/images/bake-ai-badge';
 import { FileModel } from '@shared/db/schema';
 import { ConversationMessageModel } from '@shared/db/types';
 import { logError } from '@shared/logging';
-import { useTranslations } from 'next-intl';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import React, { useEffect, useRef, useState } from 'react';
+
+import aiBadge from '@/assets/ai-badge.png';
+import { IMAGE_GENERATION_INPUT_LIMIT } from '@/configuration-text-inputs/const';
+import { bakeAiBadge } from '@/utils/images/bake-ai-badge';
+
 import { ImageAttachment } from '../chat/message-image-attachment';
 import { defaultUploadFile, LocalFileState } from '../file-upload/upload-file';
 import { useImageModels } from '../providers/image-model-provider';
@@ -45,7 +47,7 @@ export default function ImageGenerationChat({
   const [input, setInput] = useState('');
   const [files, setFiles] = useState<Map<string, LocalFileState>>(new Map());
   const imageRef = useRef<HTMLImageElement>(null);
-  const [isImageReady, setIsImageReady] = useState(false);
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
   const [showAiBadge, setShowAiBadge] = useState(true);
   const [bakedEntry, setBakedEntry] = useState<{
     sourceUrl: string;
@@ -80,6 +82,11 @@ export default function ImageGenerationChat({
     showAiBadge && bakedEntry !== null && bakedEntry.sourceUrl === sourceUrl
       ? bakedEntry.objectUrl
       : (sourceUrl ?? '');
+
+  // The displayed image's src can change after it has already loaded (e.g. once
+  // the baked-AI-badge version becomes available), which resets img.complete.
+  // Track readiness per src so copy/download aren't clickable against a stale image.
+  const isImageReady = loadedSrc !== null && loadedSrc === displaySrc;
 
   const { aspectRatio } = useImageAspectRatio();
 
@@ -163,7 +170,6 @@ export default function ImageGenerationChat({
 
     const generatedImage = await generate({ prompt, inputFileIds });
     if (generatedImage !== null) {
-      setIsImageReady(false);
       appendVersion({ ...generatedImage, attachedFiles });
     }
   }
@@ -235,7 +241,7 @@ export default function ImageGenerationChat({
                 loading="eager"
                 unoptimized
                 crossOrigin="anonymous" // Needed for clipboard copy to work
-                onLoad={() => setIsImageReady(true)}
+                onLoad={() => setLoadedSrc(displaySrc)}
               />
               <ImageActionButtons
                 imageRef={imageRef}

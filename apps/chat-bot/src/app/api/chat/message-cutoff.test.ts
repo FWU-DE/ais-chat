@@ -1,8 +1,10 @@
-import { describe, it, expect } from 'vitest';
-import { limitChatHistory, groupIntoBlocks } from './utils';
-import { type ChatMessage as Message } from '@/types/chat';
-import { generateRandomString } from '../../../../e2e/utils/random';
 import { ConversationRole } from '@ais-chat/ai-core/chat/types';
+import { describe, expect, it } from 'vitest';
+
+import { type ChatMessage as Message } from '@/types/chat';
+
+import { generateRandomString } from '../../../../e2e/utils/random';
+import { groupIntoBlocks, limitChatHistory } from './utils';
 
 // Helper function to create a message
 function createMessage(role: ConversationRole, content: string): Message {

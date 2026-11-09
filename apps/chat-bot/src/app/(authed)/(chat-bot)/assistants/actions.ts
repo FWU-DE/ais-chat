@@ -1,12 +1,12 @@
 'use server';
 
-import { requireAuth } from '@/auth/requireAuth';
+import { runServerAction } from '@shared/actions/run-server-action';
 import {
   createNewAssistant,
+  deleteAssistant,
   deleteFileMappingAndEntity,
   downloadFileFromAssistant,
   linkFileToAssistant,
-  deleteAssistant,
   updateAssistant,
   updateAssistantSchoolSharing,
   uploadAvatarPictureForAssistant,
@@ -17,8 +17,9 @@ import {
   getEntitySharingState,
   sendMessageToEditor,
 } from '@shared/community-templates/community-template-service';
-import { runServerAction } from '@shared/actions/run-server-action';
 import { AssistantInsertModel } from '@shared/db/schema';
+
+import { requireAuth } from '@/auth/requireAuth';
 
 export async function createNewAssistantAction({
   templateId,

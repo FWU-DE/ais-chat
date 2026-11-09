@@ -1,11 +1,12 @@
-import { expect, test } from '../../fixtures/test';
 import type { Page } from '@playwright/test';
-import { AUTH_FILES } from '../../utils/const';
-import { enterMessage, selectDifferentModel, sendMessage } from '../../utils/chat';
-import { configureCharacter, deleteCharacter } from '../../utils/character';
-import { waitForToast } from '../../utils/utils';
-import { LLM_MODELS } from '../../utils/llm-models';
 import { nanoid } from 'nanoid';
+
+import { expect, test } from '../../fixtures/test';
+import { configureCharacter, deleteCharacter } from '../../utils/character';
+import { enterMessage, selectDifferentModel, sendMessage } from '../../utils/chat';
+import { AUTH_FILES } from '../../utils/const';
+import { LLM_MODELS } from '../../utils/llm-models';
+import { waitForToast } from '../../utils/utils';
 
 /**
  * Creates a character with an initial message, returns its ID extracted from the editor URL.

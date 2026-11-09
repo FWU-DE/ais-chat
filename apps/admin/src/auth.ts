@@ -1,10 +1,11 @@
+import { withTrustedOrigin } from '@shared/utils/with-trusted-origin';
+import { NextResponse } from 'next/server';
 import NextAuth, { NextAuthResult } from 'next-auth';
 import KeycloakProvider from 'next-auth/providers/keycloak';
-import { NextResponse } from 'next/server';
-import { env } from '@/consts/env';
-import { withTrustedOrigin } from '@shared/utils/with-trusted-origin';
-import { AdminRole, getAdminRoleFromClaims } from '@/auth/roles';
+
 import { AUTH_COOKIES } from '@/auth/cookies';
+import { AdminRole, getAdminRoleFromClaims } from '@/auth/roles';
+import { env } from '@/consts/env';
 
 function getClaimsFromToken(token: string): Record<string, unknown> {
   const payload = token.split('.')[1];

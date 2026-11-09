@@ -1,9 +1,10 @@
 'use client';
 
-import React, { startTransition } from 'react';
-import { DesignConfiguration } from '@ui/types/design-configuration';
-import { constructRootLayoutStyle } from '@/utils/tailwind/layout';
 import { PortalContainerProvider } from '@ui/components/portal-container';
+import { DesignConfiguration } from '@ui/types/design-configuration';
+import React, { startTransition } from 'react';
+
+import { constructRootLayoutStyle } from '@/utils/tailwind/layout';
 
 type ThemeContextType = {
   designConfiguration: DesignConfiguration;

@@ -1,6 +1,8 @@
-import { validateApiKey } from '@/routes/utils';
 import { dbGetModelsByApiKeyId } from '@ais-chat/api-database';
 import { FastifyReply, FastifyRequest } from 'fastify';
+
+import { validateApiKey } from '@/routes/utils';
+
 import { obscureModels } from './utils';
 
 export async function handler(request: FastifyRequest, reply: FastifyReply): Promise<void> {

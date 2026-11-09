@@ -1,4 +1,5 @@
 import { useTranslations } from 'next-intl';
+
 import MessageImageAttachment, { ImageAttachment } from '../chat/message-image-attachment';
 import { CopyPromptButton } from './copy-prompt-button';
 

@@ -1,8 +1,9 @@
 import TwoColumnLayout from '@/components/layout/TwoColumnLayout';
-import { getFederalStateByIdAction } from './actions';
-import { FederalStateView } from './FederalStateDetailView';
 import { Sidebar, SidebarItem } from '@/components/navigation/Sidebar';
 import { ROUTES } from '@/consts/routes';
+
+import { getFederalStateByIdAction } from './actions';
+import { FederalStateView } from './FederalStateDetailView';
 
 export const dynamic = 'force-dynamic';
 

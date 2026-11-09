@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
-import { useTranslations } from 'next-intl';
 import { ImageStyle, ImageStyleType } from '@shared/utils/chat';
+import { useTranslations } from 'next-intl';
+import React from 'react';
 
 type ImageStyleProviderProps = {
   children: React.ReactNode;

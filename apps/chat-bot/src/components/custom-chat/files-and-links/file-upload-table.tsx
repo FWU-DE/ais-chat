@@ -1,13 +1,14 @@
-import DestructiveActionButton from '@/components/common/destructive-action-button';
-import DownloadFileButton from '@/components/common/download-file-button';
-import { FileModel } from '@shared/db/schema';
-
-import { formatBytes, getFileNameAndFileExtension } from '@/utils/files/generic';
-import { cn } from '@/utils/tailwind';
 import { TrashSimpleIcon } from '@phosphor-icons/react';
 import { ServerActionResult } from '@shared/actions/server-action-result';
+import { FileModel } from '@shared/db/schema';
 import { isNotNull } from '@shared/utils/guard';
 import { useTranslations } from 'next-intl';
+
+import DestructiveActionButton from '@/components/common/destructive-action-button';
+import DownloadFileButton from '@/components/common/download-file-button';
+import { formatBytes, getFileNameAndFileExtension } from '@/utils/files/generic';
+import { cn } from '@/utils/tailwind';
+
 import { useToast } from '../../common/toast';
 import { FileStatus, LocalFileState } from '../../file-upload/upload-file';
 import { getFileIconByFileExtension } from '../../icons/file-upload-icons/file-icons-dict';

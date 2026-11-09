@@ -24,9 +24,11 @@ permissions:
   attestations: write
 
 jobs:
+  # Each image is built natively per platform (no QEMU emulation) and pushed by digest only.
+  # The merge job below combines the platform digests into one multi-arch manifest with the tags.
   build_push_docker_images:
-    name: Docker image ${{ matrix.image_name }}
-    runs-on: ubuntu-latest
+    name: Docker image ${{ matrix.image.image_name }} (${{ matrix.platform.slug }})
+    runs-on: ${{ matrix.platform.runner }}
     timeout-minutes: 20
     if: >
       github.event_name == 'workflow_dispatch' ||
@@ -41,8 +43,16 @@ jobs:
       resolved_sha: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
 
     strategy:
+      fail-fast: false
       matrix:
-        include:
+        platform:
+          - name: linux/amd64
+            slug: amd64
+            runner: ubuntu-latest
+          - name: linux/arm64
+            slug: arm64
+            runner: ubuntu-24.04-arm
+        image:
           - image_name: ais-chat-api
             package_name: ais-chat-api
             dockerfile: apps/api/Dockerfile
@@ -89,7 +99,7 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v4.6.0
+        uses: docker/login-action@v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -97,8 +107,12 @@ jobs:
 
       - name: Determine last built commit for image
         id: last-built
+        # `latest` is a multi-arch index (labels per platform); the fallback reads a single-arch image
         run: |
-          revision=$(docker buildx imagetools inspect "${{ matrix.image_ref }}:latest" \
+          image="${{ matrix.image.image_ref }}:latest"
+          revision=$(docker buildx imagetools inspect "$image" \
+            --format '{{ index (index .Image "linux/amd64").Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null ||
+            docker buildx imagetools inspect "$image" \
             --format '{{ index .Image.Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)
           if [ -n "$revision" ] && [ "$revision" != "<no value>" ] && git cat-file -e "${revision}^{commit}" 2>/dev/null; then
             echo "sha=$revision" >> "$GITHUB_OUTPUT"
@@ -123,7 +137,7 @@ jobs:
         run: |
           if [ "${{ inputs.build_all_images }}" = "true" ] || [ "${{ steps.pipeline-changed.outputs.changed }}" = "true" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
-          elif pnpm exec turbo query affected --packages "${{ matrix.package_name }}" --base "${{ steps.last-built.outputs.sha }}" --exit-code; then
+          elif pnpm exec turbo query affected --packages "${{ matrix.image.package_name }}" --base "${{ steps.last-built.outputs.sha }}" --exit-code; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
@@ -137,11 +151,12 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_URL: ${{ vars.SENTRY_URL }}
-          SENTRY_PROJECT: ${{ matrix.sentry_project }}
-          NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${{ matrix.server_actions_secret != '' && secrets[matrix.server_actions_secret] || '' }}
+          SENTRY_PROJECT: ${{ matrix.image.sentry_project }}
+          NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${{ matrix.image.server_actions_secret != '' && secrets[matrix.image.server_actions_secret] || '' }}
         with:
           context: .
-          file: ${{ matrix.dockerfile }}
+          file: ${{ matrix.image.dockerfile }}
+          platforms: ${{ matrix.platform.name }}
           secret-envs: |
             SENTRY_AUTH_TOKEN=SENTRY_AUTH_TOKEN
             SENTRY_ORG=SENTRY_ORG
@@ -153,18 +168,107 @@ jobs:
             APP_VERSION=${{ env.resolved_sha }}
           labels: |
             org.opencontainers.image.revision=${{ env.resolved_sha }}
-          tags: |
-            ${{ matrix.image_ref }}:latest
-            ${{ matrix.image_ref }}:${{ env.resolved_sha }}
-          push: ${{ env.is_dry_run != 'true' }}
+          outputs: type=image,name=${{ matrix.image.image_ref }},push-by-digest=true,name-canonical=true,push=${{ env.is_dry_run != 'true' }}
           provenance: mode=max
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.image.image_name }}-${{ matrix.platform.slug }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.image_name }}-${{ matrix.platform.slug }}
+
+      - name: Export digest
+        if: steps.turbo-ignore.outputs.skip == 'false' && env.is_dry_run != 'true'
+        run: |
+          mkdir -p "${{ runner.temp }}/digests"
+          digest="${{ steps.docker-build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        if: steps.turbo-ignore.outputs.skip == 'false' && env.is_dry_run != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: digests-${{ matrix.image.image_name }}-${{ matrix.platform.slug }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge_docker_manifests:
+    name: Docker manifest ${{ matrix.image_name }}
+    needs: build_push_docker_images
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Runs even if another image failed; an image is only tagged when both platforms were built
+    if: >
+      !cancelled() &&
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    env:
+      resolved_sha: ${{ github.event.workflow_run.head_sha }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image_name: ais-chat-api
+            image_ref: ghcr.io/fwu-de/ais-chat-api
+          - image_name: ais-chat-app
+            image_ref: ghcr.io/fwu-de/ais-chat-app
+          - image_name: ais-chat-admin
+            image_ref: ghcr.io/fwu-de/ais-chat-admin
+          - image_name: ais-chat-calculator
+            image_ref: ghcr.io/fwu-de/ais-chat-calculator
+
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-${{ matrix.image_name }}-*
+          merge-multiple: true
+
+      - name: Check digests
+        id: digests
+        run: |
+          count=$(find "${{ runner.temp }}/digests" -type f 2>/dev/null | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "No build needed for ${{ matrix.image_name }}."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif [ "$count" -ne 2 ]; then
+            echo "::error::Expected 2 platform digests for ${{ matrix.image_name }}, found $count."
+            exit 1
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Docker Buildx
+        if: steps.digests.outputs.skip == 'false'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        if: steps.digests.outputs.skip == 'false'
+        uses: docker/login-action@v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create multi-arch manifest
+        if: steps.digests.outputs.skip == 'false'
+        id: manifest
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          image="${{ matrix.image_ref }}"
+          sources=()
+          for digest in *; do sources+=("$image@sha256:$digest"); done
+          docker buildx imagetools create \
+            --tag "$image:latest" \
+            --tag "$image:${{ env.resolved_sha }}" \
+            "${sources[@]}"
+          digest=$(docker buildx imagetools inspect "$image:${{ env.resolved_sha }}" --format '{{ json .Manifest }}' | jq -r .digest)
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
       - name: Generate artifact attestation
-        if: steps.turbo-ignore.outputs.skip == 'false' && env.is_dry_run != 'true'
+        if: steps.digests.outputs.skip == 'false'
         uses: actions/attest@v4.2.2
         with:
           subject-name: ${{ matrix.image_ref }}
-          subject-digest: ${{ steps.docker-build.outputs.digest }}
+          subject-digest: ${{ steps.manifest.outputs.digest }}
           push-to-registry: true

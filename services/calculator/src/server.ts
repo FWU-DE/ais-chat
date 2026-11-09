@@ -1,7 +1,8 @@
 import fastify, { type FastifyError, type FastifyInstance } from 'fastify';
-import { DEFAULT_LIMITS, validateRequest } from './validation.js';
+
 import { WorkerPool } from './pool.js';
 import type { Limits, Result } from './types.js';
+import { DEFAULT_LIMITS, validateRequest } from './validation.js';
 
 const statusCodes: Record<Result['status'], number> = {
   success: 200,

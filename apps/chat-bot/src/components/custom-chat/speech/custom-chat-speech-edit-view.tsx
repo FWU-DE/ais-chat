@@ -1,9 +1,10 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import { CustomChatHeading2 } from '../custom-chat-heading2';
 import { Card, CardContent } from '@ui/components/card';
+import { useTranslations } from 'next-intl';
 import { FieldValues } from 'react-hook-form';
+
+import { CustomChatHeading2 } from '../custom-chat-heading2';
 import { SpeechEditView, SpeechEditViewProps } from './speech-edit-view';
 
 type CustomChatSpeechEditViewProps<TFieldValues extends FieldValues = FieldValues> =

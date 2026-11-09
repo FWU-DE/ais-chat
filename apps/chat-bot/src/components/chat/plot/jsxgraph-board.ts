@@ -1,12 +1,13 @@
+import { logWarning } from '@shared/logging/logging';
+import JXG from 'jsxgraph';
+
 import {
-  getSliderRange,
   type BoundingBox,
+  getSliderRange,
   type PlotElement,
   type PlotParent,
   type PlotSpec,
 } from '@/utils/plot/plot-spec';
-import { logWarning } from '@shared/logging/logging';
-import JXG from 'jsxgraph';
 
 const DEFAULT_BOUNDING_BOX: BoundingBox = [-5, 5, 5, -5];
 

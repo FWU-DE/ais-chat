@@ -1,11 +1,12 @@
-import { describe, test, expect } from 'vitest';
+import { describe, expect, test } from 'vitest';
+
+import type { LlmProviderKeyWithModels } from '../../functions';
+import { buildBifrostProviderConfigs } from './index';
 import {
   buildBifrostNativeProviderConfig,
-  buildOpenAiProviderConfig,
   buildIonosProviderConfig,
+  buildOpenAiProviderConfig,
 } from './providers';
-import { buildBifrostProviderConfigs } from './index';
-import type { LlmProviderKeyWithModels } from '../../functions';
 
 function providerKey(
   overrides: Partial<LlmProviderKeyWithModels> & {
@@ -18,7 +19,6 @@ function providerKey(
     provider: overrides.settings.provider,
     weight: overrides.weight ?? 1,
     isEnabled: overrides.isEnabled ?? true,
-    organizationId: overrides.organizationId ?? 'org-1',
     createdAt: overrides.createdAt ?? new Date(),
     models: overrides.models ?? [
       { model: { id: 'model-1', name: 'gpt-4o', isDeleted: false }, upstreamModelName: 'gpt-4o' },

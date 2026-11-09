@@ -1,6 +1,7 @@
 import { TrashSimpleIcon } from '@phosphor-icons/react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@ui/components/button';
+import { useTranslations } from 'next-intl';
+
 import { MAX_WEB_SEARCH_INCLUDED_DOMAINS } from '@/configuration-text-inputs/const';
 import { cn } from '@/utils/tailwind';
 

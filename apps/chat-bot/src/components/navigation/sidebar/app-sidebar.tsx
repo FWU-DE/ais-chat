@@ -1,15 +1,6 @@
 'use client';
 
 import {
-  ChatTextIcon,
-  ImageSquareIcon,
-  LegoSmileyIcon,
-  MountainsIcon,
-  QuestionIcon,
-  SidebarSimpleIcon,
-  StudentIcon,
-} from '@phosphor-icons/react';
-import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
@@ -18,17 +9,28 @@ import {
   SidebarSeparator,
   useSidebar,
 } from '@ais-chat/ui/components/sidebar';
-import { AppMenuItem } from './app-menu-item';
-import LogoWithName from '@/assets/logo-with-name.svg';
-import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
-import { useTranslations } from 'next-intl';
-import { MyTokenPoints } from './my-token-points';
-import { FederalStateModel } from '@shared/federal-states/types';
+import {
+  ChatTextIcon,
+  ImageSquareIcon,
+  LegoSmileyIcon,
+  MountainsIcon,
+  QuestionIcon,
+  SidebarSimpleIcon,
+  StudentIcon,
+} from '@phosphor-icons/react';
 import { UserModel } from '@shared/auth/user-model';
-import { ChatHistory } from './chat-history';
-import Link from 'next/link';
+import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
+import { FederalStateModel } from '@shared/federal-states/types';
 import { Button } from '@ui/components/button';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+
+import LogoWithName from '@/assets/logo-with-name.svg';
+
+import { AppMenuItem } from './app-menu-item';
+import { ChatHistory } from './chat-history';
+import { MyTokenPoints } from './my-token-points';
 
 type AppSidebarProps = {
   federalState: FederalStateModel;

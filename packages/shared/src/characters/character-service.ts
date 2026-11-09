@@ -8,13 +8,12 @@ import {
   verifyWriteAccess,
 } from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
-import { getUserSettings } from '@shared/users/user-settings-service';
 import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import { db } from '@shared/db';
 import {
   dbCreateCharacterShare,
   dbDeleteCharacterByIdAndUser,
-  dbExtendSharedCharacterConversationExpiration,
+  dbExtendSharedCharacterExpiration,
   dbGetAllAccessibleCharacters,
   dbGetAllCharactersByUser,
   dbGetCharacterById,
@@ -69,6 +68,7 @@ import {
   getMaxBudgetInCentByUser,
   getUsedBudgetInCentByUser,
 } from '@shared/users/user-budget-service';
+import { getUserSettings } from '@shared/users/user-settings-service';
 import { uniqueById } from '@shared/utils/arrays';
 import { buildCharacterPictureKey } from '@shared/utils/picture-key';
 import {
@@ -618,7 +618,7 @@ export const extendCharacterShareExpiration = async ({
     throw new InvalidArgumentError('total usage time limit must not exceed 130 days');
   }
 
-  const updatedShare = await dbExtendSharedCharacterConversationExpiration({
+  const updatedShare = await dbExtendSharedCharacterExpiration({
     share: currentShare,
     additionalTimeInMinutes,
   });

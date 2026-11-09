@@ -8,7 +8,6 @@ import {
   verifyWriteAccess,
 } from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
-import { getUserSettings } from '@shared/users/user-settings-service';
 import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import { db } from '@shared/db';
 import {
@@ -72,6 +71,7 @@ import {
   getMaxBudgetInCentByUser,
   getUsedBudgetInCentByUser,
 } from '@shared/users/user-budget-service';
+import { getUserSettings } from '@shared/users/user-settings-service';
 import { uniqueById } from '@shared/utils/arrays';
 import { buildLearningScenarioPictureKey } from '@shared/utils/picture-key';
 import {

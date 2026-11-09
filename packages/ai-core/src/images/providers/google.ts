@@ -1,12 +1,13 @@
 import type { GenerateImagesConfig, GenerateImagesResponse } from '@google/genai';
 import * as Sentry from '@sentry/core';
-import type { AiModel, ImageGenerationFn, ImageResponse } from '../types';
+
 import { AiGenerationError, ResponsibleAIError } from '../../errors';
 import {
   createGoogleClient,
   formatGoogleError,
   getGoogleServiceAddress,
 } from '../../google-client';
+import type { AiModel, ImageGenerationFn, ImageResponse } from '../types';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

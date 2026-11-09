@@ -1,16 +1,17 @@
 'use client';
 
 import React from 'react';
+
 import { Button } from './button';
 import {
   Dialog,
-  DialogTrigger,
+  DialogClose,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from './dialog';
 
 type SimpleInputDialogProps<T extends Record<string, unknown>> = {

@@ -1,12 +1,12 @@
 import {
-  insertTemplateCharacters,
   insertTemplateAssistant,
+  insertTemplateCharacters,
   insertTemplateLearningScenarios,
 } from './default-templates';
 import { insertFederalStates } from './federal-state';
 import { insertHelpModeGpt } from './help-mode';
-import { insertDummyUser } from './user-entity';
 import { initializeStaticModelConfigurations } from './static-model-configuration';
+import { insertDummyUser } from './user-entity';
 
 async function add() {
   await insertFederalStates({ skip: false });

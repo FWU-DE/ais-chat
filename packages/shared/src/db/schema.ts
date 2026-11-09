@@ -1,3 +1,10 @@
+import { ToolCall } from '@ais-chat/ai-core/chat/types';
+import {
+  type LlmModelPriceMetadata,
+  llmModelPriceMetadataSchema,
+} from '@ais-chat/shared-core/schemas/llm-model-price-metadata';
+import { logError } from '@shared/logging';
+import { isNull, sql } from 'drizzle-orm';
 import {
   boolean,
   check,
@@ -6,6 +13,7 @@ import {
   index,
   integer,
   json,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -14,15 +22,12 @@ import {
   unique,
   uniqueIndex,
   uuid,
-  vector,
   varchar,
-  jsonb,
+  vector,
 } from 'drizzle-orm/pg-core';
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import {
-  llmModelPriceMetadataSchema,
-  type LlmModelPriceMetadata,
-} from '@ais-chat/shared-core/schemas/llm-model-price-metadata';
+
 import {
   conversationRoleSchema,
   conversationTypeSchema,
@@ -37,11 +42,7 @@ export type DesignConfiguration = {
   secondaryTextColor: string;
 };
 
-export { llmModelPriceMetadataSchema, type LlmModelPriceMetadata };
-import { isNull, sql } from 'drizzle-orm';
-import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod';
-import { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { logError } from '@shared/logging';
+export { type LlmModelPriceMetadata, llmModelPriceMetadataSchema };
 
 // can be expanded to include other metadata of other file types
 export type FileMetadata = Record<string, unknown>;
@@ -586,6 +587,8 @@ export const characterTable = pgTable(
     restrictions: text('restrictions'),
     pictureId: text('picture_id'),
     initialMessage: text('initial_message'),
+    licenseInformation: text('license_information').notNull().default(''),
+    didacticCommentary: text('didactic_commentary').notNull().default(''),
     isSchoolShared: boolean('is_school_shared').notNull().default(false),
     isCommunityShared: boolean('is_community_shared').notNull().default(false),
     isGlobal: boolean('is_global').notNull().default(false),
@@ -611,6 +614,7 @@ export const characterTable = pgTable(
     suspended: boolean('suspended').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
     originalCharacterId: uuid('original_character_id'),
+    popularity: integer('popularity').notNull().default(0),
   },
   (table) => [index().on(table.userId)],
 );
@@ -629,6 +633,7 @@ export const characterInsertSchema = createInsertSchema(characterTable)
     createdAt: true,
     updatedAt: true,
     suspended: true,
+    popularity: true,
   })
   .extend({
     filterGroup: filterGroupSchema.optional(),
@@ -641,6 +646,7 @@ export const characterUpdateSchema = createUpdateSchema(characterTable)
     createdAt: true,
     updatedAt: true,
     suspended: true,
+    popularity: true,
   })
   .extend({
     id: z.string(),
@@ -731,6 +737,9 @@ export const speechVoiceSchema = z.object({
 
 export const speechConfigSchema = z.object({
   voices: z.array(speechVoiceSchema),
+  // Opt-in for Azure AI Speech (`{endpoint}/tts/cognitiveservices/v1`). Azure OpenAI TTS
+  // deployments are speech models too, but must keep the Azure OpenAI deployment route.
+  useAzureSpeechEndpoint: z.boolean().optional(),
 });
 
 export type SpeechVoice = z.infer<typeof speechVoiceSchema>;
@@ -869,6 +878,8 @@ export const learningScenarioTable = pgTable(
       .notNull()
       .default(sql`'{}'::json`),
     studentExercise: text('student_exercise').default('').notNull(),
+    licenseInformation: text('license_information').notNull().default(''),
+    didacticCommentary: text('didactic_commentary').notNull().default(''),
     additionalInstructions: text('additional_instructions'),
     restrictions: text('restrictions'), // Not used anymore
     attachedLinks: text('attached_links')
@@ -887,6 +898,7 @@ export const learningScenarioTable = pgTable(
     isCommunityShared: boolean('is_community_shared').notNull().default(false),
     isGlobal: boolean('is_global').notNull().default(false),
     originalLearningScenarioId: uuid('original_learning_scenario_id'),
+    popularity: integer('popularity').notNull().default(0),
     hasLinkAccess: boolean('has_link_access').notNull().default(false),
     isWebSearchEnabled: boolean('is_web_search_enabled').notNull().default(false),
     webSearchScope: webSearchScopeEnum('web_search_scope').notNull().default('all-web'),
@@ -914,6 +926,7 @@ export const learningScenarioInsertSchema = createInsertSchema(learningScenarioT
     createdAt: true,
     updatedAt: true,
     suspended: true,
+    popularity: true,
   })
   .extend({
     filterGroup: filterGroupSchema.optional(),
@@ -921,7 +934,13 @@ export const learningScenarioInsertSchema = createInsertSchema(learningScenarioT
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
   });
 export const learningScenarioUpdateSchema = createUpdateSchema(learningScenarioTable)
-  .omit({ userId: true, createdAt: true, updatedAt: true, suspended: true })
+  .omit({
+    userId: true,
+    createdAt: true,
+    updatedAt: true,
+    suspended: true,
+    popularity: true,
+  })
   .extend({
     id: z.string(),
     filterGroup: filterGroupSchema.optional(),
@@ -1223,10 +1242,10 @@ export type ConversationUsageTrackingUpdateModel = z.infer<
 >;
 
 /**
- * Schema for table shared_character_conversation
+ * Schema for table shared_character
  */
-export const sharedCharacterConversation = pgTable(
-  'shared_character_conversation',
+export const sharedCharacter = pgTable(
+  'shared_character',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     characterId: uuid('character_id').notNull(),
@@ -1243,36 +1262,30 @@ export const sharedCharacterConversation = pgTable(
   (table) => [index().on(table.characterId, table.userId)],
 );
 
-export const sharedCharacterConversationSelectSchema = createSelectSchema(
-  sharedCharacterConversation,
-).extend({
+export const sharedCharacterSelectSchema = createSelectSchema(sharedCharacter).extend({
   startedAt: z.coerce.date(),
   expiredAt: z.coerce.date(),
   manuallyStoppedAt: z.coerce.date().nullable(),
 });
-export const sharedCharacterConversationInsertSchema = createInsertSchema(
-  sharedCharacterConversation,
-).omit({ id: true, inviteCode: true, startedAt: true, expiredAt: true, manuallyStoppedAt: true });
-export const sharedCharacterConversationUpdateSchema = createUpdateSchema(
-  sharedCharacterConversation,
-)
+export const sharedCharacterInsertSchema = createInsertSchema(sharedCharacter).omit({
+  id: true,
+  inviteCode: true,
+  startedAt: true,
+  expiredAt: true,
+  manuallyStoppedAt: true,
+});
+export const sharedCharacterUpdateSchema = createUpdateSchema(sharedCharacter)
   .omit({ characterId: true, userId: true })
   .extend({
     id: z.string(),
   });
 
-export type SharedCharacterConversationSelectModel = z.infer<
-  typeof sharedCharacterConversationSelectSchema
->;
-export type SharedCharacterConversationInsertModel = z.infer<
-  typeof sharedCharacterConversationInsertSchema
->;
-export type SharedCharacterConversationUpdateModel = z.infer<
-  typeof sharedCharacterConversationUpdateSchema
->;
+export type SharedCharacterSelectModel = z.infer<typeof sharedCharacterSelectSchema>;
+export type SharedCharacterInsertModel = z.infer<typeof sharedCharacterInsertSchema>;
+export type SharedCharacterUpdateModel = z.infer<typeof sharedCharacterUpdateSchema>;
 
-// Type for character with sharing data (from JOIN with sharedCharacterConversation)
-const sharedCharacterTransformedSchema = sharedCharacterConversationSelectSchema
+// Type for character with sharing data (from JOIN with sharedCharacter)
+const sharedCharacterTransformedSchema = sharedCharacterSelectSchema
   .omit({ id: true, characterId: true, userId: true })
   .extend({ startedBy: z.string() });
 export const characterWithShareDataModel = characterSelectSchema.and(
@@ -1376,6 +1389,8 @@ export const assistantTable = pgTable(
     pictureId: text('picture_id'),
     description: text('description'),
     instructions: text('instructions'),
+    licenseInformation: text('license_information').notNull().default(''),
+    didacticCommentary: text('didactic_commentary').notNull().default(''),
     filterGroup: json('filter_attributes')
       .$type<FilterGroup>()
       .notNull()
@@ -1391,6 +1406,7 @@ export const assistantTable = pgTable(
     suspended: boolean('suspended').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
     originalAssistantId: uuid('original_assistant_id'),
+    popularity: integer('popularity').notNull().default(0),
   },
   (table) => [index().on(table.userId)],
 );
@@ -1404,7 +1420,7 @@ export const assistantSelectSchema = createSelectSchema(assistantTable).extend({
   webSearchIncludedDomains: webSearchIncludedDomainsSchema,
 });
 export const assistantInsertSchema = createInsertSchema(assistantTable)
-  .omit({ id: true, createdAt: true, updatedAt: true, suspended: true })
+  .omit({ id: true, createdAt: true, updatedAt: true, suspended: true, popularity: true })
   .extend({
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
@@ -1416,6 +1432,7 @@ export const assistantUpdateSchema = createUpdateSchema(assistantTable)
     createdAt: true,
     updatedAt: true,
     suspended: true,
+    popularity: true,
   })
   .extend({
     id: z.string(),

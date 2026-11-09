@@ -1,17 +1,19 @@
 'use client';
 
+import { utils } from '@shared/utils';
+import { UrlPreset } from '@shared/web-search/url-presets/types';
+import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { Control, FieldPath, FieldValues, useController } from 'react-hook-form';
-import { useTranslations } from 'next-intl';
-import { MAX_WEB_SEARCH_INCLUDED_DOMAINS } from '@/configuration-text-inputs/const';
-import { utils } from '@shared/utils';
+
 import { useToast } from '@/components/common/toast';
-import type { WebSearchFields } from './web-search.types';
+import { MAX_WEB_SEARCH_INCLUDED_DOMAINS } from '@/configuration-text-inputs/const';
+
 import { useUrlPresets } from './use-url-presets';
-import { WebSearchUrlPresets } from './web-search-url-presets';
-import { UrlPreset } from '@shared/web-search/url-presets/types';
-import { WebSearchWebsiteInput } from './web-search-website-input';
+import type { WebSearchFields } from './web-search.types';
 import { WebSearchSelectedWebsites } from './web-search-selected-websites';
+import { WebSearchUrlPresets } from './web-search-url-presets';
+import { WebSearchWebsiteInput } from './web-search-website-input';
 
 export function WebSearchIncludedDomains<TFieldValues extends FieldValues>({
   control,

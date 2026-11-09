@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
-import { useImageStyle } from '../providers/image-style-provider';
+import { Separator } from '@ui/components/separator';
 import { useTranslations } from 'next-intl';
+import React from 'react';
+
 import { HeaderMainMenuItem } from '../layout/header-main-menu-item';
 import { HeaderMenuItem } from '../layout/header-menu-item';
-import { Separator } from '@ui/components/separator';
+import { useImageStyle } from '../providers/image-style-provider';
 
 export default function SelectImageStyle() {
   const { selectableStyles, selectedStyle, setSelectedStyle } = useImageStyle();

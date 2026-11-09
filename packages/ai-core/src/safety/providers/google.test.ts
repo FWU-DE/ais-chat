@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { ProviderConfigurationError } from '../../errors';
 import { buildGuardPrompt } from '../prompt';
 import type { AiModel } from '../types';
-import { ProviderConfigurationError } from '../../errors';
 import { constructGoogleSafetyCheckFn } from './google';
 
 const { captureExceptionMock, captureMessageMock, getClientMock, GoogleAuthMock } = vi.hoisted(
@@ -30,7 +31,6 @@ function createGoogleSafetyModel(): AiModel {
     displayName: 'Google Safety Model',
     description: 'Test safety model',
     provider: 'google',
-    organizationId: 'org-test',
     createdAt: new Date(),
     supportedImageFormats: [],
     imageGenerationConfig: null,

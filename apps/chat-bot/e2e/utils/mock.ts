@@ -1,7 +1,3 @@
-import { UserAndContext } from '@/auth/types';
-import { generateRandomString } from './random';
-import { generateUUID } from '@shared/utils/uuid';
-import { E2E_FEDERAL_STATE } from './const';
 import {
   CharacterSelectModel,
   ConversationUsageTrackingSelectModel,
@@ -10,6 +6,12 @@ import {
   SharedCharacterChatUsageTrackingSelectModel,
   SharedLearningScenarioUsageTrackingSelectModel,
 } from '@shared/db/schema';
+import { generateUUID } from '@shared/utils/uuid';
+
+import { UserAndContext } from '@/auth/types';
+
+import { E2E_FEDERAL_STATE } from './const';
+import { generateRandomString } from './random';
 
 export const mockUserAndContext = (): UserAndContext => {
   const schoolId = generateUUID();
@@ -93,6 +95,8 @@ export const mockLearningScenario = (): LearningScenarioSelectModel => {
     modelId: generateUUID(),
     userId: generateUUID(),
     studentExercise: generateRandomString(10),
+    licenseInformation: '',
+    didacticCommentary: '',
     attachedLinks: [],
     filterGroup: {
       school_types: [],
@@ -111,6 +115,7 @@ export const mockLearningScenario = (): LearningScenarioSelectModel => {
     originalLearningScenarioId: null,
     isDeleted: false,
     suspended: false,
+    popularity: 0,
     hasLinkAccess: false,
     isWebSearchEnabled: false,
     webSearchScope: 'all-web',
@@ -174,6 +179,8 @@ export const mockCharacter = (): CharacterSelectModel => {
     restrictions: generateRandomString(10),
     pictureId: generateUUID(),
     initialMessage: generateRandomString(10),
+    licenseInformation: '',
+    didacticCommentary: '',
     isSchoolShared: false,
     isCommunityShared: false,
     isGlobal: false,
@@ -183,6 +190,7 @@ export const mockCharacter = (): CharacterSelectModel => {
     originalCharacterId: null,
     isDeleted: false,
     suspended: false,
+    popularity: 0,
     hasLinkAccess: false,
     isWebSearchEnabled: false,
     webSearchScope: 'all-web',

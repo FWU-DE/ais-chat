@@ -1,13 +1,15 @@
-import { webScraperCrawl4AI } from './web-scraper-crawl4ai';
-import { webScraperReadability } from './web-scraper-readability';
-import { logError, logWarning } from '@shared/logging';
 import { WebSource } from '@shared/db/types';
+import { logError, logWarning } from '@shared/logging';
 import {
   incrementCrawl4aiSuccessCounter,
   incrementReadabilitySuccessCounter,
   incrementWebScraperFailedCounter,
-} from '@shared/metrics/webScraperMeter';
+} from '@shared/metrics/web-scraper-meter';
+
 import { defaultErrorSource } from '@/components/chat/sources/const';
+
+import { webScraperCrawl4AI } from './web-scraper-crawl4ai';
+import { webScraperReadability } from './web-scraper-readability';
 
 const ALLOWED_PROTOCOLS = ['http:', 'https:'];
 

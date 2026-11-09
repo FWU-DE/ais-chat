@@ -1,13 +1,15 @@
-import { TOOL_NAMES } from '@/types/tool-names';
-import { parseJsonRecord } from '@/utils/chat/tool-result-parsing';
 import type { ToolCall } from '@ais-chat/ai-core/chat/types';
 import { z } from 'zod';
-import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
+
+import { TOOL_NAMES } from '@/types/tool-names';
+import { parseJsonRecord } from '@/utils/chat/tool-result-parsing';
+
 import {
   calculate,
   CALCULATOR_MAX_EXPRESSION_LENGTH,
   type CalculatorResponse,
 } from '../calculator';
+import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
 import type { ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 export const expressionSchema = z.object({

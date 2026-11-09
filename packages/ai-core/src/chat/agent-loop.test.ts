@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { runAgentLoop } from './agent-loop';
 import type { Message, ModelUsage, StreamEvent, TokenUsage } from './types';
 

@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 export {
-  llmModelPriceMetadataSchema,
   type LlmModelPriceMetadata,
+  llmModelPriceMetadataSchema,
 } from '@ais-chat/shared-core/schemas/llm-model-price-metadata';
 
 export const imageSizeSchema = z.union([z.literal('auto'), z.string().regex(/^\d+x\d+$/)]);
@@ -24,6 +24,9 @@ export const speechVoiceSchema = z.object({
 
 export const speechConfigSchema = z.object({
   voices: z.array(speechVoiceSchema),
+  // Opt-in for Azure AI Speech (`{endpoint}/tts/cognitiveservices/v1`). Azure OpenAI TTS
+  // deployments are speech models too, but must keep the Azure OpenAI deployment route.
+  useAzureSpeechEndpoint: z.boolean().optional(),
 });
 
 export type SpeechVoice = z.infer<typeof speechVoiceSchema>;

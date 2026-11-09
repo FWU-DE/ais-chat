@@ -1,7 +1,9 @@
 import { Readable } from 'node:stream';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { NotFoundError } from '@shared/error';
+
 import { LlmModelSelectModel } from '@shared/db/schema';
+import { NotFoundError } from '@shared/error';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { IMAGE_GENERATION_INPUT_LIMIT } from '@/configuration-text-inputs/const';
 
 const mocks = vi.hoisted(() => ({

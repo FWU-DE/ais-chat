@@ -3,6 +3,7 @@
 import { type CommunityTemplateRequestEventSelectModel } from '@shared/db/schema';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
 import { useTranslations } from 'next-intl';
+
 import { CommunityTemplateRequestEventMessage } from './community-template-request-event-message';
 
 export type CommunityTemplateRequestEventProps = {

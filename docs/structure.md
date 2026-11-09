@@ -37,7 +37,7 @@ Database schema, Drizzle ORM configuration, and seed scripts for the API app. Ma
 
 Key contents:
 
-- `src/schema.ts` — Table definitions (organizations, projects, API keys, LLM models)
+- `src/schema.ts` — Table definitions (projects, API keys, LLM models)
 - `src/seed.ts` — Database seed script
 - `src/migrate.ts` — Migration runner
 

@@ -1,18 +1,19 @@
+import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
+import { getAvatarPictureUrl } from '@shared/files/fileService';
+import { getLearningScenarioForChatSession } from '@shared/learning-scenarios/learning-scenario-service';
+import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
 import { generateUUID } from '@shared/utils/uuid';
+import { type Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
+import { z } from 'zod';
+
+import { requireAuth } from '@/auth/requireAuth';
 import Chat from '@/components/chat/chat';
 import Logo from '@/components/common/logo';
-import { requireAuth } from '@/auth/requireAuth';
-import { getAvatarPictureUrl } from '@shared/files/fileService';
-import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
-import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
-import { parseSearchParams } from '@/utils/parse-search-params';
-import { z } from 'zod';
-import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
-import { getLearningScenarioForChatSession } from '@shared/learning-scenarios/learning-scenario-service';
-import { type Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
+import { parseSearchParams } from '@/utils/parse-search-params';
 
 export const dynamic = 'force-dynamic';
 const searchParamsSchema = z.object({ model: z.string().optional() });

@@ -1,6 +1,12 @@
-import { expect, Page, test } from '@playwright/test';
 import path from 'node:path';
+
+import { expect, Page, test } from '@playwright/test';
+
+import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
+
 import { waitForToast } from './utils';
+
+type AiActivityStepId = AiActivityToolName | Exclude<AiActivityStep['kind'], 'tool'>;
 
 export async function regenerateMessage(page: Page) {
   await page.getByTestId('regenerate-message-button').click();
@@ -72,7 +78,7 @@ export async function uploadFile(page: Page, filePath: string) {
 
 /** Opens the LLM model dropdown and selects a specific model by displayName, or the first available alternative if no name is provided. */
 export async function selectDifferentModel(page: Page, modelName?: string) {
-  const dropdown = page.getByTestId('main-menu-item-model-dropdown');
+  const dropdown = page.getByTestId('main-menu-item-text-model-dropdown');
   await expect(dropdown).toBeVisible();
 
   const isDisabled = await dropdown.evaluate((el) => (el as HTMLButtonElement).disabled);
@@ -101,6 +107,59 @@ export async function selectDifferentModel(page: Page, modelName?: string) {
     const firstOption = page.getByRole('menuitem').first();
     await firstOption.click();
   }
+}
+
+/** Opens the image model dropdown and selects a specific model by displayName, or the first available alternative if no name is provided. */
+export async function selectDifferentImageModel(page: Page, modelName?: string) {
+  const selectedModel = await page.getByTestId('main-menu-item-image-model-selected').innerText();
+  if (modelName && selectedModel === modelName) {
+    // requested model is already selected
+    return;
+  }
+
+  // When there's only one image model, the dropdown isn't rendered at all (nothing to switch to)
+  const dropdown = page.getByTestId('main-menu-item-image-model-dropdown');
+  await expect(dropdown).toBeVisible();
+
+  const isDisabled = await dropdown.evaluate((el) => (el as HTMLButtonElement).disabled);
+  if (isDisabled) return;
+
+  await dropdown.click();
+
+  if (modelName) {
+    const option = page.getByTestId(`menu-item-${modelName}`);
+    await option.click();
+  } else {
+    // The selected model is not listed in the dropdown
+    // -> selecting the first menu item will be a different model
+    const firstOption = page.getByRole('menuitem').first();
+    await firstOption.click();
+  }
+}
+
+/**
+ * Opens the AI activity panel on the given assistant message (last one by default, if needed)
+ * and asserts that the given step is listed.
+ */
+export function expectAiActivityStep(page: Page, stepId: AiActivityStepId, messageIndex?: number) {
+  return test.step('expect AI activity step visibility', async () => {
+    const aiActivityToggles =
+      messageIndex !== undefined
+        ? page.getByTestId(`ai-activity-toggle-${messageIndex}`)
+        : page.getByTestId(/^ai-activity-toggle-/);
+    const aiActivityToggle = aiActivityToggles.last();
+
+    await expect(aiActivityToggle).toBeVisible();
+
+    if ((await aiActivityToggle.getAttribute('aria-expanded')) === 'false') {
+      await aiActivityToggle.click();
+    }
+
+    const panelContentId = await aiActivityToggle.getAttribute('aria-controls');
+    const panelContent = panelContentId ? page.locator(`#${panelContentId}`) : page;
+    const step = panelContent.getByTestId(`ai-activity-step-${stepId}`);
+    await expect(step.first()).toBeVisible();
+  });
 }
 
 /**

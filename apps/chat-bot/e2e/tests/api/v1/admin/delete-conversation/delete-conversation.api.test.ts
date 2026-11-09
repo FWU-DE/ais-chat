@@ -1,12 +1,13 @@
 import test, { expect } from '@playwright/test';
-import { authorizationHeader } from '../../../../../utils/authorizationHeader';
-import { login } from '../../../../../utils/login';
-import type { Page } from 'playwright-core';
 import { db } from '@shared/db';
 import { federalStateTable } from '@shared/db/schema';
 import { eq } from 'drizzle-orm';
+import type { Page } from 'playwright-core';
+
+import { authorizationHeader } from '../../../../../utils/authorizationHeader';
 import { sendMessage, uploadFile } from '../../../../../utils/chat';
 import { E2E_FEDERAL_STATE } from '../../../../../utils/const';
+import { login } from '../../../../../utils/login';
 
 const deleteConversationRoute = '/api/v1/admin/delete-conversation';
 

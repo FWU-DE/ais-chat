@@ -1,12 +1,13 @@
 import {
-  dbCreateImageGenerationUsage,
   dbCreateCompletionUsage,
+  dbCreateImageGenerationUsage,
   dbGetApiKeyLimit,
   dbGetCompletionUsageCostsSinceStartOfCurrentMonth,
   dbGetImageGenerationUsageCostsSinceStartOfCurrentMonth,
 } from '@ais-chat/api-database';
-import { AiModel, Usage } from '../images/types';
+
 import type { AiModel as TextAiModel, TokenUsage } from '../chat/types';
+import { AiModel, Usage } from '../images/types';
 
 const TOKEN_AMOUNT_PER_PRICE = 1_000_000;
 const CENT_MULTIPLIER = 10;

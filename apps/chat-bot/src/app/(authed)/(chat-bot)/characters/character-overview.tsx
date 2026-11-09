@@ -1,21 +1,23 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { OverviewFilter } from '@shared/overview-filter';
-import { CharacterWithImage } from './utils';
-import EntityOverview from '@/components/entity-overview/entity-overview';
-import EntityCard from '@/components/entity-overview/entity-card';
-import { CreateNewCharacterButton } from './create-new-character-button';
-import { useOverviewFilters } from '@/components/hooks/use-overview-filters';
-import { getCharactersByFilterAction } from '../actions/entity-filter-actions';
-import { filterAndSortEntities } from '@/components/entity-overview/utils';
+import { useTranslations } from 'next-intl';
+import React, { useCallback, useState } from 'react';
+
 import { RichText } from '@/components/common/rich-text';
 import FilterSelectSection from '@/components/custom-chat/filter/custom-chat-filter-select-section';
 import {
   extractFilterValues,
   matchesFilterValues,
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
+import EntityCard from '@/components/entity-overview/entity-card';
+import EntityOverview from '@/components/entity-overview/entity-overview';
+import { filterAndSortEntities } from '@/components/entity-overview/utils';
+import { useOverviewFilters } from '@/components/hooks/use-overview-filters';
+
+import { getCharactersByFilterAction } from '../actions/entity-filter-actions';
+import { CreateNewCharacterButton } from './create-new-character-button';
+import { CharacterWithImage } from './utils';
 
 type CharacterOverviewProps = {
   currentUserId: string;

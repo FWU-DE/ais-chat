@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { scrubSentryEvent } from './scrub';
 import { ErrorEvent } from '@sentry/core';
+import { describe, expect, it } from 'vitest';
+
+import { scrubSentryEvent } from './scrub';
 
 describe('scrubSentryEvent', () => {
   it('removes modules property', () => {

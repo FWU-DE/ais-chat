@@ -1,8 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
-import Link from 'next/link';
-import { toast } from 'sonner';
+import type { InfoBanner } from '@shared/info-banners/info-banner';
 import { Button } from '@ui/components/button';
 import {
   Card,
@@ -20,10 +18,14 @@ import {
   TableHeader,
   TableRow,
 } from '@ui/components/table';
-import { ROUTES } from '@/consts/routes';
+import Link from 'next/link';
+import { useEffect, useState, useTransition } from 'react';
+import { toast } from 'sonner';
+
 import { ClickableTableRow } from '@/components/common/ClickableTableRow';
+import { ROUTES } from '@/consts/routes';
+
 import { getInfoBannersAction } from './actions';
-import type { InfoBanner } from '@shared/info-banners/info-banner';
 
 function getTypeLabel(type: InfoBanner['type']) {
   return type === 'warning' ? 'Warnung' : 'Information';

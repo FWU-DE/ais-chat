@@ -3,9 +3,10 @@
 // reports into one aggregated smart-reporter report/history/PR comment. Lives
 // under apps/chat-bot so `@playwright/test` and `playwright-smart-reporter`
 // resolve from its node_modules.
-import { defineConfig } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { defineConfig } from '@playwright/test';
 
 const reportDir = fileURLToPath(new URL('.', import.meta.url));
 

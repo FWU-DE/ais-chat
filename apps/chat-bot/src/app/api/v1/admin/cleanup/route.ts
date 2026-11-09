@@ -1,11 +1,12 @@
-import { validateApiKeyByHeadersWithResult } from '@/utils/validation';
-import { NextRequest, NextResponse } from 'next/server';
-import { logError, logInfo } from '@shared/logging';
+import { cleanupAssistants } from '@shared/assistants/assistant-admin-service';
 import { cleanupCharacters } from '@shared/characters/character-admin-service';
 import { cleanupLearningScenarios } from '@shared/learning-scenarios/learning-scenario-admin-service';
-import { cleanupAssistants } from '@shared/assistants/assistant-admin-service';
+import { logError, logInfo } from '@shared/logging';
+import { NextRequest, NextResponse } from 'next/server';
+
 import { cleanupWebChunks } from '@/app/api/rag/cleanupWebChunks';
 import { cleanupExpiredSharedChatFiles } from '@/app/api/shared-chat/shared-chat-cleanup-service';
+import { validateApiKeyByHeadersWithResult } from '@/utils/validation';
 
 export async function DELETE(req: NextRequest) {
   const [error] = validateApiKeyByHeadersWithResult(req.headers);

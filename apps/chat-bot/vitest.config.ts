@@ -1,8 +1,9 @@
-import { coverageConfigDefaults, defineConfig } from 'vitest/config';
+import fs from 'node:fs';
+
+import { config as dotenvConfig } from '@dotenvx/dotenvx';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import fs from 'node:fs';
-import { config as dotenvConfig } from '@dotenvx/dotenvx';
+import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 
 const envTestPath = path.resolve(__dirname, '.env.test');
 const envLocalPath = path.resolve(__dirname, '.env.local');

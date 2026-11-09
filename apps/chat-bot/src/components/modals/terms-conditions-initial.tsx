@@ -1,18 +1,18 @@
 'use client';
 
-import React, { startTransition, useEffect, useRef, useState } from 'react';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
-import { DisclaimerConfig } from './const';
-import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import type { ServerActionResult } from '@shared/actions/server-action-result';
+import { Button } from '@ui/components/button';
+import { Checkbox } from '@ui/components/checkbox';
+import { usePortalContainer } from '@ui/components/portal-container';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
+import React, { startTransition, useEffect, useRef, useState } from 'react';
 
 import MarkdownDisplay from '../chat/markdown-display';
-import { usePortalContainer } from '@ui/components/portal-container';
-import { useSession } from 'next-auth/react';
-import { Button } from '@ui/components/button';
-import type { ServerActionResult } from '@shared/actions/server-action-result';
-import { Checkbox } from '@ui/components/checkbox';
+import { DisclaimerConfig } from './const';
 
 type TermsConditionsModalProps = {
   handleAccept(): Promise<ServerActionResult<boolean>>;
@@ -29,7 +29,7 @@ export default function TermsConditionsModal({
 }: TermsConditionsModalProps) {
   const [pageNumber, setPageNumber] = useState(0);
   const [scrollFinished, setScrollFinished] = useState(false);
-  const [checked, setChecked] = useState(false);
+  const [checkedBoxes, setCheckedBoxes] = useState<boolean[]>([]);
   const router = useRouter();
   const tUsage = useTranslations('usage-disclaimer');
   const tCommon = useTranslations('common');
@@ -42,10 +42,23 @@ export default function TermsConditionsModal({
   const prevPage = () => {
     setPageNumber(pageNumber - 1);
     setScrollFinished(false);
-    setChecked(false);
+    setCheckedBoxes([]);
   };
 
   const contents: Array<string> = disclaimerConfig.pageContents;
+  const checkboxLabels =
+    disclaimerConfig.checkboxes ??
+    (disclaimerConfig.acceptLabel ? [disclaimerConfig.acceptLabel] : []);
+  const allCheckboxesChecked =
+    checkboxLabels.length === 0 || checkboxLabels.every((_label, index) => checkedBoxes[index]);
+
+  const toggleCheckbox = ({ index, isChecked }: { index: number; isChecked: boolean }) => {
+    setCheckedBoxes((previous) => {
+      const updated = [...previous];
+      updated[index] = isChecked;
+      return updated;
+    });
+  };
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -94,7 +107,7 @@ export default function TermsConditionsModal({
         <Button
           onClick={acceptAndClose}
           size="xl"
-          disabled={!checked && disclaimerConfig.showCheckBox}
+          disabled={!allCheckboxesChecked && disclaimerConfig.showCheckBox}
         >
           {tCommon('accept')}
         </Button>
@@ -125,8 +138,8 @@ export default function TermsConditionsModal({
           <AlertDialog.Description asChild>
             <div className="sr-only">{'Terms and conditions content'}</div>
           </AlertDialog.Description>
-          <div className="flex flex-col gap-5 items-start overflow-y-auto max-h-[60vh] disclaimer-content">
-            <div className="" ref={scrollRef} onScroll={handleScroll}>
+          <div className="flex flex-col gap-5 items-start self-stretch overflow-y-auto max-h-[60vh] disclaimer-content">
+            <div className="min-w-0 self-stretch" ref={scrollRef} onScroll={handleScroll}>
               {currentContent}
             </div>
             {disclaimerConfig.image && (
@@ -142,15 +155,29 @@ export default function TermsConditionsModal({
               </div>
             )}
             {pageNumber === contents.length - 1 && disclaimerConfig.showCheckBox && (
-              <div className="flex items-center gap-3 justify-center">
-                <Checkbox
-                  checked={checked}
-                  onCheckedChange={(checkedState) => setChecked(checkedState === true)}
-                  aria-labelledby="terms-conditions-accept-label"
-                />
-                <div id="terms-conditions-accept-label" className="flex-1 disclaimer">
-                  <MarkdownDisplay>{disclaimerConfig.acceptLabel ?? ''}</MarkdownDisplay>
-                </div>
+              <div className="flex flex-col gap-3 items-start self-stretch">
+                {checkboxLabels.map((label, index) => (
+                  <div key={label} className="flex items-center gap-3 justify-center">
+                    <Checkbox
+                      checked={checkedBoxes[index] ?? false}
+                      onCheckedChange={(checkedState) =>
+                        toggleCheckbox({ index, isChecked: checkedState === true })
+                      }
+                      aria-labelledby={`terms-conditions-accept-label-${index}`}
+                    />
+                    <div
+                      id={`terms-conditions-accept-label-${index}`}
+                      className="flex-1 disclaimer"
+                    >
+                      <MarkdownDisplay>{label}</MarkdownDisplay>
+                    </div>
+                  </div>
+                ))}
+                {disclaimerConfig.footerText && (
+                  <div className="disclaimer">
+                    <MarkdownDisplay>{disclaimerConfig.footerText}</MarkdownDisplay>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -1,3 +1,4 @@
+import type { SupportedFileExtension } from '@/const';
 import { isSupportedFileExtension, isSupportedImageExtension } from '@/const';
 
 function getLowercaseFileExtension(fileName: string): string | undefined {
@@ -5,20 +6,24 @@ function getLowercaseFileExtension(fileName: string): string | undefined {
   return parts.length > 1 ? parts.at(-1)?.toLowerCase() : undefined;
 }
 
-export function getFileExtension(fileName: string) {
+export function parseSupportedFileExtension(fileName: string): SupportedFileExtension | undefined {
   const fileExtension = getLowercaseFileExtension(fileName);
-  if (!fileExtension || !isSupportedFileExtension(fileExtension)) {
-    throw new Error(`file type ${fileExtension} is not supported`);
+  return fileExtension !== undefined && isSupportedFileExtension(fileExtension)
+    ? fileExtension
+    : undefined;
+}
+
+export function getFileExtension(fileName: string) {
+  const fileExtension = parseSupportedFileExtension(fileName);
+  if (!fileExtension) {
+    throw new Error(`file type ${getLowercaseFileExtension(fileName)} is not supported`);
   }
   return fileExtension;
 }
 
 export function isImageFile(fileName: string): boolean {
-  try {
-    return isSupportedImageExtension(getFileExtension(fileName));
-  } catch {
-    return false;
-  }
+  const fileExtension = parseSupportedFileExtension(fileName);
+  return fileExtension !== undefined && isSupportedImageExtension(fileExtension);
 }
 
 export function validateFileExtension(

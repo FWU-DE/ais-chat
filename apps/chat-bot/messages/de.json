@@ -688,6 +688,21 @@
       "title": "Instruktionen: Beispielhafter Inhalt",
       "close": "Schließen"
     },
+    "didactic-commentary": {
+      "heading": "Didaktischer Kommentar",
+      "heading-tooltip-assistant": "Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieser Assistent eingesetzt werden kann.",
+      "heading-tooltip-character": "Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieser Dialogpartner eingesetzt werden kann.",
+      "heading-tooltip-learning-scenario": "Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieses Lernszenario eingesetzt werden kann.",
+      "toggle-aria-label": "Didaktischen Kommentar ein-/ausklappen",
+      "max-length": "Der didaktische Kommentar darf maximal {maxLength} Zeichen lang sein."
+    },
+    "license-information": {
+      "heading": "Lizenzinformationen",
+      "heading-tooltip": "Sofern erforderlich, können hier Lizenzinformationen zu verwendeten Medien angegeben werden.",
+      "toggle-aria-label": "Lizenzinformationen ein- oder ausklappen",
+      "copyright-link": "Übersicht zum Urheberrecht",
+      "max-length": "Die Lizenzinformationen dürfen maximal {maxLength} Zeichen lang sein."
+    },
     "web-search": {
       "heading": "Websuche für Aktuelles",
       "heading-tooltip": "Falls aktiviert, sucht AIS.chat automatisch im Internet, sofern aktuelle Informationen nötig sind.",
@@ -799,6 +814,7 @@
     "sort-date-asc": "Älteste zuerst",
     "sort-name-asc": "Alphabetisch A-Z",
     "sort-name-desc": "Alphabetisch Z-A",
+    "sort-popularity": "Beliebteste zuerst",
     "hits-for": "{count} Treffer zu",
     "close": "Schließen",
     "chat": "Chatten",

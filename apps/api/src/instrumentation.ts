@@ -1,9 +1,10 @@
-import { env } from '@/env';
-import { logger } from '@/logger';
 import { initMetrics } from '@ais-chat/shared-core/metrics/init';
 import { scrubSentryEvent } from '@ais-chat/shared-core/sentry/scrub';
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
+
+import { env } from '@/env';
+import { logger } from '@/logger';
 
 const SERVICE_NAME = 'ais-chat-api';
 

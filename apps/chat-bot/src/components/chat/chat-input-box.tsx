@@ -1,11 +1,3 @@
-import {
-  CHAT_MESSAGE_LENGTH_LIMIT,
-  NUMBER_OF_FILES_LIMIT,
-  NUMBER_OF_IMAGES_LIMIT,
-} from '@/configuration-text-inputs/const';
-import { isImageFile } from '@/utils/files/generic';
-import { cn } from '@/utils/tailwind';
-import { iconClassName } from '@/utils/tailwind/icon';
 import { useTranslations } from 'next-intl';
 import {
   ChangeEvent,
@@ -16,6 +8,17 @@ import {
   SyntheticEvent,
   useEffect,
 } from 'react';
+
+import {
+  CHAT_MESSAGE_LENGTH_LIMIT,
+  NUMBER_OF_FILES_LIMIT,
+  NUMBER_OF_IMAGES_LIMIT,
+} from '@/configuration-text-inputs/const';
+import { unlockAudioPlayback } from '@/utils/audio/unlock-audio-playback';
+import { isImageFile } from '@/utils/files/generic';
+import { cn } from '@/utils/tailwind';
+import { iconClassName } from '@/utils/tailwind/icon';
+
 import AutoResizeTextarea from '../common/auto-resize-textarea';
 import { useToast } from '../common/toast';
 import type { FileUploadResponse, LocalFileState } from '../file-upload/upload-file';
@@ -101,11 +104,18 @@ export function ChatInputBox({
 
   const canSubmit = input.trim().length > 0 && !hasUploadingFiles;
 
+  // Single entry point for every submit, so speech that autoplays later (speech-only replies have
+  // no user gesture of their own) is always unlocked while this gesture is still active.
+  async function handleSubmit(e: SyntheticEvent) {
+    unlockAudioPlayback();
+    await customHandleSubmit(e);
+  }
+
   async function handleSubmitOnEnter(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !isGenerating && !e.shiftKey) {
       e.preventDefault();
       if (canSubmit) {
-        await customHandleSubmit(e);
+        await handleSubmit(e);
       }
     }
   }
@@ -143,7 +153,7 @@ export function ChatInputBox({
   return (
     <>
       <form
-        onSubmit={customHandleSubmit}
+        onSubmit={handleSubmit}
         className="relative bg-white w-full p-1 border focus-within:border-primary rounded-xl"
       >
         {files !== undefined && handleDeattachFile !== undefined && files.size > 0 && (

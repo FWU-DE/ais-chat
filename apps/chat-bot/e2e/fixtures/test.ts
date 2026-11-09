@@ -9,8 +9,8 @@ import type {
   PlaywrightWorkerOptions,
   TestType,
 } from '@playwright/test';
-import { withCoverage } from 'playwright-smart-reporter/coverage';
 import { test as base } from 'playwright-smart-reporter/accessibility';
+import { withCoverage } from 'playwright-smart-reporter/coverage';
 
 export const test: TestType<
   PlaywrightTestArgs & PlaywrightTestOptions & { smartReporterA11y: unknown },

@@ -1,11 +1,13 @@
 'use client';
 
-import { useToast } from '@/components/common/toast';
-import { useLlmModels } from '@/components/providers/llm-model-provider';
 import { PlusIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
-import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+
+import { useToast } from '@/components/common/toast';
+import { useLlmModels } from '@/components/providers/llm-model-provider';
+
 import { createNewCharacterAction } from './actions';
 
 export function CreateNewCharacterButton() {

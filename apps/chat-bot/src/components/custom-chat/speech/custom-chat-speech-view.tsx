@@ -1,8 +1,9 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { CheckCircleIcon, XCircleIcon } from '@phosphor-icons/react';
 import { Card, CardContent } from '@ui/components/card';
+import { useTranslations } from 'next-intl';
+
 import { CustomChatHeading2 } from '../custom-chat-heading2';
 import { SpeechFields } from './speech.types';
 

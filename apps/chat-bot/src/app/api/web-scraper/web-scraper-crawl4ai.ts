@@ -1,8 +1,9 @@
-import { WEB_SCRAPE_RESULT_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
-import { defaultErrorSource } from '@/components/chat/sources/const';
-import { logWarning } from '@shared/logging';
-import { env } from '@/env';
 import { WebSource } from '@shared/db/types';
+import { logWarning } from '@shared/logging';
+
+import { defaultErrorSource } from '@/components/chat/sources/const';
+import { WEB_SCRAPE_RESULT_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
+import { env } from '@/env';
 
 interface Crawl4AIResult {
   url: string;

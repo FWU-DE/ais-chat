@@ -1,12 +1,13 @@
 'use client';
 
+import type { WebSearchScope } from '@shared/db/schema';
 import { Switch } from '@ui/components/switch';
 import { useTranslations } from 'next-intl';
 import { Control, FieldPath, FieldValues, useController } from 'react-hook-form';
-import { WebSearchScopeOptions } from './web-search-scope-options';
-import { WebSearchIncludedDomains } from './web-search-included-domains';
-import type { WebSearchScope } from '@shared/db/schema';
+
 import type { WebSearchFields } from './web-search.types';
+import { WebSearchIncludedDomains } from './web-search-included-domains';
+import { WebSearchScopeOptions } from './web-search-scope-options';
 
 export type WebSearchEditViewProps<TFieldValues extends FieldValues = FieldValues> = {
   onCheckedChange: (checked: boolean) => void;

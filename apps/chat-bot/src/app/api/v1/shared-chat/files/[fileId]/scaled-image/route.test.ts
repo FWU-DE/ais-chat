@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { NextRequest } from 'next/server';
 import { ForbiddenError } from '@shared/error';
+import { NextRequest } from 'next/server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   verifySharedChatImageAccessMock: vi.fn(),

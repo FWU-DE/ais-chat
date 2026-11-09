@@ -1,6 +1,7 @@
 import { dbGetCharacterByIdAndInviteCode } from '@shared/db/functions/character';
 import { dbGetLearningScenarioByIdAndInviteCode } from '@shared/db/functions/learning-scenario';
 import { NotFoundError } from '@shared/error';
+
 import { SharedChatEntity, SharedChatEntityType } from './shared-chat-types';
 
 export async function getSharedChatEntity({

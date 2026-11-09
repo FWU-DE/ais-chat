@@ -1,5 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import type { PlotElement } from '@/utils/plot/plot-spec';
+
 import { getSliderDefinitions } from './slider-definitions';
 
 describe('getSliderDefinitions', () => {

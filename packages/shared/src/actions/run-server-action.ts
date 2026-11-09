@@ -1,9 +1,10 @@
+import { AiGenerationError } from '@ais-chat/ai-core/errors';
 import * as Sentry from '@sentry/nextjs';
-import { logError } from '@shared/logging';
-import { ServerActionResult } from './server-action-result';
 import { BusinessError } from '@shared/error/business-error';
 import { UnexpectedError } from '@shared/error/unexpected-error';
-import { AiGenerationError } from '@ais-chat/ai-core/errors';
+import { logError } from '@shared/logging';
+
+import { ServerActionResult } from './server-action-result';
 
 // Helper function to serialize error objects for client transmission
 function serializeError(error: BusinessError | AiGenerationError, statusCode: number) {

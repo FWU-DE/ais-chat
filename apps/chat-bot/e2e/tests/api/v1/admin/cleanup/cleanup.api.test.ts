@@ -1,12 +1,11 @@
 import test, { expect } from '@playwright/test';
-import { authorizationHeader } from '../../../../../utils/authorizationHeader';
 import { db } from '@shared/db';
 import {
+  AssistantFileMapping,
+  assistantTable,
   CharacterFileMapping,
   characterTable,
   chunkTable,
-  AssistantFileMapping,
-  assistantTable,
   conversationMessageTable,
   conversationTable,
   fileTable,
@@ -16,10 +15,12 @@ import {
   userTable,
 } from '@shared/db/schema';
 import { addDays } from '@shared/utils/date';
-import { eq } from 'drizzle-orm';
 import { generateUUID } from '@shared/utils/uuid';
+import { eq } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
+
+import { authorizationHeader } from '../../../../../utils/authorizationHeader';
 
 const cleanupRoute = '/api/v1/admin/cleanup';
 

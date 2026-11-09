@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { constructBifrostEmbeddingGenerationFn } from './bifrost';
+
 import type { AiModel } from '../types';
+import { constructBifrostEmbeddingGenerationFn } from './bifrost';
 
 const { createMock, openAiConstructorMock, instrumentOpenAiClientMock, MockOpenAI } = vi.hoisted(
   () => {

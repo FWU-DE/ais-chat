@@ -1,16 +1,16 @@
 import {
-  schoolTypesSchema,
-  gradeRangesSchema,
-  categoriesSchema,
-  federalStatesSchema,
-  languagesSchema,
-  subjectsSchema,
-  langSubjects,
-  socialSciSubjects,
   artsSubjects,
-  otherSubjects,
-  stemSubjects,
+  categoriesSchema,
   ethicsSubjects,
+  federalStatesSchema,
+  gradeRangesSchema,
+  langSubjects,
+  languagesSchema,
+  otherSubjects,
+  schoolTypesSchema,
+  socialSciSubjects,
+  stemSubjects,
+  subjectsSchema,
 } from '@shared/db/schema';
 
 export const SCHOOL_TYPE_KEYS = schoolTypesSchema.options;

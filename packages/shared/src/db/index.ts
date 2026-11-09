@@ -1,11 +1,13 @@
+import path from 'node:path';
+
+import { MemoryCache } from '@shared/db/memory-cache';
+import { logError, logInfo } from '@shared/logging';
+import { isDevelopment } from '@shared/utils/isDevelopment';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import path from 'node:path';
+
 import { env } from './env';
 import { migrateWithLock } from './migrate';
-import { isDevelopment } from '@shared/utils/isDevelopment';
-import { MemoryCache } from '@shared/db/memory-cache';
-import { logInfo, logError } from '@shared/logging';
 
 const globalState = global as unknown as {
   pool?: Pool;

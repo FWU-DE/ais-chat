@@ -1,14 +1,16 @@
 'use client';
 
+import { useCallback } from 'react';
+
 import { sendCharacterMessageAction } from '@/app/api/character/actions';
 import { sendChatMessageAction } from '@/app/api/chat/actions';
 import { sendLearningScenarioMessageAction } from '@/app/api/learning-scenario/actions';
 import { type ChatStatus, type UIMessage } from '@/types/chat';
-import { useCallback } from 'react';
+
 import {
-  useAisChat,
   type ChatMessage,
   type SendMessageFn,
+  useAisChat,
   type UseChatReturn,
 } from './use-ais-chat';
 
@@ -22,6 +24,7 @@ export function useMainChat(options: {
   conversationId: string;
   initialMessages?: ChatMessage[];
   modelId?: string;
+  modelName?: string;
   characterId?: string;
   learningScenarioId?: string;
   assistantId?: string;

@@ -1,12 +1,3 @@
-import { beforeEach, describe, expect, it, MockedFunction, vi } from 'vitest';
-import {
-  copyAssistant,
-  copyCharacter,
-  copyEntityPictureIfExists,
-  copyRelatedTemplateFiles,
-  createTemplateFromUrl,
-  updateTemplateDeletedState,
-} from './template-service';
 import { dbGetAssistantById, dbUpsertAssistant } from '@shared/db/functions/assistants';
 import { dbCreateCharacter, dbGetCharacterById } from '@shared/db/functions/character';
 import {
@@ -24,6 +15,16 @@ import {
 import { logError } from '@shared/logging';
 import { copyFileInS3 } from '@shared/s3';
 import { generateUUID } from '@shared/utils/uuid';
+import { beforeEach, describe, expect, it, MockedFunction, vi } from 'vitest';
+
+import {
+  copyAssistant,
+  copyCharacter,
+  copyEntityPictureIfExists,
+  copyRelatedTemplateFiles,
+  createTemplateFromUrl,
+  updateTemplateDeletedState,
+} from './template-service';
 
 const { mockDbSet, mockDbUpdate, mockDbReturning, mockDbValues, mockDbInsert } = vi.hoisted(() => {
   const mockDbWhere = vi.fn().mockResolvedValue(undefined);
@@ -130,6 +131,48 @@ describe('template-service', () => {
   });
 
   describe('copyAssistant', () => {
+    it('should copy licenseInformation and didacticCommentary to the new entity', async () => {
+      const sourceAssistant = {
+        id: 'assistant-origin',
+        name: 'Original assistant',
+        licenseInformation: 'Assistant license',
+        didacticCommentary: 'Assistant teaching notes',
+      };
+
+      (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
+        sourceAssistant as never,
+      );
+      (dbUpsertAssistant as MockedFunction<typeof dbUpsertAssistant>).mockResolvedValue({
+        id: 'assistant-copy',
+      } as never);
+
+      await copyAssistant('assistant-origin', false, { id: 'user-1' });
+
+      expect(dbUpsertAssistant).toHaveBeenCalledWith({
+        assistant: expect.objectContaining({
+          licenseInformation: 'Assistant license',
+          didacticCommentary: 'Assistant teaching notes',
+        }),
+      });
+    });
+
+    it('should not inherit the popularity of the source', async () => {
+      (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue({
+        id: 'assistant-origin',
+        name: 'Original assistant',
+        popularity: 42,
+      } as never);
+      (dbUpsertAssistant as MockedFunction<typeof dbUpsertAssistant>).mockResolvedValue({
+        id: 'assistant-copy',
+      } as never);
+
+      await copyAssistant('assistant-origin', false, { id: 'user-1' });
+
+      expect(dbUpsertAssistant).toHaveBeenCalledWith({
+        assistant: expect.objectContaining({ popularity: 0 }),
+      });
+    });
+
     it('should use duplicateAssistantName when provided', async () => {
       const originalId = 'assistant-origin';
       const sourceAssistant = {
@@ -246,6 +289,46 @@ describe('template-service', () => {
   });
 
   describe('copyCharacter', () => {
+    it('should copy licenseInformation and didacticCommentary to the new entity', async () => {
+      const sourceCharacter = {
+        id: 'character-origin',
+        name: 'Original character',
+        licenseInformation: 'Character license',
+        didacticCommentary: 'Character teaching notes',
+      };
+
+      (dbGetCharacterById as MockedFunction<typeof dbGetCharacterById>).mockResolvedValue(
+        sourceCharacter as never,
+      );
+      (dbCreateCharacter as MockedFunction<typeof dbCreateCharacter>).mockResolvedValue([
+        { id: 'character-copy' },
+      ] as never);
+
+      await copyCharacter('character-origin', false, { id: 'user-1' });
+
+      expect(dbCreateCharacter).toHaveBeenCalledWith(
+        expect.objectContaining({
+          licenseInformation: 'Character license',
+          didacticCommentary: 'Character teaching notes',
+        }),
+      );
+    });
+
+    it('should not inherit the popularity of the source', async () => {
+      (dbGetCharacterById as MockedFunction<typeof dbGetCharacterById>).mockResolvedValue({
+        id: 'character-origin',
+        name: 'Original character',
+        popularity: 42,
+      } as never);
+      (dbCreateCharacter as MockedFunction<typeof dbCreateCharacter>).mockResolvedValue([
+        { id: 'character-copy' },
+      ] as never);
+
+      await copyCharacter('character-origin', false, { id: 'user-1' });
+
+      expect(dbCreateCharacter).toHaveBeenCalledWith(expect.objectContaining({ popularity: 0 }));
+    });
+
     it('should use duplicateCharacterName when provided', async () => {
       const originalId = 'character-origin';
       const sourceCharacter = {
@@ -467,7 +550,7 @@ describe('template-service', () => {
       await expect(createTemplateFromUrl('/invalid/url')).rejects.toThrow('Invalid url format.');
     });
 
-    it('should duplicate the learning scenario picture in S3 under a key scoped to the new template id', async () => {
+    it('should copy learning scenario fields and picture to the template', async () => {
       const originalId = generateUUID();
       (
         dbGetLearningScenarioById as MockedFunction<typeof dbGetLearningScenarioById>
@@ -476,6 +559,8 @@ describe('template-service', () => {
         name: 'Original name',
         modelId: generateUUID(),
         userId: generateUUID(),
+        licenseInformation: 'Learning scenario license',
+        didacticCommentary: 'Learning scenario teaching notes',
         isSchoolShared: false,
         isCommunityShared: false,
         isGlobal: false,
@@ -494,6 +579,12 @@ describe('template-service', () => {
         newKey: call?.pictureId,
       });
       expect(call?.pictureId).not.toContain(originalId);
+      expect(call).toEqual(
+        expect.objectContaining({
+          licenseInformation: 'Learning scenario license',
+          didacticCommentary: 'Learning scenario teaching notes',
+        }),
+      );
     });
   });
 

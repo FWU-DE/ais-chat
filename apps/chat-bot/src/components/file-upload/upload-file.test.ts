@@ -1,6 +1,8 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { NUMBER_OF_IMAGES_LIMIT } from '@/configuration-text-inputs/const';
 import { MAX_FILE_SIZE } from '@/const';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import {
   defaultUploadFile,
   filterFilesByImageLimit,

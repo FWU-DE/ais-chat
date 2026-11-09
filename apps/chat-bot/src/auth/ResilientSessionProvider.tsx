@@ -1,9 +1,9 @@
 'use client';
 
-import { SessionProvider } from 'next-auth/react';
-import { useEffect, useRef } from 'react';
 import { logDebug, logWarning } from '@shared/logging';
 import type { Session } from 'next-auth';
+import { SessionProvider } from 'next-auth/react';
+import { useEffect, useRef } from 'react';
 
 const SESSION_ENDPOINT = '/api/auth/session';
 

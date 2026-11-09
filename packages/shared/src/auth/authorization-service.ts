@@ -1,5 +1,6 @@
-import { ForbiddenError } from '@shared/error';
 import { UserRole } from '@shared/db/schema';
+import { ForbiddenError } from '@shared/error';
+
 import { UserModel } from './user-model';
 
 type AuthorizedItem = {

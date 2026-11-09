@@ -1,14 +1,16 @@
-import { NUMBER_OF_FILES_LIMIT, NUMBER_OF_IMAGES_LIMIT } from '@/configuration-text-inputs/const';
 import { useTranslations } from 'next-intl';
 import type { Dispatch, SetStateAction } from 'react';
+
+import { NUMBER_OF_FILES_LIMIT, NUMBER_OF_IMAGES_LIMIT } from '@/configuration-text-inputs/const';
+
 import { useToast } from '../common/toast';
 import { useLlmModels } from '../providers/llm-model-provider';
 import {
+  type FileUploadResponse,
   filterFilesByImageLimit,
   filterValidFilesForUpload,
   getAllowedFileExtensions,
   handleSingleFile,
-  type FileUploadResponse,
   type LocalFileState,
 } from './upload-file';
 

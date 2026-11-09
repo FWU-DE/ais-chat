@@ -1,17 +1,18 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
   AiGenerationError,
   ApiKeyQuotaExceededError,
-  ResponsibleAIError,
-  ProviderRateLimitExceededError,
-  RateLimitExceededError,
-  InvalidModelError,
-  ProviderConfigurationError,
-  TokenPointsExceededError,
-  SharedChatExpiredError,
   EmptyResponseError,
+  InvalidModelError,
   isKnownAiGenerationError,
   normalizeAiGenerationError,
+  ProviderConfigurationError,
+  ProviderRateLimitExceededError,
+  RateLimitExceededError,
+  ResponsibleAIError,
+  SharedChatExpiredError,
+  TokenPointsExceededError,
 } from './errors';
 
 describe('AiGenerationError', () => {

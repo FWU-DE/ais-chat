@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
 import { CopyIcon } from '@phosphor-icons/react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@ui/components/button';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
 import { useToast } from '../common/toast';
 
 interface CopyPromptButtonProps {

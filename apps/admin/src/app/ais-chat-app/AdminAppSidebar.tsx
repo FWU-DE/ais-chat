@@ -1,7 +1,7 @@
-import { Sidebar, SidebarItem } from '@/components/navigation/Sidebar';
-import { ROUTES } from '@/consts/routes';
 import { auth } from '@/auth';
 import { canAccessEditorArea } from '@/auth/roles';
+import { Sidebar, SidebarItem } from '@/components/navigation/Sidebar';
+import { ROUTES } from '@/consts/routes';
 
 export async function AdminAppSidebar() {
   const session = await auth();

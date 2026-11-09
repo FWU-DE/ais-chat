@@ -1,5 +1,6 @@
-import { expect, test } from '../../fixtures/test';
 import { nanoid } from 'nanoid';
+
+import { expect, test } from '../../fixtures/test';
 import {
   configureCharacter,
   createCharacter,
@@ -8,6 +9,8 @@ import {
 } from '../../utils/character';
 import { regenerateMessage, sendMessage } from '../../utils/chat';
 import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
+import { verifyDidacticCommentary } from '../../utils/didactic-commentary';
+import { verifyLicenseInformation } from '../../utils/license-information';
 import { stopShare, waitForAutosave, waitForToast, waitForToastDisappear } from '../../utils/utils';
 
 test.use({ storageState: AUTH_FILES.teacher });
@@ -174,7 +177,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Name
   await page.getByTestId('character-name-input').fill('');
   await page.getByTestId('character-name-input').fill('New Name');
-  await page.getByTestId('character-name-input').press('Tab');
+  await page.getByTestId('character-name-input').blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('character-name-input')).toHaveValue('New Name');
@@ -182,7 +185,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Description
   await page.getByTestId('character-description-input').fill('');
   await page.getByTestId('character-description-input').fill('New Description');
-  await page.getByTestId('character-description-input').press('Tab');
+  await page.getByTestId('character-description-input').blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('character-description-input')).toHaveValue('New Description');
@@ -190,7 +193,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Instructions
   await page.getByTestId('character-instructions-input').fill('');
   await page.getByTestId('character-instructions-input').fill('New Instructions');
-  await page.getByTestId('character-instructions-input').press('Tab');
+  await page.getByTestId('character-instructions-input').blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('character-instructions-input')).toHaveValue('New Instructions');
@@ -198,12 +201,20 @@ test('data is autosaved on blur', async ({ page }) => {
   // Initial message
   await page.getByTestId('character-initial-message-input').fill('');
   await page.getByTestId('character-initial-message-input').fill('New Initial Message');
-  await page.getByTestId('character-initial-message-input').press('Tab');
+  await page.getByTestId('character-initial-message-input').blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('character-initial-message-input')).toHaveValue(
     'New Initial Message',
   );
+
+  // License information
+  await verifyDidacticCommentary(
+    page,
+    '/characters',
+    'Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieser Dialogpartner eingesetzt werden kann.',
+  );
+  await verifyLicenseInformation(page, '/characters');
 
   // cleanup
   await deleteCharacterFromDetailPage(page);

@@ -6,6 +6,7 @@ import turboConfig from 'eslint-config-turbo/flat';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import packageJson from 'eslint-plugin-package-json';
 import prettier from 'eslint-plugin-prettier';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
 
 /**
  * ESLint config for Next.js apps and React packages.
@@ -31,12 +32,15 @@ const nextJsConfig = [
     files: ['**/*.{js,mjs,cjs,jsx,ts,tsx}'],
     plugins: {
       prettier,
+      'simple-import-sort': simpleImportSort,
     },
     rules: {
       ...jsxA11y.flatConfigs.recommended.rules,
       'prettier/prettier': 'error',
       'turbo/no-undeclared-env-vars': 'warn',
       eqeqeq: ['error', 'always'],
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
       'react/jsx-no-target-blank': 'error',
     },
   },

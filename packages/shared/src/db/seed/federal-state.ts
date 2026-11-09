@@ -1,11 +1,12 @@
+import { lookupApiKeys } from '@ais-chat/ai-core/api-keys/lookup';
+import { env as aiEnv } from '@ais-chat/ai-core/env';
+
+import { env } from '../../env';
 import { db } from '..';
 import { decrypt, encrypt } from '../crypto';
-import { FederalStateInsertModel, federalStateTable } from '../schema';
 import { dbGetFederalStateWithDecryptedApiKey } from '../functions/federal-state';
 import { dbUpdateLlmModelsForAllFederalStates } from '../functions/llm-model';
-import { env } from '../../env';
-import { env as aiEnv } from '@ais-chat/ai-core/env';
-import { lookupApiKeys } from '@ais-chat/ai-core/api-keys/lookup';
+import { FederalStateInsertModel, federalStateTable } from '../schema';
 
 export async function insertFederalStates({ skip = true }: { skip: boolean }) {
   if (skip) return;
@@ -168,4 +169,4 @@ export const FEDERAL_STATES = FEDERAL_STATE_DEFINITIONS.filter((state) => {
     isWebSearchEnabled: true,
     isSpeechModelEnabled: true,
   },
-})) satisfies Array<Omit<FederalStateInsertModel, 'organizationId'>>;
+})) satisfies Array<FederalStateInsertModel>;

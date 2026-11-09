@@ -1,4 +1,34 @@
+import { dbGetSharedCharacterChatUsageInCentByCharacterId } from '@shared/db/functions/token-points';
+import { CharacterSelectModel, CharacterWithShareDataModel } from '@shared/db/schema';
+import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/error';
+import { FederalStateModel } from '@shared/federal-states/types';
+import { getUserSettings } from '@shared/users/user-settings-service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  dbCreateCharacterShare,
+  dbExtendSharedCharacterExpiration,
+  dbGetAllAccessibleCharacters,
+  dbGetAllCharactersByUser,
+  dbGetCharacterById,
+  dbGetCharacterByIdForConversation,
+  dbGetCharacterByIdOptionalShareData,
+  dbGetCharacterByIdWithShareData,
+  dbGetCharactersByAssociatedSchools,
+  dbGetCommunityCharacters,
+  dbGetGlobalCharacters,
+  dbGetLatestManageableCharacterShare,
+  dbStopCharacterShare,
+  dbUpdateCharacterShareTokenPointsLimit,
+} from '../db/functions/character';
+import { dbGetRelatedCharacterFiles } from '../db/functions/files';
+import { dbGetLlmModelsByFederalStateId } from '../db/functions/llm-model';
+import { getAvatarPictureUrl } from '../files/fileService';
+import { getReadOnlySignedUrl, uploadFileToS3 } from '../s3';
+import { SHARE_EXTENSION_WINDOW_MS } from '../sharing/const';
+import { copyCharacter, copyRelatedTemplateFiles } from '../templates/template-service';
+import { getMaxBudgetInCentByUser, getUsedBudgetInCentByUser } from '../users/user-budget-service';
+import { generateUUID } from '../utils/uuid';
 import {
   createNewCharacter,
   deleteCharacter,
@@ -20,35 +50,6 @@ import {
   updateCharacterShareTokenPointsLimit,
   uploadAvatarPictureForCharacter,
 } from './character-service';
-import {
-  dbCreateCharacterShare,
-  dbExtendSharedCharacterConversationExpiration,
-  dbGetAllAccessibleCharacters,
-  dbGetAllCharactersByUser,
-  dbGetCharacterById,
-  dbGetCharacterByIdForConversation,
-  dbGetCharacterByIdOptionalShareData,
-  dbGetCharacterByIdWithShareData,
-  dbGetCharactersByAssociatedSchools,
-  dbGetCommunityCharacters,
-  dbGetGlobalCharacters,
-  dbGetLatestManageableCharacterShare,
-  dbStopCharacterShare,
-  dbUpdateCharacterShareTokenPointsLimit,
-} from '../db/functions/character';
-import { dbGetRelatedCharacterFiles } from '../db/functions/files';
-import { getReadOnlySignedUrl, uploadFileToS3 } from '../s3';
-import { getAvatarPictureUrl } from '../files/fileService';
-import { generateUUID } from '../utils/uuid';
-import { getMaxBudgetInCentByUser, getUsedBudgetInCentByUser } from '../users/user-budget-service';
-import { CharacterSelectModel, CharacterWithShareDataModel } from '@shared/db/schema';
-import { SHARE_EXTENSION_WINDOW_MS } from '../sharing/const';
-import { FederalStateModel } from '@shared/federal-states/types';
-import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/error';
-import { dbGetSharedCharacterChatUsageInCentByCharacterId } from '@shared/db/functions/token-points';
-import { copyCharacter, copyRelatedTemplateFiles } from '../templates/template-service';
-import { getUserSettings } from '@shared/users/user-settings-service';
-import { dbGetLlmModelsByFederalStateId } from '../db/functions/llm-model';
 
 vi.mock('../db/functions/character', () => ({
   dbGetAllAccessibleCharacters: vi.fn(),
@@ -66,7 +67,7 @@ vi.mock('../db/functions/character', () => ({
   dbGetLatestManageableCharacterShare: vi.fn(),
   dbCreateCharacterShare: vi.fn(),
   dbStopCharacterShare: vi.fn(),
-  dbExtendSharedCharacterConversationExpiration: vi.fn(),
+  dbExtendSharedCharacterExpiration: vi.fn(),
   dbUpdateCharacterShareTokenPointsLimit: vi.fn(),
 }));
 vi.mock('../db/functions/files', () => ({
@@ -442,6 +443,25 @@ describe('character-service', () => {
 
       expect(mockDbSet).toHaveBeenCalledWith({ id: characterId, hasLinkAccess: true, updatedAt });
     });
+
+    it('ignores a popularity value sent by the owner', async () => {
+      const userId = generateUUID();
+      const characterId = generateUUID();
+      const character = { id: characterId, userId, name: 'old', popularity: 3 };
+
+      vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
+      mockDbReturning.mockResolvedValue([{ ...character, name: 'new' }]);
+
+      await updateCharacter({
+        id: characterId,
+        user: { id: userId },
+        name: 'new',
+        popularity: 999,
+      } as never);
+
+      expect(mockDbSet).toHaveBeenCalledTimes(1);
+      expect(mockDbSet).toHaveBeenCalledWith({ id: characterId, name: 'new' });
+    });
   });
 
   describe('ForbiddenError scenarios - role restrictions', () => {
@@ -634,9 +654,7 @@ describe('character-service', () => {
     beforeEach(() => {
       vi.mocked(dbGetCharacterById).mockResolvedValue(mockCharacter as never);
       vi.mocked(dbGetLatestManageableCharacterShare).mockResolvedValue(currentShare as never);
-      vi.mocked(dbExtendSharedCharacterConversationExpiration).mockResolvedValue(
-        updatedShare as never,
-      );
+      vi.mocked(dbExtendSharedCharacterExpiration).mockResolvedValue(updatedShare as never);
     });
 
     it('returns the updated share when the expiration is extended', async () => {
@@ -646,7 +664,7 @@ describe('character-service', () => {
         user,
       });
 
-      expect(dbExtendSharedCharacterConversationExpiration).toHaveBeenCalledWith({
+      expect(dbExtendSharedCharacterExpiration).toHaveBeenCalledWith({
         share: currentShare,
         additionalTimeInMinutes: 30,
       });
@@ -664,7 +682,7 @@ describe('character-service', () => {
           }),
         ).rejects.toThrow(InvalidArgumentError);
 
-        expect(dbExtendSharedCharacterConversationExpiration).not.toHaveBeenCalled();
+        expect(dbExtendSharedCharacterExpiration).not.toHaveBeenCalled();
       },
     );
 
@@ -686,11 +704,11 @@ describe('character-service', () => {
         }),
       ).rejects.toThrow('total usage time limit must not exceed 130 days');
 
-      expect(dbExtendSharedCharacterConversationExpiration).not.toHaveBeenCalled();
+      expect(dbExtendSharedCharacterExpiration).not.toHaveBeenCalled();
     });
 
     it('throws InvalidArgumentError when there is no active share to extend', async () => {
-      vi.mocked(dbExtendSharedCharacterConversationExpiration).mockResolvedValue(null as never);
+      vi.mocked(dbExtendSharedCharacterExpiration).mockResolvedValue(null as never);
 
       await expect(
         extendCharacterShareExpiration({
@@ -1516,12 +1534,15 @@ describe('character-service', () => {
         updatedAt: NOW,
         attachedLinks: [],
         suspended: false,
+        popularity: 0,
         isDeleted: false,
         ownerSchoolIds: [],
         specifications: null,
         restrictions: null,
         pictureId: null,
         initialMessage: null,
+        licenseInformation: '',
+        didacticCommentary: '',
         originalCharacterId: null,
         tokenPointsLimit: 50,
         maxUsageTimeLimit: 60,
