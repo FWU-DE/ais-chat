@@ -221,12 +221,13 @@ services:
 
   # Periodic admin calls (popularity refresh, cleanup) against the chat-bot running on the host,
   # see scheduled-tasks.sh. On every `up`, local conversations past their retention time and empty
-  # entities are deleted. API_KEY and PORT come from apps/chat-bot/.env.local, which is loaded in
-  # full (local development only).
+  # entities are deleted. API_KEY and PORT come from apps/chat-bot/.env.development, overridden by
+  # .env.local, which are both loaded in full (local development only).
   scheduled-tasks:
     image: curlimages/curl:8.23.0
     restart: unless-stopped
     env_file:
+      - ../../apps/chat-bot/.env.development
       - path: ../../apps/chat-bot/.env.local
         required: false
     environment:

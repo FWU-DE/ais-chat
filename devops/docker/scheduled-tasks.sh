@@ -1,9 +1,9 @@
 #!/bin/sh
 # Periodic admin calls. Each task runs once at start, then repeats on its interval.
 # Add further tasks as `task <interval-seconds> "<METHOD> <path>"...`; several entries run in order.
-# Requires APP_HOSTNAME and API_KEY. PORT defaults to 3000, MAX_TIME_SECONDS (per request) to 1800.
+# Requires APP_HOSTNAME, API_KEY and PORT; MAX_TIME_SECONDS (per request) defaults to 1800.
 
-BASE_URL="http://$APP_HOSTNAME:${PORT:-3000}"
+BASE_URL="http://$APP_HOSTNAME:$PORT"
 
 call() {
   echo "$(date -u +%FT%TZ) $1 $BASE_URL$2"

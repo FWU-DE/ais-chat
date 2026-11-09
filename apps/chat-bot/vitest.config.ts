@@ -1,18 +1,11 @@
-import fs from 'node:fs';
-
 import { config as dotenvConfig } from '@dotenvx/dotenvx';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 
-const envTestPath = path.resolve(__dirname, '.env.test');
-const envLocalPath = path.resolve(__dirname, '.env.local');
-
-if (fs.existsSync(envTestPath)) {
-  dotenvConfig({ path: envTestPath });
-} else {
-  dotenvConfig({ path: envLocalPath });
-}
+dotenvConfig({
+  path: [path.resolve(__dirname, '.env.local'), path.resolve(__dirname, '.env.development')],
+});
 
 export default defineConfig({
   plugins: [react()],
