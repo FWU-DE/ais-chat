@@ -13,6 +13,7 @@ import {
 import { CaretDownIcon, InfoIcon, MagnifyingGlassIcon, XCircleIcon } from '@phosphor-icons/react';
 import type { EntityType } from '@shared/entities/entity-types';
 import { OverviewFilter, overviewFilterSchema } from '@shared/overview-filter';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Chip } from '@ui/components/chip';
 import { useTranslations } from 'next-intl';
 import React from 'react';
@@ -65,20 +66,13 @@ export default function EntityOverview<T extends OverviewEntity>({
   fetchEntities,
   renderItem,
 }: EntityOverviewProps<T>) {
-  const [entities, setEntities] = React.useState<T[]>([]);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = React.useState(false);
   const [searchInput, setSearchInput] = React.useState('');
-
-  const loadEntities = React.useCallback(
-    async (filter: OverviewFilter) => {
-      setEntities(await fetchEntities(filter));
-    },
-    [fetchEntities],
-  );
   const tCommon = useTranslations();
   const {
     activeFilter,
     setActiveFilter,
+    isActiveFilterResolved,
     selectedFilters,
     updateSelectedFilters,
     handleRemoveFilter,
@@ -87,9 +81,24 @@ export default function EntityOverview<T extends OverviewEntity>({
     activeFilterCount,
   } = useOverviewFilters({
     entityType,
-    onLoad: loadEntities,
     translateFilterLabel: tCommon,
   });
+  const queryKey = React.useMemo(
+    () => ['entity-overview', entityType, activeFilter],
+    [entityType, activeFilter],
+  );
+  const { data: entities = [] } = useQuery({
+    queryKey,
+    queryFn: () => fetchEntities(activeFilter),
+    enabled: isActiveFilterResolved,
+    placeholderData: keepPreviousData,
+  });
+  const queryClient = useQueryClient();
+  const setEntities = React.useCallback(
+    (update: (previous: T[]) => T[]) =>
+      queryClient.setQueryData<T[]>(queryKey, (previous) => previous && update(previous)),
+    [queryClient, queryKey],
+  );
   const handleToggleFavorite = useOverviewFavoriteToggle({
     entityType,
     activeFilter,
