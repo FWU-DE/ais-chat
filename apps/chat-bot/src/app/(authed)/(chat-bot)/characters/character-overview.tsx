@@ -72,6 +72,7 @@ export default function CharacterOverview({ currentUserId }: CharacterOverviewPr
 
   return (
     <EntityOverview
+      entityType="characters"
       title={t('character')}
       infoTooltip={infoContent}
       searchPlaceholder={t('search-placeholder')}

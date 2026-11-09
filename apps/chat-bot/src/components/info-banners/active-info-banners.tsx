@@ -5,28 +5,26 @@ import type { InfoBanner } from '@shared/info-banners/info-banner';
 import { Button } from '@ui/components/button';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect } from 'react';
 
 import { trackInfoBannerViewAction } from '@/app/(authed)/(chat-bot)/actions';
+import {
+  readSessionStorage,
+  useSessionStorageState,
+  writeSessionStorage,
+} from '@/hooks/use-session-storage-state';
 import { cn } from '@/utils/tailwind';
 
 const DISMISSED_INFO_BANNERS_STORAGE_KEY = 'dismissed-info-banner-ids';
 const TRACKED_INFO_BANNERS_STORAGE_KEY = 'tracked-info-banner-ids';
-const DISMISSED_INFO_BANNERS_EVENT = 'ais-chat:info-banner-dismissed';
-const EMPTY_DISMISSED_INFO_BANNERS_SNAPSHOT = '[]';
 const pendingTrackedInfoBannerIds = new Set<string>();
 
-function subscribeToDismissedInfoBanners(callback: () => void) {
-  window.addEventListener(DISMISSED_INFO_BANNERS_EVENT, callback);
-
-  return () => {
-    window.removeEventListener(DISMISSED_INFO_BANNERS_EVENT, callback);
-  };
-}
-
-function parseInfoBannerIds(snapshot: string): string[] {
+function parseInfoBannerIds(raw: string | null): string[] {
+  if (raw === null) {
+    return [];
+  }
   try {
-    const parsedValue = JSON.parse(snapshot);
+    const parsedValue = JSON.parse(raw);
     return Array.isArray(parsedValue)
       ? parsedValue.filter((value): value is string => typeof value === 'string')
       : [];
@@ -35,41 +33,24 @@ function parseInfoBannerIds(snapshot: string): string[] {
   }
 }
 
-function getStoredInfoBannerIdsSnapshot(storageKey: string): string {
-  try {
-    return window.sessionStorage.getItem(storageKey) ?? EMPTY_DISMISSED_INFO_BANNERS_SNAPSHOT;
-  } catch {
-    return EMPTY_DISMISSED_INFO_BANNERS_SNAPSHOT;
-  }
-}
-
 function getStoredInfoBannerIds(storageKey: string): string[] {
-  return parseInfoBannerIds(getStoredInfoBannerIdsSnapshot(storageKey));
+  return parseInfoBannerIds(readSessionStorage(storageKey));
 }
 
 function persistStoredInfoBannerId(storageKey: string, infoBannerId: string) {
-  try {
-    const storedIds = new Set(getStoredInfoBannerIds(storageKey));
-    storedIds.add(infoBannerId);
-    window.sessionStorage.setItem(storageKey, JSON.stringify(Array.from(storedIds)));
-  } catch {
-    // Ignore storage failures and still dismiss in memory for the current render tree.
-  }
+  const storedIds = new Set(getStoredInfoBannerIds(storageKey));
+  storedIds.add(infoBannerId);
+  writeSessionStorage(storageKey, JSON.stringify(Array.from(storedIds)));
 }
 
-function persistDismissedInfoBannerId(infoBannerId: string) {
-  persistStoredInfoBannerId(DISMISSED_INFO_BANNERS_STORAGE_KEY, infoBannerId);
-  window.dispatchEvent(new Event(DISMISSED_INFO_BANNERS_EVENT));
-}
-
+// null on the server, so no banner is rendered before the client knows which are dismissed
 function useDismissedInfoBannerIds() {
-  const snapshot = useSyncExternalStore(
-    subscribeToDismissedInfoBanners,
-    () => getStoredInfoBannerIdsSnapshot(DISMISSED_INFO_BANNERS_STORAGE_KEY),
-    () => null,
+  const [dismissedIds] = useSessionStorageState<string[] | null>(
+    DISMISSED_INFO_BANNERS_STORAGE_KEY,
+    parseInfoBannerIds,
+    null,
   );
-
-  return snapshot === null ? null : parseInfoBannerIds(snapshot);
+  return dismissedIds;
 }
 
 export default function ActiveInfoBanners({ infoBanners }: { infoBanners: InfoBanner[] }) {
@@ -112,7 +93,7 @@ export default function ActiveInfoBanners({ infoBanners }: { infoBanners: InfoBa
 
   function handleDismiss() {
     if (currentInfoBannerId) {
-      persistDismissedInfoBannerId(currentInfoBannerId);
+      persistStoredInfoBannerId(DISMISSED_INFO_BANNERS_STORAGE_KEY, currentInfoBannerId);
     }
   }
 
