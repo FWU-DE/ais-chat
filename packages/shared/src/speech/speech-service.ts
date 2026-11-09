@@ -1,4 +1,4 @@
-import { generateSpeechById } from '@ais-chat/ai-core';
+import { generateSpeechById, getSpeechMimeType } from '@ais-chat/ai-core';
 import { UserModel } from '@shared/auth/user-model';
 import { getConversation } from '@shared/conversation/conversation-service';
 import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
@@ -134,23 +134,24 @@ export async function generateSpeechPreview({
   }
 
   const cached = await getCachedSpeechPreview(speechModel.id, voice, text);
+  const contentType = getSpeechMimeType(speechModel.provider);
   if (cached !== undefined) {
     return {
       buffer: cached,
-      contentType: 'audio/wav',
+      contentType,
     };
   }
 
-  const { wavBuffer } = await generateSpeechById({
+  const { audioBuffer } = await generateSpeechById({
     modelId: speechModel.id,
     text,
     voice,
   });
 
-  await setCachedSpeechPreview(speechModel.id, voice, text, wavBuffer);
+  await setCachedSpeechPreview(speechModel.id, voice, text, audioBuffer);
 
   return {
-    buffer: wavBuffer,
-    contentType: 'audio/wav',
+    buffer: audioBuffer,
+    contentType,
   };
 }
