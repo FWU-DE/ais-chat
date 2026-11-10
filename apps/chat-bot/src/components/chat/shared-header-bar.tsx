@@ -21,6 +21,7 @@ import {
   ThreeDotsProfileMenu,
   type ThreeDotsProfileMenuItem,
 } from '../navigation/three-dots-profile-menu';
+
 import type { ConversationDownloadFile } from './conversation-download-context';
 
 export function SharedChatHeader({
