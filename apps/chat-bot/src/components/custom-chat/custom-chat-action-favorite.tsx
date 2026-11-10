@@ -9,11 +9,9 @@ import { useSetFavorite } from '@/components/hooks/use-set-favorite';
 export function CustomChatActionFavorite({
   entityRef,
   initialIsFavorite,
-  isSuspended = false,
 }: {
   entityRef: EntityRef;
   initialIsFavorite: boolean;
-  isSuspended?: boolean;
 }) {
   const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
   const setFavorite = useSetFavorite();
@@ -24,11 +22,5 @@ export function CustomChatActionFavorite({
     if (!success) setIsFavorite(!nextIsFavorite);
   }
 
-  return (
-    <FavoriteButton
-      isFavorite={isFavorite}
-      disabled={isSuspended && !isFavorite}
-      onToggle={handleToggle}
-    />
-  );
+  return <FavoriteButton isFavorite={isFavorite} onToggle={handleToggle} />;
 }

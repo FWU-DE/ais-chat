@@ -406,7 +406,6 @@ export function CharacterEdit({
       <CustomChatActionFavorite
         entityRef={{ entityType: 'character', entityId: character.id }}
         initialIsFavorite={initialIsFavorite}
-        isSuspended={character.suspended}
       />
     </CustomChatActions>
   );

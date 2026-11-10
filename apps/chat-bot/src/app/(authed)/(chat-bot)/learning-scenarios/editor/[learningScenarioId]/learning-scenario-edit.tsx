@@ -428,7 +428,6 @@ export function LearningScenarioEdit({
       <CustomChatActionFavorite
         entityRef={{ entityType: 'learningScenario', entityId: learningScenario.id }}
         initialIsFavorite={initialIsFavorite}
-        isSuspended={learningScenario.suspended}
       />
     </CustomChatActions>
   );

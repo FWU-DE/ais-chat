@@ -1,5 +1,4 @@
 import { getAssistantByUser } from '@shared/assistants/assistant-service';
-import { isFavorite } from '@shared/favorites/favorite-service';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
@@ -23,12 +22,12 @@ export default async function Page(props: PageProps<'/assistants/[assistantId]'>
   const { assistantId } = await props.params;
   const { user, federalState } = await requireAuth();
 
-  const [{ assistant, fileMappings, pictureUrl }, initialIsFavorite] = await Promise.all([
-    getAssistantByUser({ assistantId, user }).catch(handleErrorInServerComponent),
-    isFavorite({ entityType: 'assistant', entityId: assistantId, user }).catch(
-      handleErrorInServerComponent,
-    ),
-  ]);
+  const {
+    assistant,
+    fileMappings,
+    pictureUrl,
+    isFavorite: initialIsFavorite,
+  } = await getAssistantByUser({ assistantId, user }).catch(handleErrorInServerComponent);
 
   return (
     <DefaultPageLayout>

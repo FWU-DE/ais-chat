@@ -397,7 +397,6 @@ export function AssistantEdit({
       <CustomChatActionFavorite
         entityRef={{ entityType: 'assistant', entityId: assistant.id }}
         initialIsFavorite={initialIsFavorite}
-        isSuspended={assistant.suspended}
       />
     </CustomChatActions>
   );

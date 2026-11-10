@@ -108,7 +108,7 @@ export default function EntityCard({
 
       <FavoriteButton
         isFavorite={isFavorite}
-        disabled={isSuspended && !isFavorite}
+        disabled={isSuspended && !isOwned && !isFavorite}
         onToggle={onToggleFavorite}
         className={cn('shrink-0', !chatHref && 'mr-4')}
       />
