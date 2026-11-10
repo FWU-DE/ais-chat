@@ -53,7 +53,7 @@ function uninstallSessionStorage(): void {
 
 describe('sharedChatStorageKey', () => {
   it('returns a versioned, invite-code-scoped key', () => {
-    expect(sharedChatStorageKey(INVITE_CODE)).toBe(`shared-chat:v2:${INVITE_CODE}`);
+    expect(sharedChatStorageKey(INVITE_CODE)).toBe(`shared-chat:v3:${INVITE_CODE}`);
   });
 
   it('produces different keys for different invite codes', () => {

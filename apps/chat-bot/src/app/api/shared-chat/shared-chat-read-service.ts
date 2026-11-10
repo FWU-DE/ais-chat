@@ -1,8 +1,4 @@
 import { dbGetFilesInIds } from '@shared/db/functions/files';
-import {
-  dbGetSharedChatConversation,
-  dbGetSharedChatFileConversationIds,
-} from '@shared/db/functions/shared-chat-conversation';
 import { ForbiddenError, NotFoundError } from '@shared/error';
 import { verify } from '@shared/shared-chat';
 
