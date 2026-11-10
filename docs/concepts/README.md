@@ -11,3 +11,4 @@ implementing related features; open the linked doc for full details.
 | [api-design.md](api-design.md) | Adding or modifying API routes |
 | [popularity.md](popularity.md) | Changing how assistants, characters and learning scenarios are ranked by popularity |
 | [external-data-validation.md](external-data-validation.md) | Handling data from outside the system (API requests, third-party/LLM provider responses, webhooks, `JSON.parse`) |
+| [text-to-speech.md](text-to-speech.md) | Changing speech generation, streaming, text splitting or preprocessing for read-aloud |
