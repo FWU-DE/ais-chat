@@ -87,15 +87,15 @@ export async function generateChatSpeechStream({
             promptTokens: 0,
             costsInCent,
           });
+        }
 
-          const { apiKeyId } = await dbGetFederalState(federalState.id);
-          if (apiKeyId) {
-            await billSpeechGenerationUsageToApiKey({
-              apiKeyId,
-              modelId: model.id,
-              costsInCent,
-            });
-          }
+        const { apiKeyId } = await dbGetFederalState(federalState.id);
+        if (apiKeyId) {
+          await billSpeechGenerationUsageToApiKey({
+            apiKeyId,
+            modelId: model.id,
+            costsInCent,
+          });
         }
       },
       reportUsage: async (
