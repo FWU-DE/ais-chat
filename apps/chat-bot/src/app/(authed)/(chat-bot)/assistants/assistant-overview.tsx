@@ -120,7 +120,6 @@ export default function AssistantOverview({ currentUserId }: AssistantOverviewPr
             }
             chatHref={`/assistants/d/${assistant.id}`}
             isFavorite={assistant.isFavorite}
-            isSuspended={assistant.suspended}
             onToggleFavorite={(isFavorite) => handleToggleFavorite(assistant.id, isFavorite)}
           />
         ));

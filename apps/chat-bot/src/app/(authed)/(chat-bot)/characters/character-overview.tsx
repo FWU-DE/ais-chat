@@ -119,7 +119,6 @@ export default function CharacterOverview({ currentUserId }: CharacterOverviewPr
               chatHref={`/characters/d/${character.id}`}
               shareInfo={character}
               isFavorite={character.isFavorite}
-              isSuspended={character.suspended}
               onToggleFavorite={(isFavorite) => handleToggleFavorite(character.id, isFavorite)}
             />
           );

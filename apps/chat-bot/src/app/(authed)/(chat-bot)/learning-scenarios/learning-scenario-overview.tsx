@@ -123,7 +123,6 @@ export default function LearningScenarioOverview({ currentUserId }: LearningScen
               chatHref={`/learning-scenarios/d/${scenario.id}`}
               shareInfo={scenario}
               isFavorite={scenario.isFavorite}
-              isSuspended={scenario.suspended}
               onToggleFavorite={(isFavorite) => handleToggleFavorite(scenario.id, isFavorite)}
             />
           );
