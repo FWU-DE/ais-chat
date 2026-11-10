@@ -15,13 +15,13 @@ import { type ChatMessage as Message } from '@/types/chat';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
 import { cn } from '@/utils/tailwind';
 import { reductionBreakpoint } from '@/utils/tailwind/layout';
+
 import useBreakpoints from '../hooks/use-breakpoints';
 import ProfileMenu from '../navigation/profile-menu';
 import {
   ThreeDotsProfileMenu,
   type ThreeDotsProfileMenuItem,
 } from '../navigation/three-dots-profile-menu';
-
 import type { ConversationDownloadFile } from './conversation-download-context';
 
 export function SharedChatHeader({
