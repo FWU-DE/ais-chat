@@ -1,13 +1,14 @@
-import { and, inArray, isNotNull, isNull, lt } from 'drizzle-orm';
+import { and, inArray, lt } from 'drizzle-orm';
 
 import { db } from '..';
 import { fileTable, sharedCharacter, sharedLearningScenarioTable } from '../schema';
+import { isSharedChatFileCondition } from './files';
 
 export async function dbGetSharedChatFileCandidates() {
   return db
     .select({ id: fileTable.id, metadata: fileTable.metadata })
     .from(fileTable)
-    .where(and(isNull(fileTable.userId), isNotNull(fileTable.metadata)));
+    .where(isSharedChatFileCondition);
 }
 
 export async function dbGetExpiredCharacterShares(inviteCodes: string[], cutoffDate: Date) {
