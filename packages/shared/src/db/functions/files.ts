@@ -7,7 +7,6 @@ import {
   inArray,
   isNotNull,
   isNull,
-  not,
   notExists,
   or,
   type SQL,
@@ -30,6 +29,7 @@ import {
   fileTable,
   LearningScenarioFileMapping,
   learningScenarioTable,
+  SharedChatConversationMessageFileMappingTable,
 } from '../schema';
 
 export async function linkFilesToConversation({
@@ -51,6 +51,39 @@ export async function linkFilesToConversation({
         ConversationMessageFileMappingTable.fileId,
       ],
     });
+}
+
+/** Ties an uploaded file to a shared chat conversation before it is attached to a message. */
+export async function linkFileToSharedChatConversation({
+  fileId,
+  conversationId,
+}: {
+  fileId: string;
+  conversationId: string;
+}) {
+  await db.insert(SharedChatConversationMessageFileMappingTable).values({ fileId, conversationId });
+}
+
+export async function linkFilesToSharedChatMessage({
+  conversationMessageId,
+  conversationId,
+  fileIds,
+}: {
+  conversationMessageId: string;
+  conversationId: string;
+  fileIds: string[];
+}) {
+  if (fileIds.length === 0) return;
+  await db
+    .update(SharedChatConversationMessageFileMappingTable)
+    .set({ conversationMessageId })
+    .where(
+      and(
+        eq(SharedChatConversationMessageFileMappingTable.conversationId, conversationId),
+        inArray(SharedChatConversationMessageFileMappingTable.fileId, fileIds),
+        isNull(SharedChatConversationMessageFileMappingTable.conversationMessageId),
+      ),
+    );
 }
 
 export async function dbDetachFilesFromConversationMessages(messageIds: string[]) {
@@ -495,11 +528,10 @@ export async function dbDeleteFileAndDetachFromConversation(filesToDelete: strin
   });
 }
 
-/** Shared chat uploads have no user and carry shared chat metadata. */
-export const isSharedChatFileCondition = and(
-  isNull(fileTable.userId),
-  isNotNull(fileTable.metadata),
-) as SQL;
+export async function dbDeleteFilesByIds(ids: string[]) {
+  // chunks are deleted via delete cascade on files table
+  return db.delete(fileTable).where(inArray(fileTable.id, ids));
+}
 
 export async function dbDeleteDanglingFiles() {
   return await db.transaction(async (tx) => {
@@ -513,13 +545,17 @@ export async function dbDeleteDanglingFiles() {
       .leftJoin(CharacterFileMapping, eq(fileTable.id, CharacterFileMapping.fileId))
       .leftJoin(AssistantFileMapping, eq(fileTable.id, AssistantFileMapping.fileId))
       .leftJoin(LearningScenarioFileMapping, eq(fileTable.id, LearningScenarioFileMapping.fileId))
+      .leftJoin(
+        SharedChatConversationMessageFileMappingTable,
+        eq(fileTable.id, SharedChatConversationMessageFileMappingTable.fileId),
+      )
       .where(
         and(
           isNull(ConversationMessageFileMappingTable.fileId),
           isNull(CharacterFileMapping.fileId),
           isNull(AssistantFileMapping.fileId),
           isNull(LearningScenarioFileMapping.fileId),
-          not(isSharedChatFileCondition),
+          isNull(SharedChatConversationMessageFileMappingTable.fileId),
         ),
       );
     const fileIdsToDelete = fileIds.map((f) => f.fileId);

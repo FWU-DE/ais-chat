@@ -43,19 +43,8 @@ describe('verifySharedChatImageAccess', () => {
     expect(mocks.dbGetFilesInIdsMock).not.toHaveBeenCalled();
   });
 
-  it('accepts an image owned by the shared session', async () => {
-    mocks.dbGetFilesInIdsMock.mockResolvedValue([
-      {
-        id: 'file-1',
-        userId: null,
-        metadata: {
-          inviteCode: 'invite',
-          entityType: 'character',
-          entityId: 'character-1',
-          sessionId: 'session-1',
-        },
-      },
-    ]);
+  it('accepts an image mapped to the conversation', async () => {
+    mocks.dbGetFilesInIdsMock.mockResolvedValue([{ id: 'file-1', userId: null, metadata: {} }]);
 
     const { verifySharedChatImageAccess } = await import('./shared-chat-read-service');
 
@@ -104,31 +93,5 @@ describe('verifySharedChatImageAccess', () => {
         sharedSessionId: 'session-1',
       }),
     ).rejects.toThrow('Not authorized to use one or more files');
-  });
-
-  it('rejects files from another shared session', async () => {
-    mocks.dbGetFilesInIdsMock.mockResolvedValue([
-      {
-        id: 'file-1',
-        userId: null,
-        metadata: {
-          inviteCode: 'invite',
-          entityType: 'character',
-          entityId: 'character-1',
-          sessionId: 'other-session',
-        },
-      },
-    ]);
-    const { verifySharedChatImageAccess } = await import('./shared-chat-read-service');
-
-    await expect(
-      verifySharedChatImageAccess({
-        inviteCode: 'invite',
-        entityType: 'character',
-        entityId: 'character-1',
-        fileId: 'file-1',
-        sharedSessionId: 'session-1',
-      }),
-    ).rejects.toThrow('Not authorized to access this file');
   });
 });

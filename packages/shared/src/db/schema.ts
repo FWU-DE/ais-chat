@@ -1047,6 +1047,48 @@ export type SharedLearningScenarioSelectModel = z.infer<typeof sharedLearningSce
 export type SharedLearningScenarioInsertModel = z.infer<typeof sharedLearningScenarioInsertSchema>;
 export type SharedLearningScenarioUpdateModel = z.infer<typeof sharedLearningScenarioUpdateSchema>;
 
+/**
+ * Message history for an anonymous shared-chat conversation.
+ */
+export const sharedChatEntityTypeSchema = z.enum(['character', 'learningScenario']);
+export const sharedChatEntityTypeEnum = pgEnum(
+  'shared_chat_entity_type',
+  sharedChatEntityTypeSchema.enum,
+);
+
+export const sharedChatConversationTable = pgTable('shared_chat_conversation', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  entityType: sharedChatEntityTypeEnum('entity_type').notNull(),
+  shareId: uuid('share_id').notNull(),
+  createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+});
+
+export const sharedChatConversationMessageTable = pgTable(
+  'shared_chat_conversation_message',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    conversationId: text('conversation_id').notNull(),
+    content: text('content').notNull(),
+    role: conversationRoleEnum('role').notNull(),
+    orderNumber: integer('order_number').notNull(),
+    toolCalls: json('tool_calls').$type<ToolCall[]>(),
+    toolCallId: text('tool_call_id'),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.conversationId, table.id] }),
+    uniqueIndex('shared_chat_message_order_unique').on(table.conversationId, table.orderNumber),
+    foreignKey({
+      columns: [table.conversationId],
+      foreignColumns: [sharedChatConversationTable.id],
+      name: 'shared_chat_conversation_fk',
+    }).onDelete('cascade'),
+  ],
+);
+
+export type InsertSharedChatConversationMessageModel =
+  typeof sharedChatConversationMessageTable.$inferInsert;
+
 // Type for learning scenario with sharing data (from JOIN with sharedLearningScenario)
 const sharedLearningScenarioTransformedSchema = sharedLearningScenarioSelectSchema
   .omit({ id: true, learningScenarioId: true, userId: true })
@@ -1609,6 +1651,45 @@ export type FileUpdateModel = z.infer<typeof fileUpdateSchema>;
 // Keep existing extended types
 export type FileModel = typeof fileTable.$inferSelect;
 export type FileModelAndUrl = FileModel & { signedUrl: string };
+
+export const SharedChatConversationMessageFileMappingTable = pgTable(
+  'shared_chat_conversation_message_file_mapping',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    fileId: text('file_id').notNull(),
+    // Null while the file is uploaded to the conversation but not yet attached to a message.
+    conversationMessageId: text('conversation_message_id'),
+    conversationId: text('conversation_id').notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('shared_chat_message_file_message_idx').on(table.conversationMessageId),
+    index('shared_chat_message_file_conversation_idx').on(table.conversationId),
+    unique('shared_chat_message_file_unique').on(
+      table.conversationMessageId,
+      table.conversationId,
+      table.fileId,
+    ),
+    foreignKey({
+      columns: [table.fileId],
+      foreignColumns: [fileTable.id],
+      name: 'shared_chat_message_file_file_fk',
+    }),
+    foreignKey({
+      columns: [table.conversationId, table.conversationMessageId],
+      foreignColumns: [
+        sharedChatConversationMessageTable.conversationId,
+        sharedChatConversationMessageTable.id,
+      ],
+      name: 'shared_chat_message_file_message_fk',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.conversationId],
+      foreignColumns: [sharedChatConversationTable.id],
+      name: 'shared_chat_message_file_conversation_fk',
+    }).onDelete('cascade'),
+  ],
+);
 
 /**
  * Schema for table conversation_message_file_mapping
