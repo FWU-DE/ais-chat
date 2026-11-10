@@ -1,3 +1,4 @@
+CREATE TYPE "public"."shared_chat_entity_type" AS ENUM('character', 'learningScenario');--> statement-breakpoint
 CREATE TABLE "shared_chat_conversation_message_file_mapping" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"file_id" text NOT NULL,
@@ -21,10 +22,9 @@ CREATE TABLE "shared_chat_conversation_message" (
 --> statement-breakpoint
 CREATE TABLE "shared_chat_conversation" (
 	"id" text PRIMARY KEY NOT NULL,
-	"entity_type" text NOT NULL,
+	"entity_type" "shared_chat_entity_type" NOT NULL,
 	"share_id" uuid NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "shared_chat_conversation_entity_type_check" CHECK ("shared_chat_conversation"."entity_type" in ('character', 'learningScenario'))
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "shared_chat_conversation_message_file_mapping" ADD CONSTRAINT "shared_chat_message_file_file_fk" FOREIGN KEY ("file_id") REFERENCES "public"."file_table"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

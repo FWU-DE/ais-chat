@@ -23,10 +23,10 @@ export async function loadSharedChatConversationMessagesAction({
     entityId,
   };
 
-  return checkInviteCodeForExport({ inviteCode }).then(() =>
-    runServerAction(
-      'loadSharedChatConversationMessagesAction',
-      loadSharedChatConversationMessages,
-    )(params),
-  );
+  await checkInviteCodeForExport({ inviteCode });
+
+  return runServerAction(
+    'loadSharedChatConversationMessagesAction',
+    loadSharedChatConversationMessages,
+  )(params);
 }

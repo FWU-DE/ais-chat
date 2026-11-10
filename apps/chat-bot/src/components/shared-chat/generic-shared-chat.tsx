@@ -161,9 +161,8 @@ export default function GenericSharedChat({
   const { scrollRef, reactivateAutoScrolling } = useAutoScroll([messages, entity.id, inviteCode]);
   const containerRef = useRef<HTMLDivElement>(null);
   const alreadyMounted = useRef(false); // Guard against the mount effect running twice (e.g. React StrictMode dev behavior)
-  // Incremented whenever the conversation changes so late history responses can be discarded.
-  const conversationEpoch = useRef(0);
-  const recoveryPending = useRef(false);
+  // If a response was interrupted (meaning last persisted msg is a user msg), this flag indicates that a regeneration of the response is needed.
+  const recoverInterruptedResponse = useRef(false);
 
   const chatUsable =
     chatActive && !TokenPointsExceededError.is(error) && !SharedChatExpiredError.is(error);
@@ -246,9 +245,8 @@ export default function GenericSharedChat({
 
     const nextSharedSessionId = cnanoid();
 
-    conversationEpoch.current += 1;
     setHistoryLoading(false);
-    recoveryPending.current = false;
+    recoverInterruptedResponse.current = false;
 
     setFiles(new Map());
     setMessageFileMapping(new Map());
@@ -264,8 +262,6 @@ export default function GenericSharedChat({
 
     if (!historyLoading) return;
 
-    const epoch = conversationEpoch.current;
-
     void loadSharedChatConversationMessagesAction({
       sharedSessionId,
       inviteCode,
@@ -273,8 +269,6 @@ export default function GenericSharedChat({
       entityId: entity.id,
     })
       .then((result) => {
-        if (epoch !== conversationEpoch.current) return;
-
         if (!result.success) {
           logError('Failed to load shared chat history', new Error(result.error.message));
           return;
@@ -282,7 +276,7 @@ export default function GenericSharedChat({
 
         if (result.value.messages.length > 0) {
           setMessages([...initialMessages, ...result.value.messages]);
-          recoveryPending.current = true;
+          recoverInterruptedResponse.current = true;
         }
 
         const restoredFileMapping = new Map<string, MessageFileModel[]>();
@@ -309,21 +303,18 @@ export default function GenericSharedChat({
         setMessageFileMapping(restoredFileMapping);
       })
       .catch((error) => {
-        if (epoch !== conversationEpoch.current) return;
         logError('Failed to load shared chat history', error);
       })
       .finally(() => {
-        if (epoch === conversationEpoch.current) {
-          setHistoryLoading(false);
-        }
+        setHistoryLoading(false);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     // Runs after the restored messages are rendered, so the chat hook knows the last user message.
-    if (!recoveryPending.current || historyLoading) return;
-    recoveryPending.current = false;
+    if (!recoverInterruptedResponse.current || historyLoading) return;
+    recoverInterruptedResponse.current = false;
 
     if (!chatUsable || messages.at(-1)?.role !== 'user') return;
 
@@ -333,11 +324,8 @@ export default function GenericSharedChat({
   }, [historyLoading]);
 
   useEffect(() => {
-    // Do not persist messages during streaming (assistant content is incomplete).
-    if (status === 'streaming') return;
-
     saveSharedChat(inviteCode, { sharedSessionId });
-  }, [inviteCode, sharedSessionId, status]);
+  }, [inviteCode, sharedSessionId]);
 
   function handleReload() {
     void reload({ sharedSessionId });
@@ -380,6 +368,7 @@ export default function GenericSharedChat({
       <div className="flex h-dvh min-h-0 flex-col overflow-hidden">
         <SharedChatHeader
           chatActive={chatUsable && !historyLoading}
+          disableNewChat={historyLoading}
           hasMessages={messages.length > 0}
           t={headerT}
           handleOpenNewChat={handleOpenNewChat}

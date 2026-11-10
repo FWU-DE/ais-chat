@@ -49,18 +49,4 @@ export async function verifySharedChatImageAccess({
   }
 
   verify.filesDoNotBelongToAnyUser([file]);
-
-  const conversation = await dbGetSharedChatConversation({
-    conversationId: sharedSessionId,
-    inviteCode,
-    entityType,
-    entityId,
-  });
-  const fileMappings = await dbGetSharedChatFileConversationIds([fileId]);
-  if (
-    conversation === undefined ||
-    !fileMappings.some((mapping) => mapping.conversationId === conversation.id)
-  ) {
-    throw new ForbiddenError('Not authorized to access this file');
-  }
 }

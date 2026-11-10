@@ -76,6 +76,11 @@ export async function loadSharedChatConversationMessages({
   };
 }
 
+/**
+ * Validates and prepares one shared-chat conversation using the persisted conversation as the source of truth.
+ * New user message is inserted, while regenerated turns discard their previous assistant/tool
+ * responses. The returned callback persists the completed assistant response and agent-loop messages.
+ */
 export async function prepareSharedChatConversation({
   sharedSessionId,
   inviteCode,
@@ -186,7 +191,7 @@ export async function prepareSharedChatConversation({
 }
 
 /**
- * Handles a regeneration of an already stored user message, stores a new one and links its files.
+ * Prepares a user message for processing and removes any existing responses after it when regenerating the assistant response.
  */
 async function prepareSharedChatMessageForProcessing({
   conversationId,

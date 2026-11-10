@@ -260,16 +260,13 @@ export async function sendCharacterMessage({
     onToolResult: aiActivity.onToolResult,
     onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {
       try {
-        try {
-          aiActivity.finish();
-          await sharedChatConversation.persistResponse({
-            assistantMessageId,
-            fullText,
-            agentLoopMessages,
-          });
-        } finally {
-          await persistUsage({ usage, priceInCents, modelUsages });
-        }
+        aiActivity.finish();
+        await sharedChatConversation.persistResponse({
+          assistantMessageId,
+          fullText,
+          agentLoopMessages,
+        });
+        await persistUsage({ usage, priceInCents, modelUsages });
         done();
       } catch (error) {
         logError('Error persisting shared character chat completion:', error);

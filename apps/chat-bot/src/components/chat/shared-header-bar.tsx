@@ -26,6 +26,7 @@ import type { ConversationDownloadFile } from './conversation-download-context';
 
 export function SharedChatHeader({
   chatActive,
+  disableNewChat,
   hasMessages,
   t,
   handleOpenNewChat,
@@ -37,6 +38,7 @@ export function SharedChatHeader({
   imageUrl,
 }: {
   chatActive: boolean;
+  disableNewChat: boolean;
   hasMessages: boolean;
   t: ReturnType<typeof useTranslations>;
   handleOpenNewChat: () => void;
@@ -63,6 +65,7 @@ export function SharedChatHeader({
       id: 'delete-chat',
       label: tCommon('delete'),
       icon: <TrashSimpleIcon className="size-5 text-primary" />,
+      disabled: disableNewChat,
       onSelect: openDeleteConfirm,
     },
     {
@@ -103,6 +106,7 @@ export function SharedChatHeader({
           variant="ghost"
           size="icon-round"
           className="text-primary"
+          disabled={disableNewChat}
           onClick={openDeleteConfirm}
           data-testid="custom-chat-delete-button"
         >

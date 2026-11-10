@@ -1,7 +1,7 @@
 import { logError } from '@shared/logging';
 import { z } from 'zod';
 
-const STORAGE_KEY_VERSION = 'v2';
+const STORAGE_KEY_VERSION = 'v3';
 
 const persistedSharedChatSchema = z.object({
   sharedSessionId: z.string().min(1),

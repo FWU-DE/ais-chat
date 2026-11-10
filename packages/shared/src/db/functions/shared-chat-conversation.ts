@@ -155,16 +155,6 @@ export async function dbInsertSharedChatContent(
   return insertedMessage;
 }
 
-function isUniqueViolation(error: unknown): boolean {
-  const code = (error as { code?: unknown } | null)?.code;
-  const causeCode = (error as { cause?: { code?: unknown } } | null)?.cause?.code;
-  return code === '23505' || causeCode === '23505';
-}
-
-/**
- * Inserts all messages or none. Returns an empty array if one of the reserved order numbers
- * was taken in the meantime (a retry or a newer turn), so a stale completion writes nothing.
- */
 export async function dbInsertSharedChatContentBatch(
   chatContents: InsertSharedChatConversationMessageModel[],
 ) {
@@ -172,18 +162,15 @@ export async function dbInsertSharedChatContentBatch(
     return [];
   }
 
-  try {
-    return await db.insert(sharedChatConversationMessageTable).values(chatContents).returning({
+  return db
+    .insert(sharedChatConversationMessageTable)
+    .values(chatContents)
+    .onConflictDoNothing()
+    .returning({
       id: sharedChatConversationMessageTable.id,
       conversationId: sharedChatConversationMessageTable.conversationId,
       orderNumber: sharedChatConversationMessageTable.orderNumber,
     });
-  } catch (error) {
-    if (isUniqueViolation(error)) {
-      return [];
-    }
-    throw error;
-  }
 }
 
 export async function dbGetSharedChatFileConversationIds(fileIds: string[]) {

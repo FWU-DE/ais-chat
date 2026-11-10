@@ -1050,26 +1050,23 @@ export type SharedLearningScenarioUpdateModel = z.infer<typeof sharedLearningSce
 /**
  * Message history for an anonymous shared-chat conversation.
  */
-export const sharedChatConversationTable = pgTable(
-  'shared_chat_conversation',
-  {
-    id: text('id').primaryKey(),
-    entityType: text('entity_type').$type<'character' | 'learningScenario'>().notNull(),
-    shareId: uuid('share_id').notNull(),
-    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    check(
-      'shared_chat_conversation_entity_type_check',
-      sql`${table.entityType} in ('character', 'learningScenario')`,
-    ),
-  ],
+export const sharedChatEntityTypeSchema = z.enum(['character', 'learningScenario']);
+export const sharedChatEntityTypeEnum = pgEnum(
+  'shared_chat_entity_type',
+  sharedChatEntityTypeSchema.enum,
 );
+
+export const sharedChatConversationTable = pgTable('shared_chat_conversation', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  entityType: sharedChatEntityTypeEnum('entity_type').notNull(),
+  shareId: uuid('share_id').notNull(),
+  createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+});
 
 export const sharedChatConversationMessageTable = pgTable(
   'shared_chat_conversation_message',
   {
-    id: text('id').notNull(),
+    id: uuid('id').defaultRandom().primaryKey(),
     conversationId: text('conversation_id').notNull(),
     content: text('content').notNull(),
     role: conversationRoleEnum('role').notNull(),
