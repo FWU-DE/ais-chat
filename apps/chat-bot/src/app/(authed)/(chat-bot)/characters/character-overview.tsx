@@ -1,5 +1,6 @@
 'use client';
 
+import type { WithFavorite } from '@shared/favorites/favorite-service';
 import { OverviewFilter } from '@shared/overview-filter';
 import { useTranslations } from 'next-intl';
 import React, { useCallback, useState } from 'react';
@@ -13,6 +14,7 @@ import {
 import EntityCard from '@/components/entity-overview/entity-card';
 import EntityOverview from '@/components/entity-overview/entity-overview';
 import { filterAndSortEntities } from '@/components/entity-overview/utils';
+import { useOverviewFavoriteToggle } from '@/components/hooks/use-overview-favorite-toggle';
 import { useOverviewFilters } from '@/components/hooks/use-overview-filters';
 
 import { getCharactersByFilterAction } from '../actions/entity-filter-actions';
@@ -26,7 +28,9 @@ type CharacterOverviewProps = {
 export default function CharacterOverview({ currentUserId }: CharacterOverviewProps) {
   const t = useTranslations('characters');
   const tCommon = useTranslations();
-  const [visibleCharacters, setVisibleCharacters] = useState<CharacterWithImage[]>([]);
+  const [visibleCharacters, setVisibleCharacters] = useState<WithFavorite<CharacterWithImage>[]>(
+    [],
+  );
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
   const fetchCharacters = useCallback(async (filter: OverviewFilter) => {
@@ -52,6 +56,13 @@ export default function CharacterOverview({ currentUserId }: CharacterOverviewPr
   async function handleFilterChange(filter: OverviewFilter) {
     await setActiveFilter(filter);
   }
+
+  const handleToggleFavorite = useOverviewFavoriteToggle({
+    entityType: 'character',
+    activeFilter,
+    setEntities: setVisibleCharacters,
+    entities: visibleCharacters,
+  });
 
   const infoContent = (
     <div className="whitespace-pre-line">
@@ -107,6 +118,8 @@ export default function CharacterOverview({ currentUserId }: CharacterOverviewPr
               href={isOwned ? `/characters/editor/${character.id}` : `/characters/${character.id}`}
               chatHref={`/characters/d/${character.id}`}
               shareInfo={character}
+              isFavorite={character.isFavorite}
+              onToggleFavorite={(isFavorite) => handleToggleFavorite(character.id, isFavorite)}
             />
           );
         });

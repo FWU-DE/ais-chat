@@ -24,10 +24,12 @@ export default async function Page(props: PageProps<'/assistants/editor/[assista
   const { assistantId } = await props.params;
   const { user, federalState } = await requireAuth();
 
-  const { assistant, fileMappings, pictureUrl } = await getAssistantByUser({
-    assistantId: assistantId,
-    user,
-  }).catch(handleErrorInServerComponent);
+  const {
+    assistant,
+    fileMappings,
+    pictureUrl,
+    isFavorite: initialIsFavorite,
+  } = await getAssistantByUser({ assistantId, user }).catch(handleErrorInServerComponent);
 
   const communityTemplateRequest = await getCommunityTemplateRequestWithEvents({
     entityRef: { entityType: 'assistant', entityId: assistantId },
@@ -48,6 +50,7 @@ export default async function Page(props: PageProps<'/assistants/editor/[assista
         relatedFiles={fileMappings}
         initialLinks={initialLinks}
         avatarPictureUrl={pictureUrl}
+        initialIsFavorite={initialIsFavorite}
         initialCommunityTemplateRequest={communityTemplateRequest}
         isWebSearchAvailable={isWebSearchAvailableForFederalState(federalState.featureToggles)}
         isSpeechAvailable={isSpeechAvailable}

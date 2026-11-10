@@ -1,5 +1,6 @@
 'use client';
 
+import type { WithFavorite } from '@shared/favorites/favorite-service';
 import { LearningScenarioWithImage } from '@shared/learning-scenarios/learning-scenario-service';
 import { OverviewFilter } from '@shared/overview-filter';
 import { useTranslations } from 'next-intl';
@@ -14,6 +15,7 @@ import {
 import EntityCard from '@/components/entity-overview/entity-card';
 import EntityOverview from '@/components/entity-overview/entity-overview';
 import { filterAndSortEntities } from '@/components/entity-overview/utils';
+import { useOverviewFavoriteToggle } from '@/components/hooks/use-overview-favorite-toggle';
 import { useOverviewFilters } from '@/components/hooks/use-overview-filters';
 
 import { getLearningScenariosByFilterAction } from '../actions/entity-filter-actions';
@@ -27,7 +29,7 @@ export default function LearningScenarioOverview({ currentUserId }: LearningScen
   const t = useTranslations('learning-scenarios');
   const tCommon = useTranslations();
   const [visibleLearningScenarios, setVisibleLearningScenarios] = useState<
-    LearningScenarioWithImage[]
+    WithFavorite<LearningScenarioWithImage>[]
   >([]);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
@@ -54,6 +56,13 @@ export default function LearningScenarioOverview({ currentUserId }: LearningScen
   async function handleFilterChange(filter: OverviewFilter) {
     await setActiveFilter(filter);
   }
+
+  const handleToggleFavorite = useOverviewFavoriteToggle({
+    entityType: 'learningScenario',
+    activeFilter,
+    setEntities: setVisibleLearningScenarios,
+    entities: visibleLearningScenarios,
+  });
 
   const infoContent = (
     <div className="whitespace-pre-line">
@@ -113,6 +122,8 @@ export default function LearningScenarioOverview({ currentUserId }: LearningScen
               }
               chatHref={`/learning-scenarios/d/${scenario.id}`}
               shareInfo={scenario}
+              isFavorite={scenario.isFavorite}
+              onToggleFavorite={(isFavorite) => handleToggleFavorite(scenario.id, isFavorite)}
             />
           );
         });

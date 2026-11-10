@@ -29,6 +29,8 @@
     "chat-expired-error": "Der Chat ist abgelaufen.",
     "empty-response-error": "Antwort konnte nicht generiert werden",
     "new-chat": "Neuer Chat",
+    "favorite": "Favorit",
+    "favorite-error": "Der Favorit konnte nicht gespeichert werden.",
     "stop": "Stop",
     "copy": "Kopieren",
     "edit": "Bearbeiten",
