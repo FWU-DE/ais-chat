@@ -27,6 +27,7 @@ import {
   sharedLearningScenarioTable,
   sharedLearningScenarioUsageTracking,
   SharedLearningScenarioUsageTrackingInsertModel,
+  userFavoriteTable,
   userTable,
 } from '../schema';
 import { PgTransactionObject } from '../types';
@@ -76,22 +77,6 @@ function latestActiveLearningScenarioShare(user: Pick<UserModel, 'id'>) {
  * user, regardless of whether it is active or expired. Used to surface the last share's settings
  * (tokenPointsLimit, maxUsageTimeLimit) as defaults when no active share exists.
  */
-function latestLearningScenarioShare(
-  user: Pick<UserModel, 'id'>,
-): ReturnType<typeof latestActiveLearningScenarioShare> {
-  return db
-    .selectDistinctOn([sharedLearningScenarioTable.learningScenarioId], {
-      ...getTableColumns(sharedLearningScenarioTable),
-    })
-    .from(sharedLearningScenarioTable)
-    .where(eq(sharedLearningScenarioTable.userId, user.id))
-    .orderBy(
-      sharedLearningScenarioTable.learningScenarioId,
-      desc(sharedLearningScenarioTable.startedAt),
-    )
-    .as('latest_share');
-}
-
 /**
  * Returns a subquery that selects the single most-recent non-manually-stopped share per learning
  * scenario for a given user. This includes shares that have already expired, so the caller has
@@ -394,6 +379,25 @@ export async function dbGetLearningScenariosByIdsOptionalShareData({
     .orderBy(desc(learningScenarioTable.createdAt));
 }
 
+export async function dbGetLearningScenariosByUserFavorite({
+  user,
+}: {
+  user: Pick<UserModel, 'id'>;
+}): Promise<LearningScenarioOptionalShareDataModel[]> {
+  const activeShare = latestActiveLearningScenarioShare(user);
+  return baseLearningScenarioWithShareQuery(activeShare)
+    .leftJoin(activeShare, eq(activeShare.learningScenarioId, learningScenarioTable.id))
+    .innerJoin(
+      userFavoriteTable,
+      and(
+        eq(userFavoriteTable.learningScenarioId, learningScenarioTable.id),
+        eq(userFavoriteTable.userId, user.id),
+      ),
+    )
+    .where(excludeDeletedLearningScenarios())
+    .orderBy(desc(learningScenarioTable.createdAt));
+}
+
 /**
  * Needs userId because the metadata for shared learning scenarios is both tied to the user and learning scenario,
  * this is especially important for shared learning scenarios (school wide or global).
@@ -414,26 +418,6 @@ export async function dbGetLearningScenarioByIdWithShareData({
   const latestShare = latestNonStoppedLearningScenarioShare(user);
   const [row] = await baseLearningScenarioWithShareQuery(latestShare)
     .innerJoin(latestShare, eq(latestShare.learningScenarioId, learningScenarioTable.id))
-    .where(
-      and(
-        eq(learningScenarioTable.id, learningScenarioId),
-        excludeDeletedLearningScenarios({ includeDeleted }),
-      ),
-    );
-  return row;
-}
-
-export async function dbGetLearningScenarioByIdOptionalShareData({
-  learningScenarioId,
-  user,
-  includeDeleted,
-}: {
-  learningScenarioId: string;
-  user: Pick<UserModel, 'id'>;
-} & IncludeDeletedOption): Promise<LearningScenarioOptionalShareDataModel | undefined> {
-  const latestShare = latestLearningScenarioShare(user);
-  const [row] = await baseLearningScenarioWithShareQuery(latestShare)
-    .leftJoin(latestShare, eq(latestShare.learningScenarioId, learningScenarioTable.id))
     .where(
       and(
         eq(learningScenarioTable.id, learningScenarioId),

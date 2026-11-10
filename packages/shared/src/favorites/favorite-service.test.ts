@@ -4,14 +4,13 @@ import { dbGetLearningScenarioById } from '@shared/db/functions/learning-scenari
 import {
   dbAddUserFavorite,
   dbGetUserFavoriteEntityIds,
-  dbIsUserFavorite,
   dbRemoveUserFavorite,
 } from '@shared/db/functions/user-favorites';
 import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/error';
 import { generateUUID } from '@shared/utils/uuid';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getFavoriteEntityIds, isFavorite, setFavorite } from './favorite-service';
+import { getFavoriteEntityIds, setFavorite } from './favorite-service';
 
 vi.mock('@shared/db/functions/assistants', () => ({ dbGetAssistantById: vi.fn() }));
 vi.mock('@shared/db/functions/character', () => ({ dbGetCharacterById: vi.fn() }));
@@ -22,7 +21,6 @@ vi.mock('@shared/db/functions/user-favorites', () => ({
   dbAddUserFavorite: vi.fn(),
   dbRemoveUserFavorite: vi.fn(),
   dbGetUserFavoriteEntityIds: vi.fn(),
-  dbIsUserFavorite: vi.fn(),
 }));
 
 const user = { id: generateUUID(), schoolIds: [] as string[] };
@@ -100,8 +98,17 @@ describe('favorite-service', () => {
       expect(dbAddUserFavorite).not.toHaveBeenCalled();
     });
 
-    it('rejects favoriting a suspended entity', async () => {
+    it('allows the owner to favorite a suspended entity', async () => {
       const entity = buildEntity({ userId: user.id, suspended: true });
+      vi.mocked(dbGetAssistantById).mockResolvedValue(entity as never);
+
+      await setFavorite({ entityType: 'assistant', entityId: entity.id, isFavorite: true, user });
+
+      expect(dbAddUserFavorite).toHaveBeenCalledOnce();
+    });
+
+    it('rejects favoriting a suspended entity for a non-owner', async () => {
+      const entity = buildEntity({ suspended: true });
       vi.mocked(dbGetAssistantById).mockResolvedValue(entity as never);
 
       await expect(
@@ -149,33 +156,6 @@ describe('favorite-service', () => {
           isFavorite: true,
           user,
         }),
-      ).rejects.toThrow(InvalidArgumentError);
-    });
-  });
-
-  describe('isFavorite', () => {
-    it('returns whether the entity is a favorite of the user', async () => {
-      const entityId = generateUUID();
-      vi.mocked(dbIsUserFavorite).mockResolvedValue(true);
-
-      const result = await isFavorite({ entityType: 'character', entityId, user });
-
-      expect(result).toBe(true);
-      expect(dbIsUserFavorite).toHaveBeenCalledWith({
-        userId: user.id,
-        entityRef: { entityType: 'character', entityId },
-      });
-    });
-
-    it('rejects an invalid entity id', async () => {
-      await expect(
-        isFavorite({ entityType: 'assistant', entityId: 'not-a-uuid', user }),
-      ).rejects.toThrow(InvalidArgumentError);
-    });
-
-    it('rejects an unsupported entity type', async () => {
-      await expect(
-        isFavorite({ entityType: 'foo' as never, entityId: generateUUID(), user }),
       ).rejects.toThrow(InvalidArgumentError);
     });
   });

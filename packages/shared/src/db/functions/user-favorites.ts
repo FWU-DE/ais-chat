@@ -87,5 +87,5 @@ export async function dbGetUserFavoriteEntityIds({
     .from(userFavoriteTable)
     .where(and(eq(userFavoriteTable.userId, userId), isNotNull(column)));
 
-  return rows.flatMap((row) => (row.entityId ? [row.entityId] : []));
+  return rows.map((row) => row.entityId!);
 }

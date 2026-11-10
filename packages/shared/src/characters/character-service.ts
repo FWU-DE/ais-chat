@@ -18,11 +18,11 @@ import {
   dbGetAllCharactersByUser,
   dbGetCharacterById,
   dbGetCharacterByIdForConversation,
-  dbGetCharacterByIdOptionalShareData,
   dbGetCharacterByIdWithShareData,
   dbGetCharacters,
   dbGetCharactersByAssociatedSchools,
   dbGetCharactersByIdsOptionalShareData,
+  dbGetCharactersByUserFavorite,
   dbGetCommunityCharacters,
   dbGetGlobalCharacters,
   dbGetLatestManageableCharacterShare,
@@ -37,6 +37,7 @@ import {
 } from '@shared/db/functions/files';
 import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
 import { dbGetSharedCharacterChatUsageInCentByCharacterId } from '@shared/db/functions/token-points';
+import { dbIsUserFavorite } from '@shared/db/functions/user-favorites';
 import {
   CharacterFileMapping,
   CharacterOptionalShareDataModel,
@@ -48,7 +49,6 @@ import {
 } from '@shared/db/schema';
 import { checkParameterUUID, ForbiddenError, InvalidArgumentError } from '@shared/error';
 import { NotFoundError } from '@shared/error/not-found-error';
-import { getFavoriteEntityIds } from '@shared/favorites/favorite-service';
 import { FederalStateModel } from '@shared/federal-states/types';
 import {
   deleteAvatarPicture,
@@ -761,12 +761,21 @@ export const getCharacterForEditView = async ({
   maxBudget: number | null;
   usedBudget: number;
   budgetUsedBySharedChat: number;
+  isFavorite: boolean;
 }> => {
   checkParameterUUID(characterId);
   requireTeacherRole(user.userRole);
-  const character = await dbGetCharacterByIdOptionalShareData({ characterId, user });
+  const [character] = await dbGetCharactersByIdsOptionalShareData({
+    characterIds: [characterId],
+    user,
+  });
   if (!character) throw new NotFoundError('Character not found');
   verifyReadAccess({ item: character, user });
+
+  const isFavorite = await dbIsUserFavorite({
+    userId: user.id,
+    entityRef: { entityType: 'character', entityId: characterId },
+  });
 
   const relatedFiles = await fetchFileMappings({
     characterId,
@@ -803,6 +812,7 @@ export const getCharacterForEditView = async ({
     maxBudget,
     usedBudget,
     budgetUsedBySharedChat,
+    isFavorite,
   };
 };
 
@@ -892,8 +902,7 @@ export async function getCharactersByOverviewFilter({
       break;
     }
     case 'favorites': {
-      const characterIds = await getFavoriteEntityIds({ entityType: 'character', user });
-      characters = await dbGetCharactersByIdsOptionalShareData({ characterIds, user });
+      characters = await dbGetCharactersByUserFavorite({ user });
       break;
     }
     default:

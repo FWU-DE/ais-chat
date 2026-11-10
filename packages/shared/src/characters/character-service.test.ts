@@ -1,7 +1,6 @@
 import { dbGetSharedCharacterChatUsageInCentByCharacterId } from '@shared/db/functions/token-points';
 import { CharacterSelectModel, CharacterWithShareDataModel } from '@shared/db/schema';
 import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/error';
-import { getFavoriteEntityIds } from '@shared/favorites/favorite-service';
 import { FederalStateModel } from '@shared/federal-states/types';
 import { getUserSettings } from '@shared/users/user-settings-service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,10 +12,10 @@ import {
   dbGetAllCharactersByUser,
   dbGetCharacterById,
   dbGetCharacterByIdForConversation,
-  dbGetCharacterByIdOptionalShareData,
   dbGetCharacterByIdWithShareData,
   dbGetCharactersByAssociatedSchools,
   dbGetCharactersByIdsOptionalShareData,
+  dbGetCharactersByUserFavorite,
   dbGetCommunityCharacters,
   dbGetGlobalCharacters,
   dbGetLatestManageableCharacterShare,
@@ -55,12 +54,12 @@ import {
 
 vi.mock('../db/functions/character', () => ({
   dbGetCharactersByIdsOptionalShareData: vi.fn(),
+  dbGetCharactersByUserFavorite: vi.fn(),
   dbGetAllAccessibleCharacters: vi.fn(),
   dbGetAllCharactersByUser: vi.fn(),
   dbGetCharacterById: vi.fn(),
   dbGetCharacterByIdAndUserId: vi.fn(),
   dbGetCharacterByIdForConversation: vi.fn(),
-  dbGetCharacterByIdOptionalShareData: vi.fn(),
   dbGetCharacterByIdWithShareData: vi.fn(),
   dbDeleteCharacterByIdAndUser: vi.fn(),
   dbGetCharactersByAssociatedSchools: vi.fn(),
@@ -76,8 +75,8 @@ vi.mock('../db/functions/character', () => ({
 vi.mock('../db/functions/files', () => ({
   dbGetRelatedCharacterFiles: vi.fn(),
 }));
-vi.mock('@shared/favorites/favorite-service', () => ({
-  getFavoriteEntityIds: vi.fn(),
+vi.mock('@shared/db/functions/user-favorites', () => ({
+  dbIsUserFavorite: vi.fn().mockResolvedValue(false),
 }));
 vi.mock('../s3', () => ({
   getReadOnlySignedUrl: vi.fn(),
@@ -1057,7 +1056,9 @@ describe('character-service', () => {
           hasLinkAccess: true,
         };
 
-        vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(mockCharacter as never);
+        vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([
+          mockCharacter,
+        ] as never);
         // Also mock dbGetCharacterById because fetchFileMappings -> getCharacterInfo uses it
         vi.mocked(dbGetCharacterById).mockResolvedValue(mockCharacter as never);
         vi.mocked(dbGetRelatedCharacterFiles).mockResolvedValue([]);
@@ -1144,7 +1145,9 @@ describe('character-service', () => {
           hasLinkAccess: false,
         };
 
-        vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(mockCharacter as never);
+        vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([
+          mockCharacter,
+        ] as never);
 
         await expect(
           getCharacterForEditView({
@@ -1183,7 +1186,7 @@ describe('character-service', () => {
         hasLinkAccess: false,
       } as unknown as CharacterSelectModel;
 
-      vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(character as never);
+      vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([character] as never);
       vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
       vi.mocked(dbGetRelatedCharacterFiles).mockResolvedValue([] as never);
       vi.mocked(getReadOnlySignedUrl).mockResolvedValue('');
@@ -1211,7 +1214,7 @@ describe('character-service', () => {
         expiredAt,
       } as unknown as CharacterSelectModel;
 
-      vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(character as never);
+      vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([character] as never);
       vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
       vi.mocked(dbGetRelatedCharacterFiles).mockResolvedValue([] as never);
       vi.mocked(getReadOnlySignedUrl).mockResolvedValue('');
@@ -1480,14 +1483,7 @@ describe('character-service', () => {
         id: generateUUID(),
         suspended: true,
       } as CharacterSelectModel;
-      const characterIds = [
-        readableCharacter.id,
-        noLongerSharedCharacter.id,
-        suspendedCharacter.id,
-      ];
-
-      vi.mocked(getFavoriteEntityIds).mockResolvedValue(characterIds);
-      vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([
+      vi.mocked(dbGetCharactersByUserFavorite).mockResolvedValue([
         readableCharacter,
         noLongerSharedCharacter,
         suspendedCharacter,
@@ -1495,8 +1491,7 @@ describe('character-service', () => {
 
       const result = await getCharactersByOverviewFilter({ filter: 'favorites', user });
 
-      expect(getFavoriteEntityIds).toHaveBeenCalledWith({ entityType: 'character', user });
-      expect(dbGetCharactersByIdsOptionalShareData).toHaveBeenCalledWith({ characterIds, user });
+      expect(dbGetCharactersByUserFavorite).toHaveBeenCalledWith({ user });
       expect(result).toEqual([readableCharacter]);
     });
 

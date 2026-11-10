@@ -17,7 +17,7 @@ import {
   dbDeleteAssistantByIdAndUser,
   dbGetAssistantById,
   dbGetAssistantByIdForConversation,
-  dbGetAssistantsByIds,
+  dbGetAssistantsByUserFavorite,
   dbGetAssistantsByUserId,
   dbGetCommunityGpts,
   dbGetGlobalGpts,
@@ -31,6 +31,7 @@ import {
   dbGetRelatedAssistantFiles,
   dbVerifyFileOwner,
 } from '@shared/db/functions/files';
+import { dbIsUserFavorite } from '@shared/db/functions/user-favorites';
 import {
   AssistantFileMapping,
   AssistantSelectModel,
@@ -39,7 +40,6 @@ import {
   FileModel,
 } from '@shared/db/schema';
 import { checkParameterUUID, ForbiddenError, NotFoundError } from '@shared/error';
-import { getFavoriteEntityIds } from '@shared/favorites/favorite-service';
 import {
   deleteAvatarPicture,
   deleteMessageAttachments,
@@ -85,6 +85,7 @@ export async function getAssistantByUser({
   assistant: AssistantSelectModel;
   fileMappings: FileModel[];
   pictureUrl: string | undefined;
+  isFavorite: boolean;
 }> {
   checkParameterUUID(assistantId);
   const assistant = await dbGetAssistantById({ assistantId });
@@ -93,12 +94,16 @@ export async function getAssistantByUser({
     user,
   });
 
-  const [fileMappings, pictureUrl] = await Promise.all([
+  const [fileMappings, pictureUrl, isFavorite] = await Promise.all([
     dbGetRelatedAssistantFiles(assistantId),
     getAvatarPictureUrl(assistant.pictureId),
+    dbIsUserFavorite({
+      userId: user.id,
+      entityRef: { entityType: 'assistant', entityId: assistantId },
+    }),
   ]);
 
-  return { assistant, fileMappings, pictureUrl };
+  return { assistant, fileMappings, pictureUrl, isFavorite };
 }
 
 /**
@@ -229,8 +234,7 @@ export async function getAssistantsByOverviewFilter({
       break;
     }
     case 'favorites': {
-      const assistantIds = await getFavoriteEntityIds({ entityType: 'assistant', user });
-      assistants = await dbGetAssistantsByIds({ assistantIds });
+      assistants = await dbGetAssistantsByUserFavorite({ user });
       break;
     }
     default:

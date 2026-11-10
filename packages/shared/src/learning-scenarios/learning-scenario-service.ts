@@ -27,15 +27,16 @@ import {
   dbGetLatestManageableLearningScenarioShare,
   dbGetLearningScenarioById,
   dbGetLearningScenarioByIdForConversation,
-  dbGetLearningScenarioByIdOptionalShareData,
   dbGetLearningScenarioByIdWithShareData,
   dbGetLearningScenariosByAssociatedSchools,
   dbGetLearningScenariosByIdsOptionalShareData,
   dbGetLearningScenariosByUser,
+  dbGetLearningScenariosByUserFavorite,
   dbStopLearningScenarioShare,
   dbUpdateLearningScenarioShareTokenPointsLimit,
 } from '@shared/db/functions/learning-scenario';
 import { dbGetLearningScenarioChatUsageInCentByLearningScenarioId } from '@shared/db/functions/token-points';
+import { dbIsUserFavorite } from '@shared/db/functions/user-favorites';
 import {
   FileModel,
   LearningScenarioFileMapping,
@@ -51,7 +52,6 @@ import {
   InvalidArgumentError,
   NotFoundError,
 } from '@shared/error';
-import { getFavoriteEntityIds } from '@shared/favorites/favorite-service';
 import { FederalStateModel } from '@shared/federal-states/types';
 import {
   deleteAvatarPicture,
@@ -145,14 +145,7 @@ export async function getLearningScenariosByOverviewFilter({
       break;
     }
     case 'favorites': {
-      const learningScenarioIds = await getFavoriteEntityIds({
-        entityType: 'learningScenario',
-        user,
-      });
-      learningScenarios = await dbGetLearningScenariosByIdsOptionalShareData({
-        learningScenarioIds,
-        user,
-      });
+      learningScenarios = await dbGetLearningScenariosByUserFavorite({ user });
       break;
     }
     default:
@@ -657,16 +650,22 @@ export async function getLearningScenarioForEditView({
   maxBudget: number | null;
   usedBudget: number;
   budgetUsedBySharedChat: number;
+  isFavorite: boolean;
 }> {
   checkParameterUUID(learningScenarioId);
   requireTeacherRole(user.userRole);
-  const learningScenario = await dbGetLearningScenarioByIdOptionalShareData({
-    learningScenarioId,
+  const [learningScenario] = await dbGetLearningScenariosByIdsOptionalShareData({
+    learningScenarioIds: [learningScenarioId],
     user,
   });
   if (!learningScenario) throw new NotFoundError('Learning scenario not found');
 
   verifyReadAccess({ item: learningScenario, user });
+
+  const isFavorite = await dbIsUserFavorite({
+    userId: user.id,
+    entityRef: { entityType: 'learningScenario', entityId: learningScenarioId },
+  });
 
   const relatedFiles = await getFilesForLearningScenario({
     learningScenarioId,
@@ -699,6 +698,7 @@ export async function getLearningScenarioForEditView({
     maxBudget,
     usedBudget,
     budgetUsedBySharedChat,
+    isFavorite,
   };
 }
 

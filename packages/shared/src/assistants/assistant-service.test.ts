@@ -6,7 +6,7 @@ import {
 import {
   dbGetAssistantById,
   dbGetAssistantByIdForConversation,
-  dbGetAssistantsByIds,
+  dbGetAssistantsByUserFavorite,
   dbGetAssistantsByUserId,
   dbGetCommunityGpts,
   dbGetGlobalGpts,
@@ -16,7 +16,6 @@ import {
 import { dbGetRelatedAssistantFiles } from '@shared/db/functions/files';
 import { AssistantSelectModel } from '@shared/db/schema';
 import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/error';
-import { getFavoriteEntityIds } from '@shared/favorites/favorite-service';
 import { getUserSettings } from '@shared/users/user-settings-service';
 import { generateUUID } from '@shared/utils/uuid';
 import { beforeEach, describe, expect, it, MockedFunction, vi } from 'vitest';
@@ -43,7 +42,7 @@ import {
 
 vi.mock('../db/functions/assistants', () => ({
   dbGetAssistantsByUserId: vi.fn(),
-  dbGetAssistantsByIds: vi.fn(),
+  dbGetAssistantsByUserFavorite: vi.fn(),
   dbGetAssistantById: vi.fn(),
   dbGetAssistantByIdForConversation: vi.fn(),
   dbGetCommunityGpts: vi.fn(),
@@ -54,8 +53,8 @@ vi.mock('../db/functions/assistants', () => ({
 vi.mock('../db/functions/files', () => ({
   dbGetRelatedAssistantFiles: vi.fn(),
 }));
-vi.mock('@shared/favorites/favorite-service', () => ({
-  getFavoriteEntityIds: vi.fn(),
+vi.mock('@shared/db/functions/user-favorites', () => ({
+  dbIsUserFavorite: vi.fn().mockResolvedValue(false),
 }));
 vi.mock('../conversation/conversation-service', () => ({
   getConversation: vi.fn(),
@@ -1305,14 +1304,7 @@ describe('assistant-service', () => {
         id: generateUUID(),
         suspended: true,
       } as AssistantSelectModel;
-      const assistantIds = [
-        readableAssistant.id,
-        noLongerSharedAssistant.id,
-        suspendedAssistant.id,
-      ];
-
-      vi.mocked(getFavoriteEntityIds).mockResolvedValue(assistantIds);
-      vi.mocked(dbGetAssistantsByIds).mockResolvedValue([
+      vi.mocked(dbGetAssistantsByUserFavorite).mockResolvedValue([
         readableAssistant,
         noLongerSharedAssistant,
         suspendedAssistant,
@@ -1320,14 +1312,12 @@ describe('assistant-service', () => {
 
       const result = await getAssistantsByOverviewFilter({ filter: 'favorites', user });
 
-      expect(getFavoriteEntityIds).toHaveBeenCalledWith({ entityType: 'assistant', user });
-      expect(dbGetAssistantsByIds).toHaveBeenCalledWith({ assistantIds });
+      expect(dbGetAssistantsByUserFavorite).toHaveBeenCalledWith({ user });
       expect(result).toEqual([readableAssistant]);
     });
 
     it('returns no assistants for filter=favorites without favorites', async () => {
-      vi.mocked(getFavoriteEntityIds).mockResolvedValue([]);
-      vi.mocked(dbGetAssistantsByIds).mockResolvedValue([]);
+      vi.mocked(dbGetAssistantsByUserFavorite).mockResolvedValue([]);
 
       const result = await getAssistantsByOverviewFilter({ filter: 'favorites', user });
 
