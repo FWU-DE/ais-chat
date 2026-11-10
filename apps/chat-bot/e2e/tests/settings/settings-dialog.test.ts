@@ -9,7 +9,7 @@ test(
   async ({ page }) => {
     await page.goto('/');
 
-    await page.getByRole('button', { name: 'profileDropdown' }).click();
+    await page.getByTestId('profile-dropdown').click();
     await page.getByRole('menuitem', { name: 'Einstellungen' }).click();
 
     const dialog = page.getByRole('dialog', { name: 'Einstellungen' });
@@ -34,7 +34,7 @@ test(
     await expect(saveToast).toBeVisible();
     await expect(saveToast).toBeHidden({ timeout: 10_000 });
 
-    await page.getByRole('button', { name: 'profileDropdown' }).click();
+    await page.getByTestId('profile-dropdown').click();
     await page.getByRole('menuitem', { name: 'Einstellungen' }).click();
 
     const reopenedDialog = page.getByRole('dialog', { name: 'Einstellungen' });

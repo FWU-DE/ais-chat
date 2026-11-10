@@ -33,6 +33,7 @@ export default function ProfileMenu({
           variant="ghost"
           size="icon-round"
           aria-label={t('profile-dropdown')}
+          data-testid="profile-dropdown"
           className="text-primary"
           title="Profil"
         >
