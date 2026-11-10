@@ -1,8 +1,9 @@
-import { expect, test } from '../../fixtures/test';
-import { AUTH_FILES } from '../../utils/const';
-import { configureAssistant, createAssistant } from '../../utils/assistant';
-import { waitForAutosave } from '../../utils/utils';
 import { nanoid } from 'nanoid';
+
+import { expect, test } from '../../fixtures/test';
+import { configureAssistant, createAssistant } from '../../utils/assistant';
+import { AUTH_FILES } from '../../utils/const';
+import { waitForAutosave } from '../../utils/utils';
 
 const assistantTeacher = 'Assistant by teacher - ' + nanoid(8);
 const assistantTeacher2 = 'Assistant by teacher2 - ' + nanoid(8);

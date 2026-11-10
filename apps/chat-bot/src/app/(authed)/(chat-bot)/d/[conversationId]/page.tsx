@@ -1,20 +1,21 @@
-import Chat from '@/components/chat/chat';
 import { dbGetConversationAndMessages } from '@shared/db/functions/chat';
-import { convertMessageModelToMessage } from '@/utils/chat/messages';
-import { redirect } from 'next/navigation';
-import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
-import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
-import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
 import { dbGetRelatedFiles } from '@shared/db/functions/files';
-import Logo from '@/components/common/logo';
-import z from 'zod';
-import { parseSearchParams } from '@/utils/parse-search-params';
-import { requireAuth } from '@/auth/requireAuth';
+import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
 import { WebSource } from '@shared/db/types';
-import { DefaultPageLayout } from '@/components/layout/default-page-layout';
-import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
 import { utils } from '@shared/utils';
+import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
+import z from 'zod';
+
+import { requireAuth } from '@/auth/requireAuth';
+import Chat from '@/components/chat/chat';
+import Logo from '@/components/common/logo';
+import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
+import { convertMessageModelToMessage } from '@/utils/chat/messages';
+import { parseSearchParams } from '@/utils/parse-search-params';
 
 export const dynamic = 'force-dynamic';
 

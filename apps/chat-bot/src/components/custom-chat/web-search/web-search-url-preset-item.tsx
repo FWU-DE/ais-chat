@@ -1,4 +1,3 @@
-import { MAX_WEB_SEARCH_INCLUDED_DOMAINS } from '@/configuration-text-inputs/const';
 import { CaretDownIcon, CaretUpIcon, PlusIcon } from '@phosphor-icons/react';
 import { UrlPreset } from '@shared/web-search/url-presets/types';
 import { Button } from '@ui/components/button';
@@ -6,6 +5,8 @@ import { Chip } from '@ui/components/chip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui/components/collapsible';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+
+import { MAX_WEB_SEARCH_INCLUDED_DOMAINS } from '@/configuration-text-inputs/const';
 
 type WebSearchUrlPresetItemProps = {
   selectedWebsites: string[];

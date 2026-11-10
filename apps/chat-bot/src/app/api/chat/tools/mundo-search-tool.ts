@@ -1,3 +1,6 @@
+import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
+import { z } from 'zod';
+
 import {
   MUNDO_CLASS_LEVELS,
   MUNDO_SEARCH_QUERY_LENGTH_LIMIT,
@@ -6,8 +9,7 @@ import {
 } from '@/configuration-text-inputs/const';
 import { TOOL_NAMES } from '@/types/tool-names';
 import { parseJsonRecord, toLinks } from '@/utils/chat/tool-result-parsing';
-import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
-import { z } from 'zod';
+
 import {
   mundoSearch,
   MundoSearchResult,

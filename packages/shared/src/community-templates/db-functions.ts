@@ -1,14 +1,5 @@
 import { db } from '@shared/db';
 import {
-  CommunityTemplateRequestEventInsertModel,
-  CommunityTemplateRequestEventTable,
-  CommunityTemplateRequestInsertModel,
-  CommunityTemplateRequestTable,
-  CommunityTemplateRequestUpdateModel,
-} from '@shared/db/schema';
-import { PgTransactionObject } from '@shared/db/types';
-import { EntityRef } from '@shared/entities/entity-types';
-import {
   dbUpdateAssistantCommunityShared,
   dbUpdateAssistantHasLinkAccess,
   dbUpdateAssistantSchoolShared,
@@ -23,6 +14,15 @@ import {
   dbUpdateLearningScenarioHasLinkAccess,
   dbUpdateLearningScenarioSchoolShared,
 } from '@shared/db/functions/learning-scenario';
+import {
+  CommunityTemplateRequestEventInsertModel,
+  CommunityTemplateRequestEventTable,
+  CommunityTemplateRequestInsertModel,
+  CommunityTemplateRequestTable,
+  CommunityTemplateRequestUpdateModel,
+} from '@shared/db/schema';
+import { PgTransactionObject } from '@shared/db/types';
+import { EntityRef } from '@shared/entities/entity-types';
 import { desc, eq } from 'drizzle-orm';
 
 /**

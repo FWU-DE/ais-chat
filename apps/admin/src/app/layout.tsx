@@ -1,11 +1,13 @@
 import '@ui/styles/globals.css';
+
+import { buildPublicConfig } from '@shared/sentry/public-config';
+import { Toaster } from '@ui/components/toaster';
+import { TooltipProvider } from '@ui/components/tooltip';
 import { Barlow } from 'next/font/google';
 import Script from 'next/script';
 import type { ReactNode } from 'react';
+
 import { Header } from '../components/header/Header';
-import { Toaster } from '@ui/components/toaster';
-import { buildPublicConfig } from '@shared/sentry/public-config';
-import { TooltipProvider } from '@ui/components/tooltip';
 
 const barlow = Barlow({
   weight: ['400', '500', '600', '700'],

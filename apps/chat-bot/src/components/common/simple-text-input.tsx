@@ -1,5 +1,6 @@
-import { cn } from '@/utils/tailwind';
 import React, { forwardRef } from 'react';
+
+import { cn } from '@/utils/tailwind';
 import { inputFieldClassName, labelClassName } from '@/utils/tailwind/input';
 
 interface SimpleTextInputProps extends React.ComponentProps<'input'> {

@@ -1,4 +1,5 @@
 import z from 'zod';
+
 import { normalizeVidisSchoolIds } from '../db/functions/vidis';
 
 const authErrorCodeSchema = z.enum(['federal_state_not_found']);

@@ -1,7 +1,5 @@
 'use client';
 
-import { useToast } from '@/components/common/toast';
-import { CommunityTemplateRequestMutationResult } from '@/hooks/use-community-template-request';
 import { Button } from '@ui/components/button';
 import {
   Dialog,
@@ -15,6 +13,9 @@ import {
 import { Textarea } from '@ui/components/textarea';
 import { useTranslations } from 'next-intl';
 import { type ReactElement, useState } from 'react';
+
+import { useToast } from '@/components/common/toast';
+import { CommunityTemplateRequestMutationResult } from '@/hooks/use-community-template-request';
 
 type CommunityTemplateMessageDialogProps = {
   trigger: ReactElement;

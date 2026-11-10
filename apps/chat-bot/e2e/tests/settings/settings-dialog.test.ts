@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+
 import { AUTH_FILES } from '../../utils/const';
 
 test.use({ storageState: AUTH_FILES.teacherWithSettings });

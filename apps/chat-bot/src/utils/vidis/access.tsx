@@ -1,8 +1,10 @@
-import { UserAndContext } from '@/auth/types';
 import React from 'react';
-import { FederalStateId, getFederalStateNameById } from './const';
-import { missingTrainingDisclaimers } from '@/components/modals/const';
+
+import { UserAndContext } from '@/auth/types';
 import MarkdownDisplay from '@/components/chat/markdown-display';
+import { missingTrainingDisclaimers } from '@/components/modals/const';
+
+import { FederalStateId, getFederalStateNameById } from './const';
 
 type AccessResult =
   | {

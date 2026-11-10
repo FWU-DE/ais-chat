@@ -18,6 +18,7 @@ import {
 import { Slider } from '@ui/components/slider';
 import { useTranslations } from 'next-intl';
 import type { Ref } from 'react';
+
 import { downloadPng } from './png-export';
 import type { SliderDefinition } from './slider-definitions';
 

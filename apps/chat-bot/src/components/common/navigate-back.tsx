@@ -1,5 +1,5 @@
-import { cn } from '@/utils/tailwind';
 import ChevronLeftIcon from '@/components/icons/chevron-left';
+import { cn } from '@/utils/tailwind';
 
 type NavigateBackProps = {
   label: string;

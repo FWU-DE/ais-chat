@@ -1,14 +1,8 @@
 'use client';
 
 import { SuspensionRequestEntityOverview } from '@shared/suspension/suspension-service';
-import { columns } from './columns';
-import { DataTable } from '@ui/components/data-table';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition } from 'react';
 import { type ColumnFiltersState } from '@tanstack/react-table';
-import { Input } from '@ui/components/input';
-import { getSuspensionRequestEntitiesAction } from './actions';
-import { toast } from 'sonner';
+import { Button } from '@ui/components/button';
 import {
   Card,
   CardAction,
@@ -17,9 +11,17 @@ import {
   CardHeader,
   CardTitle,
 } from '@ui/components/card';
-import { Button } from '@ui/components/button';
+import { DataTable } from '@ui/components/data-table';
+import { Input } from '@ui/components/input';
 import { Skeleton } from '@ui/components/skeleton';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, useTransition } from 'react';
+import { toast } from 'sonner';
+
 import { ROUTES } from '@/consts/routes';
+
+import { getSuspensionRequestEntitiesAction } from './actions';
+import { columns } from './columns';
 
 export default function SuspensionRequestEntitiesOverview() {
   const [suspensionRequestEntities, setSuspensionRequestEntities] = useState<

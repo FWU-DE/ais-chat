@@ -1,8 +1,10 @@
-import Link from 'next/link';
-import { SignOutButton } from '../authentication/SignOutButton';
-import { ROUTES } from '../../consts/routes';
 import { Button } from '@ui/components/button';
+import Link from 'next/link';
+
 import { auth } from '@/auth';
+
+import { ROUTES } from '../../consts/routes';
+import { SignOutButton } from '../authentication/SignOutButton';
 
 export async function Header() {
   const session = await auth();
@@ -16,7 +18,7 @@ export async function Header() {
       </Link>
       <div className="flex-1 flex flex-row gap-4">
         {session?.adminRole === 'Admin' && (
-          <Link href={ROUTES.api.organizations}>
+          <Link href={ROUTES.api.llms}>
             <Button variant={'link'}>AIS.chat-api</Button>
           </Link>
         )}

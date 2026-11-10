@@ -1,3 +1,4 @@
+import { UserModel } from '@shared/auth/user-model';
 import {
   dbGetCharacterSharedChatsUsageInCentByUserId,
   dbGetChatsUsageInCentByUserId,
@@ -5,7 +6,6 @@ import {
 } from '@shared/db/functions/token-points';
 import { dbGetCreditIncreaseForCurrentMonth } from '@shared/db/functions/voucher';
 import { FederalStateModel } from '@shared/federal-states/types';
-import { UserModel } from '@shared/auth/user-model';
 
 export async function getMaxBudgetInCentByUser({
   user,

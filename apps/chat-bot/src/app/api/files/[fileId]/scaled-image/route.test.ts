@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { NextRequest } from 'next/server';
 import { NotFoundError } from '@shared/error';
+import { NextRequest } from 'next/server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/auth/utils', () => ({
   getUser: vi.fn(),
@@ -12,9 +12,11 @@ vi.mock('@/app/api/file-operations/scaled-image-service', () => ({
   createScaledImage: vi.fn(),
 }));
 
-import { getUser } from '@/auth/utils';
 import { dbVerifyFileOwnership } from '@shared/db/functions/files';
+
 import { createScaledImage } from '@/app/api/file-operations/scaled-image-service';
+import { getUser } from '@/auth/utils';
+
 import { GET } from './route';
 
 const params = Promise.resolve({ fileId: 'file-1' });

@@ -1,8 +1,5 @@
-import { createBoard } from '@/components/chat/plot/jsxgraph-board';
-import { renderPlotPng } from '@/components/chat/plot/png-export';
-import { getRenderedPlot } from '@/components/chat/plot/rendered-plots';
-import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
-import { parsePlotSpec, type BoundingBox } from '@/utils/plot/plot-spec';
+import { logWarning } from '@shared/logging';
+import type { ParagraphChild } from 'docx';
 import {
   AlignmentType,
   BorderStyle,
@@ -11,6 +8,7 @@ import {
   Table,
   TableBorders,
   TableCell,
+  TableOfContents,
   TableRow,
   TextRun,
   WidthType,
@@ -28,8 +26,15 @@ import remarkParse from 'remark-parse';
 import { unified } from 'unified';
 import { visit } from 'unist-util-visit';
 
-const MAX_IMAGE_WIDTH = 200;
-const MAX_IMAGE_HEIGHT = 320;
+import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
+import { createBoard } from '@/components/chat/plot/jsxgraph-board';
+import { activateLivePlots } from '@/components/chat/plot/live-plots';
+import { renderPlotPng } from '@/components/chat/plot/png-export';
+import { getPlotKey, getRenderedPlot } from '@/components/chat/plot/rendered-plots';
+import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
+import { isImageFile } from '@/utils/files/generic';
+import { type BoundingBox, parsePlotSpec } from '@/utils/plot/plot-spec';
+
 const PARAGRAPH_SPACER = '\u200B';
 const PLOT_IMAGE_WIDTH = 600;
 const PLOT_IMAGE_MIN_HEIGHT = 260;
@@ -41,6 +46,11 @@ const CODE_BLOCK_VERTICAL_PADDING = 120;
 const CODE_BLOCK_BACKGROUND = '011627';
 const CODE_BLOCK_HEADER_BACKGROUND = 'F1F5F9';
 const CODE_BLOCK_HEADER_TEXT_COLOR = '000000';
+const TABLE_BORDER = {
+  color: 'B7B7B7',
+  size: 4,
+  style: BorderStyle.SINGLE,
+};
 const plotCodeNodes = new WeakSet<object>();
 const plotExportMetadata = new WeakMap<object, { imageKey: string }>();
 
@@ -153,10 +163,19 @@ const styledBlocksPlugin: RemarkDocxPlugin = async () => ({
                   children: [
                     new Paragraph({
                       alignment: textAlign?.[index] ?? AlignmentType.LEFT,
-                      children: context.render(cell.children, {
-                        ...context,
-                        rtl: undefined,
-                      }),
+                      children: context
+                        .render(cell.children, {
+                          ...context,
+                          rtl: undefined,
+                        })
+                        .filter(
+                          (child): child is ParagraphChild =>
+                            !(
+                              child instanceof Paragraph ||
+                              child instanceof Table ||
+                              child instanceof TableOfContents
+                            ),
+                        ),
                     }),
                   ],
                 }),
@@ -166,6 +185,14 @@ const styledBlocksPlugin: RemarkDocxPlugin = async () => ({
       width: { size: 100, type: WidthType.PERCENTAGE },
       alignment: AlignmentType.CENTER,
       style: 'TableGrid',
+      borders: {
+        top: TABLE_BORDER,
+        bottom: TABLE_BORDER,
+        left: TABLE_BORDER,
+        right: TABLE_BORDER,
+        insideHorizontal: TABLE_BORDER,
+        insideVertical: TABLE_BORDER,
+      },
       margins: {
         top: TABLE_CELL_PADDING,
         bottom: TABLE_CELL_PADDING,
@@ -213,57 +240,63 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
         return;
       }
 
-      const renderedPlot = getRenderedPlot(parsed.spec);
-      if (renderedPlot !== undefined) {
-        const { width: renderedWidth, height: renderedHeight } =
-          renderedPlot.getBoundingClientRect();
-        const scale = Math.min(
-          PLOT_IMAGE_WIDTH / renderedWidth,
-          PLOT_IMAGE_MAX_HEIGHT / renderedHeight,
-        );
-        const width = Math.round(renderedWidth * scale);
-        const height = Math.round(renderedHeight * scale);
-        const png = await renderPlotPng(renderedPlot);
-        images.set(imageKey, {
-          type: 'png',
-          width,
-          height,
-          data: await png.arrayBuffer(),
-        });
-        return;
-      }
-
-      const { width, height } = getPlotImageDimensions(
-        parsed.spec.board.boundingBox ?? DEFAULT_PLOT_BOUNDING_BOX,
-      );
-      const container = document.createElement('div');
-      container.style.cssText = `position:fixed;left:-10000px;top:0;width:${width}px;height:${height}px;`;
-      document.body.append(container);
-
-      let board: JXG.Board | undefined;
       try {
-        board = createBoard(container, parsed.spec, undefined, [], false).board;
-        // sync jsx graph rendering with the browser's rendering cycle
-        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-        board.fullUpdate();
-        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-        const svg = container.querySelector('svg');
-        if (svg === null) {
+        const renderedPlot = getRenderedPlot(parsed.spec);
+        if (renderedPlot !== undefined) {
+          const { width: renderedWidth, height: renderedHeight } =
+            renderedPlot.getBoundingClientRect();
+          const scale = Math.min(
+            PLOT_IMAGE_WIDTH / renderedWidth,
+            PLOT_IMAGE_MAX_HEIGHT / renderedHeight,
+          );
+          const width = Math.round(renderedWidth * scale);
+          const height = Math.round(renderedHeight * scale);
+          const png = await renderPlotPng(renderedPlot);
+          images.set(imageKey, {
+            type: 'png',
+            width,
+            height,
+            data: await png.arrayBuffer(),
+          });
           return;
         }
 
-        const png = await renderPlotPng(svg);
-        images.set(imageKey, {
-          type: 'png',
-          width,
-          height,
-          data: await png.arrayBuffer(),
-        });
-      } finally {
-        if (board !== undefined) {
-          JXG.JSXGraph.freeBoard(board);
+        const { width, height } = getPlotImageDimensions(
+          parsed.spec.board.boundingBox ?? DEFAULT_PLOT_BOUNDING_BOX,
+        );
+        const container = document.createElement('div');
+        container.style.cssText = `position:fixed;left:-10000px;top:0;width:${width}px;height:${height}px;`;
+        document.body.append(container);
+
+        let board: JXG.Board | undefined;
+        try {
+          board = createBoard(container, parsed.spec, undefined, [], false).board;
+          // sync jsx graph rendering with the browser's rendering cycle
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          board.fullUpdate();
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          const svg = container.querySelector('svg');
+          if (svg === null) {
+            return;
+          }
+
+          const png = await renderPlotPng(svg);
+          images.set(imageKey, {
+            type: 'png',
+            width,
+            height,
+            data: await png.arrayBuffer(),
+          });
+        } finally {
+          if (board !== undefined) {
+            JXG.JSXGraph.freeBoard(board);
+          }
+          container.remove();
         }
-        container.remove();
+      } catch (error) {
+        logWarning('Plot could not be exported', {
+          message: error instanceof Error ? error.message : String(error),
+        });
       }
     }),
   );
@@ -273,17 +306,32 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
       const imageKey = plotExportMetadata.get(node)?.imageKey;
       return !plotCodeNodes.has(node) || imageKey === undefined || !context.images.has(imageKey)
         ? null
-        : new Paragraph({ children: context.render([{ type: 'image', url: imageKey }]) });
+        : new Paragraph({
+            children: context
+              .render([{ type: 'image', url: imageKey }])
+              .filter(
+                (child): child is ParagraphChild =>
+                  !(
+                    child instanceof Paragraph ||
+                    child instanceof Table ||
+                    child instanceof TableOfContents
+                  ),
+              ),
+          });
     },
   };
 };
 
-function preparePlotCodeBlocks(root: Root) {
+function preparePlotCodeBlocks(root: Root, plotKeys: Set<string>) {
   visit(root, 'code', (node) => {
     if (node.lang !== PLOT_LANGUAGE) {
       return;
     }
 
+    const parsed = parsePlotSpec(node.value);
+    if (!('error' in parsed)) {
+      plotKeys.add(getPlotKey(parsed.spec));
+    }
     // Set lang here to json so shikiPlugin renders the code blocks correctly
     // as it only recognizes json but not jsxgraph-json
     node.lang = 'json';
@@ -295,6 +343,7 @@ function preparePlotCodeBlocks(root: Root) {
 }
 
 export type ConversationExportMessage = {
+  id: string;
   role: string;
   content: string;
   images: Array<{ alt: string; url: string }>;
@@ -303,6 +352,30 @@ export type ConversationExportMessage = {
 export type ConversationExport = {
   markdownBlocks: Array<{ markdown: string }>;
 };
+
+export function createConversationExportMessages({
+  messages,
+  fileMapping,
+  imageUrl = (file) => `/api/files/${file.id}/scaled-image?width=200&height=320`,
+}: {
+  messages: Array<
+    Pick<ConversationExportMessage, 'id' | 'role' | 'content'> & { createdAt?: Date }
+  >;
+  fileMapping: ReadonlyMap<string, ConversationDownloadFile[]>;
+  imageUrl?: (file: ConversationDownloadFile) => string;
+}): ConversationExportMessage[] {
+  return messages.map(({ id, role, content }) => ({
+    id,
+    role,
+    content,
+    images: (fileMapping.get(id) ?? [])
+      .filter((file) => isImageFile(file.name))
+      .map((file) => ({
+        alt: file.name,
+        url: imageUrl(file),
+      })),
+  }));
+}
 
 export function formatConversationExport({
   messages,
@@ -349,95 +422,109 @@ async function loadImageForDocx(url: string): Promise<ArrayBuffer> {
     throw new Error(`Failed to load image: ${response.status}`);
   }
 
-  const imageBlob = await response.blob();
-  if (imageBlob.type === 'image/svg+xml') {
-    return imageBlob.arrayBuffer();
-  }
-
-  const bitmap = await createImageBitmap(imageBlob);
-  const scale = Math.min(1, MAX_IMAGE_WIDTH / bitmap.width, MAX_IMAGE_HEIGHT / bitmap.height);
-
-  if (scale === 1) {
-    return imageBlob.arrayBuffer();
-  }
-
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-
-  const resizedBlob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => (blob === null ? reject(new Error('Failed to resize image')) : resolve(blob)),
-      'image/png',
-    );
-  });
-
-  return resizedBlob.arrayBuffer();
+  return response.arrayBuffer();
 }
 
-const docxOptions: DocxOptions = {
-  plugins: [
-    latexPlugin(),
-    imagePlugin({ load: loadImageForDocx }),
-    plotPlugin,
-    paddedCodeBlockPlugin,
-    styledBlocksPlugin,
-  ],
-  spacing: 80,
-  thematicBreak: 'line',
-  orderedListFormat: [
-    { format: 'DECIMAL', text: '%1.' },
-    { format: 'DECIMAL', text: '%2.' },
-    { format: 'DECIMAL', text: '%3.' },
-    { format: 'DECIMAL', text: '%4.' },
-  ],
-  styles: {
-    default: {
-      document: {
-        run: { font: 'Barlow', size: 22 },
-      },
-      title: { run: { font: 'Barlow SemiBold', size: 40 } },
-      heading1: { run: { font: 'Barlow SemiBold', size: 28 } },
-      heading2: {
-        run: { font: 'Barlow SemiBold', size: 22 },
-      },
-      heading3: {
-        run: { font: 'Barlow', size: 18, bold: false, italics: true, color: '666666' },
-      },
-      listParagraph: { run: { font: 'Barlow', size: 22 } },
-    },
-    characterStyles: [
-      {
-        id: 'Hyperlink',
-        name: 'Hyperlink',
-        run: { color: '2F80ED', size: 22 },
-      },
+function createDocxOptions({ exportImages = false }: MarkdownToDocxOptions = {}): DocxOptions {
+  const loadImage = exportImages
+    ? (url: string) => {
+        const exportUrl = new URL(url, window.location.origin);
+        if (exportUrl.origin === window.location.origin) {
+          exportUrl.searchParams.set('export', 'true');
+        }
+        return loadImageForDocx(exportUrl.toString());
+      }
+    : loadImageForDocx;
+
+  return {
+    plugins: [
+      latexPlugin(),
+      imagePlugin({ load: loadImage }),
+      plotPlugin,
+      paddedCodeBlockPlugin,
+      styledBlocksPlugin,
     ],
-  },
+    spacing: 80,
+    thematicBreak: 'line',
+    orderedListFormat: [
+      { format: 'DECIMAL', text: '%1.' },
+      { format: 'DECIMAL', text: '%2.' },
+      { format: 'DECIMAL', text: '%3.' },
+      { format: 'DECIMAL', text: '%4.' },
+    ],
+    styles: {
+      default: {
+        document: {
+          run: { font: 'Barlow', size: 22 },
+        },
+        title: { run: { font: 'Barlow SemiBold', size: 40 } },
+        heading1: { run: { font: 'Barlow SemiBold', size: 28 } },
+        heading2: {
+          run: { font: 'Barlow SemiBold', size: 22 },
+        },
+        heading3: {
+          run: { font: 'Barlow', size: 18, bold: false, italics: true, color: '666666' },
+        },
+        listParagraph: { run: { font: 'Barlow', size: 22 } },
+      },
+      characterStyles: [
+        {
+          id: 'Hyperlink',
+          name: 'Hyperlink',
+          run: { color: '2F80ED', size: 22 },
+        },
+      ],
+    },
+  };
+}
+
+type MarkdownToDocxOptions = {
+  exportImages?: boolean;
 };
 
-const processor = unified()
-  .use(remarkParse)
-  .use(RemarkMathPlugin)
-  .use(remarkGfm)
-  .use(remarkDocx, docxOptions);
-
-export async function markdownToDocxBlob(exportDocument: ConversationExport): Promise<Blob> {
-  const roots = await Promise.all(
-    exportDocument.markdownBlocks.map(async ({ markdown }) => {
-      const parsedRoot = processor.parse(markdown) as Root;
-      preparePlotCodeBlocks(parsedRoot);
-      return (await processor.run(parsedRoot)) as Root;
-    }),
-  );
-  const combinedRoot: Root = {
-    type: 'root',
-    children: roots.flatMap((root) => root.children),
-  };
-  const arrayBuffer = await processor.stringify(combinedRoot);
-
-  return new Blob([arrayBuffer], {
-    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+async function waitForPlotActivation() {
+  if (typeof requestAnimationFrame === 'undefined') {
+    return;
+  }
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
   });
+}
+
+export async function markdownToDocxBlob(
+  exportDocument: ConversationExport,
+  options?: MarkdownToDocxOptions,
+): Promise<Blob> {
+  const processor = unified()
+    .use(remarkParse)
+    .use(RemarkMathPlugin)
+    .use(remarkGfm)
+    .use(remarkDocx, createDocxOptions(options));
+  const roots = exportDocument.markdownBlocks.map(
+    ({ markdown }) => processor.parse(markdown) as Root,
+  );
+  const plotKeys = new Set<string>();
+  roots.forEach((root) => preparePlotCodeBlocks(root, plotKeys));
+  const restoreLivePlots = plotKeys.size > 0 ? activateLivePlots(plotKeys) : undefined;
+  try {
+    if (plotKeys.size > 0) {
+      await waitForPlotActivation();
+    }
+    const processedRoots = await Promise.all(
+      roots.map(async (root) => (await processor.run(root)) as Root),
+    );
+    const combinedRoot: Root = {
+      type: 'root',
+      children: processedRoots.flatMap((root) => root.children),
+    };
+    const arrayBuffer = await processor.stringify(combinedRoot);
+
+    return new Blob([arrayBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+  } finally {
+    restoreLivePlots?.();
+  }
 }

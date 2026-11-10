@@ -1,5 +1,8 @@
 'use client';
 
+import React, { Fragment, ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
+
 import type { UserAndContext } from '@/auth/types';
 import useBreakpoints from '@/components/hooks/use-breakpoints';
 import { useHeaderExtension } from '@/components/hooks/use-header-extension';
@@ -9,8 +12,6 @@ import { ThemeToggleButton } from '@/components/navigation/theme-toggle-button';
 import { ThreeDotsProfileMenu } from '@/components/navigation/three-dots-profile-menu';
 import { SettingsDialog } from '@/components/settings/settings-dialog';
 import { reductionBreakpoint } from '@/utils/tailwind/layout';
-import React, { Fragment, ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
-import { createPortal } from 'react-dom';
 
 export type ApplicationHeaderMenuItem = {
   id: string;

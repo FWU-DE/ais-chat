@@ -1,7 +1,7 @@
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { MigrationConfig } from 'drizzle-orm/migrator';
-import { Pool } from 'pg';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { Pool } from 'pg';
 
 // See Github issue for reference: https://github.com/drizzle-team/drizzle-orm/issues/874
 

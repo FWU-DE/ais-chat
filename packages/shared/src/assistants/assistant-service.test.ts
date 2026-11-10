@@ -18,6 +18,7 @@ import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/err
 import { getUserSettings } from '@shared/users/user-settings-service';
 import { generateUUID } from '@shared/utils/uuid';
 import { beforeEach, describe, expect, it, MockedFunction, vi } from 'vitest';
+
 import { getAvatarPictureUrl } from '../files/fileService';
 import { uploadFileToS3 } from '../s3';
 import { copyAssistant, copyRelatedTemplateFiles } from '../templates/template-service';
@@ -507,6 +508,26 @@ describe('assistant-service', () => {
       });
 
       expect(mockDbSet).toHaveBeenCalledWith({ hasLinkAccess: true, updatedAt });
+    });
+
+    it('ignores a popularity value sent by the owner', async () => {
+      const userId = generateUUID();
+      const assistantId = generateUUID();
+      const assistant = { id: assistantId, userId, name: 'old', popularity: 3 };
+
+      (dbGetAssistantById as MockedFunction<typeof dbGetAssistantById>).mockResolvedValue(
+        assistant as never,
+      );
+      mockDbReturning.mockResolvedValue([{ ...assistant, name: 'new' }]);
+
+      await updateAssistant({
+        assistantId,
+        user: { id: userId },
+        assistantProps: { name: 'new', popularity: 999 } as never,
+      });
+
+      expect(mockDbSet).toHaveBeenCalledTimes(1);
+      expect(mockDbSet).toHaveBeenCalledWith({ name: 'new' });
     });
   });
 

@@ -1,12 +1,14 @@
 import type { GenerateContentResponse } from '@google/genai';
+
 import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { createGoogleClient, formatGoogleError } from '../../google-client';
 import {
-  PCM_STREAM_AUDIO_FORMAT,
   type AiModel,
+  PCM_STREAM_AUDIO_FORMAT,
   type SpeechGenerationFn,
   type SpeechStreamGenerationFn,
   type SpeechUsage,
+  WAV_MIME_TYPE,
 } from '../types';
 
 function pcmToWav(pcm: Buffer): Buffer {
@@ -82,7 +84,7 @@ export function constructGoogleSpeechGenerationFn(model: AiModel): SpeechGenerat
       outputAudioTokens: usageMetadata?.candidatesTokenCount ?? 0,
     };
 
-    return { wavBuffer, usage };
+    return { audioBuffer: wavBuffer, mimeType: WAV_MIME_TYPE, usage };
   };
 }
 

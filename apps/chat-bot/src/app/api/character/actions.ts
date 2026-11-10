@@ -1,9 +1,11 @@
 'use server';
+import { SharedChatExpiredError } from '@ais-chat/ai-core/errors';
+import * as Sentry from '@sentry/nextjs';
+
 import { requireValidInviteCode } from '@/auth/requireValidInviteCode';
 import { SEND_CHARACTER_MESSAGE_ACTION_NAME } from '@/server-action-names';
 import { ChatMessage, createErrorResult, SendMessageResult } from '@/types/chat';
-import { SharedChatExpiredError } from '@ais-chat/ai-core/errors';
-import * as Sentry from '@sentry/nextjs';
+
 import { sendCharacterMessage } from './character-chat-service';
 
 export type { ChatMessage, SendMessageResult } from '@/types/chat';

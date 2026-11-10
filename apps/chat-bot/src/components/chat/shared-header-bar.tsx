@@ -1,5 +1,12 @@
 'use client';
 
+import { BoxArrowDownIcon, TrashSimpleIcon } from '@phosphor-icons/react';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
+import { Button } from '@ui/components/button';
+import Image from 'next/image';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
 import DownloadSharedConversationButton, {
   fetchSharedConversationDownload,
 } from '@/app/(unauth)/ua/download-shared-conversation-button';
@@ -8,18 +15,13 @@ import { type ChatMessage as Message } from '@/types/chat';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
 import { cn } from '@/utils/tailwind';
 import { reductionBreakpoint } from '@/utils/tailwind/layout';
-import { BoxArrowDownIcon, TrashSimpleIcon } from '@phosphor-icons/react';
-import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
-import { Button } from '@ui/components/button';
-import { useTranslations } from 'next-intl';
-import Image from 'next/image';
-import React from 'react';
 import useBreakpoints from '../hooks/use-breakpoints';
 import ProfileMenu from '../navigation/profile-menu';
 import {
   ThreeDotsProfileMenu,
   type ThreeDotsProfileMenuItem,
 } from '../navigation/three-dots-profile-menu';
+import type { ConversationDownloadFile } from './conversation-download-context';
 
 export function SharedChatHeader({
   chatActive,
@@ -30,8 +32,8 @@ export function SharedChatHeader({
   messages,
   imageSource,
   dialogStarted,
-  inviteCode,
-  sharedSessionId,
+  fileMapping,
+  imageUrl,
 }: {
   chatActive: boolean;
   hasMessages: boolean;
@@ -41,8 +43,8 @@ export function SharedChatHeader({
   messages: Message[];
   imageSource?: string;
   dialogStarted: boolean;
-  inviteCode: string;
-  sharedSessionId?: string;
+  fileMapping: ReadonlyMap<string, ConversationDownloadFile[]>;
+  imageUrl: (file: ConversationDownloadFile) => string;
 }) {
   const { isBelow } = useBreakpoints();
   const tCommon = useTranslations('common');
@@ -76,8 +78,8 @@ export function SharedChatHeader({
           const { blob, fileName } = await fetchSharedConversationDownload({
             conversationMessages: messages,
             sharedConversationName: title,
-            inviteCode,
-            sharedSessionId,
+            fileMapping,
+            imageUrl,
           });
 
           downloadFileFromBlob(blob, fileName);
@@ -129,8 +131,8 @@ export function SharedChatHeader({
             disabled={!chatActive || !hasMessages}
             sharedConversationName={title}
             showText={false}
-            inviteCode={inviteCode}
-            sharedSessionId={sharedSessionId}
+            fileMapping={fileMapping}
+            imageUrl={imageUrl}
           />
           <ProfileMenu userAndContext={undefined} />
         </>

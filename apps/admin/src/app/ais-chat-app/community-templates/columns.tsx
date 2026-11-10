@@ -1,12 +1,13 @@
 'use client';
 
-import { mapEntityTypeToAbbreviation } from '@/utils/mapEntityTypeToLabel';
 import type { CommunityTemplateRequestSummary } from '@shared/community-templates/community-template-service.admin';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
 import { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@ui/components/button';
 import { DataTableFeatures } from '@ui/components/data-table';
 import { ArrowUpDownIcon } from 'lucide-react';
+
+import { mapEntityTypeToAbbreviation } from '@/utils/mapEntityTypeToLabel';
 
 export type CommunityTemplateRequestStatus = CommunityTemplateRequestSummary['state'];
 

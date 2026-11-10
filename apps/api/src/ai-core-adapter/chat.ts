@@ -1,12 +1,13 @@
-import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions.js';
-import type OpenAI from 'openai';
+import type { SafetyMessage, TokenUsage } from '@ais-chat/ai-core';
 import {
+  checkInputSafety,
   generateTextByNameWithBilling,
   generateTextStreamByNameWithBilling,
-  checkInputSafety,
 } from '@ais-chat/ai-core';
-import type { SafetyMessage, TokenUsage } from '@ais-chat/ai-core';
 import { ResponsibleAIError } from '@ais-chat/ai-core/errors';
+import type OpenAI from 'openai';
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions.js';
+
 import { convertToAiCoreMessages } from './messages';
 
 /**

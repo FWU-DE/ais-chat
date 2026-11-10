@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { NotFoundError } from '@shared/error';
 import type { SQL } from 'drizzle-orm';
 import { PgDialect } from 'drizzle-orm/pg-core';
-import { NotFoundError } from '@shared/error';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { InfoBanner } from './info-banner';
 import {
   createInfoBanner,

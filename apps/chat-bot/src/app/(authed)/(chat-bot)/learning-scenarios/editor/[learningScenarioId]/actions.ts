@@ -1,26 +1,27 @@
 'use server';
 
-import { LearningScenarioSelectModel } from '@shared/db/schema';
-import { ShareWithLearnersLimitParams } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners-limit-params';
 import { runServerAction } from '@shared/actions/run-server-action';
-import {
-  extendLearningScenarioShareExpiration,
-  getActiveLearningScenarioShareData,
-  removeFileFromLearningScenario,
-  shareLearningScenario,
-  unshareLearningScenario,
-  updateLearningScenarioShareTokenPointsLimit,
-  updateLearningScenario,
-  updateLearningScenarioSchoolSharing,
-  uploadAvatarPictureForLearningScenario,
-} from '@shared/learning-scenarios/learning-scenario-service';
 import {
   cancelCommunityTemplateRequest,
   createCommunityTemplateRequest,
   getEntitySharingState,
   sendMessageToEditor,
 } from '@shared/community-templates/community-template-service';
+import { LearningScenarioSelectModel } from '@shared/db/schema';
+import {
+  extendLearningScenarioShareExpiration,
+  getActiveLearningScenarioShareData,
+  removeFileFromLearningScenario,
+  shareLearningScenario,
+  unshareLearningScenario,
+  updateLearningScenario,
+  updateLearningScenarioSchoolSharing,
+  updateLearningScenarioShareTokenPointsLimit,
+  uploadAvatarPictureForLearningScenario,
+} from '@shared/learning-scenarios/learning-scenario-service';
+
 import { requireAuth } from '@/auth/requireAuth';
+import { ShareWithLearnersLimitParams } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners-limit-params';
 
 export async function createCommunityTemplateRequestAction({
   learningScenarioId,

@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+
 import { authorizationHeader } from '../utils/api.js';
 
 test.describe('GET /v1/models', { tag: '@smoke' }, () => {
@@ -26,6 +27,5 @@ test.describe('GET /v1/models', { tag: '@smoke' }, () => {
 
     // Sensitive fields should be stripped
     expect(model).not.toHaveProperty('setting');
-    expect(model).not.toHaveProperty('organizationId');
   });
 });

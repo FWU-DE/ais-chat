@@ -1,25 +1,26 @@
 'use client';
 
 import {
+  type ColumnDef,
   columnFilteringFeature,
+  type ColumnFiltersState,
   columnVisibilityFeature,
   createFilteredRowModel,
   createSortedRowModel,
   filterFn_includesString,
+  type OnChangeFn,
+  type RowData,
   rowSelectionFeature,
   rowSortingFeature,
   sortFn_alphanumeric,
   sortFn_basic,
   sortFn_datetime,
   sortFn_text,
+  type SortingState,
   tableFeatures,
   useTable,
-  type ColumnDef,
-  type ColumnFiltersState,
-  type OnChangeFn,
-  type RowData,
-  type SortingState,
 } from '@tanstack/react-table';
+import { useState } from 'react';
 
 import {
   ClickableTableRow,
@@ -30,7 +31,6 @@ import {
   TableHeader,
   TableRow,
 } from './table';
-import { useState } from 'react';
 
 export const dataTableFeatures = tableFeatures({
   rowSortingFeature,

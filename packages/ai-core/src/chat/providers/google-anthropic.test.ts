@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/only-throw-error */
 /* eslint-disable require-yield */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  constructGoogleAnthropicTextGenerationFn,
-  constructGoogleAnthropicTextStreamFn,
-  constructGoogleAnthropicAgenticStreamFn,
-} from './google-anthropic';
+
 import { AiGenerationError, RateLimitExceededError } from '../../errors';
 import type { AiModel, Message } from '../types';
+import {
+  constructGoogleAnthropicAgenticStreamFn,
+  constructGoogleAnthropicTextGenerationFn,
+  constructGoogleAnthropicTextStreamFn,
+} from './google-anthropic';
 
 const { createMock, streamMock, finalMessageMock, MockAnthropicVertex, constructorMock } =
   vi.hoisted(() => {
@@ -57,7 +58,6 @@ function createGoogleAnthropicModel(projectId = 'test-project', location = 'us-c
     displayName: 'Claude 3.5 Sonnet v2',
     provider: 'google',
     description: 'Test model',
-    organizationId: 'org-test',
     createdAt: new Date(),
     supportedImageFormats: ['image/png', 'image/jpeg'],
     imageGenerationConfig: null,

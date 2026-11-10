@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
 import { FederalStateModel } from '@shared/federal-states/types';
+import React from 'react';
 
 const FederalStateContext = React.createContext<FederalStateModel | undefined>(undefined);
 

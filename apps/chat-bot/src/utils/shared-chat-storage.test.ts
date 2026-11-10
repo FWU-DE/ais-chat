@@ -5,12 +5,13 @@ vi.mock('@shared/logging', () => ({
 }));
 
 import { logError } from '@shared/logging';
+
 import {
   clearSharedChat,
   loadSharedChat,
+  type PersistedSharedChat,
   saveSharedChat,
   sharedChatStorageKey,
-  type PersistedSharedChat,
 } from './shared-chat-storage';
 
 /**

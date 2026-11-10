@@ -1,10 +1,12 @@
 'use client';
 
-import { useChatOverlayRoot } from '@/components/layout/chat-overlay-root-context';
-import { cn } from '@/utils/tailwind';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { createPortal } from 'react-dom';
+
+import { useChatOverlayRoot } from '@/components/layout/chat-overlay-root-context';
+import { cn } from '@/utils/tailwind';
+
 import useBreakpoints from '../hooks/use-breakpoints';
 import ChevronDownIcon from '../icons/chevron-down';
 import ChevronRightIcon from '../icons/chevron-right';

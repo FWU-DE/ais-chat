@@ -1,5 +1,6 @@
 import { db } from '@shared/db';
 import { urlPresetTable } from '@shared/db/schema';
+
 import { UrlPreset } from './types';
 
 /**

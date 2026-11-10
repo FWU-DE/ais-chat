@@ -1,6 +1,6 @@
 import { expect, test } from '../fixtures/test';
-import { AUTH_FILES } from '../utils/const';
 import { sendMessage } from '../utils/chat';
+import { AUTH_FILES } from '../utils/const';
 import { login } from '../utils/login';
 
 test.describe('with stored auth', () => {

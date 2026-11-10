@@ -1,7 +1,8 @@
-import { env } from '@/env';
 import swagger from '@fastify/swagger';
 import swaggerUI from '@fastify/swagger-ui';
 import { FastifyInstance } from 'fastify/types/instance';
+
+import { env } from '@/env';
 
 export async function initSwagger(fastify: FastifyInstance) {
   await fastify.register(swagger, {

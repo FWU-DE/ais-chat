@@ -1,6 +1,6 @@
 import { dbCreateUser, dbGetUserById, dbUpdateUserById } from '@ais-chat/shared/db/functions/user';
-import { dbGetFederalStateById } from '@shared/db/functions/federal-state';
 import { AuthErrorCode, validateOidcProfile } from '@shared/auth/authentication-service';
+import { dbGetFederalStateById } from '@shared/db/functions/federal-state';
 import { normalizeVidisSchoolIds, vidisRoleToUserRole } from '@shared/db/functions/vidis';
 
 export type VidisSignInResult =

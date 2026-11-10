@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
-import { decodeChatStreamEvent, readTextStream } from '@/utils/streaming';
+import { logError } from '@shared/logging';
+import { useCallback, useRef, useState } from 'react';
+
 import type { AiActivityStep } from '@/types/ai-activity';
 import {
-  deserializeError,
-  toUIMessages,
-  UIMessage,
   type ChatMessage,
   type ChatStatus,
+  deserializeError,
   type SendMessageResult,
+  toUIMessages,
+  UIMessage,
 } from '@/types/chat';
-import { logError } from '@shared/logging';
+import { decodeChatStreamEvent, readTextStream } from '@/utils/streaming';
 
 // Re-export for consumers
 export type { ChatMessage, ChatStatus };
@@ -32,6 +33,7 @@ type ChatRequestContext = Pick<Parameters<SendMessageFn>[0], 'fileIds' | 'shared
 export type UseChatOptions = {
   initialMessages?: ChatMessage[];
   modelId?: string;
+  modelName?: string;
   sendMessage: SendMessageFn;
   onError?: (error: Error) => void;
   onFinish?: (message: ChatMessage) => void;
@@ -73,6 +75,7 @@ function lastUserMessage(messages: ChatMessage[]): ChatMessage | null {
 export function useAisChat({
   initialMessages = [],
   modelId,
+  modelName,
   sendMessage,
   onError,
   onFinish,
@@ -148,6 +151,8 @@ export function useAisChat({
             id: result.messageId,
             role: 'assistant',
             content: '',
+            createdAt: new Date(),
+            modelName,
             activitySteps: assistantActivitySteps.length > 0 ? assistantActivitySteps : undefined,
           };
 
@@ -233,7 +238,7 @@ export function useAisChat({
         abortControllerRef.current = null;
       }
     },
-    [messages, modelId, sendMessage, onError, onFinish],
+    [messages, modelId, modelName, sendMessage, onError, onFinish],
   );
 
   const handleSubmit = useCallback(
@@ -249,6 +254,7 @@ export function useAisChat({
         id: options?.userMessageId ?? crypto.randomUUID(),
         role: 'user',
         content: input.trim(),
+        createdAt: new Date(),
       };
 
       // Call onMessageCreated immediately so files can be associated with this message ID

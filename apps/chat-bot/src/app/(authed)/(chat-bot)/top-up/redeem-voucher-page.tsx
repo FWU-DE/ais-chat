@@ -1,10 +1,12 @@
 'use client';
-import SimpleTextInput from '@/components/common/simple-text-input';
-import { useToast } from '@/components/common/toast';
-import { redeemVoucherAction } from './actions';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import z from 'zod';
+
+import SimpleTextInput from '@/components/common/simple-text-input';
+import { useToast } from '@/components/common/toast';
+
+import { redeemVoucherAction } from './actions';
 
 export default function RedeemVoucherPage() {
   const t = useTranslations('top-up');

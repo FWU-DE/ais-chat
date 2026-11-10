@@ -1,9 +1,10 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { ensureBifrostVirtualKeyProviderAccess } from './virtual-key-sync';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+
 import { dbGetAllProviderKeysWithModels } from '../functions';
 import { buildBifrostProviderConfigs } from './provider-config-builder';
-import { listBifrostVirtualKeys, updateBifrostVirtualKeyProviders } from './virtual-key-client';
 import type { BifrostProviderConfig, BifrostVirtualKey } from './types';
+import { listBifrostVirtualKeys, updateBifrostVirtualKeyProviders } from './virtual-key-client';
+import { ensureBifrostVirtualKeyProviderAccess } from './virtual-key-sync';
 
 vi.mock('../functions', () => ({
   dbGetAllProviderKeysWithModels: vi.fn(),
@@ -96,7 +97,7 @@ describe('ensureBifrostVirtualKeyProviderAccess', () => {
     expect(azureConfig?.key_ids).toEqual(['*']);
   });
 
-  test('drops managed providers no longer used by any organization', async () => {
+  test('drops managed providers no longer used by any model', async () => {
     const virtualKey: BifrostVirtualKey = {
       id: 'vk-all',
       provider_configs: [

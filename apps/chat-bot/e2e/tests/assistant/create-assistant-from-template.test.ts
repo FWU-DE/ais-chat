@@ -1,7 +1,8 @@
-import { expect, test } from '../../fixtures/test';
-import { AUTH_FILES } from '../../utils/const';
-import { configureAssistant } from '../../utils/assistant';
 import { nanoid } from 'nanoid';
+
+import { expect, test } from '../../fixtures/test';
+import { configureAssistant } from '../../utils/assistant';
+import { AUTH_FILES } from '../../utils/const';
 import { confirmDuplicate } from '../../utils/utils';
 
 test.use({ storageState: AUTH_FILES.teacher });

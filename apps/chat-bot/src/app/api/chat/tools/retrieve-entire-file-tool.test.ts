@@ -1,6 +1,7 @@
-import { RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT } from '@/configuration-text-inputs/const';
 import type { FileModel } from '@shared/db/schema';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT } from '@/configuration-text-inputs/const';
 
 const mocks = vi.hoisted(() => ({
   dbGetExtractedFileContentMock: vi.fn(),

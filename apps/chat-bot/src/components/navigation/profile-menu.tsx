@@ -1,7 +1,5 @@
 'use client';
 
-import { type UserAndContext } from '@/auth/types';
-import { UserIcon } from '@/components/icons/user';
 import { Button } from '@ui/components/button';
 import {
   DropdownMenu,
@@ -11,6 +9,10 @@ import {
 import { useTranslations } from 'next-intl';
 import type { RefObject } from 'react';
 import React from 'react';
+
+import { type UserAndContext } from '@/auth/types';
+import { UserIcon } from '@/components/icons/user';
+
 import { ProfileMenuContent } from './profile-menu-content';
 
 export default function ProfileMenu({

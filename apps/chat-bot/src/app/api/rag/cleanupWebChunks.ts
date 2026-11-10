@@ -1,7 +1,7 @@
 import { db } from '@shared/db';
 import { chunkTable } from '@shared/db/schema';
-import { and, eq, lt } from 'drizzle-orm';
 import { addDays } from '@shared/utils/date';
+import { and, eq, lt } from 'drizzle-orm';
 
 /**
  * Cleans up web chunks older than 30 days from the database.

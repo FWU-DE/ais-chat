@@ -1,31 +1,33 @@
-import { type ChatStatus, type GenerateSpeechFn, type UIMessage } from '@/types/chat';
-import { replacePlotBlocks } from '@/utils/code-blocks';
-import { isImageFile } from '@/utils/files/generic';
-import { cn } from '@/utils/tailwind';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import { utils } from '@shared/utils';
 import { useTranslations } from 'next-intl';
-import { ReactNode, useCallback, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+
+import { type ChatStatus, type UIMessage } from '@/types/chat';
+import { replacePlotBlocks } from '@/utils/code-blocks';
+import { isImageFile } from '@/utils/files/generic';
+import { cn } from '@/utils/tailwind';
+
 import useBreakpoints from '../hooks/use-breakpoints';
 import { AiActivityPanel } from './activity/ai-activity';
 import DisplayFileAttachment from './display-file-attachment';
 import MarkdownDisplay from './markdown-display';
 import { MessageActions } from './message-actions';
-import MessageImageAttachment, { type PendingFileModel } from './message-image-attachment';
+import MessageImageAttachment, { type MessageFileModel } from './message-image-attachment';
 import { PlotStreamingContext } from './plot/plot-block';
 import Citation from './sources/citation';
-import SpeechAudioButton from './speech-audio-button';
+import AudioPlayer from './speech/audio-player';
 import { GenerateSpeechStreamFn } from './speech/types';
 
 // Re-export for consumers
-export type { PendingFileModel };
+export type { MessageFileModel };
 
 export function ChatBox({
   assistantIcon,
   message,
   fileMapping,
-  pendingFileMapping,
+  messageFileMapping: messageFileMapping,
   index,
   webSources,
   isLastNonUser,
@@ -36,7 +38,6 @@ export function ChatBox({
   characterName,
   status,
   showActivityDialog,
-  generateSpeechFn,
   generateSpeechStreamFn,
   speechVoice,
   isSpeechModelEnabled,
@@ -45,7 +46,7 @@ export function ChatBox({
   assistantIcon?: ReactNode;
   message: UIMessage;
   fileMapping?: Map<string, FileModel[]>;
-  pendingFileMapping?: Map<string, PendingFileModel[]>;
+  messageFileMapping?: Map<string, MessageFileModel[]>;
   index: number;
   webSources?: WebSource[];
   isLastNonUser: boolean;
@@ -56,7 +57,6 @@ export function ChatBox({
   characterName?: string;
   status: ChatStatus;
   showActivityDialog?: boolean;
-  generateSpeechFn: GenerateSpeechFn;
   generateSpeechStreamFn: GenerateSpeechStreamFn;
   speechVoice?: string;
   isSpeechModelEnabled: boolean;
@@ -71,16 +71,16 @@ export function ChatBox({
       ? 'w-fit p-4 rounded-2xl rounded-br-none self-end bg-secondary/30 max-w-[70%] wrap-break-word'
       : 'w-full min-w-0';
 
-  // Check both DB file mapping and pending files for this message
+  // Check both persisted files and message-associated files for this message
   const dbFiles = fileMapping?.get(message.id);
-  const pendingFiles = pendingFileMapping?.get(message.id);
-  // Prefer DB files if available (they're persisted), otherwise use pending files.
-  // Reuse an already created blob URL so the image does not have to be fetched again.
+  const messageFiles = messageFileMapping?.get(message.id);
+  // Prefer persisted files, overlaying an existing preview URL when available.
+  // Fall back to message-associated files when no persisted entry exists.
   const allFiles =
     dbFiles?.map((file) => {
-      const localUrl = pendingFiles?.find((pendingFile) => pendingFile.id === file.id)?.localUrl;
+      const localUrl = messageFiles?.find((messageFile) => messageFile.id === file.id)?.localUrl;
       return localUrl === undefined ? file : { ...file, localUrl };
-    }) ?? pendingFiles;
+    }) ?? messageFiles;
   const hasFiles = allFiles !== undefined && allFiles.length > 0;
 
   const parsedUrls =
@@ -143,9 +143,12 @@ export function ChatBox({
       </div>
     ) : null;
 
+  // Turn number within the conversation (1-based), shared by a user message and its assistant reply.
+  const assistantMessageNumber = Math.floor(index / 2 + 1);
+
   const AiActivity =
     activitySteps.length > 0 && !showActivityDialog ? (
-      <AiActivityPanel steps={activitySteps} panelId={`assistant-ai-activity-${message.id}`} />
+      <AiActivityPanel steps={activitySteps} messageIndex={assistantMessageNumber} />
     ) : null;
 
   const margin =
@@ -162,13 +165,30 @@ export function ChatBox({
 
   const isAssistantSpeechOnly = message.role === 'assistant' && speechOnly && isSpeechModelEnabled;
   const isInitialMessage = message.id === 'initial-message';
-
-  const messageSpeechFn = useCallback(
-    (text: string, signal?: AbortSignal) => generateSpeechFn(text, isInitialMessage, signal),
-    [generateSpeechFn, isInitialMessage],
-  );
   const actionsVisible = message.role === 'assistant' && (!isLastNonUser || status !== 'streaming');
-  const isSpeechOnlyStreaming = isAssistantSpeechOnly && isLastNonUser && status === 'streaming';
+
+  // The player is shown immediately in speech-only mode; otherwise it stays hidden until the user
+  // reveals it via `ShowAudioPlayerButton`.
+  const [showAudioPlayer, setShowAudioPlayer] = useState(isAssistantSpeechOnly);
+
+  // Starts playback automatically once the current (last) assistant message has just finished
+  // streaming. Uses a counter bumped exactly once per streaming-to-ready transition, so historical
+  // messages that are already complete when the page loads never auto-play. Aborted streams end in
+  // 'error' and must not be read aloud.
+  const [autoPlayTrigger, setAutoPlayTrigger] = useState(0);
+  const previousStatusRef = useRef(status);
+  useEffect(() => {
+    const previousStatus = previousStatusRef.current;
+    previousStatusRef.current = status;
+    if (
+      isAssistantSpeechOnly &&
+      isLastNonUser &&
+      previousStatus === 'streaming' &&
+      status === 'ready'
+    ) {
+      setAutoPlayTrigger((trigger) => trigger + 1);
+    }
+  }, [status, isAssistantSpeechOnly, isLastNonUser]);
 
   const maybeShowMessageIcons = actionsVisible ? (
     <MessageActions
@@ -177,10 +197,9 @@ export function ChatBox({
       status={status}
       conversationId={conversationId}
       characterName={characterName}
+      files={allFiles ?? []}
       regenerateMessage={regenerateMessage}
       canRegenerateMessage={canRegenerateMessage}
-      generateSpeechStreamFn={generateSpeechStreamFn}
-      speechVoice={speechVoice}
       isSpeechModelEnabled={isSpeechModelEnabled}
       showActivityDialog={showActivityDialog}
       activitySteps={activitySteps}
@@ -189,16 +208,23 @@ export function ChatBox({
       isInitialMessage={isInitialMessage}
       isTextVisible={isTextVisible}
       onToggleText={() => setIsTextVisible((visible) => !visible)}
+      showAudioPlayer={showAudioPlayer}
+      onToggleAudioPlayer={() => setShowAudioPlayer((visible) => !visible)}
     />
   ) : null;
 
-  const maybeAudioButton =
-    isAssistantSpeechOnly && (actionsVisible || isSpeechOnlyStreaming) ? (
-      <SpeechAudioButton
+  const maybeAudioPlayer =
+    message.role === 'assistant' ? (
+      <AudioPlayer
         key={speechVoice ?? ''}
+        isSpeechModelEnabled={isSpeechModelEnabled}
         text={plainText}
-        generateSpeechFn={messageSpeechFn}
-        isStreaming={isSpeechOnlyStreaming}
+        isInitialMessage={isInitialMessage}
+        isGenerating={isLastNonUser && status === 'streaming'}
+        generateSpeechStreamFn={generateSpeechStreamFn}
+        hidden={!showAudioPlayer}
+        autoPlayTrigger={autoPlayTrigger}
+        className="w-full"
       />
     ) : null;
 
@@ -215,7 +241,7 @@ export function ChatBox({
       {AiActivity}
       {/* Hover surface for the message actions revealed by MessageActions. */}
       <div key={index} className={cn('w-full group/message', userClassName, margin)}>
-        <div aria-label={`${message.role} message ${Math.floor(index / 2 + 1)}`}>
+        <div aria-label={`${message.role} message ${assistantMessageNumber}`}>
           <div className={cn('flex min-w-0', isAtLeast.sm ? 'flex-row' : 'flex-col')}>
             {message.role === 'assistant' && assistantIcon}
             <div
@@ -225,7 +251,7 @@ export function ChatBox({
               )}
             >
               {showMessageText && messageContent}
-              {maybeAudioButton}
+              {maybeAudioPlayer}
               {maybeShowMessageIcons}
             </div>
           </div>

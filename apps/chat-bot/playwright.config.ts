@@ -1,8 +1,9 @@
-import { parse as parseEnvFile } from '@dotenvx/dotenvx';
-import { defineConfig, devices } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { parse as parseEnvFile } from '@dotenvx/dotenvx';
+import { defineConfig, devices } from '@playwright/test';
 import type SmartReporter from 'playwright-smart-reporter';
 
 type AccessibilityConfig = NonNullable<

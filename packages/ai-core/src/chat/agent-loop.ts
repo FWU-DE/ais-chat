@@ -1,8 +1,10 @@
-import { metrics } from '@opentelemetry/api';
 import * as Sentry from '@sentry/core';
+
 import { env } from '../env';
 import { EmptyResponseError } from '../errors';
 import { generateAgenticStreamWithBilling } from './agentic-stream';
+import { recordGenerationRssDelta } from './metrics/generation-rss-delta';
+import { recordToolCallDuration } from './metrics/tool-call-duration';
 import type {
   Message as AiCoreMessage,
   ModelSelection,
@@ -16,13 +18,6 @@ import type {
 
 export const MAX_AGENTIC_ITERATIONS = env.maxAgenticIterations;
 export const MAX_TOOL_CALLS_PER_ITERATION = env.maxToolCallsPerIteration;
-
-const toolCallDuration = metrics
-  .getMeter('ais-chat.tools', '0.0.1')
-  .createHistogram('tool_call_duration', {
-    description: 'Duration of executed AI tool calls',
-    unit: 'ms',
-  });
 
 function logError(message: string, error: unknown) {
   console.error(message, error);
@@ -101,8 +96,21 @@ export function runAgentLoop({
     const modelUsages: ModelUsage[] = [];
     const loopMessages = [...messages];
     const tools = toolRegistry ? Object.values(toolRegistry).map((entry) => entry.definition) : [];
+    const rssBefore = process.memoryUsage().rss;
 
-    const complete = () =>
+    // The histogram's own count series carries the per-outcome run count, so no extra counter.
+    const recordOutcome = (outcome: 'success' | 'error' | 'aborted', error?: Error) => {
+      recordGenerationRssDelta({
+        rssDelta: process.memoryUsage().rss - rssBefore,
+        outcome,
+        agentName,
+        modelName: modelSelection.modelName,
+        errorType: error?.name,
+      });
+    };
+
+    const complete = () => {
+      recordOutcome(abortSignal?.aborted ? 'aborted' : 'success');
       onComplete({
         fullText,
         ...sumModelUsages(modelUsages),
@@ -110,12 +118,15 @@ export function runAgentLoop({
         modelUsages,
         agentLoopMessages: loopMessages.slice(messages.length),
       });
+    };
 
-    const fail = (error: Error) =>
+    const fail = (error: Error) => {
+      recordOutcome('error', error);
       onError(error, {
         ...sumModelUsages(modelUsages),
         modelUsages,
       });
+    };
 
     try {
       await Sentry.startSpan(
@@ -274,9 +285,10 @@ export function runAgentLoop({
                       result = { error: message };
                       serializedResult = JSON.stringify(result);
                     } finally {
-                      toolCallDuration.record(performance.now() - startedAt, {
-                        'gen_ai.tool.name': registryEntry ? toolCall.name : 'unknown',
-                        'tool.status': status,
+                      recordToolCallDuration({
+                        durationMs: performance.now() - startedAt,
+                        toolName: registryEntry ? toolCall.name : 'unknown',
+                        status,
                       });
                     }
 
@@ -318,6 +330,7 @@ export function runAgentLoop({
 
         // Nothing was generated and nothing was billed, so there is nothing to report.
         if (modelUsages.length === 0) {
+          recordOutcome('aborted');
           return;
         }
       }
@@ -329,6 +342,8 @@ export function runAgentLoop({
       if (abortSignal?.aborted) {
         if (fullText.trim().length > 0 || modelUsages.length > 0) {
           complete();
+        } else {
+          recordOutcome('aborted');
         }
         return;
       }

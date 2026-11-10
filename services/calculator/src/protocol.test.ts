@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { parseCalculatorOutput } from './protocol.js';
 
 describe('qalc protocol', () => {

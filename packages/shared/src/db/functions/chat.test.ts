@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   insert: vi.fn(),
@@ -17,12 +17,12 @@ vi.mock('../../logging/logging', () => ({
   logError: mocks.logError,
 }));
 
+import type { InsertConversationMessageModel } from '../types';
 import {
   dbDeleteRegeneratedConversationMessage,
   dbInsertChatContent,
   dbInsertChatContentBatch,
 } from './chat';
-import type { InsertConversationMessageModel } from '../types';
 
 function createMessage(overrides: Partial<InsertConversationMessageModel> = {}) {
   return {

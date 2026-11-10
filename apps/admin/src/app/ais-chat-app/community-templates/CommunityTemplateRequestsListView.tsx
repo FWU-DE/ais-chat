@@ -1,5 +1,8 @@
 'use client';
 
+import { CommunityTemplateRequestSummary } from '@shared/community-templates/community-template-service.admin';
+import { ColumnFiltersState } from '@tanstack/react-table';
+import { Button } from '@ui/components/button';
 import {
   Card,
   CardAction,
@@ -9,23 +12,22 @@ import {
   CardTitle,
 } from '@ui/components/card';
 import { DataTable } from '@ui/components/data-table';
+import { Field, FieldLabel } from '@ui/components/field';
 import { Input } from '@ui/components/input';
 import { MultipleSelectDropdown } from '@ui/components/multiple-select-dropdown';
 import { Skeleton } from '@ui/components/skeleton';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
+
+import { ROUTES } from '@/consts/routes';
+
 import { getCommunityTemplateRequestsAction } from './actions';
-import { Button } from '@ui/components/button';
 import {
   columns,
-  communityTemplateRequestStatusOptions,
   type CommunityTemplateRequestStatus,
+  communityTemplateRequestStatusOptions,
 } from './columns';
-import { ColumnFiltersState } from '@tanstack/react-table';
-import { CommunityTemplateRequestSummary } from '@shared/community-templates/community-template-service.admin';
-import { Field, FieldLabel } from '@ui/components/field';
-import { useRouter } from 'next/navigation';
-import { ROUTES } from '@/consts/routes';
 
 export default function CommunityTemplateRequestsListView() {
   const router = useRouter();

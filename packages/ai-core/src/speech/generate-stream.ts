@@ -1,6 +1,6 @@
-import { getSpeechModelById } from '../models';
 import { AiGenerationError } from '../errors';
-import { constructGoogleStreamingSpeechGenerationFn } from './providers/google';
+import { getSpeechModelById } from '../models';
+import { getStreamingSpeechGenerationFn } from './providers';
 import type { SpeechStreamResult } from './types';
 
 // Generous ceiling for the whole stream (not just time-to-first-chunk), since long assistant
@@ -20,7 +20,7 @@ export async function streamSpeechById({
   abortSignal?: AbortSignal;
 }): Promise<SpeechStreamResult> {
   const model = await getSpeechModelById(modelId);
-  const generateSpeechStream = constructGoogleStreamingSpeechGenerationFn(model);
+  const generateSpeechStream = getStreamingSpeechGenerationFn(model);
   const timeoutSignal = AbortSignal.timeout(SPEECH_STREAM_MAX_DURATION_MS);
   const combinedSignal = abortSignal
     ? AbortSignal.any([timeoutSignal, abortSignal])

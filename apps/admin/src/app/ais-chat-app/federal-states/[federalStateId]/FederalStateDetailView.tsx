@@ -1,24 +1,26 @@
 'use client';
-import { Button } from '@ui/components/button';
-import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
-import { useForm } from 'react-hook-form';
+import { FormFieldCheckbox } from '@ais-chat/ui/components/form/form-field-checkbox';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { deleteFederalStateAction, updateFederalStateAction } from './actions';
+import { TrashSimpleIcon } from '@phosphor-icons/react';
+import { federalStatePictureUrlsSchema } from '@shared/db/schema';
+import { FederalStateModel, federalStateSchema } from '@shared/federal-states/types';
+import { logError } from '@shared/logging';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
+import { Button } from '@ui/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/components/card';
 import { FormField } from '@ui/components/form/form-field';
-import { FormFieldCheckbox } from '@ais-chat/ui/components/form/form-field-checkbox';
-import { FormFieldArray } from '@/components/form/FormFieldArray';
+import { DesignConfigurationSchema } from '@ui/types/design-configuration';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import z from 'zod';
-import { FederalStateModel, federalStateSchema } from '@shared/federal-states/types';
-import { DesignConfigurationSchema } from '@ui/types/design-configuration';
-import { logError } from '@shared/logging';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+
+import { FormFieldArray } from '@/components/form/FormFieldArray';
 import { FormErrorDisplay } from '@/components/FormErrorDisplay';
-import { federalStatePictureUrlsSchema } from '@shared/db/schema';
 import { ROUTES } from '@/consts/routes';
-import { TrashSimpleIcon } from '@phosphor-icons/react';
+
+import { deleteFederalStateAction, updateFederalStateAction } from './actions';
 
 export type FederalStateViewProps = {
   federalState: FederalStateModel;

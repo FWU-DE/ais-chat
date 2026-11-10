@@ -9,6 +9,7 @@ import {
 } from '@ais-chat/ai-core/errors';
 import { NotFoundError } from '@shared/error/not-found-error';
 import { describe, expect, it } from 'vitest';
+
 import { getErrorMessageByType } from './get-error-message-by-type';
 
 describe('getErrorMessageByType', () => {

@@ -1,10 +1,12 @@
-import { useLlmModels } from '@/components/providers/llm-model-provider';
-import { useTranslations } from 'next-intl';
-import { useToast } from '@/components/common/toast';
-import { useRouter } from 'next/navigation';
-import { createNewLearningScenarioAction } from './actions';
-import { Button } from '@ui/components/button';
 import { PlusIcon } from '@phosphor-icons/react';
+import { Button } from '@ui/components/button';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+
+import { useToast } from '@/components/common/toast';
+import { useLlmModels } from '@/components/providers/llm-model-provider';
+
+import { createNewLearningScenarioAction } from './actions';
 
 export function CreateNewLearningScenarioButton() {
   const router = useRouter();

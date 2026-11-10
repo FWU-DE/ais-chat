@@ -1,8 +1,5 @@
 'use client';
 
-import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
-import { truncate } from '@/utils/chat/tool-result-parsing';
-import { cn } from '@/utils/tailwind';
 import {
   BooksIcon,
   CalculatorIcon,
@@ -12,10 +9,10 @@ import {
   FileMagnifyingGlassIcon,
   FileTextIcon,
   GlobeSimpleIcon,
+  type Icon,
   MagnifyingGlassIcon,
   SparkleIcon,
   XCircleIcon,
-  type Icon,
 } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import {
@@ -27,7 +24,12 @@ import {
 } from '@ui/components/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/tooltip';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useId, useState } from 'react';
+
+import type { AiActivityStep, AiActivityToolName } from '@/types/ai-activity';
+import { truncate } from '@/utils/chat/tool-result-parsing';
+import { cn } from '@/utils/tailwind';
+
 import MarkdownDisplay from '../markdown-display';
 
 const TOOL_ICONS: Record<AiActivityToolName, Icon> = {
@@ -168,7 +170,10 @@ function ActivityStep({ step, isLast }: { step: AiActivityStep; isLast: boolean 
   const detailTooltip = step.kind === 'tool' ? step.detail : undefined;
 
   return (
-    <li className="flex gap-3">
+    <li
+      className="flex gap-3"
+      data-testid={`ai-activity-step-${step.kind === 'tool' ? step.tool : step.kind}`}
+    >
       <div className="flex flex-col items-center">
         <span
           className={cn(
@@ -294,9 +299,16 @@ export function AiActivityDialog({ steps }: { steps: AiActivityStep[] }) {
   );
 }
 
-export function AiActivityPanel({ steps, panelId }: { steps: AiActivityStep[]; panelId: string }) {
+export function AiActivityPanel({
+  steps,
+  messageIndex,
+}: {
+  steps: AiActivityStep[];
+  messageIndex: number;
+}) {
   const t = useTranslations('ai-activity');
   const [isOpen, setIsOpen] = useState(false);
+  const panelId = useId();
 
   if (steps.every((step) => step.kind === 'analysis')) {
     return null;
@@ -311,6 +323,7 @@ export function AiActivityPanel({ steps, panelId }: { steps: AiActivityStep[]; p
         aria-expanded={isOpen}
         aria-controls={panelId}
         title={t('toggle')}
+        data-testid={`ai-activity-toggle-${messageIndex}`}
       >
         <span>{t('title')}</span>
         <CaretRightIcon

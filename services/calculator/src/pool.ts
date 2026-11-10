@@ -1,5 +1,5 @@
-import { runCalculator, type SpawnCalculator } from './worker.js';
 import type { Limits, Result, RunOptions } from './types.js';
+import { runCalculator, type SpawnCalculator } from './worker.js';
 
 export class WorkerPool {
   private active = 0;

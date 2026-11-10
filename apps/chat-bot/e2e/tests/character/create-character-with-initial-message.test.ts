@@ -1,9 +1,10 @@
-import { expect, test } from '../../fixtures/test';
-import { AUTH_FILES } from '../../utils/const';
-import { sendMessage } from '../../utils/chat';
-import { waitForToast } from '../../utils/utils';
-import { configureCharacter, deleteCharacter } from '../../utils/character';
 import { nanoid } from 'nanoid';
+
+import { expect, test } from '../../fixtures/test';
+import { configureCharacter, deleteCharacter } from '../../utils/character';
+import { sendMessage } from '../../utils/chat';
+import { AUTH_FILES } from '../../utils/const';
+import { waitForToast } from '../../utils/utils';
 
 test.use({ storageState: AUTH_FILES.teacher });
 

@@ -1,7 +1,6 @@
 'use client';
 
-import React from 'react';
-import { useTranslations } from 'next-intl';
+import { Button } from '@ais-chat/ui/components/button';
 import {
   Dialog,
   DialogClose,
@@ -12,7 +11,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@ais-chat/ui/components/dialog';
-import { Button } from '@ais-chat/ui/components/button';
+import { useTranslations } from 'next-intl';
+import React from 'react';
 
 type InfoDialogProps = {
   trigger: React.ReactElement;

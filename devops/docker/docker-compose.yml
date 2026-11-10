@@ -6,7 +6,7 @@ services:
   # so that a service is reachable under the same URL from within a container and
   # from the browser
   keycloak:
-    image: quay.io/keycloak/keycloak:26.8.1-0
+    image: quay.io/keycloak/keycloak:26.8.2-0
     restart: unless-stopped
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
@@ -32,7 +32,7 @@ services:
 
   # Fix keycloak volume permissions (runs with uid 1000)
   fix-keycloak-volume-ownership:
-    image: alpine:3.24.2
+    image: alpine:3.24.3
     restart: no
     entrypoint: /bin/sh -c "chown 1000 /keycloak"
     volumes:
@@ -61,7 +61,7 @@ services:
 
   # Valkey (Redis-compatible) for session storage
   valkey:
-    image: ghcr.io/valkey-io/valkey:9.1.2-alpine
+    image: ghcr.io/valkey-io/valkey:9.1.3-alpine
     restart: unless-stopped
     volumes:
       - valkey_data:/data
@@ -119,7 +119,7 @@ services:
   # Shares keycloak's netns so presigned URLs signed for http://localhost:9000 are
   # reachable both from the app containers and from the browser on the host.
   rustfs:
-    image: rustfs/rustfs:1.0.3
+    image: rustfs/rustfs:1.0.4
     restart: unless-stopped
     environment:
       RUSTFS_ADDRESS: 0.0.0.0:9000
@@ -143,7 +143,7 @@ services:
         condition: service_started
 
   bifrost:
-    image: ghcr.io/maximhq/bifrost:v2.3.2
+    image: ghcr.io/maximhq/bifrost:v2.4.0
     restart: unless-stopped
     environment:
       BIFROST_ADMIN_USERNAME: admin
@@ -362,7 +362,7 @@ services:
 
   # Initialization container
   ais-chat-init:
-    image: alpine:3.24.2
+    image: alpine:3.24.3
     restart: no
     environment:
       # Database URLs for both databases
@@ -388,10 +388,7 @@ services:
         echo '=== Creating S3 bucket: ais-chat ==='
         s3cmd --access_key=rustfsadmin --secret_key=RustFS-Admin-123456 --host=localhost:9000 --host-bucket='localhost:9000/%(bucket)' --region=eu-de --no-ssl --no-check-certificate mb s3://ais-chat
 
-        echo '=== Seeding api_db ==='
-        apk add --no-cache postgresql-client
-        PGPASSWORD=test1234 psql -h postgres -U admin -d api_db -c \"INSERT INTO organization (name) SELECT 'LOCAL' WHERE NOT EXISTS (SELECT 1 FROM organization);\"
-        # Remaining seeding is done manually via ais-chat-admin interface
+        # Models, provider keys and projects are configured manually via ais-chat-admin interface
 
         echo '=== AIS.chat initialization completed successfully ==='
       "

@@ -1,6 +1,5 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@ui/components/alert-dialog';
+import { useTranslations } from 'next-intl';
 
 type CustomShareRemovalConfirmationDialogProps = {
   open: boolean;

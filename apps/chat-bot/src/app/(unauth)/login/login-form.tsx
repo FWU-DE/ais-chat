@@ -1,5 +1,9 @@
 'use client';
 
+import { Button } from '@ui/components/button';
+import { useSearchParams } from 'next/navigation';
+import { signIn } from 'next-auth/react';
+
 import LogoWithName from '@/assets/logo-with-name.svg';
 import { getSafeCallbackUrl } from '@/auth/callback-url';
 import { Button } from '@ui/components/button';

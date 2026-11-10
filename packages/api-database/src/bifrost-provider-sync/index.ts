@@ -1,9 +1,9 @@
 import { dbGetAllProviderKeysWithModels, type LlmProviderKeyWithModels } from '../functions';
-import { BifrostProviderSyncError } from './error';
 import { deleteBifrostProvider, listBifrostProviders, syncBifrostProvider } from './client';
+import { BifrostProviderSyncError } from './error';
 import { buildBifrostProviderConfigs } from './provider-config-builder';
-import { ensureBifrostVirtualKeyProviderAccess } from './virtual-key-sync';
 import { type BifrostProviderConfig, type BifrostProviderSyncOptions } from './types';
+import { ensureBifrostVirtualKeyProviderAccess } from './virtual-key-sync';
 
 /**
  * Mirrors API DB model/provider configuration into Bifrost.
@@ -92,34 +92,11 @@ async function deleteStaleManagedProviders(
   }
 }
 
-export async function syncBifrostProvidersForOrganization(
-  organizationId: string,
-  options: BifrostProviderSyncOptions,
-): Promise<void> {
-  // Bifrost provider configuration and virtual keys are shared across organizations. Rebuild the
-  // complete desired state so syncing one organization cannot remove another organization's keys.
-  const providerKeys = await dbGetAllProviderKeysWithModels();
-  await syncBifrostProviders(providerKeys, {
-    ...options,
-    logger: options.logger
-      ? {
-          ...options.logger,
-          info: (message, context) =>
-            options.logger?.info?.(message, { organizationId, ...context }),
-          warning: (message, context) =>
-            options.logger?.warning?.(message, { organizationId, ...context }),
-          error: (message, error, context) =>
-            options.logger?.error?.(message, error, { organizationId, ...context }),
-        }
-      : undefined,
-  });
-}
-
 export async function syncAllBifrostProviders(options: BifrostProviderSyncOptions): Promise<void> {
   await syncBifrostProviders(await dbGetAllProviderKeysWithModels(), options);
 }
 
 export * from './error';
-export * from './types';
 export { buildBifrostProviderConfigs } from './provider-config-builder';
+export * from './types';
 export { ensureBifrostVirtualKeyProviderAccess } from './virtual-key-sync';

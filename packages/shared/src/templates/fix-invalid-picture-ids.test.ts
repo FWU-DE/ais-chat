@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, MockedFunction, vi } from 'vitest';
-import { fixInvalidPictureIds } from './fix-invalid-picture-ids';
-import { copyFileInS3 } from '@shared/s3';
 import { logError, logInfo } from '@shared/logging';
+import { copyFileInS3 } from '@shared/s3';
+import { beforeEach, describe, expect, it, MockedFunction, vi } from 'vitest';
+
+import { fixInvalidPictureIds } from './fix-invalid-picture-ids';
 
 const {
   mockDbWhere,

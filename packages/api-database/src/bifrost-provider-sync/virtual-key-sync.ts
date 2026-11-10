@@ -1,13 +1,13 @@
 import { dbGetAllProviderKeysWithModels } from '../functions';
 import { BifrostProviderSyncError } from './error';
 import { buildBifrostProviderConfigs } from './provider-config-builder';
+import type { BifrostVirtualKey } from './types';
 import {
   BIFROST_PROVIDERS,
   BifrostProviderSyncLogger,
   BifrostVirtualKeyProviderConfig,
 } from './types';
 import { listBifrostVirtualKeys, updateBifrostVirtualKeyProviders } from './virtual-key-client';
-import type { BifrostVirtualKey } from './types';
 
 const NATIVE_BIFROST_PROVIDERS = new Set<string>(BIFROST_PROVIDERS);
 
@@ -15,10 +15,8 @@ const NATIVE_BIFROST_PROVIDERS = new Set<string>(BIFROST_PROVIDERS);
  * Ensures every Bifrost virtual key can access the providers/models we currently sync.
  *
  * Virtual keys are deny-by-default: a virtual key with no matching provider config for a given
- * provider is rejected with a 403 when used against that provider. Since virtual keys are shared
- * across organizations, this always computes the desired provider access from *all*
- * organizations' active models (not just the organization that triggered the current sync),
- * so syncing one organization's models can't narrow another organization's provider access.
+ * provider is rejected with a 403 when used against that provider. This computes the desired
+ * provider access from all active models.
  *
  * Provider configs for providers not in `BIFROST_PROVIDERS` are left untouched here. Model
  * lists are explicit (not `"*"`) so access doesn't depend on Bifrost's Model Catalog /

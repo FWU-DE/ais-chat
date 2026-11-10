@@ -3,8 +3,8 @@
 import { useSidebar } from '@ais-chat/ui/components/sidebar';
 import { PlusSquareIcon, SidebarSimpleIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
-import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 export function ToggleSidebarButton({ forceVisibility = false }: { forceVisibility?: boolean }) {
   const { toggleSidebar, open, isMobile, openMobile } = useSidebar();

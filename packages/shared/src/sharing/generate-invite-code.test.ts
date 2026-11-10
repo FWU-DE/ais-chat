@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { generateInviteCode } from './generate-invite-code';
 
 describe('generateInviteCode', () => {

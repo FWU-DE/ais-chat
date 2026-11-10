@@ -1,9 +1,11 @@
 import { EntityType } from '@shared/entities/entity-types';
+
 import { AdminAppSidebar } from '@/app/ais-chat-app/AdminAppSidebar';
+import { requireAdminOrEditorAuth } from '@/auth/requireAdminAuth';
 import TwoColumnLayout from '@/components/layout/TwoColumnLayout';
 import { buildChatBotEntityUrl } from '@/utils/buildChatBotEntityUrl';
+
 import { SuspensionRequestItemDetailView } from './SuspensionRequestItemDetailView';
-import { requireAdminOrEditorAuth } from '@/auth/requireAdminAuth';
 
 export const dynamic = 'force-dynamic';
 

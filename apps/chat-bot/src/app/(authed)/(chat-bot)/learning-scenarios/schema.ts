@@ -3,13 +3,14 @@
  * If the field is required, set the min length to at least 1.
  */
 
+import { z } from 'zod';
+
 import {
   SMALL_TEXT_INPUT_FIELDS_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS,
 } from '@/configuration-text-inputs/const';
 import { formLinks } from '@/utils/web-search/form-links';
-import { z } from 'zod';
 
 /**
  * Zod form configuration Info:

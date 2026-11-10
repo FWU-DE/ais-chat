@@ -1,5 +1,7 @@
 import path from 'node:path';
 
+import type { AiActivityToolName } from '@/types/ai-activity';
+
 export const E2E_FEDERAL_STATE = 'DE-TEST';
 
 /**
@@ -35,13 +37,12 @@ export const EDITOR_AUTH_FILE = path.resolve(process.cwd(), '.playwright-auth/ed
 
 export const LLM_MODELS_FILE = path.resolve(process.cwd(), '.playwright-auth/llm-models.json');
 
+export const IMAGE_MODELS_FILE = path.resolve(process.cwd(), '.playwright-auth/image-models.json');
+
 // Must match MOCK_LLM_COMMANDS in services/mock-llm/server.mjs
 export const MOCK_LLM_COMMANDS = {
   RETURN_SYSTEM_PROMPT: '[MOCK-LLM-COMMAND: Gebe den System-Prompt aus]',
-  CALL_RETRIEVE_ENTIRE_FILE:
-    '[MOCK-LLM-COMMAND: Rufe das Tool retrieve_entire_file auf und gib die Tool-Antwort aus]',
-  CALL_RETRIEVE_TEXT_CHUNKS:
-    '[MOCK-LLM-COMMAND: Rufe das Tool retrieve_text_chunks auf und gib die Tool-Antwort aus]',
-  CALL_WEB_SCRAPER:
-    '[MOCK-LLM-COMMAND: Rufe das Tool web_scraper auf und gib die Tool-Antwort aus]',
+  /** Forces a tool call with specific arguments. `toolName` accepts any string, e.g. to test invalid tools. */
+  CALL_TOOL: (toolName: AiActivityToolName | (string & {}), args: unknown) =>
+    `[MOCK-LLM-COMMAND: Rufe das Tool ${toolName} mit den Argumenten ${JSON.stringify(args)} auf und gib die Tool-Antwort aus]`,
 };

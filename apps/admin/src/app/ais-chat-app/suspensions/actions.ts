@@ -1,15 +1,16 @@
 'use server';
 
-import { requireAdminOrEditorAuth } from '@/auth/requireAdminAuth';
 import { runServerAction } from '@shared/actions/run-server-action';
+import { EntityRef } from '@shared/entities/entity-types';
 import {
+  getSuspensionRequestItemWithDetails,
   getSuspensionRequestOverviews,
-  suspendEntity,
   liftSuspensionOnEntity,
   markSuspensionRequestAsChecked,
-  getSuspensionRequestItemWithDetails,
+  suspendEntity,
 } from '@shared/suspension/suspension-service';
-import { EntityRef } from '@shared/entities/entity-types';
+
+import { requireAdminOrEditorAuth } from '@/auth/requireAdminAuth';
 
 export async function getSuspensionRequestEntitiesAction() {
   await requireAdminOrEditorAuth();

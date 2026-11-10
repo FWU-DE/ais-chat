@@ -1,18 +1,14 @@
 'use client';
 
-import { startTransition, useEffect, useState } from 'react';
-import {
-  getUrlPresetsAction,
-  insertUrlPresetAction,
-  deleteUrlPresetAction,
-  updateUrlPresetAction,
-} from './actions';
+import { TrashSimpleIcon } from '@phosphor-icons/react';
 import {
   UrlPreset,
   UrlPresetInsert,
   UrlPresetUpdate,
   urlPresetUpdateSchema,
 } from '@shared/web-search/url-presets/types';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
+import { Button } from '@ui/components/button';
 import {
   Card,
   CardAction,
@@ -21,14 +17,19 @@ import {
   CardHeader,
   CardTitle,
 } from '@ui/components/card';
-import { Button } from '@ui/components/button';
-import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
-import { AddUrlToPresetForm } from './AddUrlToPresetForm';
 import { Chip } from '@ui/components/chip';
-import { TrashSimpleIcon } from '@phosphor-icons/react';
+import { startTransition, useEffect, useState } from 'react';
+import { toast } from 'sonner';
+
+import {
+  deleteUrlPresetAction,
+  getUrlPresetsAction,
+  insertUrlPresetAction,
+  updateUrlPresetAction,
+} from './actions';
+import { AddUrlToPresetForm } from './AddUrlToPresetForm';
 import { CreateNewUrlPreset } from './CreateNewUrlPreset';
 import { EditUrlPresetForm } from './EditUrlPresetForm';
-import { toast } from 'sonner';
 
 function sortUrlPresets(presets: UrlPreset[]): UrlPreset[] {
   return presets.toSorted((a, b) => a.orderNumber - b.orderNumber || a.name.localeCompare(b.name));

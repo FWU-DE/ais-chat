@@ -1,9 +1,10 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import { Card, CardContent } from '@ui/components/card';
 import { UrlPreset } from '@shared/web-search/url-presets/types';
+import { Card, CardContent } from '@ui/components/card';
 import { Chip } from '@ui/components/chip';
+import { useTranslations } from 'next-intl';
+
 import { WebSearchSelectedWebsitesFooter } from './web-search-selected-websites-footer';
 
 const UNASSIGNED_PRESET_NAME = '__unassigned__';

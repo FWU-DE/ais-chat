@@ -1,6 +1,7 @@
 import { and, inArray, isNotNull, isNull, lt } from 'drizzle-orm';
+
 import { db } from '..';
-import { fileTable, sharedCharacterConversation, sharedLearningScenarioTable } from '../schema';
+import { fileTable, sharedCharacter, sharedLearningScenarioTable } from '../schema';
 
 export async function dbGetSharedChatFileCandidates() {
   return db
@@ -14,14 +15,14 @@ export async function dbGetExpiredCharacterShares(inviteCodes: string[], cutoffD
 
   return db
     .select({
-      inviteCode: sharedCharacterConversation.inviteCode,
-      entityId: sharedCharacterConversation.characterId,
+      inviteCode: sharedCharacter.inviteCode,
+      entityId: sharedCharacter.characterId,
     })
-    .from(sharedCharacterConversation)
+    .from(sharedCharacter)
     .where(
       and(
-        inArray(sharedCharacterConversation.inviteCode, inviteCodes),
-        lt(sharedCharacterConversation.expiredAt, cutoffDate),
+        inArray(sharedCharacter.inviteCode, inviteCodes),
+        lt(sharedCharacter.expiredAt, cutoffDate),
       ),
     );
 }

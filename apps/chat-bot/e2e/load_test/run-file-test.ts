@@ -1,8 +1,9 @@
+import { check } from 'k6';
 import { Page } from 'k6/browser';
 import encoding from 'k6/encoding';
-import { HEADLESS_BROWSER_OPTIONS, WAIT_TIMES_IN_MS } from './config';
+
 import { performLogin, runTest, selectModel, sendMessage } from './common';
-import { check } from 'k6';
+import { HEADLESS_BROWSER_OPTIONS, WAIT_TIMES_IN_MS } from './config';
 
 export const options = HEADLESS_BROWSER_OPTIONS;
 

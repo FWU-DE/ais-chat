@@ -1,6 +1,7 @@
-import { z } from 'zod';
-import { env } from '../env';
 import { llmModelSelectSchema } from '@shared/db/schema';
+import { z } from 'zod';
+
+import { env } from '../env';
 
 export async function fetchLlmModels({ apiKey }: { apiKey: string }) {
   // Todo: replace when api administration is moved to this repo

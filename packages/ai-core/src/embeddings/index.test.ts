@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { generateEmbeddingsWithBilling } from './index';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { AiGenerationError, InvalidModelError } from '../errors';
+import { generateEmbeddingsWithBilling } from './index';
 import type { AiModel } from './types';
 
 // Mock all dependencies
@@ -20,10 +21,10 @@ vi.mock('../models', () => ({
   getEmbeddingModelById: vi.fn(),
 }));
 
-import { generateEmbeddings } from './providers';
 import { isApiKeyOverQuota } from '../api-keys/billing';
 import { hasAccessToModel } from '../api-keys/model-access';
 import { getEmbeddingModelById } from '../models';
+import { generateEmbeddings } from './providers';
 
 const mockGenerateEmbeddings = vi.mocked(generateEmbeddings);
 const mockIsApiKeyOverQuota = vi.mocked(isApiKeyOverQuota);

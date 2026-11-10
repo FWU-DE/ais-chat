@@ -1,5 +1,6 @@
-import { z } from 'zod';
 import { logError } from '@shared/logging';
+import { z } from 'zod';
+
 import { chatMessageSchema } from '@/types/chat';
 
 const STORAGE_KEY_VERSION = 'v2';

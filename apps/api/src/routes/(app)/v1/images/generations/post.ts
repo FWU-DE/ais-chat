@@ -1,8 +1,9 @@
+import { FastifyReply, FastifyRequest } from 'fastify';
+import { z } from 'zod';
+
 import { handleAiCoreError } from '@/ai-core-adapter/errors';
 import { createImage } from '@/ai-core-adapter/images';
 import { validateApiKeyWithResult } from '@/routes/utils';
-import { FastifyReply, FastifyRequest } from 'fastify';
-import { z } from 'zod';
 
 const imageSizeSchema = z
   .string()

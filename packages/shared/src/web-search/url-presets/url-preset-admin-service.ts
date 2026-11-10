@@ -1,8 +1,9 @@
-import { eq } from 'drizzle-orm';
 import { db } from '@shared/db';
 import { urlPresetTable } from '@shared/db/schema';
-import { UrlPreset, UrlPresetInsert, UrlPresetUpdate } from './types';
 import { NotFoundError } from '@shared/error';
+import { eq } from 'drizzle-orm';
+
+import { UrlPreset, UrlPresetInsert, UrlPresetUpdate } from './types';
 
 export async function getUrlPresetById(id: string): Promise<UrlPreset> {
   const [preset] = await db.select().from(urlPresetTable).where(eq(urlPresetTable.id, id));

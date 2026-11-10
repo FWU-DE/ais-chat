@@ -1,9 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+
+import { dbGetFederalStateByIdWithResult } from '@shared/db/functions/federal-state';
 import { ImageResponse } from 'next/og';
+
 import { getMaybeUser } from '@/auth/utils';
 import { DEFAULT_DESIGN_CONFIGURATION } from '@/db/const';
-import { dbGetFederalStateByIdWithResult } from '@shared/db/functions/federal-state';
 
 export const dynamic = 'force-dynamic';
 

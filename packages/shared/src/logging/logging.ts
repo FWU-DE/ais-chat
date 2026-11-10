@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
-import { env } from './env';
 import { isDevelopment } from '@shared/utils/isDevelopment';
+
+import { env } from './env';
 
 const logLevelOrder = ['fatal', 'error', 'warning', 'log', 'info', 'debug'] as const;
 const logLevels = logLevelOrder.slice(

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { constructBifrostImageGenerationFn } from './bifrost';
-import type { AiModel } from '../types';
+
 import { AiGenerationError } from '../../errors';
+import type { AiModel } from '../types';
+import { constructBifrostImageGenerationFn } from './bifrost';
 
 const {
   generateMock,

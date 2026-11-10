@@ -1,9 +1,15 @@
+import { generateSpeechPreview } from '@shared/speech/speech-service';
+import { requiredNonEmptyString } from '@shared/utils/zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { getTranslations } from 'next-intl/server';
+import { z } from 'zod';
+
 import { getUser } from '@/auth/utils';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
-import { generateSpeechPreview } from '@/app/api/chat/speech-service';
-import { speechPreviewRequestSchema } from '@/app/api/chat/speech-request-schemas';
+
+const speechPreviewRequestSchema = z.object({
+  voice: requiredNonEmptyString('voice is required'),
+});
 
 export async function POST(req: NextRequest) {
   try {

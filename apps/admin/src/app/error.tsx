@@ -1,7 +1,7 @@
 'use client'; // Error boundaries must be Client Components
 
-import { useEffect } from 'react';
 import { logError } from '@shared/logging';
+import { useEffect } from 'react';
 
 /**
  * Error boundary component that displays error information and logs errors for debugging.

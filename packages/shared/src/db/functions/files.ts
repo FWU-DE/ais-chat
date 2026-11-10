@@ -1,6 +1,5 @@
 import { logDebug } from '@shared/logging';
 import {
-  type SQL,
   and,
   asc,
   eq,
@@ -10,7 +9,9 @@ import {
   isNull,
   notExists,
   or,
+  type SQL,
 } from 'drizzle-orm';
+
 import { db } from '..';
 import {
   AssistantFileMapping,

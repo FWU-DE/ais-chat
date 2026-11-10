@@ -11,12 +11,12 @@ function checksum(value: string) {
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
-function getKey(spec: PlotSpec) {
+export function getPlotKey(spec: PlotSpec) {
   return `spec:${checksum(JSON.stringify(spec))}`;
 }
 
 export function registerRenderedPlot(spec: PlotSpec, svg: SVGSVGElement) {
-  const key = getKey(spec);
+  const key = getPlotKey(spec);
   const plots = renderedPlots.get(key) ?? new Set<SVGSVGElement>();
   plots.add(svg);
   renderedPlots.set(key, plots);
@@ -30,7 +30,7 @@ export function registerRenderedPlot(spec: PlotSpec, svg: SVGSVGElement) {
 }
 
 export function getRenderedPlot(spec: PlotSpec) {
-  const plots = renderedPlots.get(getKey(spec));
+  const plots = renderedPlots.get(getPlotKey(spec));
   if (plots === undefined) {
     return undefined;
   }

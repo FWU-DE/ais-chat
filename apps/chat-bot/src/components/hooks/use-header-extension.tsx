@@ -1,7 +1,8 @@
 'use client';
 
+import { createContext, ReactNode, useContext, useMemo, useState } from 'react';
+
 import type { ApplicationHeaderMenuItem } from '@/components/layout/application-header';
-import { createContext, useContext, useMemo, ReactNode, useState } from 'react';
 
 type HeaderExtensionContextValue = {
   headerMountNode: HTMLDivElement | null;

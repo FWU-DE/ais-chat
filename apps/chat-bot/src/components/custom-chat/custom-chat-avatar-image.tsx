@@ -1,8 +1,8 @@
 'use client';
 
 import { ImageSquareIcon } from '@phosphor-icons/react';
-import { useTranslations } from 'next-intl';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 
 export function CustomChatAvatarImage({ pictureUrl }: { pictureUrl: string | undefined }) {
   const t = useTranslations('custom-chat.image');

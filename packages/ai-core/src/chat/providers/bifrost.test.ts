@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { constructBifrostTextGenerationFn, constructBifrostTextStreamFn } from './bifrost';
+
 import type { AiModel } from '../types';
+import { constructBifrostTextGenerationFn, constructBifrostTextStreamFn } from './bifrost';
 
 const { responsesCreateMock, openAiConstructorMock, instrumentOpenAiClientMock, MockOpenAI } =
   vi.hoisted(() => {
@@ -65,7 +66,6 @@ function createBifrostModel(settingProvider: 'azure' | 'openai' | 'ionos' | 'goo
     isDeleted: false,
     useBifrost: true,
     isNew: false,
-    organizationId: 'organization-id',
     priceMetadata: {
       type: 'text',
       completionTokenPrice: 1,

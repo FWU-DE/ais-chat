@@ -1,5 +1,15 @@
 'use client';
 
+import type { ServerActionResult } from '@shared/actions/server-action-result';
+import {
+  calculateShareSessionState,
+  ShareSessionState,
+} from '@shared/sharing/calculate-share-session-state';
+import { Button } from '@ui/components/button';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { QRCodeSVG } from 'qrcode.react';
+
 import { getCharacterShareDataAction } from '@/app/(authed)/(chat-bot)/characters/editor/[characterId]/actions';
 import CountDownTimer from '@/app/(authed)/(chat-bot)/learning-scenarios/_components/count-down';
 import { getLearningScenarioShareDataAction } from '@/app/(authed)/(chat-bot)/learning-scenarios/editor/[learningScenarioId]/actions';
@@ -9,15 +19,7 @@ import SidebarCloseIcon from '@/components/icons/sidebar-close';
 import Footer from '@/components/navigation/footer';
 import type { SharePollingData } from '@/hooks/use-share-data-polling';
 import { useShareDataPolling } from '@/hooks/use-share-data-polling';
-import type { ServerActionResult } from '@shared/actions/server-action-result';
-import {
-  ShareSessionState,
-  calculateShareSessionState,
-} from '@shared/sharing/calculate-share-session-state';
-import { Button } from '@ui/components/button';
-import { useTranslations } from 'next-intl';
-import Link from 'next/link';
-import { QRCodeSVG } from 'qrcode.react';
+
 import CustomChatHeader from './custom-chat-header';
 import { CustomChatShareWarning } from './share-with-learners/custom-chat-share-warning';
 

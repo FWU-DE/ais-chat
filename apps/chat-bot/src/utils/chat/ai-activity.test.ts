@@ -1,8 +1,10 @@
+import type { ToolCall, ToolResult } from '@ais-chat/ai-core/chat/types';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import type { MathCalculateToolSuccessResponse } from '@/app/api/chat/tools/math-calculate-tool';
 import { parseGenericPersistedToolResult } from '@/app/api/chat/tools/parse-persisted-tool-result';
 import type { ToolActivity } from '@/app/api/chat/tools/types';
-import type { ToolCall, ToolResult } from '@ais-chat/ai-core/chat/types';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import { createAiActivityCollector } from './ai-activity';
 
 const toolCall: ToolCall = {

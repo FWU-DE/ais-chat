@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { decode } from 'he';
+import { z } from 'zod';
 
 // JSXGraph parses string parents with JessieCode, which can call methods on any object reachable
 // through a property chain (e.g. `$board`'s real DOM container), so only allowlisted,

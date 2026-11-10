@@ -1,8 +1,9 @@
-import { expect, test } from '../../fixtures/test';
-import { AUTH_FILES } from '../../utils/const';
-import { configureCharacter, createCharacter } from '../../utils/character';
-import { startShare, stopShare, waitForAutosave } from '../../utils/utils';
 import { nanoid } from 'nanoid';
+
+import { expect, test } from '../../fixtures/test';
+import { configureCharacter, createCharacter } from '../../utils/character';
+import { AUTH_FILES } from '../../utils/const';
+import { startShare, stopShare, waitForAutosave } from '../../utils/utils';
 
 test.describe('share character with grace window', () => {
   test.use({ storageState: AUTH_FILES.teacher });

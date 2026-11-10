@@ -14,6 +14,8 @@ vi.mock('..', () => ({
   },
 }));
 
+import { NotFoundError } from '@shared/error';
+
 import {
   dbExtendSharedLearningScenarioExpiration,
   dbGetAllAccessibleLearningScenarios,
@@ -32,7 +34,6 @@ import {
   dbSetLearningScenarioSuspended,
   dbUpdateLearningScenarioShareTokenPointsLimit,
 } from './learning-scenario';
-import { NotFoundError } from '@shared/error';
 
 function mockSelectChain(result: unknown[]) {
   const chain: Record<string, unknown> = {

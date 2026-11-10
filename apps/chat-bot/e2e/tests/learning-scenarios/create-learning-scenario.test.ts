@@ -1,15 +1,18 @@
-import { expect, test } from '../../fixtures/test';
 import type { Page } from '@playwright/test';
-import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
-import { waitForAutosave, waitForToast, waitForToastDisappear } from '../../utils/utils';
+import { nanoid } from 'nanoid';
+
+import { expect, test } from '../../fixtures/test';
 import { sendMessage } from '../../utils/chat';
+import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
+import { verifyDidacticCommentary } from '../../utils/didactic-commentary';
 import {
   configureLearningScenario,
   createLearningScenario,
   deleteLearningScenario,
   deleteLearningScenarioFromDetailPage,
 } from '../../utils/learning-scenario';
-import { nanoid } from 'nanoid';
+import { verifyLicenseInformation } from '../../utils/license-information';
+import { waitForAutosave, waitForToast, waitForToastDisappear } from '../../utils/utils';
 
 test.use({ storageState: AUTH_FILES.teacher });
 
@@ -231,7 +234,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Title
   await page.getByRole('textbox', { name: 'Name des Lernszenarios' }).fill('');
   await page.getByRole('textbox', { name: 'Name des Lernszenarios' }).fill('New Title');
-  await page.getByRole('textbox', { name: 'Name des Lernszenarios' }).press('Tab');
+  await page.getByRole('textbox', { name: 'Name des Lernszenarios' }).blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Name des Lernszenarios' })).toHaveValue(
@@ -241,7 +244,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Description
   await page.getByRole('textbox', { name: 'Kurzbeschreibung' }).fill('');
   await page.getByRole('textbox', { name: 'Kurzbeschreibung' }).fill('New Description');
-  await page.getByRole('textbox', { name: 'Kurzbeschreibung' }).press('Tab');
+  await page.getByRole('textbox', { name: 'Kurzbeschreibung' }).blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Kurzbeschreibung' })).toHaveValue(
@@ -251,7 +254,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Instructions
   await page.getByRole('textbox', { name: 'Instruktionen' }).fill('');
   await page.getByRole('textbox', { name: 'Instruktionen' }).fill('New Instructions');
-  await page.getByRole('textbox', { name: 'Instruktionen' }).press('Tab');
+  await page.getByRole('textbox', { name: 'Instruktionen' }).blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Instruktionen' })).toHaveValue(
@@ -261,10 +264,18 @@ test('data is autosaved on blur', async ({ page }) => {
   // Student Exercise
   await page.getByRole('textbox', { name: 'Arbeitsauftrag' }).fill('');
   await page.getByRole('textbox', { name: 'Arbeitsauftrag' }).fill('New Exercise');
-  await page.getByRole('textbox', { name: 'Arbeitsauftrag' }).press('Tab');
+  await page.getByRole('textbox', { name: 'Arbeitsauftrag' }).blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Arbeitsauftrag' })).toHaveValue('New Exercise');
+
+  // License information
+  await verifyDidacticCommentary(
+    page,
+    '/learning-scenarios',
+    'Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieses Lernszenario eingesetzt werden kann.',
+  );
+  await verifyLicenseInformation(page, '/learning-scenarios');
 
   // cleanup
   await deleteLearningScenarioFromDetailPage(page);

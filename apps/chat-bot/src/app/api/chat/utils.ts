@@ -1,16 +1,18 @@
-import { logError } from '@shared/logging';
-import { env as imageAttachmentEnv } from './image-attachment-env';
-import { type ChatMessage } from '@/types/chat';
 import {
   generateTextWithBilling,
-  type Message as AiCoreMessage,
   isChatImageAttachment,
+  type Message as AiCoreMessage,
 } from '@ais-chat/ai-core';
-import { TOTAL_CHAT_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
 import { type FileModel, LlmModelSelectModel } from '@shared/db/schema';
 import { UnexpectedError } from '@shared/error/unexpected-error';
-import { ChatAttachmentWithMessageId } from '../file-operations/preprocess-image';
+import { logError } from '@shared/logging';
 import { escape } from 'he';
+
+import { TOTAL_CHAT_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
+import { type ChatMessage } from '@/types/chat';
+
+import { ChatAttachmentWithMessageId } from '../file-operations/preprocess-image';
+import { env as imageAttachmentEnv } from './image-attachment-env';
 
 export type FileWithConversationMessageId = FileModel & { conversationMessageId?: string };
 

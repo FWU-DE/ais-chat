@@ -1,11 +1,12 @@
 import { Readability } from '@mozilla/readability';
-import { JSDOM, VirtualConsole } from 'jsdom';
-import { WEB_SCRAPE_RESULT_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
-import { defaultErrorSource } from '@/components/chat/sources/const';
-import { decode } from 'he';
-import { logDebug, logError, logInfo, logWarning } from '@shared/logging';
-import { isBinaryFile } from 'isbinaryfile';
 import { WebSource } from '@shared/db/types';
+import { logDebug, logError, logInfo, logWarning } from '@shared/logging';
+import { decode } from 'he';
+import { isBinaryFile } from 'isbinaryfile';
+import { JSDOM, VirtualConsole } from 'jsdom';
+
+import { defaultErrorSource } from '@/components/chat/sources/const';
+import { WEB_SCRAPE_RESULT_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
 
 const headers = {
   'User-Agent':
