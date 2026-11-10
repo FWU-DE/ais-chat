@@ -819,7 +819,7 @@
     "hits-for": "{count} Treffer zu",
     "close": "Schließen",
     "chat": "Chatten",
-    "chat-with-dialogue-partner": "Mit Dialogpartner chatten"
+    "chat-with-character": "Mit Dialogpartner chatten"
   },
   "filter": {
     "filter-label": "Filter",
