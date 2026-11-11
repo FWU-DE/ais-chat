@@ -37,6 +37,17 @@ export function writeSessionStorage(key: string, value: string) {
   window.dispatchEvent(new Event(SESSION_STORAGE_CHANGE_EVENT));
 }
 
+/** Clears sessionStorage and the in-memory fallback, and notifies all `useSessionStorageState` instances. */
+export function clearSessionStorage() {
+  memoryFallback.clear();
+  try {
+    window.sessionStorage.clear();
+  } catch {
+    // Storage access might be blocked
+  }
+  window.dispatchEvent(new Event(SESSION_STORAGE_CHANGE_EVENT));
+}
+
 /**
  * Reads a sessionStorage entry as external store state.
  * `parse` receives the raw stored value (null if missing) and runs on the client only;
