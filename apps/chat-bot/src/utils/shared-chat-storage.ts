@@ -4,7 +4,7 @@ import { z } from 'zod';
 const STORAGE_KEY_VERSION = 'v3';
 
 const persistedSharedChatSchema = z.object({
-  sharedSessionId: z.string().min(1),
+  sharedSessionId: z.uuid(),
 });
 
 export type PersistedSharedChat = z.infer<typeof persistedSharedChatSchema>;
