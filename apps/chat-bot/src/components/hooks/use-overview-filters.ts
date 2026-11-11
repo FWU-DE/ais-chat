@@ -1,5 +1,6 @@
 'use client';
 
+import type { EntityType } from '@shared/entities/entity-types';
 import type { OverviewFilter } from '@shared/overview-filter';
 import { useTranslations } from 'next-intl';
 import { useCallback, useMemo, useState } from 'react';
@@ -10,10 +11,7 @@ import {
   type FilterValues,
   getActiveFilterPills,
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
-import {
-  type EntityType,
-  usePersistedOverviewFilter,
-} from '@/components/hooks/use-persisted-overview-filter';
+import { usePersistedOverviewFilter } from '@/components/hooks/use-persisted-overview-filter';
 
 type UseOverviewFiltersOptions = {
   entityType: EntityType;

@@ -10,7 +10,7 @@ export const VALID_SORT_OPTIONS = [
 
 export type SortOption = (typeof VALID_SORT_OPTIONS)[number];
 
-type SortableEntity = {
+export type SortableEntity = {
   name: string;
   updatedAt: Date;
   // Higher is more popular.

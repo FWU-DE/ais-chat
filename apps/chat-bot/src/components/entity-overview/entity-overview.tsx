@@ -11,34 +11,39 @@ import {
   SelectValue,
 } from '@ais-chat/ui/components/select';
 import { CaretDownIcon, InfoIcon, MagnifyingGlassIcon, XCircleIcon } from '@phosphor-icons/react';
+import type { EntityType } from '@shared/entities/entity-types';
 import { OverviewFilter, overviewFilterSchema } from '@shared/overview-filter';
 import { Chip } from '@ui/components/chip';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
 import { InfoDialog } from '@/components/common/dialog';
-import type { EntityType } from '@/components/hooks/use-persisted-overview-filter';
+import FilterSelectSection from '@/components/custom-chat/filter/custom-chat-filter-select-section';
+import {
+  type EntityWithFilterValues,
+  extractFilterValues,
+  matchesFilterValues,
+} from '@/components/custom-chat/filter/custom-chat-filter-utils';
+import { useOverviewFavoriteToggle } from '@/components/hooks/use-overview-favorite-toggle';
+import { useOverviewFilters } from '@/components/hooks/use-overview-filters';
 import { useFederalState } from '@/components/providers/federal-state-provider';
 import { useSessionStorageState } from '@/hooks/use-session-storage-state';
 
-import { isSortOption, SortOption } from './utils';
+import { filterAndSortEntities, isSortOption, SortableEntity, SortOption } from './utils';
 
-type EntityOverviewProps = {
+type OverviewEntity = SortableEntity & EntityWithFilterValues & { id: string; isFavorite: boolean };
+
+type EntityOverviewProps<T extends OverviewEntity> = {
   entityType: EntityType;
   title: string;
   infoTooltip: React.ReactNode;
   searchPlaceholder: string;
   createButton: React.ReactNode;
-  activeFilter: OverviewFilter;
-  onFilterChange: (filter: OverviewFilter) => void;
-  children: (searchQuery: string, sortBy: SortOption) => React.ReactNode;
-  itemCount: number;
-  isFilterPanelOpen: boolean;
-  onFilterPanelToggle: () => void;
-  filterPanel: React.ReactNode;
-  filterActiveCount: number;
-  activeFilterPills: Array<{ label: string; group: string; value: string }>;
-  onRemoveFilter: (group: string, value: string) => void;
+  fetchEntities: (filter: OverviewFilter) => Promise<T[]>;
+  renderItem: (
+    entity: T,
+    onToggleFavorite: (isFavorite: boolean) => Promise<void>,
+  ) => React.ReactNode;
 };
 
 const FILTER_OPTIONS = overviewFilterSchema.options;
@@ -51,24 +56,46 @@ function parseSortOption(raw: string | null): SortOption {
   return raw !== null && isSortOption(raw) ? raw : DEFAULT_SORT_OPTION;
 }
 
-export default function EntityOverview({
+export default function EntityOverview<T extends OverviewEntity>({
   entityType,
   title,
   infoTooltip,
   searchPlaceholder,
   createButton,
-  activeFilter,
-  onFilterChange,
-  children,
-  itemCount,
-  isFilterPanelOpen,
-  onFilterPanelToggle,
-  filterPanel,
-  filterActiveCount,
-  activeFilterPills,
-  onRemoveFilter,
-}: EntityOverviewProps) {
+  fetchEntities,
+  renderItem,
+}: EntityOverviewProps<T>) {
+  const [entities, setEntities] = React.useState<T[]>([]);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = React.useState(false);
   const [searchInput, setSearchInput] = React.useState('');
+
+  const loadEntities = React.useCallback(
+    async (filter: OverviewFilter) => {
+      setEntities(await fetchEntities(filter));
+    },
+    [fetchEntities],
+  );
+  const tCommon = useTranslations();
+  const {
+    activeFilter,
+    setActiveFilter,
+    selectedFilters,
+    updateSelectedFilters,
+    handleRemoveFilter,
+    resetSelectedFilters,
+    activeFilterPills,
+    activeFilterCount,
+  } = useOverviewFilters({
+    entityType,
+    onLoad: loadEntities,
+    translateFilterLabel: tCommon,
+  });
+  const handleToggleFavorite = useOverviewFavoriteToggle({
+    entityType,
+    activeFilter,
+    entities,
+    setEntities,
+  });
   const [sortBy, setSortBy] = useSessionStorageState(
     `overview-sort-${entityType}`,
     parseSortOption,
@@ -86,7 +113,7 @@ export default function EntityOverview({
   };
 
   const showSchoolFilter = federalState?.featureToggles?.isShareTemplateWithSchoolEnabled ?? false;
-  const filterDisabled = itemCount < 1;
+  const filterDisabled = entities.length < 1;
 
   const visibleTabs = FILTER_OPTIONS.filter((f) => f !== 'school' || showSchoolFilter).map((f) => ({
     value: f,
@@ -97,8 +124,11 @@ export default function EntityOverview({
     scrollContainerRef.current?.closest('main')?.scrollTo({ top: 0 });
   }, [activeFilter]);
 
-  const renderedChildren = children(searchInput, sortBy);
-  const renderedCount = React.Children.count(renderedChildren);
+  const visibleEntities = filterAndSortEntities(
+    entities.filter((entity) => matchesFilterValues(extractFilterValues(entity), selectedFilters)),
+    searchInput,
+    sortBy,
+  );
 
   return (
     <div className="min-w-full flex flex-col">
@@ -163,7 +193,7 @@ export default function EntityOverview({
             className="flex items-end flex-wrap gap-y-2 gap-x-4"
             aria-label={t('filter-tabs-label')}
           >
-            <FilterTabs tabs={visibleTabs} activeTab={activeFilter} onTabChange={onFilterChange} />
+            <FilterTabs tabs={visibleTabs} activeTab={activeFilter} onTabChange={setActiveFilter} />
             <div className="grow" />
             <div className="flex gap-2 whitespace-nowrap">
               <div className="text-primary hover:text-primary-dark">
@@ -171,7 +201,7 @@ export default function EntityOverview({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={onFilterPanelToggle}
+                  onClick={() => setIsFilterPanelOpen((previous) => !previous)}
                   className={`${OVERVIEW_CONTROL_TRIGGER_CLASSNAME} relative aria-expanded:bg-transparent aria-expanded:text-primary`}
                   aria-label={t('filter-label')}
                   aria-expanded={isFilterPanelOpen}
@@ -183,9 +213,9 @@ export default function EntityOverview({
                     aria-hidden="true"
                     weight="bold"
                   />
-                  {filterActiveCount > 0 ? (
+                  {activeFilterCount > 0 ? (
                     <span className="absolute -top-1 -right-1 inline-flex size-4 items-center justify-center rounded-full bg-primary text-[10px] leading-none text-primary-foreground">
-                      {filterActiveCount}
+                      {activeFilterCount}
                     </span>
                   ) : null}
                 </Button>
@@ -223,21 +253,33 @@ export default function EntityOverview({
               id={filterPanelId}
               className="mt-3 rounded-xl border border-gray-200 bg-background p-3 sm:p-4"
             >
-              {filterPanel}
+              <FilterSelectSection
+                className="mt-0"
+                isEditView={false}
+                onReset={resetSelectedFilters}
+                hasActiveValues={activeFilterCount > 0}
+                values={selectedFilters}
+                onSchoolTypesChange={(values) => updateSelectedFilters('schoolTypes', values)}
+                onGradeRangesChange={(values) => updateSelectedFilters('gradeRanges', values)}
+                onSubjectsChange={(values) => updateSelectedFilters('subjects', values)}
+                onCategoriesChange={(values) => updateSelectedFilters('categories', values)}
+                onFederalStatesChange={(values) => updateSelectedFilters('federalStates', values)}
+                onLanguagesChange={(values) => updateSelectedFilters('languages', values)}
+              />
             </div>
           ) : null}
 
           {activeFilterPills.length > 0 ? (
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <span className="text-sm text-foreground">
-                {t('hits-for', { count: renderedCount })}
+                {t('hits-for', { count: visibleEntities.length })}
               </span>
               {activeFilterPills.map((pill) => (
                 <Chip
                   key={`${pill.group}-${pill.value}`}
                   size="sm"
                   label={pill.label}
-                  onDelete={() => onRemoveFilter(pill.group, pill.value)}
+                  onDelete={() => handleRemoveFilter(pill.group, pill.value)}
                   ariaDeleteLabel={t('filter-aria-delete', { filter_name: pill.label })}
                 />
               ))}
@@ -246,7 +288,11 @@ export default function EntityOverview({
         </div>
 
         <div className="pb-6">
-          <div className="flex flex-col gap-2 w-full py-1">{renderedChildren}</div>
+          <div className="flex flex-col gap-2 w-full py-1">
+            {visibleEntities.map((entity) =>
+              renderItem(entity, (isFavorite) => handleToggleFavorite(entity.id, isFavorite)),
+            )}
+          </div>
         </div>
       </div>
     </div>
