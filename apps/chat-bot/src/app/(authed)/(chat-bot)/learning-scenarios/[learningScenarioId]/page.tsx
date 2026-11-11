@@ -29,11 +29,10 @@ export default async function Page(props: PageProps<'/learning-scenarios/[learni
     maxBudget,
     usedBudget,
     budgetUsedBySharedChat,
-  } = await getLearningScenarioForEditView({
-    learningScenarioId,
-    user,
-    federalState,
-  }).catch(handleErrorInServerComponent);
+    isFavorite: initialIsFavorite,
+  } = await getLearningScenarioForEditView({ learningScenarioId, user, federalState }).catch(
+    handleErrorInServerComponent,
+  );
 
   const initialLinks = learningScenario.attachedLinks.map((url) => ({ link: url }));
 
@@ -43,6 +42,7 @@ export default async function Page(props: PageProps<'/learning-scenarios/[learni
         learningScenario={learningScenario}
         fileMappings={relatedFiles}
         pictureUrl={avatarPictureUrl}
+        initialIsFavorite={initialIsFavorite}
         initialLinks={initialLinks}
         usedBudget={usedBudget ?? 0}
         maxBudget={maxBudget ?? 500}

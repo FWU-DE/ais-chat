@@ -1,7 +1,15 @@
+import { getMp3Duration, parseMp3Frames } from './mp3-frames';
+import { computeWaveformPeaks } from './mp3-waveform';
 import { takePrimedAudioElement } from './unlock-audio-playback';
 
 const MP3_MIME_TYPE = 'audio/mpeg';
 const MIN_BAR_HEIGHT = 0.08;
+// SourceBuffers have a small quota (about 12 MB of audio in Chrome, roughly 15 min of speech), so
+// only a window around the playback position is kept in the buffer.
+const MAX_BUFFER_AHEAD_SECONDS = 60;
+const KEEP_BUFFER_BEHIND_SECONDS = 10;
+const MIN_EVICTION_SECONDS = 1;
+const FULLY_BUFFERED_TOLERANCE_SECONDS = 0.5;
 
 export type Mp3PlayerState = 'idle' | 'loading' | 'playing' | 'paused' | 'ended' | 'error';
 
@@ -14,11 +22,8 @@ function getMediaSourceConstructor(): MediaSourceConstructor | undefined {
   return managed ?? globalThis.MediaSource;
 }
 
-/** Appends a chunk and resolves once the source buffer has finished processing it. */
-function appendChunk(
-  sourceBuffer: SourceBuffer,
-  chunk: Uint8Array<ArrayBufferLike>,
-): Promise<void> {
+/** Runs an append/remove operation and resolves once the source buffer has finished processing it. */
+function updateSourceBuffer(sourceBuffer: SourceBuffer, operation: () => void): Promise<void> {
   return new Promise((resolve, reject) => {
     const cleanup = () => {
       sourceBuffer.removeEventListener('updateend', onUpdateEnd);
@@ -35,10 +40,31 @@ function appendChunk(
 
     sourceBuffer.addEventListener('updateend', onUpdateEnd);
     sourceBuffer.addEventListener('error', onError);
-    // Fetch response bytes are always backed by a real ArrayBuffer, never a SharedArrayBuffer, so
-    // this narrowing cast (needed for BufferSource's stricter DOM types) is safe.
-    sourceBuffer.appendBuffer(chunk as Uint8Array<ArrayBuffer>);
+    try {
+      operation();
+    } catch (error) {
+      cleanup();
+      reject(error instanceof Error ? error : new Error(String(error)));
+    }
   });
+}
+
+function isQuotaExceededError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'QuotaExceededError';
+}
+
+/** Removes buffered audio before `end` (in seconds) to free up the source buffer's quota. */
+async function evictBufferedBefore(sourceBuffer: SourceBuffer, end: number): Promise<void> {
+  const { buffered } = sourceBuffer;
+  if (buffered.length === 0 || end - buffered.start(0) < MIN_EVICTION_SECONDS) {
+    return;
+  }
+  await updateSourceBuffer(sourceBuffer, () => sourceBuffer.remove(0, end));
+}
+
+function getBufferedAhead(sourceBuffer: SourceBuffer, currentTime: number): number {
+  const { buffered } = sourceBuffer;
+  return buffered.length === 0 ? 0 : buffered.end(buffered.length - 1) - currentTime;
 }
 
 function concatChunks(chunks: Uint8Array<ArrayBufferLike>[]): Uint8Array<ArrayBuffer> {
@@ -58,6 +84,10 @@ function concatChunks(chunks: Uint8Array<ArrayBufferLike>[]): Uint8Array<ArrayBu
  * decoding chunks individually (e.g. via `decodeAudioData` into Web Audio) would produce audible
  * gaps — the media element's own demuxer is what keeps playback continuous. Using an element also
  * gives native seeking and pitch-corrected `playbackRate` for free.
+ *
+ * The network stream is always read completely into memory, but only a window around the playback
+ * position is appended to the source buffer. Once the stream is complete, seeking outside that
+ * window switches the element to a Blob URL holding the whole audio.
  */
 export class Mp3StreamPlayer {
   private audio: HTMLAudioElement | null = null;
@@ -74,10 +104,16 @@ export class Mp3StreamPlayer {
   private endedBeforeStreamDone = false;
   private disposed = false;
   private streamDone = false;
+  private networkDone = false;
+  // Set once the element plays a Blob URL of the whole audio instead of the MediaSource.
+  private usingFullSource = false;
   private duration = 0;
   private playbackRate = 1;
   private mp3Chunks: Uint8Array<ArrayBufferLike>[] = [];
-  private waveformSamples: Float32Array | null = null;
+  // Received chunks not yet appended to the source buffer.
+  private pendingChunks: Uint8Array<ArrayBufferLike>[] = [];
+  private wakeFeeder: (() => void) | null = null;
+  private waveformPeaks: Float32Array | null = null;
 
   constructor(
     private readonly callbacks: {
@@ -117,7 +153,7 @@ export class Mp3StreamPlayer {
    * availability); returns an all-zero array otherwise so callers can render a placeholder.
    */
   getWaveformPeaks(barCount: number): number[] {
-    const samples = this.waveformSamples;
+    const samples = this.waveformPeaks;
     if (!samples || samples.length === 0 || barCount <= 0) {
       return new Array(Math.max(barCount, 0)).fill(0) as number[];
     }
@@ -125,8 +161,11 @@ export class Mp3StreamPlayer {
     const peaks = new Array<number>(barCount).fill(0);
     const samplesPerBar = samples.length / barCount;
     for (let bar = 0; bar < barCount; bar++) {
-      const start = Math.floor(bar * samplesPerBar);
-      const end = Math.min(Math.round((bar + 1) * samplesPerBar), samples.length);
+      const start = Math.min(Math.floor(bar * samplesPerBar), samples.length - 1);
+      const end = Math.max(
+        Math.min(Math.round((bar + 1) * samplesPerBar), samples.length),
+        start + 1,
+      );
       let peak = 0;
       for (let index = start; index < end; index++) {
         const value = Math.abs(samples[index] ?? 0);
@@ -149,7 +188,19 @@ export class Mp3StreamPlayer {
       return;
     }
 
-    audio.currentTime = Math.min(Math.max(time, 0), this.duration);
+    const target = Math.min(Math.max(time, 0), this.duration);
+    if (!this.isFullyBuffered()) {
+      this.switchToFullSource(audio);
+      // Some browsers ignore seeks before the new source's metadata has loaded.
+      audio.addEventListener(
+        'loadedmetadata',
+        () => {
+          audio.currentTime = target;
+        },
+        { once: true },
+      );
+    }
+    audio.currentTime = target;
     if (this.state === 'paused') {
       return;
     }
@@ -167,6 +218,8 @@ export class Mp3StreamPlayer {
     }
     this.playbackRate = rate;
     if (this.audio) {
+      // The default rate survives a source switch, which resets `playbackRate`.
+      this.audio.defaultPlaybackRate = rate;
       this.audio.playbackRate = rate;
     }
   }
@@ -188,28 +241,7 @@ export class Mp3StreamPlayer {
     try {
       const audio = this.ensureAudioElement();
       const sourceBuffer = await this.openSourceBuffer();
-
-      for await (const chunk of chunks) {
-        if (this.disposed) {
-          return;
-        }
-        this.mp3Chunks.push(chunk);
-        await appendChunk(sourceBuffer, chunk);
-        if (this.disposed) {
-          return;
-        }
-        if (this.state === 'loading') {
-          if (this.pausedBeforePlaying) {
-            audio.pause();
-            this.setState('paused');
-          } else {
-            this.play(audio);
-            this.setState('playing');
-          }
-        }
-      }
-
-      await this.finishStream();
+      await Promise.all([this.receiveChunks(chunks), this.feedSourceBuffer(sourceBuffer, audio)]);
     } catch (error) {
       if (!this.disposed) {
         this.setState('error');
@@ -248,6 +280,7 @@ export class Mp3StreamPlayer {
 
   dispose(): void {
     this.disposed = true;
+    this.notifyFeeder();
     if (this.audio) {
       this.audio.pause();
       this.audio.removeAttribute('src');
@@ -261,7 +294,8 @@ export class Mp3StreamPlayer {
     this.mediaSource = null;
     this.sourceBuffer = null;
     this.mp3Chunks = [];
-    this.waveformSamples = null;
+    this.pendingChunks = [];
+    this.waveformPeaks = null;
   }
 
   private play(audio: HTMLAudioElement): void {
@@ -293,6 +327,8 @@ export class Mp3StreamPlayer {
     audio.disableRemotePlayback = true;
     audio.preservesPitch = true;
     audio.src = objectUrl;
+    // Playback progress frees room in the buffer window, so the feeder re-checks on every update.
+    audio.addEventListener('timeupdate', () => this.notifyFeeder());
     audio.addEventListener('ended', () => {
       if (this.disposed) {
         return;
@@ -344,51 +380,150 @@ export class Mp3StreamPlayer {
     });
   }
 
+  /** Reads the whole network stream into memory without waiting for playback to catch up. */
+  private async receiveChunks(chunks: AsyncIterable<Uint8Array<ArrayBufferLike>>): Promise<void> {
+    for await (const chunk of chunks) {
+      if (this.disposed) {
+        return;
+      }
+      this.mp3Chunks.push(chunk);
+      this.pendingChunks.push(chunk);
+      this.notifyFeeder();
+    }
+    this.networkDone = true;
+    this.notifyFeeder();
+    await this.finishStream();
+  }
+
+  /**
+   * Appends received chunks while at most `MAX_BUFFER_AHEAD_SECONDS` are buffered ahead of the
+   * playback position, evicting already played audio to stay within the source buffer's quota.
+   */
+  private async feedSourceBuffer(
+    sourceBuffer: SourceBuffer,
+    audio: HTMLAudioElement,
+  ): Promise<void> {
+    try {
+      for (;;) {
+        if (this.disposed || this.usingFullSource) {
+          return;
+        }
+        const chunk = this.pendingChunks[0];
+        if (!chunk) {
+          if (this.networkDone) {
+            break;
+          }
+          await this.waitForFeederWake();
+          continue;
+        }
+        if (getBufferedAhead(sourceBuffer, audio.currentTime) >= MAX_BUFFER_AHEAD_SECONDS) {
+          await this.waitForFeederWake();
+          continue;
+        }
+
+        await evictBufferedBefore(sourceBuffer, audio.currentTime - KEEP_BUFFER_BEHIND_SECONDS);
+        try {
+          // Fetch response bytes are always backed by a real ArrayBuffer, never a
+          // SharedArrayBuffer, so this narrowing cast (needed for BufferSource's stricter DOM
+          // types) is safe.
+          await updateSourceBuffer(sourceBuffer, () =>
+            sourceBuffer.appendBuffer(chunk as Uint8Array<ArrayBuffer>),
+          );
+        } catch (error) {
+          if (!isQuotaExceededError(error)) {
+            throw error;
+          }
+          await evictBufferedBefore(sourceBuffer, audio.currentTime);
+          await this.waitForFeederWake();
+          continue;
+        }
+        this.pendingChunks.shift();
+
+        if (this.state === 'loading' && !this.disposed) {
+          if (this.pausedBeforePlaying) {
+            audio.pause();
+            this.setState('paused');
+          } else {
+            this.play(audio);
+            this.setState('playing');
+          }
+        }
+      }
+
+      if (this.mediaSource?.readyState === 'open') {
+        this.mediaSource.endOfStream();
+      }
+    } catch (error) {
+      // Disposing or switching to the full source detaches the MediaSource mid-operation.
+      if (this.disposed || this.usingFullSource) {
+        return;
+      }
+      throw error;
+    }
+  }
+
+  private waitForFeederWake(): Promise<void> {
+    return new Promise((resolve) => {
+      this.wakeFeeder = resolve;
+    });
+  }
+
+  private notifyFeeder(): void {
+    const wake = this.wakeFeeder;
+    this.wakeFeeder = null;
+    wake?.();
+  }
+
+  private isFullyBuffered(): boolean {
+    if (this.usingFullSource) {
+      return true;
+    }
+    const buffered = this.sourceBuffer?.buffered;
+    return (
+      this.pendingChunks.length === 0 &&
+      buffered?.length === 1 &&
+      buffered.start(0) <= FULLY_BUFFERED_TOLERANCE_SECONDS &&
+      buffered.end(0) >= this.duration - FULLY_BUFFERED_TOLERANCE_SECONDS
+    );
+  }
+
+  /** Replaces the MediaSource with a Blob URL of the whole audio, so every position is seekable. */
+  private switchToFullSource(audio: HTMLAudioElement): void {
+    this.usingFullSource = true;
+    this.pendingChunks = [];
+    this.notifyFeeder();
+    if (this.objectUrl) {
+      URL.revokeObjectURL(this.objectUrl);
+    }
+    this.mediaSource = null;
+    this.sourceBuffer = null;
+    // Same narrowing as for `appendBuffer`: fetch response bytes are never SharedArrayBuffers.
+    const blob = new Blob(this.mp3Chunks as Uint8Array<ArrayBuffer>[], { type: MP3_MIME_TYPE });
+    this.objectUrl = URL.createObjectURL(blob);
+    audio.src = this.objectUrl;
+  }
+
   private async finishStream(): Promise<void> {
     if (this.mp3Chunks.length === 0) {
       throw new Error('No audio data received from the speech stream');
     }
 
-    const mediaSource = this.mediaSource;
-    if (mediaSource?.readyState === 'open') {
-      mediaSource.endOfStream();
-    }
-
-    // Decoded before announcing the duration, so seeking, speed changes and the waveform (all
+    const bytes = concatChunks(this.mp3Chunks);
+    const frames = parseMp3Frames(bytes);
+    // Computed before announcing the duration, so seeking, speed changes and the waveform (all
     // gated on a known duration by the UI) become available together.
-    const decodedDuration = await this.decodeWaveformSamples();
+    this.waveformPeaks = await computeWaveformPeaks(bytes, frames);
     if (this.disposed) {
       return;
     }
 
-    const mediaSourceDuration = mediaSource?.duration ?? Number.NaN;
-    this.duration =
-      Number.isFinite(mediaSourceDuration) && mediaSourceDuration > 0
-        ? mediaSourceDuration
-        : (decodedDuration ?? 0);
+    this.duration = getMp3Duration(frames);
     this.streamDone = true;
     this.callbacks.onDurationKnown?.(this.duration);
 
     if (this.endedBeforeStreamDone) {
       this.endedBeforeStreamDone = false;
       this.setState('ended');
-    }
-  }
-
-  /**
-   * Decodes the buffered MP3 once the stream is complete to obtain the samples the waveform is
-   * drawn from, which the media element itself never exposes. Returns the decoded duration, or
-   * `null` if decoding failed (the waveform then stays flat, playback is unaffected).
-   */
-  private async decodeWaveformSamples(): Promise<number | null> {
-    try {
-      const merged = concatChunks(this.mp3Chunks);
-      // An offline context decodes without touching audio hardware or autoplay policies.
-      const decoded = await new OfflineAudioContext(1, 1, 44_100).decodeAudioData(merged.buffer);
-      this.waveformSamples = decoded.getChannelData(0);
-      return decoded.duration;
-    } catch {
-      return null;
     }
   }
 

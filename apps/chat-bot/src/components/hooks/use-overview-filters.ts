@@ -1,5 +1,6 @@
 'use client';
 
+import type { EntityType } from '@shared/entities/entity-types';
 import type { OverviewFilter } from '@shared/overview-filter';
 import { useTranslations } from 'next-intl';
 import { useCallback, useMemo, useState } from 'react';
@@ -10,21 +11,17 @@ import {
   type FilterValues,
   getActiveFilterPills,
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
-import {
-  type EntityType,
-  usePersistedOverviewFilter,
-} from '@/components/hooks/use-persisted-overview-filter';
+import { usePersistedOverviewFilter } from '@/components/hooks/use-persisted-overview-filter';
 
 type UseOverviewFiltersOptions = {
   entityType: EntityType;
-  onLoad: (filter: OverviewFilter) => Promise<void>;
   translateFilterLabel: ReturnType<typeof useTranslations<never>>;
 };
 
 type UseOverviewFiltersResult = {
   activeFilter: OverviewFilter;
-  setActiveFilter: (filter: OverviewFilter) => Promise<void>;
-  isLoading: boolean;
+  setActiveFilter: (filter: OverviewFilter) => void;
+  isActiveFilterResolved: boolean;
   selectedFilters: FilterValues;
   updateSelectedFilters: <K extends keyof FilterValues>(key: K, values: FilterValues[K]) => void;
   handleRemoveFilter: (group: string, value: string) => void;
@@ -35,10 +32,10 @@ type UseOverviewFiltersResult = {
 
 export function useOverviewFilters({
   entityType,
-  onLoad,
   translateFilterLabel,
 }: UseOverviewFiltersOptions): UseOverviewFiltersResult {
-  const [activeFilter, setActiveFilter, isLoading] = usePersistedOverviewFilter(entityType, onLoad);
+  const [activeFilter, setActiveFilter, isActiveFilterResolved] =
+    usePersistedOverviewFilter(entityType);
   const [selectedFilters, setSelectedFilters] = useState<FilterValues>(EMPTY_FILTER_VALUES);
 
   const updateSelectedFilters = useCallback(
@@ -71,7 +68,7 @@ export function useOverviewFilters({
   return {
     activeFilter,
     setActiveFilter,
-    isLoading,
+    isActiveFilterResolved,
     selectedFilters,
     updateSelectedFilters,
     handleRemoveFilter,

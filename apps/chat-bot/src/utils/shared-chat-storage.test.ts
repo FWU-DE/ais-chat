@@ -42,6 +42,7 @@ class MemoryStorage implements Storage {
 }
 
 const INVITE_CODE = 'invite-abc-123';
+const SESSION_ID = crypto.randomUUID();
 
 function installSessionStorage(storage: Storage): void {
   (globalThis as { window?: unknown }).window = { sessionStorage: storage };
@@ -51,16 +52,9 @@ function uninstallSessionStorage(): void {
   delete (globalThis as { window?: unknown }).window;
 }
 
-const persistedFile = {
-  id: 'file-1',
-  name: 'test.png',
-  type: 'png',
-  size: 123,
-};
-
 describe('sharedChatStorageKey', () => {
   it('returns a versioned, invite-code-scoped key', () => {
-    expect(sharedChatStorageKey(INVITE_CODE)).toBe(`shared-chat:v2:${INVITE_CODE}`);
+    expect(sharedChatStorageKey(INVITE_CODE)).toBe(`shared-chat:v3:${INVITE_CODE}`);
   });
 
   it('produces different keys for different invite codes', () => {
@@ -85,122 +79,50 @@ describe('shared-chat sessionStorage round-trip', () => {
     expect(loadSharedChat(INVITE_CODE)).toBeNull();
   });
 
-  it('persists and restores a simple shared chat', () => {
-    const data: PersistedSharedChat = {
-      sharedSessionId: 'session-1',
-      messages: [
-        { id: 'm1', role: 'user', content: 'Hello', files: [] },
-        { id: 'm2', role: 'assistant', content: 'Hi there', files: [] },
-      ],
-    };
+  it('persists and restores only the shared session ID', () => {
+    const data: PersistedSharedChat = { sharedSessionId: SESSION_ID };
 
     saveSharedChat(INVITE_CODE, data);
 
     expect(loadSharedChat(INVITE_CODE)).toEqual(data);
-  });
-
-  it('persists and restores files attached to a message', () => {
-    const data: PersistedSharedChat = {
-      sharedSessionId: 'session-1',
-      messages: [{ id: 'm1', role: 'user', content: 'Hello', files: [persistedFile] }],
-    };
-
-    saveSharedChat(INVITE_CODE, data);
-
-    expect(loadSharedChat(INVITE_CODE)).toEqual(data);
-  });
-
-  it('defaults files to an empty array when not provided', () => {
-    storage.setItem(
-      sharedChatStorageKey(INVITE_CODE),
-      JSON.stringify({
-        sharedSessionId: 'session-1',
-        messages: [{ id: 'm1', role: 'user', content: 'Hello' }],
-      }),
-    );
-
-    expect(loadSharedChat(INVITE_CODE)).toEqual({
-      sharedSessionId: 'session-1',
-      messages: [{ id: 'm1', role: 'user', content: 'Hello', files: [] }],
-    });
+    expect(storage.getItem(sharedChatStorageKey(INVITE_CODE))).toBe(JSON.stringify(data));
   });
 
   it('writes to the invite-code-scoped key', () => {
     saveSharedChat(INVITE_CODE, {
-      sharedSessionId: 'session-1',
-      messages: [{ id: 'm1', role: 'user', content: 'hi', files: [] }],
+      sharedSessionId: SESSION_ID,
     });
 
     expect(storage.getItem(sharedChatStorageKey(INVITE_CODE))).not.toBeNull();
   });
 
   it('isolates shared chats between invite codes', () => {
-    saveSharedChat('code-a', {
-      sharedSessionId: 'session-a',
-      messages: [{ id: 'a1', role: 'user', content: 'A', files: [] }],
-    });
-    saveSharedChat('code-b', {
-      sharedSessionId: 'session-b',
-      messages: [{ id: 'b1', role: 'user', content: 'B', files: [] }],
-    });
+    const sessionA = crypto.randomUUID();
+    const sessionB = crypto.randomUUID();
+    saveSharedChat('code-a', { sharedSessionId: sessionA });
+    saveSharedChat('code-b', { sharedSessionId: sessionB });
 
-    expect(loadSharedChat('code-a')?.messages).toEqual([
-      { id: 'a1', role: 'user', content: 'A', files: [] },
-    ]);
-    expect(loadSharedChat('code-b')?.messages).toEqual([
-      { id: 'b1', role: 'user', content: 'B', files: [] },
-    ]);
+    expect(loadSharedChat('code-a')).toEqual({ sharedSessionId: sessionA });
+    expect(loadSharedChat('code-b')).toEqual({ sharedSessionId: sessionB });
   });
 
-  it('strips extra ChatMessage fields that are not part of the persisted shape', () => {
-    saveSharedChat(INVITE_CODE, {
-      sharedSessionId: 'session-1',
-      messages: [
-        {
-          id: 'm1',
-          role: 'assistant',
-          content: 'with extras',
-          files: [],
-          // @ts-expect-error - extra fields should be stripped, not part of the persisted type
-          attachments: [
-            { type: 'image', contentType: 'image/png', url: 'data:image/png;base64,xx' },
-          ],
-          toolCallId: 'tc1',
-        },
-      ],
-    });
+  it('does not store transcript data', () => {
+    saveSharedChat(INVITE_CODE, { sharedSessionId: SESSION_ID });
 
-    expect(loadSharedChat(INVITE_CODE)).toEqual({
-      sharedSessionId: 'session-1',
-      messages: [{ id: 'm1', role: 'assistant', content: 'with extras', files: [] }],
-    });
+    expect(storage.getItem(sharedChatStorageKey(INVITE_CODE))).not.toContain('messages');
   });
 
   it('overwrites previously persisted data on subsequent saves', () => {
-    saveSharedChat(INVITE_CODE, {
-      sharedSessionId: 'session-1',
-      messages: [{ id: 'old', role: 'user', content: 'old', files: [] }],
-    });
-    saveSharedChat(INVITE_CODE, {
-      sharedSessionId: 'session-1',
-      messages: [{ id: 'new', role: 'user', content: 'new', files: [] }],
-    });
+    const newSession = crypto.randomUUID();
+    saveSharedChat(INVITE_CODE, { sharedSessionId: crypto.randomUUID() });
+    saveSharedChat(INVITE_CODE, { sharedSessionId: newSession });
 
-    expect(loadSharedChat(INVITE_CODE)?.messages).toEqual([
-      { id: 'new', role: 'user', content: 'new', files: [] },
-    ]);
-  });
-
-  it('supports persisting an empty message array (e.g. after Start over)', () => {
-    saveSharedChat(INVITE_CODE, { sharedSessionId: 'session-1', messages: [] });
-
-    expect(loadSharedChat(INVITE_CODE)).toEqual({ sharedSessionId: 'session-1', messages: [] });
+    expect(loadSharedChat(INVITE_CODE)).toEqual({ sharedSessionId: newSession });
   });
 
   it('clearSharedChat removes the persisted entry', () => {
     saveSharedChat(INVITE_CODE, {
-      sharedSessionId: 'session-1',
-      messages: [{ id: 'm1', role: 'user', content: 'hi', files: [] }],
+      sharedSessionId: SESSION_ID,
     });
     expect(loadSharedChat(INVITE_CODE)).not.toBeNull();
 
@@ -235,16 +157,18 @@ describe('loadSharedChat — invalid data', () => {
     expect(logError).toHaveBeenCalledTimes(1);
   });
 
-  it('returns null when stored JSON does not match the schema', () => {
+  it('strips legacy transcript fields from stored JSON', () => {
     storage.setItem(
       sharedChatStorageKey(INVITE_CODE),
       JSON.stringify({
-        sharedSessionId: 'session-1',
+        sharedSessionId: SESSION_ID,
         messages: [{ id: 'm1', role: 'bogus-role', content: 'x' }],
       }),
     );
 
-    expect(loadSharedChat(INVITE_CODE)).toBeNull();
+    expect(loadSharedChat(INVITE_CODE)).toEqual({
+      sharedSessionId: SESSION_ID,
+    });
   });
 
   it('returns null when sharedSessionId is missing', () => {
@@ -265,20 +189,17 @@ describe('loadSharedChat — invalid data', () => {
     expect(loadSharedChat(INVITE_CODE)).toBeNull();
   });
 
-  it('returns null when stored JSON is not an object', () => {
-    storage.setItem(sharedChatStorageKey(INVITE_CODE), JSON.stringify([{ id: 'm1' }]));
+  it('returns null when sharedSessionId is not a uuid', () => {
+    storage.setItem(
+      sharedChatStorageKey(INVITE_CODE),
+      JSON.stringify({ sharedSessionId: 'AbCdEfGhIjKlMnOpQrStUvWx' }),
+    );
 
     expect(loadSharedChat(INVITE_CODE)).toBeNull();
   });
 
-  it('returns null when a message is missing required fields', () => {
-    storage.setItem(
-      sharedChatStorageKey(INVITE_CODE),
-      JSON.stringify({
-        sharedSessionId: 'session-1',
-        messages: [{ id: 'm1', role: 'user' }], // missing content
-      }),
-    );
+  it('returns null when stored JSON is not an object', () => {
+    storage.setItem(sharedChatStorageKey(INVITE_CODE), JSON.stringify([{ id: 'm1' }]));
 
     expect(loadSharedChat(INVITE_CODE)).toBeNull();
   });
@@ -299,8 +220,7 @@ describe('shared-chat-storage — storage unavailable', () => {
     uninstallSessionStorage();
     expect(() =>
       saveSharedChat(INVITE_CODE, {
-        sharedSessionId: 'session-1',
-        messages: [{ id: 'm1', role: 'user', content: 'hi', files: [] }],
+        sharedSessionId: SESSION_ID,
       }),
     ).not.toThrow();
   });
@@ -342,8 +262,7 @@ describe('shared-chat-storage — storage unavailable', () => {
 
     expect(() =>
       saveSharedChat(INVITE_CODE, {
-        sharedSessionId: 'session-1',
-        messages: [{ id: 'm1', role: 'user', content: 'hi', files: [] }],
+        sharedSessionId: SESSION_ID,
       }),
     ).not.toThrow();
     expect(logError).toHaveBeenCalledTimes(1);

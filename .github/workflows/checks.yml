@@ -122,6 +122,24 @@ jobs:
       - name: Check linter
         run: pnpm run lint
 
+  check_migrations:
+    runs-on: ubuntu-26.04
+    needs: install
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check database migrations
+        run: pnpm run db:check
+
   check_unit_tests:
     runs-on: ubuntu-26.04
     needs: install
