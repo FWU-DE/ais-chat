@@ -2,7 +2,6 @@
 
 import { SharedChatExpiredError, TokenPointsExceededError } from '@ais-chat/ai-core/errors';
 import { logError } from '@shared/logging';
-import { cnanoid } from '@shared/random/randomService';
 import {
   calculateShareSessionState,
   ShareSessionState,
@@ -243,7 +242,7 @@ export default function GenericSharedChat({
       }
     }
 
-    const nextSharedSessionId = cnanoid();
+    const nextSharedSessionId = newSharedChatSessionId();
 
     setHistoryLoading(false);
     recoverInterruptedResponse.current = false;

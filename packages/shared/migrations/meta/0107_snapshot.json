@@ -1,6 +1,6 @@
 {
   "id": "5da17432-e2bc-4600-9172-0d29a77c6817",
-  "prevId": "7ccb837c-eaaf-44cc-bf45-58f7ca11fae7",
+  "prevId": "0c72c812-0478-4ddb-90d7-4676a7010963",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1113,6 +1113,13 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
+        },
+        "popularity": {
+          "name": "popularity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         }
       },
       "indexes": {
@@ -1432,6 +1439,13 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
+        },
+        "popularity": {
+          "name": "popularity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         }
       },
       "indexes": {
@@ -2885,6 +2899,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "popularity": {
+          "name": "popularity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "has_link_access": {
           "name": "has_link_access",
           "type": "boolean",
@@ -3505,7 +3526,7 @@
         },
         "entity_type": {
           "name": "entity_type",
-          "type": "text",
+          "type": "shared_chat_entity_type",
           "primaryKey": false,
           "notNull": true
         },
@@ -3528,12 +3549,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {
-        "shared_chat_conversation_entity_type_check": {
-          "name": "shared_chat_conversation_entity_type_check",
-          "value": "\"shared_chat_conversation\".\"entity_type\" in ('character', 'learningScenario')"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.shared_learning_scenario": {
@@ -4075,6 +4091,227 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.user_favorite": {
+      "name": "user_favorite",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assistant_id": {
+          "name": "assistant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "character_id": {
+          "name": "character_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "learning_scenario_id": {
+          "name": "learning_scenario_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "user_favorite_user_assistant_uq": {
+          "name": "user_favorite_user_assistant_uq",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "assistant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"user_favorite\".\"assistant_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "user_favorite_user_character_uq": {
+          "name": "user_favorite_user_character_uq",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "character_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"user_favorite\".\"character_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "user_favorite_user_learning_scenario_uq": {
+          "name": "user_favorite_user_learning_scenario_uq",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "learning_scenario_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"user_favorite\".\"learning_scenario_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "user_favorite_assistant_id_index": {
+          "name": "user_favorite_assistant_id_index",
+          "columns": [
+            {
+              "expression": "assistant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "user_favorite_character_id_index": {
+          "name": "user_favorite_character_id_index",
+          "columns": [
+            {
+              "expression": "character_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "user_favorite_learning_scenario_id_index": {
+          "name": "user_favorite_learning_scenario_id_index",
+          "columns": [
+            {
+              "expression": "learning_scenario_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "user_favorite_user_id_user_entity_id_fk": {
+          "name": "user_favorite_user_id_user_entity_id_fk",
+          "tableFrom": "user_favorite",
+          "tableTo": "user_entity",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "user_favorite_assistant_id_assistant_id_fk": {
+          "name": "user_favorite_assistant_id_assistant_id_fk",
+          "tableFrom": "user_favorite",
+          "tableTo": "assistant",
+          "columnsFrom": [
+            "assistant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "user_favorite_character_id_character_id_fk": {
+          "name": "user_favorite_character_id_character_id_fk",
+          "tableFrom": "user_favorite",
+          "tableTo": "character",
+          "columnsFrom": [
+            "character_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "user_favorite_learning_scenario_id_learning_scenario_id_fk": {
+          "name": "user_favorite_learning_scenario_id_learning_scenario_id_fk",
+          "tableFrom": "user_favorite",
+          "tableTo": "learning_scenario",
+          "columnsFrom": [
+            "learning_scenario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "user_favorite_exactly_one_target_ck": {
+          "name": "user_favorite_exactly_one_target_ck",
+          "value": "((\"user_favorite\".\"assistant_id\" IS NOT NULL)::int + (\"user_favorite\".\"character_id\" IS NOT NULL)::int + (\"user_favorite\".\"learning_scenario_id\" IS NOT NULL)::int) = 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.user_settings": {
       "name": "user_settings",
       "schema": "",
@@ -4238,6 +4475,14 @@
         "text",
         "image",
         "fc"
+      ]
+    },
+    "public.shared_chat_entity_type": {
+      "name": "shared_chat_entity_type",
+      "schema": "public",
+      "values": [
+        "character",
+        "learningScenario"
       ]
     },
     "public.suspension_request_reason": {

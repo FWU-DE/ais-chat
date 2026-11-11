@@ -1067,7 +1067,7 @@ export const sharedChatConversationMessageTable = pgTable(
   'shared_chat_conversation_message',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    conversationId: text('conversation_id').notNull(),
+    conversationId: uuid('conversation_id').notNull(),
     content: text('content').notNull(),
     role: conversationRoleEnum('role').notNull(),
     orderNumber: integer('order_number').notNull(),
@@ -1076,7 +1076,6 @@ export const sharedChatConversationMessageTable = pgTable(
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.conversationId, table.id] }),
     uniqueIndex('shared_chat_message_order_unique').on(table.conversationId, table.orderNumber),
     foreignKey({
       columns: [table.conversationId],
@@ -1658,8 +1657,8 @@ export const SharedChatConversationMessageFileMappingTable = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     fileId: text('file_id').notNull(),
     // Null while the file is uploaded to the conversation but not yet attached to a message.
-    conversationMessageId: text('conversation_message_id'),
-    conversationId: text('conversation_id').notNull(),
+    conversationMessageId: uuid('conversation_message_id'),
+    conversationId: uuid('conversation_id').notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
@@ -1676,11 +1675,8 @@ export const SharedChatConversationMessageFileMappingTable = pgTable(
       name: 'shared_chat_message_file_file_fk',
     }),
     foreignKey({
-      columns: [table.conversationId, table.conversationMessageId],
-      foreignColumns: [
-        sharedChatConversationMessageTable.conversationId,
-        sharedChatConversationMessageTable.id,
-      ],
+      columns: [table.conversationMessageId],
+      foreignColumns: [sharedChatConversationMessageTable.id],
       name: 'shared_chat_message_file_message_fk',
     }).onDelete('cascade'),
     foreignKey({
