@@ -6,6 +6,8 @@ import {
   fileTable,
   llmModelTable,
   sharedCharacter,
+  SharedChatConversationMessageFileMappingTable,
+  sharedChatConversationTable,
   userTable,
 } from '@shared/db/schema';
 import { generateInviteCode } from '@shared/sharing/generate-invite-code';
@@ -91,14 +93,23 @@ test('should not delete an uploaded file belonging to an active shared chat', as
   if (!character) throw new Error('Failed to create character');
 
   const inviteCode = generateInviteCode();
-  await db.insert(sharedCharacter).values({
-    characterId: character.id,
-    userId: user.id,
-    tokenPointsLimit: 1000,
-    maxUsageTimeLimit: 1000,
-    inviteCode,
-    expiredAt: addDays(new Date(), 1),
-  });
+  const [share] = await db
+    .insert(sharedCharacter)
+    .values({
+      characterId: character.id,
+      userId: user.id,
+      tokenPointsLimit: 1000,
+      maxUsageTimeLimit: 1000,
+      inviteCode,
+      expiredAt: addDays(new Date(), 1),
+    })
+    .returning();
+  if (!share) throw new Error('Failed to create shared character');
+
+  const conversationId = generateUUID();
+  await db
+    .insert(sharedChatConversationTable)
+    .values({ id: conversationId, entityType: 'character', shareId: share.id });
 
   const fileId = generateUUID();
   await db.insert(fileTable).values({
@@ -106,13 +117,8 @@ test('should not delete an uploaded file belonging to an active shared chat', as
     name: 'shared-chat-upload.txt',
     size: 0,
     type: 'plain/text',
-    metadata: {
-      sessionId: generateUUID(),
-      inviteCode,
-      entityType: 'character',
-      entityId: character.id,
-    },
   });
+  await db.insert(SharedChatConversationMessageFileMappingTable).values({ fileId, conversationId });
 
   try {
     const response = await request.delete(deleteConversationRoute, {
@@ -123,6 +129,9 @@ test('should not delete an uploaded file belonging to an active shared chat', as
     const remainingFile = await db.select().from(fileTable).where(eq(fileTable.id, fileId));
     expect(remainingFile).toHaveLength(1);
   } finally {
+    await db
+      .delete(sharedChatConversationTable)
+      .where(eq(sharedChatConversationTable.id, conversationId));
     await db.delete(fileTable).where(eq(fileTable.id, fileId));
     await db.delete(sharedCharacter).where(eq(sharedCharacter.characterId, character.id));
     await db.delete(characterTable).where(eq(characterTable.id, character.id));
