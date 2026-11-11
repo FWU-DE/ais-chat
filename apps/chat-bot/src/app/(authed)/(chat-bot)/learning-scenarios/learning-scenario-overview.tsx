@@ -72,6 +72,7 @@ export default function LearningScenarioOverview({ currentUserId }: LearningScen
 
   return (
     <EntityOverview
+      entityType="learning-scenarios"
       title={t('title')}
       infoTooltip={infoContent}
       searchPlaceholder={t('search-placeholder')}

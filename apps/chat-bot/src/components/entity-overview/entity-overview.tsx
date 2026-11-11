@@ -17,11 +17,14 @@ import { useTranslations } from 'next-intl';
 import React from 'react';
 
 import { InfoDialog } from '@/components/common/dialog';
+import type { EntityType } from '@/components/hooks/use-persisted-overview-filter';
 import { useFederalState } from '@/components/providers/federal-state-provider';
+import { useSessionStorageState } from '@/hooks/use-session-storage-state';
 
 import { isSortOption, SortOption } from './utils';
 
 type EntityOverviewProps = {
+  entityType: EntityType;
   title: string;
   infoTooltip: React.ReactNode;
   searchPlaceholder: string;
@@ -42,7 +45,14 @@ const FILTER_OPTIONS = overviewFilterSchema.options;
 const OVERVIEW_CONTROL_TRIGGER_CLASSNAME =
   'w-fit gap-1 border-0 bg-transparent shadow-none text-sm hover:bg-transparent';
 
+const DEFAULT_SORT_OPTION: SortOption = 'date-desc';
+
+function parseSortOption(raw: string | null): SortOption {
+  return raw !== null && isSortOption(raw) ? raw : DEFAULT_SORT_OPTION;
+}
+
 export default function EntityOverview({
+  entityType,
   title,
   infoTooltip,
   searchPlaceholder,
@@ -59,7 +69,11 @@ export default function EntityOverview({
   onRemoveFilter,
 }: EntityOverviewProps) {
   const [searchInput, setSearchInput] = React.useState('');
-  const [sortBy, setSortBy] = React.useState<SortOption>('date-desc');
+  const [sortBy, setSortBy] = useSessionStorageState(
+    `overview-sort-${entityType}`,
+    parseSortOption,
+    DEFAULT_SORT_OPTION,
+  );
   const federalState = useFederalState();
   const t = useTranslations('entity-overview');
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);

@@ -72,6 +72,7 @@ export default function AssistantOverview({ currentUserId }: AssistantOverviewPr
 
   return (
     <EntityOverview
+      entityType="assistants"
       title={t('title')}
       infoTooltip={infoContent}
       searchPlaceholder={t('search-placeholder')}

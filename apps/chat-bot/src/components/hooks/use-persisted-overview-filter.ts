@@ -2,15 +2,13 @@
 
 import type { OverviewFilter } from '@shared/overview-filter';
 import { overviewFilterSchema } from '@shared/overview-filter';
+import { startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+
 import {
-  startTransition,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react';
+  readSessionStorage,
+  useSessionStorageState,
+  writeSessionStorage,
+} from '@/hooks/use-session-storage-state';
 
 export type EntityType = 'characters' | 'learning-scenarios' | 'assistants';
 
@@ -23,21 +21,12 @@ function getFilterFromURL(): OverviewFilter | null {
   return parseFilter(new URLSearchParams(window.location.search).get('filter'));
 }
 
-function resolveInitialFilter(sessionStorageKey: string): OverviewFilter {
-  try {
-    const stored = sessionStorage.getItem(sessionStorageKey);
-    if (stored) {
-      return parseFilter(stored) ?? 'mine';
-    }
-    // Legacy bookmark support: read URL param once on mount
-    const urlFilter = getFilterFromURL();
-    if (urlFilter) {
-      return urlFilter;
-    }
-  } catch {
-    // Storage access might be blocked
+function resolveFilter(stored: string | null): OverviewFilter {
+  if (stored) {
+    return parseFilter(stored) ?? 'mine';
   }
-  return 'mine';
+  // Legacy bookmark support: read URL param when nothing is stored
+  return getFilterFromURL() ?? 'mine';
 }
 
 /**
@@ -55,28 +44,20 @@ export function usePersistedOverviewFilter(
 ): [OverviewFilter, (filter: OverviewFilter) => Promise<void>, boolean] {
   const sessionStorageKey = `overview-filter-${entityType}`;
 
-  // Initialize sessionStorage from URL param before useSyncExternalStore reads it
+  // Persist the legacy URL param so it survives navigation without the param
   useLayoutEffect(() => {
-    try {
-      const urlFilter = getFilterFromURL();
-      if (urlFilter && !sessionStorage.getItem(sessionStorageKey)) {
-        sessionStorage.setItem(sessionStorageKey, urlFilter);
-      }
-    } catch {
-      // Storage access might be blocked
+    const urlFilter = getFilterFromURL();
+    if (urlFilter && !readSessionStorage(sessionStorageKey)) {
+      writeSessionStorage(sessionStorageKey, urlFilter);
     }
   }, [sessionStorageKey]);
 
-  // useSyncExternalStore provides the sessionStorage value synchronously on the client
-  // and null as a server snapshot, preventing SSR crashes.
-  const sessionStorageFilter = useSyncExternalStore<OverviewFilter | null>(
-    () => () => {},
-    () => resolveInitialFilter(sessionStorageKey),
-    () => null,
+  // null on the server, so no data is loaded before the client knows the stored filter
+  const [filter, setStoredFilter] = useSessionStorageState<OverviewFilter | null>(
+    sessionStorageKey,
+    resolveFilter,
+    null,
   );
-  // manualFilter holds user-initiated changes; null means "use sessionStorageFilter"
-  const [manualFilter, setManualFilter] = useState<OverviewFilter | null>(null);
-  const filter = manualFilter ?? sessionStorageFilter;
   const selectedFilter = filter ?? 'mine';
   const [isLoading, setIsLoading] = useState(true);
   const onLoadRef = useRef(onLoad);
@@ -99,16 +80,10 @@ export function usePersistedOverviewFilter(
 
   const setFilter = useCallback(
     async (newFilter: OverviewFilter) => {
-      try {
-        sessionStorage.setItem(sessionStorageKey, newFilter);
-      } catch {
-        // Storage access might be blocked
-      }
-
-      setManualFilter(newFilter);
+      setStoredFilter(newFilter);
       setIsLoading(true);
     },
-    [sessionStorageKey],
+    [setStoredFilter],
   );
 
   return [selectedFilter, setFilter, isLoading];

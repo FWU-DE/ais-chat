@@ -1238,7 +1238,7 @@ export const conversationUsageTracking = pgTable(
     // Exactly one billing source is stored per row: either a model call or a tool call.
     modelId: uuid('model_id').references(() => llmModelTable.id),
     toolCallName: toolCallNameEnum('tool_call_name'),
-    // this rows will be kept forever even if conversations are deleted, therefore we cannot enforce a foreign key constaint here
+    // these rows will be kept forever even if conversations are deleted, therefore we cannot enforce a foreign key constraint here
     conversationId: uuid('conversation_id').notNull(),
     // for easier tracking we add a user_id here to make less joins as this table will contain a lot of entries
     // this is not database normalization conform tho, we need to keep these rows forever too
