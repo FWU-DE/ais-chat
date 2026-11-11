@@ -1,3 +1,5 @@
+-- Existing rows may hold non-uuid ids that cannot be cast; shared chat data is intentionally discarded.
+DELETE FROM "shared_chat_conversation" WHERE 1 = 1;--> statement-breakpoint
 ALTER TABLE "shared_chat_conversation_message_file_mapping" DROP CONSTRAINT "shared_chat_message_file_message_fk";--> statement-breakpoint
 ALTER TABLE "shared_chat_conversation_message_file_mapping" DROP CONSTRAINT "shared_chat_message_file_conversation_fk";--> statement-breakpoint
 ALTER TABLE "shared_chat_conversation_message" DROP CONSTRAINT "shared_chat_conversation_fk";--> statement-breakpoint

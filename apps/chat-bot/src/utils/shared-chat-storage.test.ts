@@ -42,6 +42,7 @@ class MemoryStorage implements Storage {
 }
 
 const INVITE_CODE = 'invite-abc-123';
+const SESSION_ID = crypto.randomUUID();
 
 function installSessionStorage(storage: Storage): void {
   (globalThis as { window?: unknown }).window = { sessionStorage: storage };
@@ -79,7 +80,7 @@ describe('shared-chat sessionStorage round-trip', () => {
   });
 
   it('persists and restores only the shared session ID', () => {
-    const data: PersistedSharedChat = { sharedSessionId: '11111111-1111-4111-8111-111111111111' };
+    const data: PersistedSharedChat = { sharedSessionId: SESSION_ID };
 
     saveSharedChat(INVITE_CODE, data);
 
@@ -89,46 +90,39 @@ describe('shared-chat sessionStorage round-trip', () => {
 
   it('writes to the invite-code-scoped key', () => {
     saveSharedChat(INVITE_CODE, {
-      sharedSessionId: '11111111-1111-4111-8111-111111111111',
+      sharedSessionId: SESSION_ID,
     });
 
     expect(storage.getItem(sharedChatStorageKey(INVITE_CODE))).not.toBeNull();
   });
 
   it('isolates shared chats between invite codes', () => {
-    saveSharedChat('code-a', {
-      sharedSessionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    });
-    saveSharedChat('code-b', {
-      sharedSessionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-    });
+    const sessionA = crypto.randomUUID();
+    const sessionB = crypto.randomUUID();
+    saveSharedChat('code-a', { sharedSessionId: sessionA });
+    saveSharedChat('code-b', { sharedSessionId: sessionB });
 
-    expect(loadSharedChat('code-a')).toEqual({
-      sharedSessionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    });
-    expect(loadSharedChat('code-b')).toEqual({
-      sharedSessionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-    });
+    expect(loadSharedChat('code-a')).toEqual({ sharedSessionId: sessionA });
+    expect(loadSharedChat('code-b')).toEqual({ sharedSessionId: sessionB });
   });
 
   it('does not store transcript data', () => {
-    saveSharedChat(INVITE_CODE, { sharedSessionId: '11111111-1111-4111-8111-111111111111' });
+    saveSharedChat(INVITE_CODE, { sharedSessionId: SESSION_ID });
 
     expect(storage.getItem(sharedChatStorageKey(INVITE_CODE))).not.toContain('messages');
   });
 
   it('overwrites previously persisted data on subsequent saves', () => {
-    saveSharedChat(INVITE_CODE, { sharedSessionId: '22222222-2222-4222-8222-222222222222' });
-    saveSharedChat(INVITE_CODE, { sharedSessionId: '33333333-3333-4333-8333-333333333333' });
+    const newSession = crypto.randomUUID();
+    saveSharedChat(INVITE_CODE, { sharedSessionId: crypto.randomUUID() });
+    saveSharedChat(INVITE_CODE, { sharedSessionId: newSession });
 
-    expect(loadSharedChat(INVITE_CODE)).toEqual({
-      sharedSessionId: '33333333-3333-4333-8333-333333333333',
-    });
+    expect(loadSharedChat(INVITE_CODE)).toEqual({ sharedSessionId: newSession });
   });
 
   it('clearSharedChat removes the persisted entry', () => {
     saveSharedChat(INVITE_CODE, {
-      sharedSessionId: '11111111-1111-4111-8111-111111111111',
+      sharedSessionId: SESSION_ID,
     });
     expect(loadSharedChat(INVITE_CODE)).not.toBeNull();
 
@@ -167,13 +161,13 @@ describe('loadSharedChat — invalid data', () => {
     storage.setItem(
       sharedChatStorageKey(INVITE_CODE),
       JSON.stringify({
-        sharedSessionId: '11111111-1111-4111-8111-111111111111',
+        sharedSessionId: SESSION_ID,
         messages: [{ id: 'm1', role: 'bogus-role', content: 'x' }],
       }),
     );
 
     expect(loadSharedChat(INVITE_CODE)).toEqual({
-      sharedSessionId: '11111111-1111-4111-8111-111111111111',
+      sharedSessionId: SESSION_ID,
     });
   });
 
@@ -226,7 +220,7 @@ describe('shared-chat-storage — storage unavailable', () => {
     uninstallSessionStorage();
     expect(() =>
       saveSharedChat(INVITE_CODE, {
-        sharedSessionId: '11111111-1111-4111-8111-111111111111',
+        sharedSessionId: SESSION_ID,
       }),
     ).not.toThrow();
   });
@@ -268,7 +262,7 @@ describe('shared-chat-storage — storage unavailable', () => {
 
     expect(() =>
       saveSharedChat(INVITE_CODE, {
-        sharedSessionId: '11111111-1111-4111-8111-111111111111',
+        sharedSessionId: SESSION_ID,
       }),
     ).not.toThrow();
     expect(logError).toHaveBeenCalledTimes(1);
