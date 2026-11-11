@@ -147,6 +147,34 @@ export async function billTextGenerationUsageToApiKey(
   return priceInCent;
 }
 
+/**
+ * Bills speech (TTS) generation usage to the specified API key.
+ *
+ * @param apiKeyId - The unique identifier of the API key to bill
+ * @param modelId - The speech model used for generation
+ * @param costsInCent - The cost of the generation in cents
+ * @returns A promise that resolves to the price in cents charged for the operation
+ */
+export async function billSpeechGenerationUsageToApiKey({
+  apiKeyId,
+  modelId,
+  costsInCent,
+}: {
+  apiKeyId: string;
+  modelId: string;
+  costsInCent: number;
+}): Promise<number> {
+  await dbCreateCompletionUsage({
+    apiKeyId,
+    modelId,
+    completionTokens: 0,
+    promptTokens: 0,
+    totalTokens: 0,
+    costsInCent,
+  });
+  return costsInCent;
+}
+
 export async function isApiKeyOverQuota(apiKeyId: string): Promise<boolean> {
   // Get the API key limit and sum usage costs since the start of the month
   const [apiKeyData, completionCosts, imageCosts] = await Promise.all([
