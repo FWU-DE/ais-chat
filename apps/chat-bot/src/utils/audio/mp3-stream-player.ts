@@ -107,6 +107,8 @@ export class Mp3StreamPlayer {
   private networkDone = false;
   // Set once the element plays a Blob URL of the whole audio instead of the MediaSource.
   private usingFullSource = false;
+  // Latest seek target requested before the full source's metadata loaded.
+  private pendingSeekTime: number | null = null;
   private duration = 0;
   private playbackRate = 1;
   private mp3Chunks: Uint8Array<ArrayBufferLike>[] = [];
@@ -191,14 +193,9 @@ export class Mp3StreamPlayer {
     const target = Math.min(Math.max(time, 0), this.duration);
     if (!this.isFullyBuffered()) {
       this.switchToFullSource(audio);
-      // Some browsers ignore seeks before the new source's metadata has loaded.
-      audio.addEventListener(
-        'loadedmetadata',
-        () => {
-          audio.currentTime = target;
-        },
-        { once: true },
-      );
+    }
+    if (this.usingFullSource && audio.readyState < HTMLMediaElement.HAVE_METADATA) {
+      this.pendingSeekTime = target;
     }
     audio.currentTime = target;
     if (this.state === 'paused') {
@@ -280,6 +277,7 @@ export class Mp3StreamPlayer {
 
   dispose(): void {
     this.disposed = true;
+    this.pendingSeekTime = null;
     this.notifyFeeder();
     if (this.audio) {
       this.audio.pause();
@@ -500,6 +498,19 @@ export class Mp3StreamPlayer {
     // Same narrowing as for `appendBuffer`: fetch response bytes are never SharedArrayBuffers.
     const blob = new Blob(this.mp3Chunks as Uint8Array<ArrayBuffer>[], { type: MP3_MIME_TYPE });
     this.objectUrl = URL.createObjectURL(blob);
+    this.pendingSeekTime = null;
+    // Some browsers ignore seeks before the new source's metadata has loaded.
+    audio.addEventListener(
+      'loadedmetadata',
+      () => {
+        if (this.disposed || this.pendingSeekTime === null) {
+          return;
+        }
+        audio.currentTime = this.pendingSeekTime;
+        this.pendingSeekTime = null;
+      },
+      { once: true },
+    );
     audio.src = this.objectUrl;
   }
 
