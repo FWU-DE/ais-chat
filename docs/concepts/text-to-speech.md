@@ -25,7 +25,7 @@ Providers limit the input length of a single request, so the text is split befor
 - `preprocessSpeechText` (`speech/text/preprocess.ts`) runs first, because it can change the text
   length. It is currently a pass-through; markdown, code block or URL handling belongs here.
 - `splitSpeechText` (`speech/text/split.ts`) creates segments of at most `MAX_SPEECH_SEGMENT_CHARS`
-  (4000) characters. It breaks at paragraphs, then sentences (`Intl.Segmenter`, German and English),
+  characters. It breaks at paragraphs, then sentences (`Intl.Segmenter`, German and English),
   then words, and cuts inside a word only if a single word exceeds the limit.
 
 The limit is a code constant for all providers. Make it configurable per provider once a provider
