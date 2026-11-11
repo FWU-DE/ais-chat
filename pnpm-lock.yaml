@@ -516,6 +516,9 @@ importers:
       katex:
         specifier: 0.19.1
         version: 0.19.1
+      linguist-languages:
+        specifier: 9.5.0
+        version: 9.5.0
       linkup-sdk:
         specifier: 3.7.1
         version: 3.7.1(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)(viem@2.57.11(typescript@6.0.3)(zod@4.6.7))
@@ -4508,14 +4511,6 @@ packages:
   '@sentry/browser@11.10.0':
     resolution: {integrity: sha512-kU8Inx3K/PaaDGqTu4lBW8XCYNsYNTwwPIZNIRDas/mTXtepXpM7M0KxxrTSZXBTWX0RfDU4t7vsL9ay0o4+NQ==}
     engines: {node: '>=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0'}
-    peerDependencies:
-      rollup: '>=3.2.0'
-      webpack: '>=5.1.0'
-    peerDependenciesMeta:
-      rollup:
-        optional: true
-      webpack:
-        optional: true
 
   '@sentry/bundler-plugins@11.10.0':
     resolution: {integrity: sha512-+ngJ485rIYll5uOhWSvSO+Vx4S24MGe5KcLKlUZghr+BXK+ib32uBOZNG294wGyeauLTDvdjncLEYwiaBnP/5w==}
@@ -7936,6 +7931,9 @@ packages:
 
   lines-and-columns@1.2.4:
     resolution: {integrity: sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==}
+
+  linguist-languages@9.5.0:
+    resolution: {integrity: sha512-Wtg9O6iHNBYFJQVtPNwWCaWkNEqZqiCGI4gSkeH8TqvgZUyb1IUWmFSa9Z9UhT392/aX6Peoa91bH9sDah1ZVw==}
 
   linkify-it@6.1.0:
     resolution: {integrity: sha512-wJ/TwpSDTLepCrQoYWYIExIKg5Zchex2Nn5yk2mFnB+6PtdkHtyLx742md9csRjjOnGkKIS/RrbY7l8D6gT9Vw==}
@@ -17103,6 +17101,8 @@ snapshots:
       unicode-trie: 2.0.0
 
   lines-and-columns@1.2.4: {}
+
+  linguist-languages@9.5.0: {}
 
   linkify-it@6.1.0:
     dependencies:
