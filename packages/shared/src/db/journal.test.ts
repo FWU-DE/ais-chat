@@ -7,6 +7,7 @@ type DrizzleMigrationJournal = {
   entries: Array<{
     idx: number;
     when: number;
+    tag: string;
   }>;
 };
 
@@ -41,6 +42,26 @@ describe('Drizzle Migration Journal - Shared Database', () => {
           `timestamp at position ${i} (${currentEntry.when}) must be > ${prevEntry.when}`,
         )
         .toBeGreaterThan(prevEntry.when);
+    }
+  });
+
+  test('should have a continuous snapshot chain', () => {
+    const metaPath = resolve(__dirname, '../../migrations/meta');
+    const journal = JSON.parse(
+      readFileSync(resolve(metaPath, '_journal.json'), 'utf-8'),
+    ) as DrizzleMigrationJournal;
+
+    let prev: { name: string; id: string } | undefined;
+    for (const { tag } of journal.entries) {
+      const name = tag.slice(0, 4);
+      const snapshot = JSON.parse(
+        readFileSync(resolve(metaPath, `${name}_snapshot.json`), 'utf-8'),
+      ) as { id: string; prevId: string };
+
+      if (prev) {
+        expect.soft(snapshot.prevId, `${name} prevId must equal id of ${prev.name}`).toBe(prev.id);
+      }
+      prev = { name, id: snapshot.id };
     }
   });
 });

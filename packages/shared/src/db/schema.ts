@@ -1057,7 +1057,7 @@ export const sharedChatEntityTypeEnum = pgEnum(
 );
 
 export const sharedChatConversationTable = pgTable('shared_chat_conversation', {
-  id: uuid('id').defaultRandom().primaryKey(),
+  id: text('id').primaryKey(),
   entityType: sharedChatEntityTypeEnum('entity_type').notNull(),
   shareId: uuid('share_id').notNull(),
   createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
@@ -1066,7 +1066,7 @@ export const sharedChatConversationTable = pgTable('shared_chat_conversation', {
 export const sharedChatConversationMessageTable = pgTable(
   'shared_chat_conversation_message',
   {
-    id: uuid('id').defaultRandom().primaryKey(),
+    id: text('id').notNull(),
     conversationId: text('conversation_id').notNull(),
     content: text('content').notNull(),
     role: conversationRoleEnum('role').notNull(),
