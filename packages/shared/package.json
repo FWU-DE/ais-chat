@@ -10,6 +10,7 @@
   },
   "scripts": {
     "check-types": "tsc --noEmit",
+    "db:check": "DATABASE_URL=postgres://dummy drizzle-kit check --config=./drizzle.config.ts",
     "db:drop": "dotenvx run -f ../../apps/chat-bot/.env.local -f ../../apps/chat-bot/.env.development -- drizzle-kit drop --config=./drizzle.config.ts",
     "db:generate": "dotenvx run -f ../../apps/chat-bot/.env.local -f ../../apps/chat-bot/.env.development -- drizzle-kit generate --config=./drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",
