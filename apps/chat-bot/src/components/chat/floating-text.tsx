@@ -252,6 +252,18 @@ export function FloatingText({
           aria-expanded={!isMinimized}
           onClick={() => {
             setIsMinimized(!isMinimized);
+            // The max size depends on the position, so a resized panel must be moved back into view
+            // using its saved size before it expands. Measuring it afterwards would see the capped size.
+            if (isMinimized && size !== null) {
+              setPosition(
+                clampPosition({
+                  ...position,
+                  containerWidth: size.width,
+                  containerHeight: size.height,
+                }),
+              );
+              return;
+            }
             setTimeout(() => {
               const parent = getParentElement();
               if (containerRef.current && parent) {
