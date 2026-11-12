@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import React from 'react';
 import { createPortal } from 'react-dom';
 
@@ -40,6 +41,8 @@ export function FloatingText({
   const [dragging, setDragging] = React.useState(false);
   const [rel, setRel] = React.useState<{ x: number; y: number } | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const t = useTranslations('common');
 
   const getParentElement = React.useCallback(() => {
     return overlayTarget ?? parentElement ?? parentRef?.current ?? null;
@@ -195,7 +198,7 @@ export function FloatingText({
           {title}
         </span>
         <button
-          aria-label="Minimize"
+          aria-label={isMinimized ? t('maximize') : t('minimize')}
           aria-expanded={!isMinimized}
           onClick={() => {
             setIsMinimized(!isMinimized);

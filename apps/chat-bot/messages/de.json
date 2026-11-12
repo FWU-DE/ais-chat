@@ -16,12 +16,16 @@
     "cancel": "Abbrechen",
     "continue": "Weiter",
     "back": "Zurück",
+    "maximize": "Maximieren",
+    "minimize": "Minimieren",
     "accept": "Akzeptieren",
+    "ais-chat-logo": "AIS.chat-Logo",
     "image": "Bild",
     "upload-image": "Bild hochladen",
     "llm-model": "Sprachmodell",
     "current-language-model": "Aktuelles Sprachmodell",
     "no-language-model-available": "Kein Sprachmodell verfügbar",
+    "energy-efficient-model": "Energieeffizientes Modell",
     "conversation-download": "Konversation herunterladen",
     "send-message-placeholder": "Wie kann ich Dir helfen?",
     "information-disclaimer": "AIS.chat kann Fehler machen. Sei kritisch und überprüfe alle Informationen.",
@@ -74,7 +78,16 @@
     "not-found-error": "Diese Ressource existiert nicht oder ist nicht freigegeben.",
     "generic-error": "Ein Fehler ist aufgetreten",
     "retry-button": "Erneut versuchen",
-    "please-select": "Bitte auswählen"
+    "please-select": "Bitte auswählen",
+    "sidebar-toggle-close": "Seitenleiste schließen",
+    "sidebar-toggle-open": "Seitenleiste öffnen",
+    "profile-dropdown": "Profil-Dropdown",
+    "profile-picture": "Profilbild"
+  },
+  "chat": {
+    "send-message": "Nachricht abschicken",
+    "chat-textarea": "Chat-Eingabefeld",
+    "stop-generating": "Antwort stoppen"
   },
   "errors": {
     "no-api-key": "Dem Bundesland wurde noch kein API-Schlüssel zugewiesen."
@@ -809,7 +822,8 @@
     "sort-popularity": "Beliebteste zuerst",
     "hits-for": "{count} Treffer zu",
     "close": "Schließen",
-    "chat": "Chatten"
+    "chat": "Chatten",
+    "chat-with-character": "Mit Dialogpartner chatten"
   },
   "filter": {
     "filter-label": "Filter",
