@@ -42,16 +42,11 @@ async function collect(chunks: AsyncGenerator<Buffer>): Promise<string[]> {
   return result;
 }
 
-const usage = (inputTextTokens: number, outputAudioTokens: number): SpeechUsage => ({
-  inputTextTokens,
-  outputAudioTokens,
-});
-
 describe('streamSpeechSegments', () => {
   it('streams all segments in order and sums their usage', async () => {
     const generateSpeechStream = createFakeProvider({
-      first: { chunks: ['a1', 'a2'], usage: usage(5, 50) },
-      second: { chunks: ['b1'], usage: usage(6, 60) },
+      first: { chunks: ['a1', 'a2'], usage: { characters: 5 } },
+      second: { chunks: ['b1'], usage: { characters: 6 } },
     });
 
     const result = await streamSpeechSegments({
@@ -62,7 +57,7 @@ describe('streamSpeechSegments', () => {
     });
 
     expect(await collect(result.chunks)).toEqual(['a1', 'a2', 'b1']);
-    expect(await result.usage).toEqual(usage(11, 110));
+    expect(await result.usage).toEqual({ characters: 11 });
     expect(result.mimeType).toBe(MP3_MIME_TYPE);
     expect(generateSpeechStream.mock.calls.map(([args]) => args.text)).toEqual(['first', 'second']);
     expect(generateSpeechStream.mock.calls.every(([args]) => args.voice === 'alloy')).toBe(true);
@@ -70,8 +65,8 @@ describe('streamSpeechSegments', () => {
 
   it('requests the next segment only after the previous one finished', async () => {
     const generateSpeechStream = createFakeProvider({
-      first: { chunks: ['a1'], usage: usage(1, 1) },
-      second: { chunks: ['b1'], usage: usage(1, 1) },
+      first: { chunks: ['a1'], usage: { characters: 1 } },
+      second: { chunks: ['b1'], usage: { characters: 1 } },
     });
 
     const result = await streamSpeechSegments({
@@ -101,9 +96,9 @@ describe('streamSpeechSegments', () => {
 
   it('reports the failing segment after streaming the audio received so far', async () => {
     const generateSpeechStream = createFakeProvider({
-      first: { chunks: ['a1'], usage: usage(5, 50) },
-      second: { chunks: ['b1'], usage: usage(6, 60), error: new Error('upstream broke') },
-      third: { chunks: ['c1'], usage: usage(7, 70) },
+      first: { chunks: ['a1'], usage: { characters: 5 } },
+      second: { chunks: ['b1'], usage: { characters: 6 }, error: new Error('upstream broke') },
+      third: { chunks: ['c1'], usage: { characters: 7 } },
     });
 
     const result = await streamSpeechSegments({
@@ -122,12 +117,12 @@ describe('streamSpeechSegments', () => {
 
     expect(received).toEqual(['a1', 'b1']);
     expect(generateSpeechStream).toHaveBeenCalledTimes(2);
-    expect(await result.usage).toEqual(usage(11, 110));
+    expect(await result.usage).toEqual({ characters: 11 });
   });
 
   it('reports a failing request of a later segment with its index', async () => {
     const generateSpeechStream = createFakeProvider({
-      first: { chunks: ['a1'], usage: usage(5, 50) },
+      first: { chunks: ['a1'], usage: { characters: 5 } },
     });
 
     const result = await streamSpeechSegments({
@@ -140,7 +135,7 @@ describe('streamSpeechSegments', () => {
     await expect(collect(result.chunks)).rejects.toThrow(
       'Speech generation failed (segment 2/2): Unexpected text: missing',
     );
-    expect(await result.usage).toEqual(usage(5, 50));
+    expect(await result.usage).toEqual({ characters: 5 });
   });
 
   it('applies the timeout to each segment separately', async () => {
@@ -150,7 +145,11 @@ describe('streamSpeechSegments', () => {
         abortSignal.throwIfAborted();
         yield Buffer.from('chunk');
       }
-      return { chunks: chunks(), usage: Promise.resolve(usage(1, 1)), mimeType: MP3_MIME_TYPE };
+      return {
+        chunks: chunks(),
+        usage: Promise.resolve({ characters: 1 }),
+        mimeType: MP3_MIME_TYPE,
+      };
     });
 
     const result = await streamSpeechSegments({
@@ -172,7 +171,11 @@ describe('streamSpeechSegments', () => {
           abortSignal.addEventListener('abort', () => reject(new Error('aborted')));
         });
       }
-      return { chunks: chunks(), usage: Promise.resolve(usage(1, 1)), mimeType: MP3_MIME_TYPE };
+      return {
+        chunks: chunks(),
+        usage: Promise.resolve({ characters: 1 }),
+        mimeType: MP3_MIME_TYPE,
+      };
     });
 
     const result = await streamSpeechSegments({
@@ -196,7 +199,11 @@ describe('streamSpeechSegments', () => {
         abortController.abort();
         throw abortError;
       }
-      return { chunks: chunks(), usage: Promise.resolve(usage(1, 1)), mimeType: MP3_MIME_TYPE };
+      return {
+        chunks: chunks(),
+        usage: Promise.resolve({ characters: 1 }),
+        mimeType: MP3_MIME_TYPE,
+      };
     });
 
     const result = await streamSpeechSegments({
@@ -213,8 +220,8 @@ describe('streamSpeechSegments', () => {
 
   it('resolves the summed usage when the consumer stops early', async () => {
     const generateSpeechStream = createFakeProvider({
-      first: { chunks: ['a1', 'a2'], usage: usage(5, 50) },
-      second: { chunks: ['b1'], usage: usage(6, 60) },
+      first: { chunks: ['a1', 'a2'], usage: { characters: 5 } },
+      second: { chunks: ['b1'], usage: { characters: 6 } },
     });
 
     const result = await streamSpeechSegments({
@@ -227,7 +234,7 @@ describe('streamSpeechSegments', () => {
     await result.chunks.next();
     await result.chunks.return();
 
-    expect(await result.usage).toEqual(usage(5, 50));
+    expect(await result.usage).toEqual({ characters: 5 });
     expect(generateSpeechStream).toHaveBeenCalledTimes(1);
   });
 });

@@ -5,8 +5,7 @@ export const MP3_MIME_TYPE = 'audio/mpeg';
 export type SpeechMimeType = typeof MP3_MIME_TYPE;
 
 export type SpeechUsage = {
-  inputTextTokens: number;
-  outputAudioTokens: number;
+  characters: number;
 };
 
 export type SpeechCosts = {

@@ -25,7 +25,7 @@ const speechModel = {
   id: 'speech-model-id',
   provider: 'bifrost',
   name: 'speech-model',
-  priceMetadata: { type: 'speech', inputTextTokenPrice: 1, outputAudioTokenPrice: 1 },
+  priceMetadata: { type: 'speech', priceInCentPer1MillionCharacters: 1 },
   modelConfig: { voices: [{ name: 'alloy' }, { name: 'nova' }] },
 } as unknown as LlmModelSelectModel;
 
@@ -37,7 +37,7 @@ beforeEach(() => {
   mocks.generateSpeechById.mockResolvedValue({
     audioBuffer: mp3Buffer,
     mimeType: 'audio/mpeg',
-    usage: { inputTextTokens: 10, outputAudioTokens: 20 },
+    usage: { characters: 10 },
   });
 });
 
