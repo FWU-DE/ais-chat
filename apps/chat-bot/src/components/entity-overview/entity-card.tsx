@@ -68,7 +68,7 @@ export default function EntityCard({
       >
         <figure className="w-15 h-15 bg-primary/7 rounded-full flex justify-center items-center shrink-0">
           {avatarUrl ? (
-            <AvatarPicture src={avatarUrl} alt={`${name} Avatar`} variant="smallCircle" />
+            <AvatarPicture src={avatarUrl} alt={tCommon('profile-picture')} variant="smallCircle" />
           ) : (
             <ImageSquareIcon
               className="w-8 h-8 text-primary/30 "

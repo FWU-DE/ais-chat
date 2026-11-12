@@ -2,8 +2,11 @@
 
 import { ImageSquareIcon } from '@phosphor-icons/react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 
 export function CustomChatAvatarImage({ pictureUrl }: { pictureUrl: string | undefined }) {
+  const t = useTranslations('custom-chat.image');
+
   return (
     <div className="relative w-35 h-35 justify-center items-center flex">
       {pictureUrl ? (
@@ -11,7 +14,7 @@ export function CustomChatAvatarImage({ pictureUrl }: { pictureUrl: string | und
           src={pictureUrl}
           fill
           unoptimized
-          alt={'profile-picture'}
+          alt={t('profile-picture')}
           className="rounded-full"
           priority
         />

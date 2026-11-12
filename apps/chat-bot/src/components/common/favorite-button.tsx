@@ -2,6 +2,7 @@
 
 import { HeartStraightIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/tooltip';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
@@ -33,22 +34,28 @@ export function FavoriteButton({
   }
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon-round"
-      className={cn(className)}
-      aria-label={t('favorite')}
-      aria-pressed={isFavorite}
-      disabled={isPending || disabled}
-      onClick={handleClick}
-      data-testid="favorite-button"
-    >
-      <HeartStraightIcon
-        aria-hidden="true"
-        className="size-6 text-primary"
-        weight={isFavorite ? 'fill' : 'regular'}
-      />
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild disableKeyboardToggle>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-round"
+          className={cn(className)}
+          // Constant name: with aria-pressed the state is announced separately.
+          aria-label={t('favorite-add')}
+          aria-pressed={isFavorite}
+          disabled={isPending || disabled}
+          onClick={handleClick}
+          data-testid="favorite-button"
+        >
+          <HeartStraightIcon
+            aria-hidden="true"
+            className="size-6 text-primary"
+            weight={isFavorite ? 'fill' : 'regular'}
+          />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{t(isFavorite ? 'favorite-remove' : 'favorite-add')}</TooltipContent>
+    </Tooltip>
   );
 }
