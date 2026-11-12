@@ -13,8 +13,6 @@ import { createGeneratedDocumentBlob } from '@/utils/files/generated-document';
 import DisplayFileAttachment from '../display-file-attachment';
 import type { MessageFileModel } from '../message-image-attachment';
 
-// Shows a file created by the generate_document tool like an uploaded file, with a download
-// button. The DOCX/PDF is created on click; only images the user uploaded can be embedded.
 export function GeneratedDocumentAttachment({
   document,
   fileMapping,
