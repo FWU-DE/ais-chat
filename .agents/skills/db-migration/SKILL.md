@@ -31,3 +31,4 @@ Use this skill when the user asks to:
 
 - verify that all three files are created for the migration
 - run `pnpm run check-types` to ensure there are no type errors
+- run `pnpm run db:check` from the repo root to validate the snapshot chain; the unit tests additionally verify that the latest snapshot matches the schema

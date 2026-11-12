@@ -114,6 +114,7 @@
       "persistent": true,
       "cache": false
     },
+    "db:check": {},
     "db:migrate": {
       "dependsOn": ["^db:migrate"],
       "env": ["API_DATABASE_URL"]

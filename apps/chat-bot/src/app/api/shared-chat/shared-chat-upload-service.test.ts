@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   dbInsertFileWithChunksMock: vi.fn(),
   uploadMessageAttachmentMock: vi.fn(),
   cnanoidMock: vi.fn(),
+  dbGetOrCreateSharedChatConversationMock: vi.fn(),
+  linkFileToSharedChatConversationMock: vi.fn(),
 }));
 
 vi.mock('@/auth/utils', () => ({
@@ -41,6 +43,11 @@ vi.mock('../file-operations/preprocess-image', () => ({
 
 vi.mock('@shared/db/functions/files', () => ({
   dbInsertFileWithChunks: mocks.dbInsertFileWithChunksMock,
+  linkFileToSharedChatConversation: mocks.linkFileToSharedChatConversationMock,
+}));
+
+vi.mock('@shared/db/functions/shared-chat-conversation', () => ({
+  dbGetOrCreateSharedChatConversation: mocks.dbGetOrCreateSharedChatConversationMock,
 }));
 
 vi.mock('@shared/files/fileService', () => ({
@@ -66,6 +73,8 @@ beforeEach(() => {
     federalStateId: 'federal-state-1',
   });
   mocks.cnanoidMock.mockReturnValue('abc123');
+  mocks.dbGetOrCreateSharedChatConversationMock.mockResolvedValue({ id: 'session-1' });
+  mocks.linkFileToSharedChatConversationMock.mockResolvedValue(undefined);
   mocks.dbInsertFileWithChunksMock.mockResolvedValue(undefined);
   mocks.uploadMessageAttachmentMock.mockResolvedValue(undefined);
   mocks.preprocessImageMock.mockResolvedValue({
@@ -96,6 +105,10 @@ describe('uploadSharedChatFile', () => {
     });
 
     expect(fileId).toBe('file_abc123');
+    expect(mocks.linkFileToSharedChatConversationMock).toHaveBeenCalledWith({
+      fileId: 'file_abc123',
+      conversationId: 'session-1',
+    });
     expect(mocks.preprocessImageMock).toHaveBeenCalled();
     expect(mocks.uploadMessageAttachmentMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -107,12 +120,7 @@ describe('uploadSharedChatFile', () => {
       expect.objectContaining({
         id: 'file_abc123',
         userId: null,
-        metadata: expect.objectContaining({
-          inviteCode: 'invite',
-          entityType: 'character',
-          entityId: 'character-1',
-          sessionId: 'session-1',
-        }),
+        metadata: { width: 10, height: 10 },
       }),
       [],
     );
@@ -149,12 +157,7 @@ describe('uploadSharedChatFile', () => {
       expect.objectContaining({
         id: 'file_abc123',
         userId: null,
-        metadata: expect.objectContaining({
-          inviteCode: 'invite',
-          entityType: 'learningScenario',
-          entityId: 'learning-scenario-1',
-          sessionId: 'session-1',
-        }),
+        metadata: {},
       }),
       expect.any(Array),
     );
@@ -203,5 +206,26 @@ describe('uploadSharedChatFile', () => {
 
     expect(arrayBuffer).not.toHaveBeenCalled();
     expect(mocks.fileExtractionXbergMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects the upload when the conversation does not belong to the invite', async () => {
+    mocks.dbGetCharacterByIdAndInviteCodeMock.mockResolvedValue(validEntity);
+    mocks.dbGetOrCreateSharedChatConversationMock.mockResolvedValue(undefined);
+
+    const { uploadSharedChatFile } = await import('./shared-chat-upload-service');
+    const file = new File([new Uint8Array([1, 2, 3])], 'upload.png', { type: 'image/png' });
+
+    await expect(
+      uploadSharedChatFile({
+        file,
+        inviteCode: 'invite',
+        entityType: 'character',
+        entityId: 'character-1',
+        sharedSessionId: 'session-1',
+      }),
+    ).rejects.toThrow('Not authorized to access this shared chat conversation');
+
+    expect(mocks.uploadMessageAttachmentMock).not.toHaveBeenCalled();
+    expect(mocks.linkFileToSharedChatConversationMock).not.toHaveBeenCalled();
   });
 });

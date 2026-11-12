@@ -40,6 +40,7 @@ import {
 } from '../chat/utils';
 import { isWebSearchEnabledForEntity } from '../chat/websearch';
 import { ingestWebContent } from '../rag/ingestWebContent';
+import { prepareSharedChatConversation } from '../shared-chat/shared-chat-conversation-service';
 import { combineSharedRelatedFiles } from '../shared-chat/shared-chat-file-service';
 import { resolveAgentNameForTracing } from '../utils/agent-name';
 import { extractUrls } from '../utils/extract-urls';
@@ -125,13 +126,19 @@ export async function sendLearningScenarioMessage({
     return createErrorResult(new TokenPointsExceededError());
   }
 
+  const sharedChatConversation = await prepareSharedChatConversation({
+    sharedSessionId,
+    inviteCode,
+    entityType: 'learningScenario',
+    entityId: learningScenario.id,
+    clientMessages: messages,
+    fileIds,
+  });
+
   // Get related files and web sources
   const relatedFileEntities = await combineSharedRelatedFiles({
     relatedFileEntities: await dbGetRelatedLearningScenarioFiles(learningScenario.id),
-    fileIds,
-    inviteCode,
-    entityType: 'learningScenario',
-    entityId: learningScenarioId,
+    fileIds: sharedChatConversation.fileIds ?? fileIds,
     sharedSessionId,
     userMessageId: getMostRecentUserMessage(messages)?.id,
   });
@@ -150,7 +157,7 @@ export async function sendLearningScenarioMessage({
 
   // Prune messages
   const prunedMessages = limitChatHistory(
-    annotateMessageAttachmentNames(messages, relatedFileEntities),
+    annotateMessageAttachmentNames(sharedChatConversation.messages, relatedFileEntities),
   );
 
   let messagesWithImages: ChatMessage[];
@@ -255,11 +262,20 @@ export async function sendLearningScenarioMessage({
     onReasoningSummary: aiActivity.onReasoningSummary,
     onToolCalls: aiActivity.onToolCalls,
     onToolResult: aiActivity.onToolResult,
-    onComplete: async ({ usage, priceInCents, modelUsages }) => {
-      aiActivity.finish();
-      await persistUsage({ usage, priceInCents, modelUsages });
-
-      done();
+    onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {
+      try {
+        aiActivity.finish();
+        await sharedChatConversation.persistResponse({
+          assistantMessageId,
+          fullText,
+          agentLoopMessages,
+        });
+        await persistUsage({ usage, priceInCents, modelUsages });
+        done();
+      } catch (error) {
+        logError('Error persisting shared learning scenario chat completion:', error);
+        streamError(error instanceof Error ? error : new Error('Unknown error'));
+      }
     },
     onError: async (error, billedUsage) => {
       logError('Error during shared chat streaming:', error);

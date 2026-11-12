@@ -1,6 +1,12 @@
-import { generateSpeechById, MP3_MIME_TYPE, type SpeechMimeType } from '@ais-chat/ai-core';
+import {
+  billSpeechGenerationUsageToApiKey,
+  generateSpeechById,
+  MP3_MIME_TYPE,
+  type SpeechMimeType,
+} from '@ais-chat/ai-core';
 import { UserModel } from '@shared/auth/user-model';
 import { getConversation } from '@shared/conversation/conversation-service';
+import { dbGetFederalState } from '@shared/db/functions/federal-state';
 import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
 import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
 import { LlmModelSelectModel } from '@shared/db/schema';
@@ -68,6 +74,8 @@ export async function generateChatSpeechStream({
         model: LlmModelSelectModel,
         result: ChatSpeechStreamResult,
       ) => {
+        const costsInCent = await result.costsInCent;
+
         // we only store usage if there is an associated conversation
         // not true for initial messages
         if (context.conversation) {
@@ -77,7 +85,16 @@ export async function generateChatSpeechStream({
             modelId: model.id,
             completionTokens: 0,
             promptTokens: 0,
-            costsInCent: await result.costsInCent,
+            costsInCent,
+          });
+        }
+
+        const { apiKeyId } = await dbGetFederalState(federalState.id);
+        if (apiKeyId) {
+          await billSpeechGenerationUsageToApiKey({
+            apiKeyId,
+            modelId: model.id,
+            costsInCent,
           });
         }
       },

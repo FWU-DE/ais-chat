@@ -21,6 +21,7 @@ import {
   dbGetAssistantByIdForConversation,
   dbGetAssistantByIdOrAssociatedSchool,
   dbGetAssistantsByIds,
+  dbGetAssistantsByUserFavorite,
   dbGetAssistantsByUserId,
   dbGetCommunityGpts,
   dbGetGlobalAssistantByName,
@@ -72,6 +73,17 @@ describe('db assistant helpers', () => {
       mockSelectChain(assistants);
 
       const result = await dbGetAssistantsByUserId({ user: { id: 'user-1' } });
+
+      expect(result).toBe(assistants);
+    });
+  });
+
+  describe('dbGetAssistantsByUserFavorite', () => {
+    it('returns the assistants favorited by the user', async () => {
+      const assistants = [{ id: 'assistant-1' }];
+      mockSelectChain(assistants);
+
+      const result = await dbGetAssistantsByUserFavorite({ user: { id: 'user-1' } });
 
       expect(result).toBe(assistants);
     });

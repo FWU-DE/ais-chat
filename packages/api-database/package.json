@@ -14,6 +14,7 @@
     "./utils": "./src/api-utils/index.ts"
   },
   "scripts": {
+    "db:check": "API_DATABASE_URL=postgres://dummy drizzle-kit check --config=./drizzle.config.ts",
     "db:generate": "dotenvx run -f ../../apps/api/.env.local -f ../../apps/api/.env.development -- drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",
     "db:migrate:local": "dotenvx run -f ../../apps/api/.env.local -f ../../apps/api/.env.development -- drizzle-kit migrate --config=./drizzle.config.ts",

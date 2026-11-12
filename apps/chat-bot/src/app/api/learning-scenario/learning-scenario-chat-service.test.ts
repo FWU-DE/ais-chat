@@ -33,6 +33,8 @@ const mocks = vi.hoisted(() => ({
   ingestWebContentMock: vi.fn(),
   resolveAgentNameForTracingMock: vi.fn(),
   combineSharedRelatedFilesMock: vi.fn(),
+  prepareSharedChatConversationMock: vi.fn(),
+  persistSharedChatResponseMock: vi.fn(),
   isWebSearchEnabledForEntityMock: vi.fn(),
 }));
 
@@ -140,6 +142,10 @@ vi.mock('../shared-chat/shared-chat-file-service', () => ({
   combineSharedRelatedFiles: mocks.combineSharedRelatedFilesMock,
 }));
 
+vi.mock('../shared-chat/shared-chat-conversation-service', () => ({
+  prepareSharedChatConversation: mocks.prepareSharedChatConversationMock,
+}));
+
 vi.mock('../chat/websearch', () => ({
   isWebSearchEnabledForEntity: mocks.isWebSearchEnabledForEntityMock,
 }));
@@ -218,6 +224,13 @@ beforeEach(() => {
   mocks.userHasReachedTokenPointsLimitMock.mockResolvedValue(false);
   mocks.dbGetRelatedLearningScenarioFilesMock.mockResolvedValue([]);
   mocks.combineSharedRelatedFilesMock.mockResolvedValue([]);
+  mocks.persistSharedChatResponseMock.mockResolvedValue(undefined);
+  mocks.prepareSharedChatConversationMock.mockImplementation(
+    ({ clientMessages }: { clientMessages: ChatMessage[] }) => ({
+      messages: clientMessages,
+      persistResponse: mocks.persistSharedChatResponseMock,
+    }),
+  );
   mocks.ingestWebContentMock.mockResolvedValue({ processedUrls: [], errorUrls: [] });
   mocks.isWebSearchEnabledForEntityMock.mockReturnValue(true);
   mocks.buildToolsMock.mockReturnValue({ toolRegistry: {} });
@@ -307,9 +320,6 @@ describe('sendLearningScenarioMessage', () => {
     expect(mocks.combineSharedRelatedFilesMock).toHaveBeenCalledWith({
       relatedFileEntities: [],
       fileIds: ['file-1', 'file-2'],
-      inviteCode: 'invite-code',
-      entityType: 'learningScenario',
-      entityId: learningScenario.id,
       sharedSessionId: 'session-1',
       userMessageId: 'message-1',
     });

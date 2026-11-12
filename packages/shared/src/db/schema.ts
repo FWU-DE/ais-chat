@@ -1047,6 +1047,47 @@ export type SharedLearningScenarioSelectModel = z.infer<typeof sharedLearningSce
 export type SharedLearningScenarioInsertModel = z.infer<typeof sharedLearningScenarioInsertSchema>;
 export type SharedLearningScenarioUpdateModel = z.infer<typeof sharedLearningScenarioUpdateSchema>;
 
+/**
+ * Message history for an anonymous shared-chat conversation.
+ */
+export const sharedChatEntityTypeSchema = z.enum(['character', 'learningScenario']);
+export const sharedChatEntityTypeEnum = pgEnum(
+  'shared_chat_entity_type',
+  sharedChatEntityTypeSchema.enum,
+);
+
+export const sharedChatConversationTable = pgTable('shared_chat_conversation', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  entityType: sharedChatEntityTypeEnum('entity_type').notNull(),
+  shareId: uuid('share_id').notNull(),
+  createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+});
+
+export const sharedChatConversationMessageTable = pgTable(
+  'shared_chat_conversation_message',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    conversationId: uuid('conversation_id').notNull(),
+    content: text('content').notNull(),
+    role: conversationRoleEnum('role').notNull(),
+    orderNumber: integer('order_number').notNull(),
+    toolCalls: json('tool_calls').$type<ToolCall[]>(),
+    toolCallId: text('tool_call_id'),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('shared_chat_message_order_unique').on(table.conversationId, table.orderNumber),
+    foreignKey({
+      columns: [table.conversationId],
+      foreignColumns: [sharedChatConversationTable.id],
+      name: 'shared_chat_conversation_fk',
+    }).onDelete('cascade'),
+  ],
+);
+
+export type InsertSharedChatConversationMessageModel =
+  typeof sharedChatConversationMessageTable.$inferInsert;
+
 // Type for learning scenario with sharing data (from JOIN with sharedLearningScenario)
 const sharedLearningScenarioTransformedSchema = sharedLearningScenarioSelectSchema
   .omit({ id: true, learningScenarioId: true, userId: true })
@@ -1196,7 +1237,7 @@ export const conversationUsageTracking = pgTable(
     // Exactly one billing source is stored per row: either a model call or a tool call.
     modelId: uuid('model_id').references(() => llmModelTable.id),
     toolCallName: toolCallNameEnum('tool_call_name'),
-    // this rows will be kept forever even if conversations are deleted, therefore we cannot enforce a foreign key constaint here
+    // these rows will be kept forever even if conversations are deleted, therefore we cannot enforce a foreign key constraint here
     conversationId: uuid('conversation_id').notNull(),
     // for easier tracking we add a user_id here to make less joins as this table will contain a lot of entries
     // this is not database normalization conform tho, we need to keep these rows forever too
@@ -1501,6 +1542,45 @@ export type SuspensionRequestInsertModel = z.infer<typeof suspensionRequestInser
 export type SuspensionRequestUpdateModel = z.infer<typeof suspensionRequestUpdateSchema>;
 
 /**
+ * Schema for table user_favorite. Exactly one of the entity columns is set per row.
+ */
+export const userFavoriteTable = pgTable(
+  'user_favorite',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => userTable.id, { onDelete: 'cascade' }),
+    assistantId: uuid('assistant_id').references(() => assistantTable.id, { onDelete: 'cascade' }),
+    characterId: uuid('character_id').references(() => characterTable.id, { onDelete: 'cascade' }),
+    learningScenarioId: uuid('learning_scenario_id').references(() => learningScenarioTable.id, {
+      onDelete: 'cascade',
+    }),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    check(
+      'user_favorite_exactly_one_target_ck',
+      sql`((${table.assistantId} IS NOT NULL)::int + (${table.characterId} IS NOT NULL)::int + (${table.learningScenarioId} IS NOT NULL)::int) = 1`,
+    ),
+    uniqueIndex('user_favorite_user_assistant_uq')
+      .on(table.userId, table.assistantId)
+      .where(sql`${table.assistantId} IS NOT NULL`),
+    uniqueIndex('user_favorite_user_character_uq')
+      .on(table.userId, table.characterId)
+      .where(sql`${table.characterId} IS NOT NULL`),
+    uniqueIndex('user_favorite_user_learning_scenario_uq')
+      .on(table.userId, table.learningScenarioId)
+      .where(sql`${table.learningScenarioId} IS NOT NULL`),
+    index().on(table.assistantId),
+    index().on(table.characterId),
+    index().on(table.learningScenarioId),
+  ],
+);
+
+export type UserFavoriteSelectModel = typeof userFavoriteTable.$inferSelect;
+
+/**
  * Schema for table assistant_template_mappings
  */
 export const assistantTemplateMappingTable = pgTable(
@@ -1570,6 +1650,42 @@ export type FileUpdateModel = z.infer<typeof fileUpdateSchema>;
 // Keep existing extended types
 export type FileModel = typeof fileTable.$inferSelect;
 export type FileModelAndUrl = FileModel & { signedUrl: string };
+
+export const SharedChatConversationMessageFileMappingTable = pgTable(
+  'shared_chat_conversation_message_file_mapping',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    fileId: text('file_id').notNull(),
+    // Null while the file is uploaded to the conversation but not yet attached to a message.
+    conversationMessageId: uuid('conversation_message_id'),
+    conversationId: uuid('conversation_id').notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('shared_chat_message_file_message_idx').on(table.conversationMessageId),
+    index('shared_chat_message_file_conversation_idx').on(table.conversationId),
+    unique('shared_chat_message_file_unique').on(
+      table.conversationMessageId,
+      table.conversationId,
+      table.fileId,
+    ),
+    foreignKey({
+      columns: [table.fileId],
+      foreignColumns: [fileTable.id],
+      name: 'shared_chat_message_file_file_fk',
+    }),
+    foreignKey({
+      columns: [table.conversationMessageId],
+      foreignColumns: [sharedChatConversationMessageTable.id],
+      name: 'shared_chat_message_file_message_fk',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.conversationId],
+      foreignColumns: [sharedChatConversationTable.id],
+      name: 'shared_chat_message_file_conversation_fk',
+    }).onDelete('cascade'),
+  ],
+);
 
 /**
  * Schema for table conversation_message_file_mapping

@@ -30,6 +30,7 @@ import { RichText, stripRichTextTags } from '@/components/common/rich-text';
 import { useToast } from '@/components/common/toast';
 import { CustomChatActionDelete } from '@/components/custom-chat/custom-chat-action-delete';
 import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
+import { CustomChatActionFavorite } from '@/components/custom-chat/custom-chat-action-favorite';
 import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
 import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
 import { CustomChatHeaderContent } from '@/components/custom-chat/custom-chat-header-content';
@@ -161,6 +162,7 @@ export function CharacterEdit({
   isWebSearchAvailable,
   isSpeechAvailable,
   speechVoices,
+  initialIsFavorite,
 }: {
   character: CharacterOptionalShareDataModel;
   relatedFiles: FileModel[];
@@ -173,6 +175,7 @@ export function CharacterEdit({
   isWebSearchAvailable: boolean;
   isSpeechAvailable: boolean;
   speechVoices: SpeechVoice[];
+  initialIsFavorite: boolean;
 }) {
   useForceReloadOnBrowserBackButton();
   const router = useRouter();
@@ -399,6 +402,10 @@ export function CharacterEdit({
         onClick={handleDeleteCharacter}
         modalTitle={t('delete-modal-title')}
         modalDescription={t('delete-modal-description')}
+      />
+      <CustomChatActionFavorite
+        entityRef={{ entityType: 'character', entityId: character.id }}
+        initialIsFavorite={initialIsFavorite}
       />
     </CustomChatActions>
   );
