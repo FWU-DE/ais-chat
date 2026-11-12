@@ -20,6 +20,7 @@ export function ToggleSidebarButton({ forceVisibility = false }: { forceVisibili
       title="Sidebar"
       onClick={toggleSidebar}
       aria-label={t(isOpen ? 'sidebar-toggle-close' : 'sidebar-toggle-open')}
+      aria-expanded={isOpen}
     >
       <SidebarSimpleIcon className="size-6 text-primary" />
     </Button>
