@@ -1,5 +1,4 @@
 import type { LlmModelSelectModel } from '@shared/db/schema';
-import { InvalidArgumentError } from '@shared/error';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -42,12 +41,16 @@ beforeEach(() => {
 });
 
 describe('generateSpeechPreview', () => {
-  it('rejects an unknown voice without generating speech', async () => {
-    await expect(
-      generateSpeechPreview({ text: 'Hello', voice: 'does-not-exist' }),
-    ).rejects.toBeInstanceOf(InvalidArgumentError);
+  it('falls back to the first configured voice for an unknown voice', async () => {
+    mocks.getCachedSpeechPreview.mockResolvedValue(undefined);
 
-    expect(mocks.generateSpeechById).not.toHaveBeenCalled();
+    await generateSpeechPreview({ text: 'Hello', voice: 'does-not-exist' });
+
+    expect(mocks.generateSpeechById).toHaveBeenCalledWith({
+      modelId: speechModel.id,
+      text: 'Hello',
+      voice: 'alloy',
+    });
   });
 
   it('returns the cached preview without regenerating or re-caching', async () => {
