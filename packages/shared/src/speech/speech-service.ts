@@ -11,7 +11,6 @@ import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
 import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
 import { LlmModelSelectModel } from '@shared/db/schema';
 import { ConversationModel } from '@shared/db/types';
-import { InvalidArgumentError } from '@shared/error';
 import { FederalStateModel } from '@shared/federal-states/types';
 import { constructNewMessageEvent, sendRabbitmqEvent } from '@shared/rabbitmq';
 import { getCachedSpeechPreview, setCachedSpeechPreview } from '@shared/speech/speech-cache';
@@ -21,6 +20,7 @@ import {
 } from '@shared/speech/streaming/speech-pipeline';
 
 import { ChatSpeechStreamResult } from './types';
+import { resolveSpeechVoice } from './utils';
 
 type SpeechContext = {
   user: UserModel;
@@ -142,15 +142,9 @@ export async function generateSpeechPreview({
 
   if (!speechModel) throw new Error('No speech model configured');
 
-  const voices = speechModel.modelConfig?.voices ?? [];
+  const resolvedVoice = resolveSpeechVoice(speechModel, voice);
 
-  if (voices.length === 0) throw new Error('No voices configured for the speech model');
-
-  if (!voices.some((v) => v.name === voice)) {
-    throw new InvalidArgumentError(`Unknown voice: ${voice}`);
-  }
-
-  const cached = await getCachedSpeechPreview(speechModel.id, voice, text);
+  const cached = await getCachedSpeechPreview(speechModel.id, resolvedVoice, text);
   if (cached !== undefined) {
     return {
       buffer: cached,
@@ -161,10 +155,10 @@ export async function generateSpeechPreview({
   const { audioBuffer, mimeType } = await generateSpeechById({
     modelId: speechModel.id,
     text,
-    voice,
+    voice: resolvedVoice,
   });
 
-  await setCachedSpeechPreview(speechModel.id, voice, text, audioBuffer);
+  await setCachedSpeechPreview(speechModel.id, resolvedVoice, text, audioBuffer);
 
   return {
     buffer: audioBuffer,
