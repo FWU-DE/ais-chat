@@ -1,4 +1,3 @@
-import { defaultErrorSource } from '@/components/chat/sources/const';
 import { WebSource } from '@shared/db/types';
 import { logError, logWarning } from '@shared/logging';
 import {
@@ -6,6 +5,9 @@ import {
   incrementReadabilitySuccessCounter,
   incrementWebScraperFailedCounter,
 } from '@shared/metrics/web-scraper-meter';
+
+import { defaultErrorSource } from '@/components/chat/sources/const';
+
 import { webScraperCrawl4AI } from './web-scraper-crawl4ai';
 import { webScraperReadability } from './web-scraper-readability';
 

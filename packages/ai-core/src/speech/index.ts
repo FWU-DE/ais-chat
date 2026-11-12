@@ -1,15 +1,16 @@
-export type {
-  SpeechGenerationFn,
-  SpeechResponse,
-  SpeechUsage,
-  SpeechStreamGenerationFn,
-  SpeechStreamResult,
-  AudioFormat,
-} from './types';
-export { PCM_STREAM_AUDIO_FORMAT } from './types';
-export {
-  constructGoogleSpeechGenerationFn,
-  constructGoogleStreamingSpeechGenerationFn,
-} from './providers/google';
+export { billSpeechGenerationUsageToApiKey } from '../api-keys/billing';
 export { generateSpeechById } from './generate';
 export { streamSpeechById } from './generate-stream';
+export {
+  constructBifrostSpeechGenerationFn,
+  constructBifrostStreamingSpeechGenerationFn,
+} from './providers/bifrost';
+export type {
+  SpeechGenerationFn,
+  SpeechMimeType,
+  SpeechResponse,
+  SpeechStreamGenerationFn,
+  SpeechStreamResult,
+  SpeechUsage,
+} from './types';
+export { MP3_MIME_TYPE } from './types';

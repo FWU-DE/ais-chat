@@ -18,6 +18,7 @@
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
     "check-types": "turbo run check-types",
+    "db:check": "turbo run db:check",
     "db:migrate": "pnpm --filter @ais-chat/shared db:migrate:local && pnpm --filter @ais-chat/api-database db:migrate:local",
     "db:seed": "pnpm --filter @ais-chat/api-database db:seed && pnpm --filter @ais-chat/shared db:seed",
     "db:seed:from-stage": "pnpm --filter @ais-chat/api-database db:seed:from-stage && pnpm --filter @ais-chat/shared db:seed:from-stage",

@@ -1,8 +1,6 @@
 'use client';
 
-import React from 'react';
-import { useTranslations } from 'next-intl';
-import { useToast } from '@/components/common/toast';
+import { MAX_EXTENDABLE_USAGE_TIME_IN_SECONDS } from '@shared/sharing/const';
 import { Button } from '@ui/components/button';
 import {
   Dialog,
@@ -14,9 +12,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@ui/components/dialog';
-import { TimeLimitSelect } from './custom-chat-time-limit-select';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
+import { useToast } from '@/components/common/toast';
+
 import { extendTimeValuesInMinutes } from './custom-chat-share-with-learners-limit-params';
-import { MAX_EXTENDABLE_USAGE_TIME_IN_SECONDS } from '@shared/sharing/const';
+import { TimeLimitSelect } from './custom-chat-time-limit-select';
 
 type CustomChatExtendShareExpirationDialogProps = {
   trigger: React.ReactElement<{ disabled?: boolean }>;

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
+
 import {
   activateLivePlots,
+  type LivePlot,
   registerLivePlot,
   releaseOverflow,
   retainLivePlot,
-  type LivePlot,
 } from './live-plots';
 
 function makePlot(

@@ -1,7 +1,8 @@
-import React from 'react';
-import Image from 'next/image';
-import { FileModel } from '@shared/db/schema';
 import { Skeleton } from '@ais-chat/ui/components/skeleton';
+import { FileModel } from '@shared/db/schema';
+import Image from 'next/image';
+import React from 'react';
+
 import { cn } from '@/utils/tailwind';
 
 // Minimal type required to render an image attachment chip

@@ -1,4 +1,3 @@
-import { cacheLife } from 'next/cache';
 import { generateTextWithBilling } from '@ais-chat/ai-core';
 import { dbGetCharacterById, dbUpdateCharacterFilterGroup } from '@shared/db/functions/character';
 import {
@@ -6,11 +5,14 @@ import {
   dbUpdateLearningScenarioFilterGroup,
 } from '@shared/db/functions/learning-scenario';
 import { dbGetFederalStateByUserId } from '@shared/db/functions/school';
-import { getMaybeUser } from '@/auth/utils';
-import { getModelAndApiKeyWithResult, getStrongAuxiliaryModel } from '@/app/api/utils/utils';
+import type { FilterGroup, LlmModelSelectModel } from '@shared/db/schema';
+import { cacheLife } from 'next/cache';
+
 import { constructCharacterLanguageSystemPrompt } from '@/app/api/character/system-prompt';
 import { constructLearningScenarioLanguageSystemPrompt } from '@/app/api/learning-scenario/system-prompt';
-import type { FilterGroup, LlmModelSelectModel } from '@shared/db/schema';
+import { getModelAndApiKeyWithResult, getStrongAuxiliaryModel } from '@/app/api/utils/utils';
+import { getMaybeUser } from '@/auth/utils';
+
 import {
   DEFAULT_LOCALE,
   getLocaleForFilterLanguage,

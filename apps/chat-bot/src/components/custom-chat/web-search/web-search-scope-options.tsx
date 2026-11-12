@@ -1,9 +1,9 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import { RadioGroup, RadioGroupItem } from '@ui/components/radio-group';
-import { FieldLabel } from '@ui/components/field';
 import type { WebSearchScope } from '@shared/db/schema';
+import { FieldLabel } from '@ui/components/field';
+import { RadioGroup, RadioGroupItem } from '@ui/components/radio-group';
+import { useTranslations } from 'next-intl';
 
 export function WebSearchScopeOptions({
   scopeValue,

@@ -1,7 +1,7 @@
+import * as Sentry from '@sentry/nextjs';
 import { Cache, MutationOption } from 'drizzle-orm/cache/core';
 import { CacheConfig } from 'drizzle-orm/cache/core/types';
 import { entityKind } from 'drizzle-orm/entity';
-import * as Sentry from '@sentry/nextjs';
 
 /**
  * A drizzle cache provider for caching values in memory.

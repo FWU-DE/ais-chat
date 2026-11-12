@@ -1,7 +1,8 @@
-import { expect, test } from '../../fixtures/test';
-import { AUTH_FILES } from '../../utils/const';
-import { deleteChat, sendMessage } from '../../utils/chat';
 import path from 'path';
+
+import { expect, test } from '../../fixtures/test';
+import { deleteChat, sendMessage } from '../../utils/chat';
+import { AUTH_FILES } from '../../utils/const';
 
 test.use({ storageState: AUTH_FILES.teacher });
 

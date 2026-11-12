@@ -1,8 +1,9 @@
-import { auth } from '@/auth';
-import { env } from '@/consts/env';
 import { logError, logInfo, logWarning } from '@shared/logging';
 import { withTrustedOrigin } from '@shared/utils/with-trusted-origin';
 import { NextRequest, NextResponse } from 'next/server';
+
+import { auth } from '@/auth';
+import { env } from '@/consts/env';
 
 function handleEmptyToken(request: NextRequest) {
   logWarning('No valid token found, redirecting to logout-callback url');

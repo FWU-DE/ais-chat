@@ -1,19 +1,20 @@
 'use client';
 
-import React from 'react';
 import { PlusIcon } from '@phosphor-icons/react';
-import { Input } from '@ui/components/input';
-import { Button } from '@ui/components/button';
 import { WebSource } from '@shared/db/types';
+import { utils } from '@shared/utils';
+import { Button } from '@ui/components/button';
+import { Chip } from '@ui/components/chip';
+import { Input } from '@ui/components/input';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
+import { useToast } from '@/components/common/toast';
+import { ingestWebContentAction } from '@/components/custom-chat/files-and-links/actions';
 import {
   NUMBER_OF_LINKS_LIMIT_FOR_SHARED_CHAT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT,
 } from '@/configuration-text-inputs/const';
-import { useToast } from '@/components/common/toast';
-import { ingestWebContentAction } from '@/components/custom-chat/files-and-links/actions';
-import { useTranslations } from 'next-intl';
-import { utils } from '@shared/utils';
-import { Chip } from '@ui/components/chip';
 
 export type CustomChatLinksProps = {
   initialLinks: WebSource[];

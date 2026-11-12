@@ -1,15 +1,10 @@
-import { UserAndContext } from '@/auth/types';
-import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
-import { convertMessageModelToMessage } from '@/utils/chat/messages';
-import { deepEqual } from '@/utils/object';
-import { createTextStream } from '@/utils/streaming';
 import {
   type Message as AiCoreMessage,
   type ModelUsage,
-  type TokenUsage,
   ResponsibleAIError,
-  TokenPointsExceededError,
   runAgentLoop,
+  TokenPointsExceededError,
+  type TokenUsage,
 } from '@ais-chat/ai-core';
 import {
   getAssistantForExistingConversation,
@@ -52,6 +47,13 @@ import {
   sendRabbitmqEvent,
 } from '@shared/rabbitmq';
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
+
+import { UserAndContext } from '@/auth/types';
+import { ChatMessage, createErrorResult, SendMessageResult } from '@/types/chat';
+import { convertMessageModelToMessage } from '@/utils/chat/messages';
+import { deepEqual } from '@/utils/object';
+import { createTextStream } from '@/utils/streaming';
+
 import { ingestWebContent } from '../rag/ingestWebContent';
 import { resolveAgentNameForTracing } from '../utils/agent-name';
 import { extractUrls } from '../utils/extract-urls';

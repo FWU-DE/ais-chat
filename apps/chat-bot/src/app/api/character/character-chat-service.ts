@@ -1,13 +1,9 @@
-import { getUserAndContextByUserId } from '@/auth/utils';
-import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
-import { createTextStream } from '@/utils/streaming';
-import { checkProductAccess } from '@/utils/vidis/access';
 import {
+  type ModelUsage,
   ResponsibleAIError,
+  runAgentLoop,
   SharedChatExpiredError,
   TokenPointsExceededError,
-  runAgentLoop,
-  type ModelUsage,
   type TokenUsage,
 } from '@ais-chat/ai-core';
 import {
@@ -27,6 +23,12 @@ import {
   sharedChatHasExpired,
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
+
+import { getUserAndContextByUserId } from '@/auth/utils';
+import { ChatMessage, createErrorResult, SendMessageResult } from '@/types/chat';
+import { createTextStream } from '@/utils/streaming';
+import { checkProductAccess } from '@/utils/vidis/access';
+
 import { createAiActivityStream } from '../chat/ai-activity-stream';
 import { buildTools } from '../chat/build-tools';
 import { prepareAgentMessages } from '../chat/prepare-agent-messages';
@@ -38,6 +40,7 @@ import {
 } from '../chat/utils';
 import { isWebSearchEnabledForEntity } from '../chat/websearch';
 import { ingestWebContent } from '../rag/ingestWebContent';
+import { prepareSharedChatConversation } from '../shared-chat/shared-chat-conversation-service';
 import { combineSharedRelatedFiles } from '../shared-chat/shared-chat-file-service';
 import { resolveAgentNameForTracing } from '../utils/agent-name';
 import { extractUrls } from '../utils/extract-urls';
@@ -118,13 +121,20 @@ export async function sendCharacterMessage({
     return createErrorResult(new TokenPointsExceededError());
   }
 
+  const sharedChatConversation = await prepareSharedChatConversation({
+    sharedSessionId,
+    inviteCode,
+    entityType: 'character',
+    entityId: character.id,
+    initialMessage: character.initialMessage,
+    clientMessages: messages,
+    fileIds,
+  });
+
   // Get related files and web sources
   const relatedFileEntities = await combineSharedRelatedFiles({
     relatedFileEntities: await dbGetRelatedCharacterFiles(character.id),
-    fileIds,
-    inviteCode,
-    entityType: 'character',
-    entityId: characterId,
+    fileIds: sharedChatConversation.fileIds ?? fileIds,
     sharedSessionId,
     userMessageId: getMostRecentUserMessage(messages)?.id,
   });
@@ -143,7 +153,7 @@ export async function sendCharacterMessage({
 
   // Prune messages
   const prunedMessages = limitChatHistory(
-    annotateMessageAttachmentNames(messages, relatedFileEntities),
+    annotateMessageAttachmentNames(sharedChatConversation.messages, relatedFileEntities),
   );
 
   let messagesWithImages: ChatMessage[];
@@ -248,11 +258,20 @@ export async function sendCharacterMessage({
     onReasoningSummary: aiActivity.onReasoningSummary,
     onToolCalls: aiActivity.onToolCalls,
     onToolResult: aiActivity.onToolResult,
-    onComplete: async ({ usage, priceInCents, modelUsages }) => {
-      aiActivity.finish();
-      await persistUsage({ usage, priceInCents, modelUsages });
-
-      done();
+    onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {
+      try {
+        aiActivity.finish();
+        await sharedChatConversation.persistResponse({
+          assistantMessageId,
+          fullText,
+          agentLoopMessages,
+        });
+        await persistUsage({ usage, priceInCents, modelUsages });
+        done();
+      } catch (error) {
+        logError('Error persisting shared character chat completion:', error);
+        streamError(error instanceof Error ? error : new Error('Unknown error'));
+      }
     },
     onError: async (error, billedUsage) => {
       logError('Error during character chat streaming:', error);

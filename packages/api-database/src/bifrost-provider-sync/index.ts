@@ -1,9 +1,9 @@
 import { dbGetAllProviderKeysWithModels, type LlmProviderKeyWithModels } from '../functions';
-import { BifrostProviderSyncError } from './error';
 import { deleteBifrostProvider, listBifrostProviders, syncBifrostProvider } from './client';
+import { BifrostProviderSyncError } from './error';
 import { buildBifrostProviderConfigs } from './provider-config-builder';
-import { ensureBifrostVirtualKeyProviderAccess } from './virtual-key-sync';
 import { type BifrostProviderConfig, type BifrostProviderSyncOptions } from './types';
+import { ensureBifrostVirtualKeyProviderAccess } from './virtual-key-sync';
 
 /**
  * Mirrors API DB model/provider configuration into Bifrost.
@@ -97,6 +97,6 @@ export async function syncAllBifrostProviders(options: BifrostProviderSyncOption
 }
 
 export * from './error';
-export * from './types';
 export { buildBifrostProviderConfigs } from './provider-config-builder';
+export * from './types';
 export { ensureBifrostVirtualKeyProviderAccess } from './virtual-key-sync';

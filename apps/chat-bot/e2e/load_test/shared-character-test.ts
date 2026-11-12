@@ -1,4 +1,5 @@
 import exec from 'k6/execution';
+
 import { runTest } from './common';
 import { SharedCharacterPage } from './page-objects/SharedCharacterPage';
 import { SharedCharacterProxy } from './utils/shared-character-proxy';

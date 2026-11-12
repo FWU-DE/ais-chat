@@ -1,13 +1,14 @@
 /**
  * @description One-off data-repair migration for TD-1498.
  */
-import { and, eq, isNotNull, ne, sql } from 'drizzle-orm';
+import path from 'node:path';
+
 import { db } from '@shared/db';
 import { assistantTable, characterTable } from '@shared/db/schema';
+import { logError, logInfo } from '@shared/logging';
 import { copyFileInS3 } from '@shared/s3';
 import { buildAssistantPictureKey, buildCharacterPictureKey } from '@shared/utils/picture-key';
-import { logError, logInfo } from '@shared/logging';
-import path from 'node:path';
+import { and, eq, isNotNull, ne, sql } from 'drizzle-orm';
 
 const LOCK_KEY1 = 1000;
 const LOCK_KEY2 = 100003;

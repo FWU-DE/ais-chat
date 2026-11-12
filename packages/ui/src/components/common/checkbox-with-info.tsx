@@ -1,5 +1,6 @@
-import { Checkbox } from '../checkbox';
 import { Control, Controller, FieldPath, FieldValues } from 'react-hook-form';
+
+import { Checkbox } from '../checkbox';
 import { Field, FieldError, FieldLabel } from '../field';
 
 type CheckboxWithInfoProps<

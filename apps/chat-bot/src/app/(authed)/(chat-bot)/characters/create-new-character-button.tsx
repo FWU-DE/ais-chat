@@ -1,12 +1,14 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { createNewCharacterAction } from './actions';
-import { useToast } from '@/components/common/toast';
-import { useTranslations } from 'next-intl';
-import { useLlmModels } from '@/components/providers/llm-model-provider';
-import { Button } from '@ui/components/button';
 import { PlusIcon } from '@phosphor-icons/react';
+import { Button } from '@ui/components/button';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+
+import { useToast } from '@/components/common/toast';
+import { useLlmModels } from '@/components/providers/llm-model-provider';
+
+import { createNewCharacterAction } from './actions';
 
 export function CreateNewCharacterButton() {
   const router = useRouter();
@@ -28,7 +30,7 @@ export function CreateNewCharacterButton() {
 
   return (
     <Button type="button" onClick={handleNewCharacter} data-testid="character-create-button">
-      <PlusIcon className="size-5" />
+      <PlusIcon className="size-5" aria-hidden="true" />
       {t('form.create-character')}
     </Button>
   );

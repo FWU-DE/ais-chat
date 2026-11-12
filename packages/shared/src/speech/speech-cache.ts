@@ -1,8 +1,9 @@
-import { logError } from '@shared/logging';
-import { valkey } from '@shared/valkey';
 import { createHash } from 'node:crypto';
 
-const SPEECH_PREVIEW_PREFIX = 'speech-preview:v1:';
+import { logError } from '@shared/logging';
+import { valkey } from '@shared/valkey';
+
+const SPEECH_PREVIEW_PREFIX = 'speech-preview:v2:';
 const SPEECH_PREVIEW_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
 function buildKey(modelId: string, voice: string, text: string) {

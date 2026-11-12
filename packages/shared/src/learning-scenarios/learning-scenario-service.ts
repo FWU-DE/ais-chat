@@ -8,7 +8,6 @@ import {
   verifyWriteAccess,
 } from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
-import { getUserSettings } from '@shared/users/user-settings-service';
 import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import { db } from '@shared/db';
 import {
@@ -28,14 +27,16 @@ import {
   dbGetLatestManageableLearningScenarioShare,
   dbGetLearningScenarioById,
   dbGetLearningScenarioByIdForConversation,
-  dbGetLearningScenarioByIdOptionalShareData,
   dbGetLearningScenarioByIdWithShareData,
   dbGetLearningScenariosByAssociatedSchools,
+  dbGetLearningScenariosByIdsOptionalShareData,
   dbGetLearningScenariosByUser,
+  dbGetLearningScenariosByUserFavorite,
   dbStopLearningScenarioShare,
   dbUpdateLearningScenarioShareTokenPointsLimit,
 } from '@shared/db/functions/learning-scenario';
 import { dbGetLearningScenarioChatUsageInCentByLearningScenarioId } from '@shared/db/functions/token-points';
+import { dbIsUserFavorite } from '@shared/db/functions/user-favorites';
 import {
   FileModel,
   LearningScenarioFileMapping,
@@ -72,6 +73,7 @@ import {
   getMaxBudgetInCentByUser,
   getUsedBudgetInCentByUser,
 } from '@shared/users/user-budget-service';
+import { getUserSettings } from '@shared/users/user-settings-service';
 import { uniqueById } from '@shared/utils/arrays';
 import { buildLearningScenarioPictureKey } from '@shared/utils/picture-key';
 import {
@@ -140,6 +142,10 @@ export async function getLearningScenariosByOverviewFilter({
         ...schoolLearningScenarios,
         ...filterCommunitySharedByAssociatedSchool({ items: communityLearningScenarios, user }),
       ]);
+      break;
+    }
+    case 'favorites': {
+      learningScenarios = await dbGetLearningScenariosByUserFavorite({ user });
       break;
     }
     default:
@@ -644,16 +650,22 @@ export async function getLearningScenarioForEditView({
   maxBudget: number | null;
   usedBudget: number;
   budgetUsedBySharedChat: number;
+  isFavorite: boolean;
 }> {
   checkParameterUUID(learningScenarioId);
   requireTeacherRole(user.userRole);
-  const learningScenario = await dbGetLearningScenarioByIdOptionalShareData({
-    learningScenarioId,
+  const [learningScenario] = await dbGetLearningScenariosByIdsOptionalShareData({
+    learningScenarioIds: [learningScenarioId],
     user,
   });
   if (!learningScenario) throw new NotFoundError('Learning scenario not found');
 
   verifyReadAccess({ item: learningScenario, user });
+
+  const isFavorite = await dbIsUserFavorite({
+    userId: user.id,
+    entityRef: { entityType: 'learningScenario', entityId: learningScenarioId },
+  });
 
   const relatedFiles = await getFilesForLearningScenario({
     learningScenarioId,
@@ -686,6 +698,7 @@ export async function getLearningScenarioForEditView({
     maxBudget,
     usedBudget,
     budgetUsedBySharedChat,
+    isFavorite,
   };
 }
 

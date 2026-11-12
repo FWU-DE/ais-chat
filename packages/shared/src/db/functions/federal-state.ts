@@ -1,14 +1,15 @@
+import { eq } from 'drizzle-orm';
+
+import { env } from '../../env';
+import { errorifyAsyncFn } from '../../utils/error';
 import { db } from '..';
+import { decrypt } from '../crypto';
 import {
   FederalStateInsertModel,
   FederalStateSelectModel,
   federalStateTable,
   FederalStateUpdateModel,
 } from '../schema';
-import { eq } from 'drizzle-orm';
-import { decrypt } from '../crypto';
-import { env } from '../../env';
-import { errorifyAsyncFn } from '../../utils/error';
 
 export const dbGetFederalStateWithDecryptedApiKeyWithResult = errorifyAsyncFn(
   dbGetFederalStateWithDecryptedApiKey,

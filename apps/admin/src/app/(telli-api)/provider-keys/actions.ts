@@ -1,8 +1,9 @@
 'use server';
 
+import { runServerAction } from '@shared/actions/run-server-action';
+
 import { requireAdminAuth } from '@/auth/requireAdminAuth';
 import { getProviderKeys } from '@/services/provider-key-service';
-import { runServerAction } from '@shared/actions/run-server-action';
 
 export async function getProviderKeysAction() {
   await requireAdminAuth();

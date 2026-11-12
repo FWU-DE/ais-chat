@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { NotFoundError } from '@shared/error';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@shared/db/functions/files', () => ({
   dbGetFilesInIds: vi.fn(),
@@ -10,6 +10,7 @@ vi.mock('@shared/s3', () => ({
 
 import { dbGetFilesInIds } from '@shared/db/functions/files';
 import { getFileFromS3 } from '@shared/s3';
+
 import { createScaledImage } from './scaled-image-service';
 
 describe('createScaledImage', () => {

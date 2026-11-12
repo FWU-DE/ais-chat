@@ -1,7 +1,8 @@
-import Image from 'next/image';
-import LogoWithName from '@/assets/logo-with-name.svg';
 import { getReadOnlySignedUrl } from '@shared/s3';
 import { SEVEN_DAYS } from '@shared/s3/const';
+import Image from 'next/image';
+
+import LogoWithName from '@/assets/logo-with-name.svg';
 
 export default async function Logo({ logoPath }: { logoPath: string | undefined }) {
   if (logoPath) {

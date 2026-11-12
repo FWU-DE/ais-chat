@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { obscureModels } from './utils';
 import type { LlmModel } from '@ais-chat/api-database';
+import { describe, expect, it } from 'vitest';
+
+import { obscureModels } from './utils';
 
 const baseModel: LlmModel = {
   id: 'model-1',

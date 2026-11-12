@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 const ADMIN_API_KEY = process.env.API_KEY;
 

@@ -1,7 +1,9 @@
-import { NUMBER_OF_FILES_LIMIT } from '@/configuration-text-inputs/const';
-import { cn } from '@/utils/tailwind';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+
+import { NUMBER_OF_FILES_LIMIT } from '@/configuration-text-inputs/const';
+import { cn } from '@/utils/tailwind';
+
 import type { LocalFileState } from '../file-upload/upload-file';
 import AttachFileIcon from '../icons/attach-file';
 
@@ -62,13 +64,18 @@ export default function UploadFileButton({
         className={cn(className, 'disabled:cursor-not-allowed')}
         disabled={isUploadLimitReached}
         type="button"
+        aria-label={t('upload.upload-input-aria-label')}
         title={
           isUploadLimitReached
             ? t('upload.upload-file-button-disabled', { max_files: NUMBER_OF_FILES_LIMIT })
             : t('upload.upload-file-button')
         }
       >
-        <AttachFileIcon className={cn('sm:w-10 sm:h-10 w-8 h-8')} stroke="black" />
+        <AttachFileIcon
+          className={cn('sm:w-10 sm:h-10 w-8 h-8')}
+          stroke="black"
+          aria-hidden="true"
+        />
       </button>
     </>
   );

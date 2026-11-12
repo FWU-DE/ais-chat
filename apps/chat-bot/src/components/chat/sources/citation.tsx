@@ -1,12 +1,14 @@
 'use client';
 import './citation.css';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/utils/tailwind';
-import SearchIcon from '@/components/icons/search';
-import { openInNewTab } from '@/utils/navigation/router';
-import Spinner from '@/components/icons/spinner';
+
 import { WebSource } from '@shared/db/types';
 import { utils } from '@shared/utils';
+
+import SearchIcon from '@/components/icons/search';
+import Spinner from '@/components/icons/spinner';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { openInNewTab } from '@/utils/navigation/router';
+import { cn } from '@/utils/tailwind';
 
 function truncateText(text: string, maxLength: number) {
   return text.length > maxLength ? text.slice(0, maxLength) + '...' : text;

@@ -1,9 +1,9 @@
-import { constructIonosImageGenerationFn } from './ionos';
-import { constructBifrostImageGenerationFn } from './bifrost';
+import { ProviderConfigurationError } from '../../errors';
 import type { AiModel, ImageGenerationFn, ImageGenerationRequestOptions } from '../types';
 import { constructAzureImageGenerationFn } from './azure';
+import { constructBifrostImageGenerationFn } from './bifrost';
 import { constructGoogleImageGenerationFn } from './google';
-import { ProviderConfigurationError } from '../../errors';
+import { constructIonosImageGenerationFn } from './ionos';
 
 // This could probably be more direct, but it would require reworking the individual provider files
 function getImageGenerationFnByModel({ model }: { model: AiModel }): ImageGenerationFn | undefined {

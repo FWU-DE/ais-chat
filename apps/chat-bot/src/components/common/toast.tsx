@@ -1,10 +1,13 @@
 'use client';
-import { cn } from '@/utils/tailwind';
+import './toast.css';
+
 import * as Toast from '@radix-ui/react-toast';
 import React from 'react';
+
+import { cn } from '@/utils/tailwind';
+
 import CheckIcon from '../icons/check';
 import DangerIcon from '../icons/danger';
-import './toast.css';
 
 export type ToastContextType = {
   success: (message: string) => void;

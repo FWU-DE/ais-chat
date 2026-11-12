@@ -4,6 +4,7 @@ import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/err
 import { FederalStateModel } from '@shared/federal-states/types';
 import { getUserSettings } from '@shared/users/user-settings-service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import {
   dbCreateCharacterShare,
   dbExtendSharedCharacterExpiration,
@@ -11,9 +12,10 @@ import {
   dbGetAllCharactersByUser,
   dbGetCharacterById,
   dbGetCharacterByIdForConversation,
-  dbGetCharacterByIdOptionalShareData,
   dbGetCharacterByIdWithShareData,
   dbGetCharactersByAssociatedSchools,
+  dbGetCharactersByIdsOptionalShareData,
+  dbGetCharactersByUserFavorite,
   dbGetCommunityCharacters,
   dbGetGlobalCharacters,
   dbGetLatestManageableCharacterShare,
@@ -51,12 +53,13 @@ import {
 } from './character-service';
 
 vi.mock('../db/functions/character', () => ({
+  dbGetCharactersByIdsOptionalShareData: vi.fn(),
+  dbGetCharactersByUserFavorite: vi.fn(),
   dbGetAllAccessibleCharacters: vi.fn(),
   dbGetAllCharactersByUser: vi.fn(),
   dbGetCharacterById: vi.fn(),
   dbGetCharacterByIdAndUserId: vi.fn(),
   dbGetCharacterByIdForConversation: vi.fn(),
-  dbGetCharacterByIdOptionalShareData: vi.fn(),
   dbGetCharacterByIdWithShareData: vi.fn(),
   dbDeleteCharacterByIdAndUser: vi.fn(),
   dbGetCharactersByAssociatedSchools: vi.fn(),
@@ -71,6 +74,9 @@ vi.mock('../db/functions/character', () => ({
 }));
 vi.mock('../db/functions/files', () => ({
   dbGetRelatedCharacterFiles: vi.fn(),
+}));
+vi.mock('@shared/db/functions/user-favorites', () => ({
+  dbIsUserFavorite: vi.fn().mockResolvedValue(false),
 }));
 vi.mock('../s3', () => ({
   getReadOnlySignedUrl: vi.fn(),
@@ -441,6 +447,25 @@ describe('character-service', () => {
       await updateCharacter({ id: characterId, user: { id: userId }, hasLinkAccess: true });
 
       expect(mockDbSet).toHaveBeenCalledWith({ id: characterId, hasLinkAccess: true, updatedAt });
+    });
+
+    it('ignores a popularity value sent by the owner', async () => {
+      const userId = generateUUID();
+      const characterId = generateUUID();
+      const character = { id: characterId, userId, name: 'old', popularity: 3 };
+
+      vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
+      mockDbReturning.mockResolvedValue([{ ...character, name: 'new' }]);
+
+      await updateCharacter({
+        id: characterId,
+        user: { id: userId },
+        name: 'new',
+        popularity: 999,
+      } as never);
+
+      expect(mockDbSet).toHaveBeenCalledTimes(1);
+      expect(mockDbSet).toHaveBeenCalledWith({ id: characterId, name: 'new' });
     });
   });
 
@@ -1031,7 +1056,9 @@ describe('character-service', () => {
           hasLinkAccess: true,
         };
 
-        vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(mockCharacter as never);
+        vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([
+          mockCharacter,
+        ] as never);
         // Also mock dbGetCharacterById because fetchFileMappings -> getCharacterInfo uses it
         vi.mocked(dbGetCharacterById).mockResolvedValue(mockCharacter as never);
         vi.mocked(dbGetRelatedCharacterFiles).mockResolvedValue([]);
@@ -1118,7 +1145,9 @@ describe('character-service', () => {
           hasLinkAccess: false,
         };
 
-        vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(mockCharacter as never);
+        vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([
+          mockCharacter,
+        ] as never);
 
         await expect(
           getCharacterForEditView({
@@ -1157,7 +1186,7 @@ describe('character-service', () => {
         hasLinkAccess: false,
       } as unknown as CharacterSelectModel;
 
-      vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(character as never);
+      vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([character] as never);
       vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
       vi.mocked(dbGetRelatedCharacterFiles).mockResolvedValue([] as never);
       vi.mocked(getReadOnlySignedUrl).mockResolvedValue('');
@@ -1185,7 +1214,7 @@ describe('character-service', () => {
         expiredAt,
       } as unknown as CharacterSelectModel;
 
-      vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(character as never);
+      vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([character] as never);
       vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
       vi.mocked(dbGetRelatedCharacterFiles).mockResolvedValue([] as never);
       vi.mocked(getReadOnlySignedUrl).mockResolvedValue('');
@@ -1435,6 +1464,37 @@ describe('character-service', () => {
       expect(result).toEqual([schoolAndCommunityCharacter]);
     });
 
+    it('routes filter=favorites to the favorite characters that are still readable', async () => {
+      const readableCharacter = {
+        id: generateUUID(),
+        userId: generateUUID(),
+        isCommunityShared: true,
+        hasLinkAccess: false,
+        suspended: false,
+        ownerSchoolIds: [],
+      } as unknown as CharacterSelectModel;
+      const noLongerSharedCharacter = {
+        ...readableCharacter,
+        id: generateUUID(),
+        isCommunityShared: false,
+      } as CharacterSelectModel;
+      const suspendedCharacter = {
+        ...readableCharacter,
+        id: generateUUID(),
+        suspended: true,
+      } as CharacterSelectModel;
+      vi.mocked(dbGetCharactersByUserFavorite).mockResolvedValue([
+        readableCharacter,
+        noLongerSharedCharacter,
+        suspendedCharacter,
+      ] as never);
+
+      const result = await getCharactersByOverviewFilter({ filter: 'favorites', user });
+
+      expect(dbGetCharactersByUserFavorite).toHaveBeenCalledWith({ user });
+      expect(result).toEqual([readableCharacter]);
+    });
+
     it('returns an empty list for unsupported overview filters', async () => {
       const result = await getCharactersByOverviewFilter({
         filter: 'invalid' as never,
@@ -1514,6 +1574,7 @@ describe('character-service', () => {
         updatedAt: NOW,
         attachedLinks: [],
         suspended: false,
+        popularity: 0,
         isDeleted: false,
         ownerSchoolIds: [],
         specifications: null,

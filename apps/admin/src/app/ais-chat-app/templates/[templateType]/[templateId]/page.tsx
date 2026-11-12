@@ -1,6 +1,8 @@
-import TemplateDetailView from './TemplateDetailView';
 import { isTemplateType } from '@shared/templates/template';
+
 import { requireAdminOrEditorAuth } from '@/auth/requireAdminAuth';
+
+import TemplateDetailView from './TemplateDetailView';
 
 export const dynamic = 'force-dynamic';
 

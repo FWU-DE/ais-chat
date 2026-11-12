@@ -1,12 +1,13 @@
 'use client';
 
-import { useCharacterChat, type ChatMessage } from '@/hooks/use-chat-hooks';
-import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
-import { loadSharedChat } from '@/utils/shared-chat-storage';
-import { reductionBreakpoint } from '@/utils/tailwind/layout';
 import { CharacterWithShareDataModel } from '@shared/db/schema';
 import { useTranslations } from 'next-intl';
 import { z } from 'zod';
+
+import { type ChatMessage, useCharacterChat } from '@/hooks/use-chat-hooks';
+import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
+import { reductionBreakpoint } from '@/utils/tailwind/layout';
+
 import { AssistantIcon } from '../chat/assistant-icon';
 import useBreakpoints from '../hooks/use-breakpoints';
 import GenericSharedChat from './generic-shared-chat';
@@ -26,16 +27,9 @@ export default function CharacterSharedChat({
   const t = useTranslations('characters.shared');
   const { id, inviteCode, modelId } = character;
 
-  const initialMessages: ChatMessage[] =
-    loadSharedChat(inviteCode)?.messages.map((message) => ({
-      id: message.id,
-      role: message.role,
-      content: message.content,
-      activitySteps: message.activitySteps,
-    })) ??
-    (character.initialMessage
-      ? [{ id: 'initial-message', role: 'assistant', content: character.initialMessage }]
-      : []);
+  const initialMessages: ChatMessage[] = character.initialMessage
+    ? [{ id: 'initial-message', role: 'assistant', content: character.initialMessage }]
+    : [];
 
   const chat = useCharacterChat({
     characterId: id,
@@ -96,6 +90,7 @@ export default function CharacterSharedChat({
       headerT={t}
       entity={character}
       inviteCode={inviteCode}
+      initialMessages={initialMessages}
       sharedEntityType="character"
       avatarPictureUrl={avatarPictureUrl}
       chat={chat}

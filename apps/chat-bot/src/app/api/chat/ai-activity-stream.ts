@@ -1,7 +1,8 @@
+import type { ToolCall, ToolErrorResult, ToolResult } from '@ais-chat/ai-core/chat/types';
+
 import type { AiActivityOptions } from '@/utils/chat/ai-activity';
 import { createAiActivityCollector } from '@/utils/chat/ai-activity';
 import { encodeChatStreamEvent } from '@/utils/streaming';
-import type { ToolCall, ToolErrorResult, ToolResult } from '@ais-chat/ai-core/chat/types';
 
 /**
  * Collects the agent activity and pushes every update to the client as a stream event.

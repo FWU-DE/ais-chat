@@ -1,7 +1,9 @@
-import { auth } from '@/auth';
 import { UserModel, userSchema } from '@shared/auth/user-model';
 import { FederalStateModel, federalStateSchema } from '@shared/federal-states/types';
 import { headers } from 'next/headers';
+
+import { auth } from '@/auth';
+
 import { redirectToLogin } from './utils';
 
 export async function requireAuth(): Promise<{

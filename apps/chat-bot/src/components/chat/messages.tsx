@@ -1,7 +1,9 @@
-import type { AiActivityStep } from '@/types/ai-activity';
-import { type ChatStatus, type UIMessage } from '@/types/chat';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
+
+import type { AiActivityStep } from '@/types/ai-activity';
+import { type ChatStatus, type UIMessage } from '@/types/chat';
+
 import { ChatBox, type MessageFileModel } from './chat-box';
 import LoadingAnimation from './loading-animation';
 import { AudioPlaybackCoordinatorProvider } from './speech/audio-playback-coordinator';

@@ -1,16 +1,18 @@
 'use client';
 
-import { useId } from 'react';
+import { ChatTextIcon, ImageSquareIcon } from '@phosphor-icons/react';
+import { calculateShareSessionState } from '@shared/sharing/calculate-share-session-state';
+import { Button } from '@ui/components/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/tooltip';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { useId } from 'react';
+
+import CountDownTimer from '@/app/(authed)/(chat-bot)/learning-scenarios/_components/count-down';
+import AvatarPicture from '@/components/common/avatar-picture';
+import { FavoriteButton } from '@/components/common/favorite-button';
 import { cn } from '@/utils/tailwind';
 import { truncateClassName } from '@/utils/tailwind/truncate';
-import AvatarPicture from '@/components/common/avatar-picture';
-import { useTranslations } from 'next-intl';
-import { ChatTextIcon, ImageSquareIcon } from '@phosphor-icons/react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/tooltip';
-import { Button } from '@ui/components/button';
-import CountDownTimer from '@/app/(authed)/(chat-bot)/learning-scenarios/_components/count-down';
-import { calculateShareSessionState } from '@shared/sharing/calculate-share-session-state';
 
 type ShareInfo = {
   expiredAt: Date | null;
@@ -26,6 +28,8 @@ type EntityCardProps = {
   href: string;
   chatHref?: string;
   shareInfo?: ShareInfo;
+  isFavorite: boolean;
+  onToggleFavorite: (isFavorite: boolean) => Promise<void>;
 };
 
 export default function EntityCard({
@@ -36,6 +40,8 @@ export default function EntityCard({
   href,
   chatHref,
   shareInfo,
+  isFavorite,
+  onToggleFavorite,
 }: EntityCardProps) {
   const { timeLeftInSeconds, isExtendable } = shareInfo
     ? calculateShareSessionState(shareInfo)
@@ -62,7 +68,7 @@ export default function EntityCard({
       >
         <figure className="w-15 h-15 bg-primary/7 rounded-full flex justify-center items-center shrink-0">
           {avatarUrl ? (
-            <AvatarPicture src={avatarUrl} alt={`${name} Avatar`} variant="smallCircle" />
+            <AvatarPicture src={avatarUrl} alt={tCommon('profile-picture')} variant="smallCircle" />
           ) : (
             <ImageSquareIcon
               className="w-8 h-8 text-primary/30 "
@@ -98,6 +104,12 @@ export default function EntityCard({
         />
       )}
 
+      <FavoriteButton
+        isFavorite={isFavorite}
+        onToggle={onToggleFavorite}
+        className={cn('shrink-0', !chatHref && 'mr-4')}
+      />
+
       {chatHref && (
         <Tooltip>
           <TooltipTrigger asChild disableKeyboardToggle>
@@ -106,7 +118,7 @@ export default function EntityCard({
               data-testid="chat-button"
               variant="ghost"
               size="icon-round"
-              className="mx-4"
+              className="mr-4 ml-0"
             >
               <Link href={chatHref} prefetch={false} aria-label={tCommon('new-chat')}>
                 <ChatTextIcon aria-hidden="true" className="size-6 text-primary" />

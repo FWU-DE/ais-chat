@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { runCalculator } from './worker.js';
+
 import type { Limits } from './types.js';
+import { runCalculator } from './worker.js';
 
 const limits: Limits = {
   maxExpressionLength: 20,

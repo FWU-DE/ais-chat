@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/auth/requireAuth';
 import { setLastUsedModelOfUser } from '@shared/users/user-service';
-import { updateSession } from '@/auth/utils';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+
+import { requireAuth } from '@/auth/requireAuth';
+import { updateSession } from '@/auth/utils';
 import { handleErrorInRoute } from '@/error/handle-error-in-route';
 
 const requestSchema = z.object({

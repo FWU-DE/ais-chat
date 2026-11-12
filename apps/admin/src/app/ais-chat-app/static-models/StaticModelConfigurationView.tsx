@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { toast } from 'sonner';
+import type {
+  LlmModelSelectModel,
+  StaticModelRole,
+  StaticModelsConfiguration,
+} from '@shared/db/schema';
 import { Button } from '@ui/components/button';
 import {
   Card,
@@ -18,11 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/select';
-import type {
-  LlmModelSelectModel,
-  StaticModelsConfiguration,
-  StaticModelRole,
-} from '@shared/db/schema';
+import { useState } from 'react';
+import { toast } from 'sonner';
+
 import { updateStaticModelConfigurationAction } from './actions';
 
 const roles: { role: StaticModelRole; label: string; type: 'text' | 'image' | 'safety' }[] = [

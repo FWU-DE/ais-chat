@@ -1,6 +1,8 @@
-import { cn } from '@/utils/tailwind';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+
+import { cn } from '@/utils/tailwind';
+
 import { formatTime } from './format-time';
 
 type AudioWaveformProps = {
@@ -54,7 +56,7 @@ function Bars({ peaks, className }: { peaks: number[]; className?: string }) {
  * Renders the audio stream position as a waveform instead of a plain slider: a flat pulsing
  * placeholder while the stream is still loading, and once fully loaded, the real peak-amplitude
  * waveform with the already-played portion overlaid in a solid color. Supports click/drag/touch
- * seeking once loaded (seeking requires the whole stream to be buffered, see `PcmStreamPlayer`).
+ * seeking once loaded (seeking requires the whole stream to be buffered, see `Mp3StreamPlayer`).
  */
 export function AudioWaveform({
   duration,

@@ -1,14 +1,16 @@
-import { Card, CardContent } from '@ui/components/card';
+import { ImageSquareIcon, UploadIcon } from '@phosphor-icons/react';
 import { ServerActionResult } from '@shared/actions/server-action-result';
+import { Button } from '@ui/components/button';
+import { Card, CardContent } from '@ui/components/card';
+import { Input } from '@ui/components/input';
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import React from 'react';
-import { useToast } from '../common/toast';
-import { Input } from '@ui/components/input';
-import { ImageSquareIcon, UploadIcon } from '@phosphor-icons/react';
-import { Button } from '@ui/components/button';
-import AvatarCropModal from './custom-chat-avatar-crop-modal';
-import Image from 'next/image';
+
 import { AVATAR_MAX_SIZE } from '@/const';
+
+import { useToast } from '../common/toast';
+import AvatarCropModal from './custom-chat-avatar-crop-modal';
 
 type AvatarUploadResult = {
   picturePath: string;
@@ -31,6 +33,7 @@ export function CustomChatImageUpload({
 
   const toast = useToast();
   const t = useTranslations('custom-chat.image');
+  const tCommon = useTranslations('common');
   const tFileInteraction = useTranslations('file-interaction');
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -82,7 +85,7 @@ export function CustomChatImageUpload({
               src={displayedAvatarUrl}
               fill
               unoptimized
-              alt={t('profile-picture')}
+              alt={tCommon('profile-picture')}
               className="rounded-full"
               priority
             />

@@ -1,7 +1,7 @@
 import { getTextModelById } from '../models';
 import { checkInputSafety } from '../safety';
-import { isChatImageAttachment } from './types';
 import type { Message, ModelSelection } from './types';
+import { isChatImageAttachment } from './types';
 
 export async function checkTextInputSafety({
   modelSelection,

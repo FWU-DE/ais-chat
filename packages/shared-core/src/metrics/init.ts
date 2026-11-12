@@ -9,6 +9,7 @@ import {
   type ViewOptions,
 } from '@opentelemetry/sdk-metrics';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
+
 import { registerProcessMemoryMetrics } from './process-memory';
 
 const MIB = 1024 * 1024;

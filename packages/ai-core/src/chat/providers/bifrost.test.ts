@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { constructBifrostTextGenerationFn, constructBifrostTextStreamFn } from './bifrost';
+
 import type { AiModel } from '../types';
+import { constructBifrostTextGenerationFn, constructBifrostTextStreamFn } from './bifrost';
 
 const { responsesCreateMock, openAiConstructorMock, instrumentOpenAiClientMock, MockOpenAI } =
   vi.hoisted(() => {

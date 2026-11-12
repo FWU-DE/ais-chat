@@ -1,10 +1,5 @@
 'use client';
 
-import { updateUserSettingsAction } from '@/app/(authed)/(chat-bot)/actions';
-import { useToast } from '@/components/common/toast';
-import { SpeechVoicePreviewButton } from '@/components/custom-chat/speech/speech-voice-preview-button';
-import { useUserSettings } from '@/components/providers/user-settings-provider';
-import { deepEqual } from '@/utils/object';
 import { GearSixIcon } from '@phosphor-icons/react';
 import type { SpeechVoice, UserSettings } from '@shared/db/schema';
 import { Button } from '@ui/components/button';
@@ -31,6 +26,12 @@ import { Switch } from '@ui/components/switch';
 import { InfoTooltip } from '@ui/components/tooltip';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+
+import { updateUserSettingsAction } from '@/app/(authed)/(chat-bot)/actions';
+import { useToast } from '@/components/common/toast';
+import { SpeechVoicePreviewButton } from '@/components/custom-chat/speech/speech-voice-preview-button';
+import { useUserSettings } from '@/components/providers/user-settings-provider';
+import { deepEqual } from '@/utils/object';
 
 export function SettingsDialog({
   open,

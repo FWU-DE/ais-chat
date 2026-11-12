@@ -1,10 +1,11 @@
-import { SUPPORTED_DOCUMENTS_EXTENSIONS, SUPPORTED_IMAGE_EXTENSIONS } from '@/const';
-import { TOOL_NAMES, type ToolName } from '@/types/tool-names';
 import {
   MAX_AGENTIC_ITERATIONS,
   MAX_TOOL_CALLS_PER_ITERATION,
   type ToolDefinition,
 } from '@ais-chat/ai-core';
+
+import { SUPPORTED_DOCUMENTS_EXTENSIONS, SUPPORTED_IMAGE_EXTENSIONS } from '@/const';
+import { TOOL_NAMES, type ToolName } from '@/types/tool-names';
 
 export const LANGUAGE_GUIDELINES = `
 ## Sprachliche Richtlinien

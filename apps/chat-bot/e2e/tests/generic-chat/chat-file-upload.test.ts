@@ -1,8 +1,10 @@
-import { expect, test } from '../../fixtures/test';
-import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
-import { deleteChat, sendMessage, uploadFile } from '../../utils/chat';
-import { SUPPORTED_FILE_EXTENSIONS } from '@/const';
 import path from 'path';
+
+import { SUPPORTED_FILE_EXTENSIONS } from '@/const';
+
+import { expect, test } from '../../fixtures/test';
+import { deleteChat, sendMessage, uploadFile } from '../../utils/chat';
+import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
 
 test.use({ storageState: AUTH_FILES.teacher });
 

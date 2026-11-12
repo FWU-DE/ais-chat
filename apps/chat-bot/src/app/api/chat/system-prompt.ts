@@ -1,11 +1,14 @@
-import { formatDateToGermanTimestamp } from '@shared/utils/date';
-import { ObscuredFederalState } from '@/auth/utils';
+import type { ToolDefinition } from '@ais-chat/ai-core';
+import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
 import type {
   AssistantSelectModel,
   CharacterSelectModel,
   LearningScenarioSelectModel,
 } from '@shared/db/schema';
-import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
+import { formatDateToGermanTimestamp } from '@shared/utils/date';
+
+import { ObscuredFederalState } from '@/auth/utils';
+
 import { constructCharacterSystemPrompt } from '../character/system-prompt';
 import { constructLearningScenarioSystemPrompt } from '../learning-scenario/system-prompt';
 import {
@@ -14,7 +17,6 @@ import {
   LANGUAGE_GUIDELINES,
   SUGGESTION_GUIDELINES,
 } from '../utils/system-prompt';
-import type { ToolDefinition } from '@ais-chat/ai-core';
 
 function constructAisChatSystemPrompt(activeToolDefinitions: ToolDefinition[]) {
   return `Du bist AIS.chat, der datenschutzkonforme KI-Chatbot für den Schulunterricht. 

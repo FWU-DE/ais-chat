@@ -1,18 +1,18 @@
 'use client';
 
-import React, { startTransition, useEffect, useRef, useState } from 'react';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
-import { DisclaimerConfig } from './const';
-import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import type { ServerActionResult } from '@shared/actions/server-action-result';
+import { Button } from '@ui/components/button';
+import { Checkbox } from '@ui/components/checkbox';
+import { usePortalContainer } from '@ui/components/portal-container';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
+import React, { startTransition, useEffect, useRef, useState } from 'react';
 
 import MarkdownDisplay from '../chat/markdown-display';
-import { usePortalContainer } from '@ui/components/portal-container';
-import { useSession } from 'next-auth/react';
-import { Button } from '@ui/components/button';
-import type { ServerActionResult } from '@shared/actions/server-action-result';
-import { Checkbox } from '@ui/components/checkbox';
+import { DisclaimerConfig } from './const';
 
 type TermsConditionsModalProps = {
   handleAccept(): Promise<ServerActionResult<boolean>>;

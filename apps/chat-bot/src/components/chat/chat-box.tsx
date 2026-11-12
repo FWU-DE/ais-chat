@@ -1,12 +1,14 @@
-import { type ChatStatus, type UIMessage } from '@/types/chat';
-import { replacePlotBlocks } from '@/utils/code-blocks';
-import { isImageFile } from '@/utils/files/generic';
-import { cn } from '@/utils/tailwind';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import { utils } from '@shared/utils';
 import { useTranslations } from 'next-intl';
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+
+import { type ChatStatus, type UIMessage } from '@/types/chat';
+import { replacePlotBlocks } from '@/utils/code-blocks';
+import { isImageFile } from '@/utils/files/generic';
+import { cn } from '@/utils/tailwind';
+
 import useBreakpoints from '../hooks/use-breakpoints';
 import { AiActivityPanel } from './activity/ai-activity';
 import DisplayFileAttachment from './display-file-attachment';

@@ -1,92 +1,95 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
+import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
 import {
-  LICENSE_INFORMATION_LENGTH_LIMIT,
+  categoriesSchema,
+  federalStatesSchema,
+  FileModel,
+  gradeRangesSchema,
+  languagesSchema,
+  LearningScenarioOptionalShareDataModel,
+  schoolTypesSchema,
+  type SpeechVoice,
+  subjectsSchema,
+  webSearchScopeSchema,
+} from '@shared/db/schema';
+import { WebSource } from '@shared/db/types';
+import { Card, CardContent } from '@ui/components/card';
+import { FieldGroup } from '@ui/components/field';
+import { FormField } from '@ui/components/form/form-field';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { useCallback, useMemo, useRef } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import z from 'zod';
+
+import { BackButton } from '@/components/common/back-button';
+import { RichText, stripRichTextTags } from '@/components/common/rich-text';
+import { useToast } from '@/components/common/toast';
+import { CustomChatActionDelete } from '@/components/custom-chat/custom-chat-action-delete';
+import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
+import { CustomChatActionFavorite } from '@/components/custom-chat/custom-chat-action-favorite';
+import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
+import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
+import { CustomChatHeaderContent } from '@/components/custom-chat/custom-chat-header-content';
+import { CustomChatHeading2 } from '@/components/custom-chat/custom-chat-heading2';
+import { CustomChatImageUpload } from '@/components/custom-chat/custom-chat-image-upload';
+import { CustomChatInstructionsExampleDialog } from '@/components/custom-chat/custom-chat-instructions-example-dialog';
+import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
+import { CustomChatModelSelect } from '@/components/custom-chat/custom-chat-model-select';
+import { CustomChatShareInfo } from '@/components/custom-chat/custom-chat-share-info';
+import CustomShareSection from '@/components/custom-chat/custom-chat-share-section';
+import { CustomChatSuspensionError } from '@/components/custom-chat/custom-chat-suspension-error';
+import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
+import { CustomChatDidacticCommentaryEditView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-edit-view';
+import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
+import FilterSelectSection from '@/components/custom-chat/filter/custom-chat-filter-select-section';
+import {
+  extractFilterValues,
+  toFilterGroup,
+} from '@/components/custom-chat/filter/custom-chat-filter-utils';
+import { CustomChatLicenseInformationEditView } from '@/components/custom-chat/license-information/custom-chat-license-information-edit-view';
+import { CustomChatShareWithLearners } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners';
+import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
+import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
+import { resolveInitialVoice } from '@/components/custom-chat/speech/resolve-initial-voice';
+import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
+import { useLlmModels } from '@/components/providers/llm-model-provider';
+import {
   DIDACTIC_COMMENTARY_LENGTH_LIMIT,
+  LICENSE_INFORMATION_LENGTH_LIMIT,
   SMALL_TEXT_INPUT_FIELDS_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS,
 } from '@/configuration-text-inputs/const';
-import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  FileModel,
-  LearningScenarioOptionalShareDataModel,
-  schoolTypesSchema,
-  gradeRangesSchema,
-  subjectsSchema,
-  categoriesSchema,
-  federalStatesSchema,
-  languagesSchema,
-  webSearchScopeSchema,
-  type SpeechVoice,
-} from '@shared/db/schema';
-import { BackButton } from '@/components/common/back-button';
-import { Card, CardContent } from '@ui/components/card';
-import { FieldGroup } from '@ui/components/field';
-import { useForm, useWatch } from 'react-hook-form';
-import { useCallback, useMemo, useRef } from 'react';
-import z from 'zod';
-import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
-import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
-import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
-import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
-import { CustomChatActionDelete } from '@/components/custom-chat/custom-chat-action-delete';
-import { useRouter } from 'next/navigation';
-import {
-  extendLearningScenarioShareExpirationAction,
-  getLearningScenarioShareDataAction,
-  removeFileFromLearningScenarioAction,
-  shareLearningScenarioAction,
-  unshareLearningScenarioAction,
-  updateLearningScenarioShareTokenPointsLimitAction,
-  createCommunityTemplateRequestAction,
-  cancelCommunityTemplateRequestAction,
-  sendMessageToEditorAction,
-  getLearningScenarioSharingStateAction,
-  updateLearningScenarioSchoolSharingAction,
-  updateLearningScenarioAction,
-  uploadAvatarPictureForLearningScenarioAction,
-} from './actions';
+import { useEntitySharing } from '@/hooks/use-entity-sharing';
+import { useForceReloadOnBrowserBackButton } from '@/hooks/use-force-reload-on-browser-back-button';
+import { useFormAutosave } from '@/hooks/use-form-autosave';
+import { usePendingChangesGuard } from '@/hooks/use-pending-changes-guard';
+
 import {
   createNewLearningScenarioFromTemplateAction,
   deleteLearningScenarioAction,
   downloadFileFromLearningScenarioAction,
   linkFileToLearningScenarioAction,
 } from '../../actions';
-import { useToast } from '@/components/common/toast';
-import { useTranslations } from 'next-intl';
-import { CustomChatShareInfo } from '@/components/custom-chat/custom-chat-share-info';
-import { CustomChatImageUpload } from '@/components/custom-chat/custom-chat-image-upload';
-import { usePendingChangesGuard } from '@/hooks/use-pending-changes-guard';
-import { useForceReloadOnBrowserBackButton } from '@/hooks/use-force-reload-on-browser-back-button';
-import { useFormAutosave } from '@/hooks/use-form-autosave';
-import { useEntitySharing } from '@/hooks/use-entity-sharing';
-import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
-import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
-import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
-import { CustomChatModelSelect } from '@/components/custom-chat/custom-chat-model-select';
-import { WebSource } from '@shared/db/types';
-import CustomShareSection from '@/components/custom-chat/custom-chat-share-section';
-import { useLlmModels } from '@/components/providers/llm-model-provider';
-import { CustomChatShareWithLearners } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners';
-import { CustomChatHeading2 } from '@/components/custom-chat/custom-chat-heading2';
-import { CustomChatInstructionsExampleDialog } from '@/components/custom-chat/custom-chat-instructions-example-dialog';
-import { CustomChatHeaderContent } from '@/components/custom-chat/custom-chat-header-content';
-import { FormField } from '@ui/components/form/form-field';
-import { RichText, stripRichTextTags } from '@/components/common/rich-text';
-import { CustomChatSuspensionError } from '@/components/custom-chat/custom-chat-suspension-error';
-import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
-import FilterSelectSection from '@/components/custom-chat/filter/custom-chat-filter-select-section';
 import {
-  extractFilterValues,
-  toFilterGroup,
-} from '@/components/custom-chat/filter/custom-chat-filter-utils';
-import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
-import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
-import { CustomChatLicenseInformationEditView } from '@/components/custom-chat/license-information/custom-chat-license-information-edit-view';
-import { CustomChatDidacticCommentaryEditView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-edit-view';
-import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
-import { resolveInitialVoice } from '@/components/custom-chat/speech/resolve-initial-voice';
+  cancelCommunityTemplateRequestAction,
+  createCommunityTemplateRequestAction,
+  extendLearningScenarioShareExpirationAction,
+  getLearningScenarioShareDataAction,
+  getLearningScenarioSharingStateAction,
+  removeFileFromLearningScenarioAction,
+  sendMessageToEditorAction,
+  shareLearningScenarioAction,
+  unshareLearningScenarioAction,
+  updateLearningScenarioAction,
+  updateLearningScenarioSchoolSharingAction,
+  updateLearningScenarioShareTokenPointsLimitAction,
+  uploadAvatarPictureForLearningScenarioAction,
+} from './actions';
 
 type LearningScenarioTranslator = ReturnType<typeof useTranslations<'learning-scenarios'>>;
 
@@ -163,6 +166,7 @@ export function LearningScenarioEdit({
   isWebSearchAvailable,
   isSpeechAvailable,
   speechVoices,
+  initialIsFavorite,
 }: {
   learningScenario: LearningScenarioOptionalShareDataModel;
   relatedFiles: FileModel[];
@@ -175,6 +179,7 @@ export function LearningScenarioEdit({
   isWebSearchAvailable: boolean;
   isSpeechAvailable: boolean;
   speechVoices: SpeechVoice[];
+  initialIsFavorite: boolean;
 }) {
   useForceReloadOnBrowserBackButton();
   const router = useRouter();
@@ -419,6 +424,10 @@ export function LearningScenarioEdit({
         onClick={handleDeleteLearningScenario}
         modalTitle={t('delete-modal-title')}
         modalDescription={t('delete-modal-description')}
+      />
+      <CustomChatActionFavorite
+        entityRef={{ entityType: 'learningScenario', entityId: learningScenario.id }}
+        initialIsFavorite={initialIsFavorite}
       />
     </CustomChatActions>
   );

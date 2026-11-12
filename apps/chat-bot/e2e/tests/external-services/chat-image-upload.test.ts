@@ -1,8 +1,9 @@
-import { expect, test } from '../../fixtures/test';
-import { AUTH_FILES } from '../../utils/const';
-import { deleteChat, selectDifferentModel, sendMessage, uploadFile } from '../../utils/chat';
-import { LLM_MODELS } from '../../utils/llm-models';
 import path from 'path';
+
+import { expect, test } from '../../fixtures/test';
+import { deleteChat, selectDifferentModel, sendMessage, uploadFile } from '../../utils/chat';
+import { AUTH_FILES } from '../../utils/const';
+import { LLM_MODELS } from '../../utils/llm-models';
 
 test.use({ storageState: AUTH_FILES.teacher });
 

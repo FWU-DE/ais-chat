@@ -1,6 +1,7 @@
+import { ReactNode } from 'react';
+
 import type { UserAndContext } from '@/auth/types';
 import { PageLayoutSelector } from '@/components/layout/page-layout-selector';
-import { ReactNode } from 'react';
 
 export type DefaultPageLayoutConfig =
   | {

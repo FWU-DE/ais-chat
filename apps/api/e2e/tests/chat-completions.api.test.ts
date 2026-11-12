@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+
 import { authorizationHeader, getModel, getTextModel } from '../utils/api.js';
 
 test.describe('POST /v1/chat/completions', () => {

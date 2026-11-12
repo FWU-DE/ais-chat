@@ -1,5 +1,6 @@
-import TwoColumnLayout from '@/components/layout/TwoColumnLayout';
 import { requireAdminOrEditorAuth } from '@/auth/requireAdminAuth';
+import TwoColumnLayout from '@/components/layout/TwoColumnLayout';
+
 import { AdminAppSidebar } from '../AdminAppSidebar';
 import TemplateListView from './TemplateListView';
 

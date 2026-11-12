@@ -1,5 +1,8 @@
 import bcrypt from 'bcryptjs';
-import { cnanoid } from '../utils';
+import { and, eq, getTableColumns, inArray } from 'drizzle-orm';
+
+import { isDateBefore } from '../date';
+import { db } from '../db';
 import {
   ApiKeyInsertModel,
   ApiKeyModel,
@@ -8,10 +11,8 @@ import {
   llmModelTable,
   projectTable,
 } from '../schema';
-import { db } from '../db';
+import { cnanoid } from '../utils';
 import { dbGetProjectById } from './projects';
-import { isDateBefore } from '../date';
-import { and, eq, getTableColumns, inArray } from 'drizzle-orm';
 
 export async function dbLookupApiKeyByFullKey(fullApiKey: string) {
   const [sk, keyId, _secretKey] = fullApiKey.split('_');

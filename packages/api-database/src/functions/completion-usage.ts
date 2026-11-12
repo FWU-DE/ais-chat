@@ -1,11 +1,12 @@
-import { db } from '../db';
-import { CompletionUsageInsertModel, completionUsageTrackingTable, llmModelTable } from '../schema';
 import { and, eq, gte, sum } from 'drizzle-orm';
+
 import { getStartOfCurrentMonth } from '../api-utils';
+import { db } from '../db';
 import {
-  calculatePriceInCentByTextModelAndUsage,
   calculatePriceInCentByEmbeddingModelAndUsage,
+  calculatePriceInCentByTextModelAndUsage,
 } from '../llm-model';
+import { CompletionUsageInsertModel, completionUsageTrackingTable, llmModelTable } from '../schema';
 
 export async function dbCreateCompletionUsage(completionUsage: CompletionUsageInsertModel) {
   // Get the model to calculate costs
@@ -34,6 +35,8 @@ export async function dbCreateCompletionUsage(completionUsage: CompletionUsageIn
       priceMetadata: modelData.priceMetadata,
       promptTokens: completionUsage.promptTokens,
     });
+  } else if (modelData.priceMetadata.type === 'speech') {
+    costsInCent = completionUsage.costsInCent ?? 0;
   }
 
   const insertedCompletionUsage = (

@@ -1,9 +1,11 @@
 import { notFound } from 'next/navigation';
+
 import TwoColumnLayout from '@/components/layout/TwoColumnLayout';
-import CommunityTemplateRequestDetailView from './CommunityTemplateRequestDetailView';
-import { AdminAppSidebar } from '../../AdminAppSidebar';
 import { buildChatBotEntityUrl } from '@/utils/buildChatBotEntityUrl';
+
+import { AdminAppSidebar } from '../../AdminAppSidebar';
 import { getCommunityTemplateRequestWithEventsForAdminAction } from './actions';
+import CommunityTemplateRequestDetailView from './CommunityTemplateRequestDetailView';
 
 export const dynamic = 'force-dynamic';
 

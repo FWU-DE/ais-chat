@@ -1,9 +1,11 @@
-import { CHAT_MESSAGE_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
-import { cn } from '@/utils/tailwind';
-import { iconClassName } from '@/utils/tailwind/icon';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
 import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useRef } from 'react';
+
+import { CHAT_MESSAGE_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
+import { cn } from '@/utils/tailwind';
+import { iconClassName } from '@/utils/tailwind/icon';
+
 import ChatInputAttachmentPreview from '../chat/chat-input-attachment-preview';
 import AutoResizeTextarea from '../common/auto-resize-textarea';
 import { FileUploadResponse, LocalFileState } from '../file-upload/upload-file';

@@ -1,8 +1,10 @@
-import Link from 'next/link';
-import { SignOutButton } from '../authentication/SignOutButton';
-import { ROUTES } from '../../consts/routes';
 import { Button } from '@ui/components/button';
+import Link from 'next/link';
+
 import { auth } from '@/auth';
+
+import { ROUTES } from '../../consts/routes';
+import { SignOutButton } from '../authentication/SignOutButton';
 
 export async function Header() {
   const session = await auth();

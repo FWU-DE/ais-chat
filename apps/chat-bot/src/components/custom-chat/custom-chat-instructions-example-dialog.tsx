@@ -1,9 +1,10 @@
 'use client';
 
-import { ReactElement } from 'react';
+import { CaretRightIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
-import { CaretRightIcon } from '@phosphor-icons/react';
+import { ReactElement } from 'react';
+
 import { InfoDialog } from '../common/dialog';
 
 type CustomChatInstructionsExampleDialogProps = {

@@ -2,7 +2,7 @@ import { logError } from '@shared/logging';
 
 /**
  * Adapts a `ReadableStream<Uint8Array>` (e.g. a fetch `Response.body`) into an `AsyncIterable`,
- * so PCM audio chunks can be consumed with `for await`/`yield*` the same way as any other
+ * so MP3 audio chunks can be consumed with `for await`/`yield*` the same way as any other
  * generator-based stream in this codebase.
  */
 export async function* readableStreamToAsyncIterable(

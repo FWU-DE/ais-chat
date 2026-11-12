@@ -32,8 +32,8 @@ export default tseslint.config(
     rules: {
       'prettier/prettier': 'error',
       eqeqeq: ['error', 'always'],
-      'simple-import-sort/imports': 'off',
-      'simple-import-sort/exports': 'off',
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
       'turbo/no-undeclared-env-vars': 'warn',
     },
     files: ['**/*.ts'],

@@ -1,16 +1,17 @@
-import { generateUUID } from '@shared/utils/uuid';
-import Chat from '@/components/chat/chat';
-import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
-import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
-import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
-import Logo from '@/components/common/logo';
 import { getAssistantForNewChat } from '@shared/assistants/assistant-service';
-import { requireAuth } from '@/auth/requireAuth';
-import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
+import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
 import { getAvatarPictureUrl } from '@shared/files/fileService';
-import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
+import { generateUUID } from '@shared/utils/uuid';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+
+import { requireAuth } from '@/auth/requireAuth';
+import Chat from '@/components/chat/chat';
+import Logo from '@/components/common/logo';
+import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
+import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 
 export const dynamic = 'force-dynamic';
 

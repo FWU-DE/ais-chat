@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { MUNDO_SEARCH_RESULTS_LIMIT } from '@/configuration-text-inputs/const';
 
 vi.mock('@shared/logging', () => ({

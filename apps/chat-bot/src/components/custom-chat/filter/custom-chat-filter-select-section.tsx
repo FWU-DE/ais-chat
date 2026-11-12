@@ -1,10 +1,21 @@
 'use client';
 
 import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react';
-import { Card, CardRow } from '@ui/components/card';
+import type {
+  Category,
+  FederalState,
+  GradeRange,
+  Language,
+  SchoolType,
+  Subject,
+} from '@shared/db/schema';
 import { Button } from '@ui/components/button';
+import { Card, CardRow } from '@ui/components/card';
 import { MultipleSelectDropdown } from '@ui/components/multiple-select-dropdown';
+import { cn } from '@ui/lib/utils';
 import { useTranslations } from 'next-intl';
+
+import { CustomChatHeading2 } from '../custom-chat-heading2';
 import {
   CATEGORY_KEYS,
   FEDERAL_STATE_KEYS,
@@ -13,16 +24,6 @@ import {
   SCHOOL_TYPE_KEYS,
   SUBJECT_SUBGROUPS,
 } from './custom-chat-filter-keys';
-import { CustomChatHeading2 } from '../custom-chat-heading2';
-import { cn } from '@ui/lib/utils';
-import type {
-  SchoolType,
-  GradeRange,
-  Subject,
-  Category,
-  FederalState,
-  Language,
-} from '@shared/db/schema';
 
 export type FilterSelectSectionValues = {
   schoolTypes: SchoolType[];

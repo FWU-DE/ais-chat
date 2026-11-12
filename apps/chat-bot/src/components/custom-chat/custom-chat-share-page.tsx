@@ -1,9 +1,11 @@
-import { getBaseUrlByHeaders, getHostByHeaders } from '@/utils/host';
-import { getTranslations } from 'next-intl/server';
-import CustomChatSharePageContent from './custom-chat-share-page-content';
 import { NextIntlClientProvider } from 'next-intl';
-import { resolveSharingLocale } from '@/i18n/sharing-locale';
+import { getTranslations } from 'next-intl/server';
+
 import { loadTranslations } from '@/i18n/load-translations';
+import { resolveSharingLocale } from '@/i18n/sharing-locale';
+import { getBaseUrlByHeaders, getHostByHeaders } from '@/utils/host';
+
+import CustomChatSharePageContent from './custom-chat-share-page-content';
 
 type CustomChatSharePageProps = {
   backHref: string;

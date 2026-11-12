@@ -1,15 +1,17 @@
-import { requireAuth } from '@/auth/requireAuth';
-import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
-import { getLearningScenarioForEditView } from '@shared/learning-scenarios/learning-scenario-service';
 import { getCommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
-import { getSpeechModelVoices } from '@shared/llm-models/llm-model-service';
-import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 import { WebSource } from '@shared/db/types';
-import { LearningScenarioEdit } from './learning-scenario-edit';
-import { redirect } from 'next/navigation';
-import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { getLearningScenarioForEditView } from '@shared/learning-scenarios/learning-scenario-service';
+import { getSpeechModelVoices } from '@shared/llm-models/llm-model-service';
 import { type Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+
+import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
+import { requireAuth } from '@/auth/requireAuth';
+import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
+
+import { LearningScenarioEdit } from './learning-scenario-edit';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,8 +35,9 @@ export default async function Page(
     maxBudget,
     usedBudget,
     budgetUsedBySharedChat,
+    isFavorite: initialIsFavorite,
   } = await getLearningScenarioForEditView({
-    learningScenarioId: learningScenarioId,
+    learningScenarioId,
     user,
     federalState,
   }).catch(handleErrorInServerComponent);
@@ -70,6 +73,7 @@ export default async function Page(
         relatedFiles={relatedFiles}
         initialLinks={initialLinks}
         avatarPictureUrl={avatarPictureUrl}
+        initialIsFavorite={initialIsFavorite}
         initialCommunityTemplateRequest={communityTemplateRequest}
         usedBudget={usedBudget ?? 0}
         maxBudget={maxBudget ?? 500}

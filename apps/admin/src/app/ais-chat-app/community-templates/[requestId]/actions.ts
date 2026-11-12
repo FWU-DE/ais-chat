@@ -1,14 +1,15 @@
 'use server';
 
-import { requireAdminOrEditorAuth } from '@/auth/requireAdminAuth';
 import { runServerAction } from '@shared/actions/run-server-action';
 import {
-  getCommunityTemplateRequestWithEventsForAdmin,
-  updateInternalNote,
   approveRequest,
+  getCommunityTemplateRequestWithEventsForAdmin,
   rejectRequest,
   sendMessageToAuthor,
+  updateInternalNote,
 } from '@shared/community-templates/community-template-service.admin';
+
+import { requireAdminOrEditorAuth } from '@/auth/requireAdminAuth';
 
 export async function getCommunityTemplateRequestWithEventsForAdminAction(requestId: string) {
   await requireAdminOrEditorAuth();

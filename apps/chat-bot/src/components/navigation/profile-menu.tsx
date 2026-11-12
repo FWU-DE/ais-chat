@@ -1,15 +1,18 @@
 'use client';
 
-import { type UserAndContext } from '@/auth/types';
-import { UserIcon } from '@/components/icons/user';
 import { Button } from '@ui/components/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@ui/components/dropdown-menu';
+import { useTranslations } from 'next-intl';
 import type { RefObject } from 'react';
 import React from 'react';
+
+import { type UserAndContext } from '@/auth/types';
+import { UserIcon } from '@/components/icons/user';
+
 import { ProfileMenuContent } from './profile-menu-content';
 
 export default function ProfileMenu({
@@ -21,6 +24,7 @@ export default function ProfileMenu({
   onOpenSettings?: () => void;
   triggerRef?: RefObject<HTMLButtonElement | null>;
 }) {
+  const t = useTranslations('common');
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
 
   return (
@@ -30,7 +34,8 @@ export default function ProfileMenu({
           ref={triggerRef}
           variant="ghost"
           size="icon-round"
-          aria-label="profileDropdown"
+          aria-label={t('profile-dropdown')}
+          data-testid="profile-dropdown"
           className="text-primary"
           title="Profil"
         >

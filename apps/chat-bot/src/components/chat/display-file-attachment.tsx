@@ -1,8 +1,9 @@
-import { getFileIconByFileExtension } from '../icons/file-upload-icons/file-icons-dict';
-import DeattachFileIcon from '../icons/file-upload-icons/deattach-file-icon';
-import Spinner from '../icons/spinner';
 import { getFileNameAndFileExtension } from '@/utils/files/generic';
 import { cn } from '@/utils/tailwind';
+
+import DeattachFileIcon from '../icons/file-upload-icons/deattach-file-icon';
+import { getFileIconByFileExtension } from '../icons/file-upload-icons/file-icons-dict';
+import Spinner from '../icons/spinner';
 
 type DisplayFileAttachmentProps = {
   fileName: string;

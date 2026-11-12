@@ -1,14 +1,16 @@
 'use client';
 
+import { useCallback } from 'react';
+
 import { sendCharacterMessageAction } from '@/app/api/character/actions';
 import { sendChatMessageAction } from '@/app/api/chat/actions';
 import { sendLearningScenarioMessageAction } from '@/app/api/learning-scenario/actions';
 import { type ChatStatus, type UIMessage } from '@/types/chat';
-import { useCallback } from 'react';
+
 import {
-  useAisChat,
   type ChatMessage,
   type SendMessageFn,
+  useAisChat,
   type UseChatReturn,
 } from './use-ais-chat';
 
@@ -71,7 +73,7 @@ export function useCharacterChat(options: {
       return sendCharacterMessageAction({
         characterId,
         inviteCode,
-        messages,
+        messages: messages.slice(-1),
         fileIds,
         sharedSessionId,
       });
@@ -103,7 +105,7 @@ export function useLearningScenarioChat(options: {
       return sendLearningScenarioMessageAction({
         learningScenarioId,
         inviteCode,
-        messages,
+        messages: messages.slice(-1),
         fileIds,
         sharedSessionId,
       });

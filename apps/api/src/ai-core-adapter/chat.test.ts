@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { chatCompletion, chatCompletionStream } from './chat';
 
 const mocks = vi.hoisted(() => ({

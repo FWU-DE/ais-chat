@@ -1,11 +1,12 @@
 'use client';
 
-import { useLearningScenarioChat } from '@/hooks/use-chat-hooks';
-import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
-import { loadSharedChat } from '@/utils/shared-chat-storage';
 import { LearningScenarioWithShareDataModel } from '@shared/db/schema';
 import { useTranslations } from 'next-intl';
 import { z } from 'zod';
+
+import { type ChatMessage, useLearningScenarioChat } from '@/hooks/use-chat-hooks';
+import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
+
 import GenericSharedChat from './generic-shared-chat';
 
 export default function LearningScenarioSharedChat({
@@ -20,13 +21,7 @@ export default function LearningScenarioSharedChat({
   const t = useTranslations('learning-scenarios.shared');
   const { id, inviteCode, modelId } = sharedSchoolChat;
 
-  const initialMessages =
-    loadSharedChat(inviteCode)?.messages.map((message) => ({
-      id: message.id,
-      role: message.role,
-      content: message.content,
-      activitySteps: message.activitySteps,
-    })) ?? [];
+  const initialMessages: ChatMessage[] = [];
 
   const chat = useLearningScenarioChat({
     learningScenarioId: id,

@@ -1,7 +1,9 @@
-import { checkTextInputSafety } from '@ais-chat/ai-core/chat/safety';
 import type { ModelSelection } from '@ais-chat/ai-core';
+import { checkTextInputSafety } from '@ais-chat/ai-core/chat/safety';
 import type { LlmModelSelectModel } from '@shared/db/schema';
+
 import type { ChatMessage } from '@/types/chat';
+
 import { createImageAttachmentsForConversation } from '../file-operations/preprocess-image';
 import {
   convertToAiCoreMessages,

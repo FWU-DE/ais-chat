@@ -2,10 +2,11 @@ import { SuspensionRequestSelectModel } from '@shared/db/schema';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
 import { Button } from '@ui/components/button';
 import { Checkbox } from '@ui/components/checkbox';
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@ui/components/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui/components/collapsible';
 import { FieldLabel } from '@ui/components/field';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import { useState } from 'react';
+
 import { mapReasonToLabel } from '../../utils';
 
 type SuspensionRequestItemProps = {

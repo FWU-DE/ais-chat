@@ -1,13 +1,15 @@
-import type { UserAndContext } from '@/auth/types';
-import { AiActivityToolStep } from '@/types/ai-activity';
 import {
   ToolCall,
-  ToolRegistryEntry,
   type ToolDefinition,
+  ToolRegistryEntry,
   type ToolResult,
 } from '@ais-chat/ai-core';
 import type { ToolErrorResult } from '@ais-chat/ai-core/chat/types';
 import type { FileModel, WebSearchModel } from '@shared/db/schema';
+
+import type { UserAndContext } from '@/auth/types';
+import { AiActivityToolStep } from '@/types/ai-activity';
+
 import type { buildTools } from '../build-tools';
 
 export type { ToolDefinition };

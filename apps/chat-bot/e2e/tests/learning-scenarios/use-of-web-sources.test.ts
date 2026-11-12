@@ -1,9 +1,10 @@
+import { nanoid } from 'nanoid';
+
 import { expect, test } from '../../fixtures/test';
-import { AUTH_FILES } from '../../utils/const';
 import { sendMessage } from '../../utils/chat';
+import { AUTH_FILES } from '../../utils/const';
 import { configureLearningScenario } from '../../utils/learning-scenario';
 import { waitForAutosave } from '../../utils/utils';
-import { nanoid } from 'nanoid';
 
 test.use({ storageState: AUTH_FILES.teacher });
 
@@ -52,7 +53,7 @@ test('teacher can create shared chat with web sources, student can join chat and
   const schoolChatPagePromise = page.waitForEvent('popup');
   await page.getByRole('link', { name: 'Chat öffnen' }).click();
   const schoolChatPage = await schoolChatPagePromise;
-  await schoolChatPage.getByLabel('profileDropdown').waitFor();
+  await schoolChatPage.getByTestId('profile-dropdown').waitFor();
 
   // send first message
   const button = schoolChatPage.getByTestId('start-dialog-button');

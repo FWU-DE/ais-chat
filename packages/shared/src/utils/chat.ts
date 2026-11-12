@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { CONVERSATION_ROLES } from '@ais-chat/ai-core/chat/types';
+import { z } from 'zod';
 
 export const conversationRoleSchema = z.enum(CONVERSATION_ROLES);
 

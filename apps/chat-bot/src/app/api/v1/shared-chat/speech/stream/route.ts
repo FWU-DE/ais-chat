@@ -1,10 +1,12 @@
-import { requireValidInviteCode } from '@/auth/requireValidInviteCode';
-import { handleErrorInRoute } from '@/error/handle-error-in-route';
 import { logError } from '@shared/logging';
 import { generateSharedChatSpeechStream } from '@shared/speech/shared-chat-speech-service';
 import { requiredNonEmptyString } from '@shared/utils/zod';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
+
+import { requireValidInviteCode } from '@/auth/requireValidInviteCode';
+import { handleErrorInRoute } from '@/error/handle-error-in-route';
+
 import { buildSpeechStreamResponse } from '../../../../utils/speech-stream-response';
 
 const sharedChatSpeechRequestSchema = z.object({
@@ -23,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     await requireValidInviteCode(parsed.inviteCode);
 
-    const { chunks, contentType, format } = await generateSharedChatSpeechStream({
+    const { chunks, contentType } = await generateSharedChatSpeechStream({
       inviteCode: parsed.inviteCode,
       entityType: parsed.entityType,
       entityId: parsed.entityId,
@@ -53,7 +55,6 @@ export async function POST(req: NextRequest) {
     return buildSpeechStreamResponse({
       body,
       contentType,
-      format,
     });
   } catch (error) {
     return handleErrorInRoute(error);

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { constructAzureImageGenerationFn } from './azure';
+
 import { AiGenerationError, ProviderConfigurationError, ResponsibleAIError } from '../../errors';
 import type { AiModel } from '../types';
+import { constructAzureImageGenerationFn } from './azure';
 
 const {
   generateMock,

@@ -7,7 +7,6 @@ import {
   verifyWriteAccess,
 } from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
-import { getUserSettings } from '@shared/users/user-settings-service';
 import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import {
   getConversation,
@@ -18,6 +17,7 @@ import {
   dbDeleteAssistantByIdAndUser,
   dbGetAssistantById,
   dbGetAssistantByIdForConversation,
+  dbGetAssistantsByUserFavorite,
   dbGetAssistantsByUserId,
   dbGetCommunityGpts,
   dbGetGlobalGpts,
@@ -31,6 +31,7 @@ import {
   dbGetRelatedAssistantFiles,
   dbVerifyFileOwner,
 } from '@shared/db/functions/files';
+import { dbIsUserFavorite } from '@shared/db/functions/user-favorites';
 import {
   AssistantFileMapping,
   AssistantSelectModel,
@@ -48,6 +49,7 @@ import { OverviewFilter } from '@shared/overview-filter';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
 import { copyAssistant, copyRelatedTemplateFiles } from '@shared/templates/template-service';
+import { getUserSettings } from '@shared/users/user-settings-service';
 import { uniqueById } from '@shared/utils/arrays';
 import { buildAssistantPictureKey } from '@shared/utils/picture-key';
 import {
@@ -83,6 +85,7 @@ export async function getAssistantByUser({
   assistant: AssistantSelectModel;
   fileMappings: FileModel[];
   pictureUrl: string | undefined;
+  isFavorite: boolean;
 }> {
   checkParameterUUID(assistantId);
   const assistant = await dbGetAssistantById({ assistantId });
@@ -91,12 +94,16 @@ export async function getAssistantByUser({
     user,
   });
 
-  const [fileMappings, pictureUrl] = await Promise.all([
+  const [fileMappings, pictureUrl, isFavorite] = await Promise.all([
     dbGetRelatedAssistantFiles(assistantId),
     getAvatarPictureUrl(assistant.pictureId),
+    dbIsUserFavorite({
+      userId: user.id,
+      entityRef: { entityType: 'assistant', entityId: assistantId },
+    }),
   ]);
 
-  return { assistant, fileMappings, pictureUrl };
+  return { assistant, fileMappings, pictureUrl, isFavorite };
 }
 
 /**
@@ -224,6 +231,10 @@ export async function getAssistantsByOverviewFilter({
         ...schoolAssistants,
         ...filterCommunitySharedByAssociatedSchool({ items: communityAssistants, user }),
       ]);
+      break;
+    }
+    case 'favorites': {
+      assistants = await dbGetAssistantsByUserFavorite({ user });
       break;
     }
     default:

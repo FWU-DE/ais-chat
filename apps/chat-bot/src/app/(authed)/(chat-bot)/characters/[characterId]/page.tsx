@@ -1,12 +1,14 @@
 import { getCharacterForEditView } from '@shared/characters/character-service';
-import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
-import { requireAuth } from '@/auth/requireAuth';
-import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 import { WebSource } from '@shared/db/types';
-import { CharacterView } from './character-view';
-import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+
+import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
+import { requireAuth } from '@/auth/requireAuth';
+import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
+
+import { CharacterView } from './character-view';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,11 +30,10 @@ export default async function Page(props: PageProps<'/characters/[characterId]'>
     maxBudget,
     usedBudget,
     budgetUsedBySharedChat,
-  } = await getCharacterForEditView({
-    characterId,
-    user,
-    federalState,
-  }).catch(handleErrorInServerComponent);
+    isFavorite: initialIsFavorite,
+  } = await getCharacterForEditView({ characterId, user, federalState }).catch(
+    handleErrorInServerComponent,
+  );
 
   const initialLinks = character.attachedLinks
     .filter((l) => l !== '')
@@ -51,6 +52,7 @@ export default async function Page(props: PageProps<'/characters/[characterId]'>
         relatedFiles={relatedFiles}
         initialLinks={initialLinks}
         avatarPictureUrl={maybeSignedPictureUrl}
+        initialIsFavorite={initialIsFavorite}
         usedBudget={usedBudget ?? 0}
         maxBudget={maxBudget ?? 500}
         budgetUsedBySharedChat={budgetUsedBySharedChat}

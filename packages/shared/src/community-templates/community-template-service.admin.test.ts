@@ -4,6 +4,7 @@ import type {
 } from '@shared/db/schema';
 import { InvalidArgumentError, NotFoundError } from '@shared/error';
 import { describe, expect, it } from 'vitest';
+
 import {
   getApprovableStates,
   getRejectableStates,

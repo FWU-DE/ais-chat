@@ -1,7 +1,8 @@
 import { instrumentOpenAiClient } from '@sentry/server-utils';
 import OpenAI from 'openai';
-import type { AiModel, ImageGenerationFn } from '../types';
+
 import { AiGenerationError } from '../../errors';
+import type { AiModel, ImageGenerationFn } from '../types';
 
 export function constructIonosImageGenerationFn(llmModel: AiModel): ImageGenerationFn {
   if (llmModel.setting.provider !== 'ionos') {

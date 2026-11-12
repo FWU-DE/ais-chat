@@ -1,6 +1,7 @@
 'use server';
+import { createTemplateFromUrl, getTemplates } from '@ais-chat/shared/templates/template-service';
+
 import { requireAdminOrEditorAuth } from '@/auth/requireAdminAuth';
-import { getTemplates, createTemplateFromUrl } from '@ais-chat/shared/templates/template-service';
 
 export async function getTemplatesAction() {
   await requireAdminOrEditorAuth();

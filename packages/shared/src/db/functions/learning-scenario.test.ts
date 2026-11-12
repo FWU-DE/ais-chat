@@ -14,6 +14,8 @@ vi.mock('..', () => ({
   },
 }));
 
+import { NotFoundError } from '@shared/error';
+
 import {
   dbExtendSharedLearningScenarioExpiration,
   dbGetAllAccessibleLearningScenarios,
@@ -23,16 +25,16 @@ import {
   dbGetLearningScenarioById,
   dbGetLearningScenarioByIdAndInviteCode,
   dbGetLearningScenarioByIdForConversation,
-  dbGetLearningScenarioByIdOptionalShareData,
   dbGetLearningScenarioByIdWithShareData,
   dbGetLearningScenariosByAssociatedSchools,
   dbGetLearningScenariosByIds,
+  dbGetLearningScenariosByIdsOptionalShareData,
   dbGetLearningScenariosByUser,
+  dbGetLearningScenariosByUserFavorite,
   dbLiftSuspensionOnLearningScenario,
   dbSetLearningScenarioSuspended,
   dbUpdateLearningScenarioShareTokenPointsLimit,
 } from './learning-scenario';
-import { NotFoundError } from '@shared/error';
 
 function mockSelectChain(result: unknown[]) {
   const chain: Record<string, unknown> = {
@@ -205,23 +207,42 @@ describe('db learning scenario sharing helpers', () => {
       expect(result).toBe(learningScenarios);
     });
 
+    it('dbGetLearningScenariosByIdsOptionalShareData returns an empty array without querying the db when given no ids', async () => {
+      const result = await dbGetLearningScenariosByIdsOptionalShareData({
+        learningScenarioIds: [],
+        user: { id: 'user-1' },
+      });
+
+      expect(result).toEqual([]);
+      expect(mocks.select).not.toHaveBeenCalled();
+    });
+
+    it('dbGetLearningScenariosByIdsOptionalShareData queries the db when given ids', async () => {
+      const learningScenarios = [{ id: 'scenario-1' }];
+      mockSelectChain(learningScenarios);
+
+      const result = await dbGetLearningScenariosByIdsOptionalShareData({
+        learningScenarioIds: ['scenario-1'],
+        user: { id: 'user-1' },
+      });
+
+      expect(result).toBe(learningScenarios);
+    });
+
+    it('dbGetLearningScenariosByUserFavorite returns the scenarios favorited by the user', async () => {
+      const learningScenarios = [{ id: 'scenario-1' }];
+      mockSelectChain(learningScenarios);
+
+      const result = await dbGetLearningScenariosByUserFavorite({ user: { id: 'user-1' } });
+
+      expect(result).toBe(learningScenarios);
+    });
+
     it('dbGetLearningScenarioByIdWithShareData returns the matching row', async () => {
       const row = { id: 'scenario-1' };
       mockSelectChain([row]);
 
       const result = await dbGetLearningScenarioByIdWithShareData({
-        learningScenarioId: 'scenario-1',
-        user: { id: 'user-1' },
-      });
-
-      expect(result).toBe(row);
-    });
-
-    it('dbGetLearningScenarioByIdOptionalShareData returns the matching row', async () => {
-      const row = { id: 'scenario-1' };
-      mockSelectChain([row]);
-
-      const result = await dbGetLearningScenarioByIdOptionalShareData({
         learningScenarioId: 'scenario-1',
         user: { id: 'user-1' },
       });

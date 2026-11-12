@@ -1,5 +1,7 @@
-import { getFileNameAndFileExtension, isImageFile } from '@/utils/files/generic';
 import React from 'react';
+
+import { getFileNameAndFileExtension, isImageFile } from '@/utils/files/generic';
+
 import { LocalFileState } from '../file-upload/upload-file';
 import CrossIcon from '../icons/cross';
 import DeattachFileIcon from '../icons/file-upload-icons/deattach-file-icon';

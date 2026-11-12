@@ -1,10 +1,13 @@
 // this import has to be at the top of the file for fastify to be instrumented properly
+// eslint-disable-next-line simple-import-sort/imports
 import { flushSentry, shutdownMetrics } from '@/instrumentation';
-import cors from '@fastify/cors';
+
+import path from 'node:path';
 
 import { db, migrateWithLock, shutdownDatabase } from '@ais-chat/api-database';
+import cors from '@fastify/cors';
 import * as Sentry from '@sentry/node';
-import path from 'node:path';
+
 import buildApp from './app';
 import { env } from './env';
 import { logger } from './logger';

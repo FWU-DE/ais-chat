@@ -1,20 +1,21 @@
+import { dbGetCharacterById } from '@shared/db/functions/character';
+import {
+  dbGetConversationById,
+  dbGetConversationMessageById,
+  dbGetConversationMessages,
+} from '@shared/db/functions/chat';
+import { dbGetRelatedFiles } from '@shared/db/functions/files';
+import { ConversationModel } from '@shared/db/types';
+import { ForbiddenError, NotFoundError } from '@shared/error';
+import { generateUUID } from '@shared/utils/uuid';
 import { beforeEach, describe, expect, it, MockedFunction, vi } from 'vitest';
+
 import {
   getConversation,
   getConversationAndMessagesForExport,
   getConversationMessageForExport,
   getConversationMessages,
 } from './conversation-service';
-import { ForbiddenError, NotFoundError } from '@shared/error';
-import { generateUUID } from '@shared/utils/uuid';
-import {
-  dbGetConversationById,
-  dbGetConversationMessageById,
-  dbGetConversationMessages,
-} from '@shared/db/functions/chat';
-import { dbGetCharacterById } from '@shared/db/functions/character';
-import { dbGetRelatedFiles } from '@shared/db/functions/files';
-import { ConversationModel } from '@shared/db/types';
 
 vi.mock('../db/functions/chat', () => ({
   dbGetConversationById: vi.fn(),

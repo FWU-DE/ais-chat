@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { parsePlotSpec, getSliderRange } from './plot-spec';
+import { describe, expect, it } from 'vitest';
+
+import { getSliderRange, parsePlotSpec } from './plot-spec';
 
 function expectValid(source: string) {
   const result = parsePlotSpec(source);

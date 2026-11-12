@@ -1,11 +1,16 @@
-import { generateSpeechById } from '@ais-chat/ai-core';
+import {
+  billSpeechGenerationUsageToApiKey,
+  generateSpeechById,
+  MP3_MIME_TYPE,
+  type SpeechMimeType,
+} from '@ais-chat/ai-core';
 import { UserModel } from '@shared/auth/user-model';
 import { getConversation } from '@shared/conversation/conversation-service';
+import { dbGetFederalState } from '@shared/db/functions/federal-state';
 import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
 import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
 import { LlmModelSelectModel } from '@shared/db/schema';
 import { ConversationModel } from '@shared/db/types';
-import { InvalidArgumentError } from '@shared/error';
 import { FederalStateModel } from '@shared/federal-states/types';
 import { constructNewMessageEvent, sendRabbitmqEvent } from '@shared/rabbitmq';
 import { getCachedSpeechPreview, setCachedSpeechPreview } from '@shared/speech/speech-cache';
@@ -13,7 +18,9 @@ import {
   runSpeechPipeline,
   SpeechStreamingPipelineParams,
 } from '@shared/speech/streaming/speech-pipeline';
+
 import { ChatSpeechStreamResult } from './types';
+import { resolveSpeechVoice } from './utils';
 
 type SpeechContext = {
   user: UserModel;
@@ -67,6 +74,8 @@ export async function generateChatSpeechStream({
         model: LlmModelSelectModel,
         result: ChatSpeechStreamResult,
       ) => {
+        const costsInCent = await result.costsInCent;
+
         // we only store usage if there is an associated conversation
         // not true for initial messages
         if (context.conversation) {
@@ -76,7 +85,16 @@ export async function generateChatSpeechStream({
             modelId: model.id,
             completionTokens: 0,
             promptTokens: 0,
-            costsInCent: await result.costsInCent,
+            costsInCent,
+          });
+        }
+
+        const { apiKeyId } = await dbGetFederalState(federalState.id);
+        if (apiKeyId) {
+          await billSpeechGenerationUsageToApiKey({
+            apiKeyId,
+            modelId: model.id,
+            costsInCent,
           });
         }
       },
@@ -118,38 +136,32 @@ export async function generateSpeechPreview({
   voice: string;
 }): Promise<{
   buffer: Buffer<ArrayBufferLike>;
-  contentType: string;
+  contentType: SpeechMimeType;
 }> {
   const speechModel = await dbGetSpeechModel();
 
   if (!speechModel) throw new Error('No speech model configured');
 
-  const voices = speechModel.modelConfig?.voices ?? [];
+  const resolvedVoice = resolveSpeechVoice(speechModel, voice);
 
-  if (voices.length === 0) throw new Error('No voices configured for the speech model');
-
-  if (!voices.some((v) => v.name === voice)) {
-    throw new InvalidArgumentError(`Unknown voice: ${voice}`);
-  }
-
-  const cached = await getCachedSpeechPreview(speechModel.id, voice, text);
+  const cached = await getCachedSpeechPreview(speechModel.id, resolvedVoice, text);
   if (cached !== undefined) {
     return {
       buffer: cached,
-      contentType: 'audio/wav',
+      contentType: MP3_MIME_TYPE,
     };
   }
 
-  const { wavBuffer } = await generateSpeechById({
+  const { audioBuffer, mimeType } = await generateSpeechById({
     modelId: speechModel.id,
     text,
-    voice,
+    voice: resolvedVoice,
   });
 
-  await setCachedSpeechPreview(speechModel.id, voice, text, wavBuffer);
+  await setCachedSpeechPreview(speechModel.id, resolvedVoice, text, audioBuffer);
 
   return {
-    buffer: wavBuffer,
-    contentType: 'audio/wav',
+    buffer: audioBuffer,
+    contentType: mimeType,
   };
 }

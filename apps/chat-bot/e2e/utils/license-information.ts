@@ -1,4 +1,5 @@
 import { expect, Page } from '@playwright/test';
+
 import { openCollapsible, waitForAutosave } from './utils';
 
 export async function verifyLicenseInformation(page: Page, viewBasePath: string) {
@@ -23,7 +24,7 @@ export async function verifyLicenseInformation(page: Page, viewBasePath: string)
 
   await toggle.click();
   await input.fill(`${licenseText}   \n `);
-  await input.press('Tab');
+  await input.blur();
   await waitForAutosave(page);
   await page.reload();
 

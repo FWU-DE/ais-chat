@@ -2,6 +2,8 @@
  * @description Service functions for handling global templates of characters, assistants, and learning scenarios.
  * Only for admin use, does not check for user authorization.
  */
+import path from 'node:path';
+
 import { UserModel } from '@shared/auth/user-model';
 import { db } from '@shared/db';
 import { dbGetAssistantById, dbUpsertAssistant } from '@shared/db/functions/assistants';
@@ -45,7 +47,6 @@ import {
 } from '@shared/utils/picture-key';
 import { generateUUID } from '@shared/utils/uuid';
 import { and, eq, inArray } from 'drizzle-orm';
-import path from 'node:path';
 
 const templateTypeMap: Record<string, TemplateTypes> = {
   assistants: 'assistant',
@@ -564,6 +565,7 @@ export async function copyAssistant(
 
   const newAssistant = {
     ...sourceAssistant,
+    popularity: 0, // a copy does not inherit the usage of its source
     name: (duplicateAssistantName ?? sourceAssistant.name).substring(0, MAX_ENTITY_NAME_LENGTH),
     id: newAssistantId,
     originalAssistantId: originalId,
@@ -628,6 +630,7 @@ export async function copyCharacter(
 
   const newCharacter = {
     ...sourceCharacter,
+    popularity: 0, // a copy does not inherit the usage of its source
     name: (duplicateCharacterName ?? sourceCharacter.name).substring(0, MAX_ENTITY_NAME_LENGTH),
     id: newCharacterId,
     originalCharacterId: originalId,

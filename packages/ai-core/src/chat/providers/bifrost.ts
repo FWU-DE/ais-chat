@@ -1,10 +1,11 @@
 import { dbGetModelIdByProviderAndUpstreamName } from '@ais-chat/api-database';
 import { instrumentOpenAiClient } from '@sentry/server-utils';
 import OpenAI from 'openai';
+
 import {
+  type BifrostExtraFields,
   extractBifrostFieldsFromHeaders,
   stripBifrostProviderPrefix,
-  type BifrostExtraFields,
 } from '../../bifrost-headers';
 import { env } from '../../env';
 import { AiGenerationError, ProviderConfigurationError } from '../../errors';

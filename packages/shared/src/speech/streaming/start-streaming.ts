@@ -1,7 +1,8 @@
 import { streamSpeechById } from '@ais-chat/ai-core';
 import { LlmModelSelectModel } from '@shared/db/schema';
+
 import { ChatSpeechStreamResult } from '../types';
-import { calculateSpeechCostsInCent } from '../utils';
+import { calculateSpeechCostsInCent, resolveSpeechVoice } from '../utils';
 import type { SpeechStreamingPipelineParams } from './speech-pipeline';
 
 export const startStream = async (
@@ -9,29 +10,16 @@ export const startStream = async (
   model: LlmModelSelectModel,
   onStreamFinished: (result: ChatSpeechStreamResult) => Promise<void>,
 ): Promise<ChatSpeechStreamResult> => {
-  const voices = model.modelConfig?.voices ?? [];
-  const firstVoice = voices.at(0);
-
-  if (firstVoice === undefined) {
-    throw new Error('No voices configured for the speech model');
-  }
-
-  const selectedVoice =
-    params.voice && voices.some((voice) => voice.name === params.voice)
-      ? params.voice
-      : firstVoice.name;
-
-  const { chunks, usage, format } = await streamSpeechById({
+  const { chunks, usage, mimeType } = await streamSpeechById({
     modelId: model.id,
     text: params.input,
-    voice: selectedVoice,
+    voice: resolveSpeechVoice(model, params.voice),
     abortSignal: params.abortSignal,
   });
 
   const result: ChatSpeechStreamResult = {
     chunks,
-    contentType: 'application/octet-stream',
-    format,
+    contentType: mimeType,
     costsInCent: usage.then((resolvedUsage) => calculateSpeechCostsInCent(model, resolvedUsage)),
     modelId: model.id,
     provider: model.provider,
@@ -52,7 +40,6 @@ export const startStream = async (
   return {
     chunks: chunksWithUsageReporting(),
     contentType: result.contentType,
-    format: result.format,
     costsInCent: result.costsInCent,
     modelId: result.modelId,
     modelName: result.modelName,

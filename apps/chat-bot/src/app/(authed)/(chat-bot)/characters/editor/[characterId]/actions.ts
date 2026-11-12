@@ -1,7 +1,6 @@
 'use server';
 
-import { ShareWithLearnersLimitParams } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners-limit-params';
-import { requireAuth } from '@/auth/requireAuth';
+import { runServerAction } from '@shared/actions/run-server-action';
 import {
   deleteCharacter,
   deleteFileMappingAndEntity,
@@ -11,10 +10,10 @@ import {
   linkFileToCharacter,
   shareCharacter,
   unshareCharacter,
-  updateCharacterShareTokenPointsLimit,
   updateCharacter,
-  updateCharacterSchoolSharing,
   UpdateCharacterActionModel,
+  updateCharacterSchoolSharing,
+  updateCharacterShareTokenPointsLimit,
   uploadAvatarPictureForCharacter,
 } from '@shared/characters/character-service';
 import {
@@ -23,7 +22,9 @@ import {
   getEntitySharingState,
   sendMessageToEditor,
 } from '@shared/community-templates/community-template-service';
-import { runServerAction } from '@shared/actions/run-server-action';
+
+import { requireAuth } from '@/auth/requireAuth';
+import { ShareWithLearnersLimitParams } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners-limit-params';
 
 export async function createCommunityTemplateRequestAction({
   characterId,

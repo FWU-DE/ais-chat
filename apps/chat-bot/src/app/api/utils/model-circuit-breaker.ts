@@ -1,8 +1,8 @@
+import type { ModelSelection } from '@ais-chat/ai-core';
+import type { LlmModelSelectModel } from '@shared/db/schema';
 import { findStaticModelByRoleAndFederalStateId } from '@shared/llm-models/llm-model-service';
 import { logError } from '@shared/logging';
 import { valkey } from '@shared/valkey';
-import type { LlmModelSelectModel } from '@shared/db/schema';
-import type { ModelSelection } from '@ais-chat/ai-core';
 
 const MODEL_UNAVAILABLE_TTL_SECONDS = 45;
 const MODEL_UNAVAILABLE_PREFIX = 'model-unavailable:v1:';

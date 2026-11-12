@@ -1,9 +1,5 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import { useState } from 'react';
-import { Checkbox } from '@ui/components/checkbox';
-import MarkdownDisplay from '@/components/chat/markdown-display';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,6 +10,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@ui/components/alert-dialog';
+import { Checkbox } from '@ui/components/checkbox';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
+
+import MarkdownDisplay from '@/components/chat/markdown-display';
 
 const CHECKLIST_SECTIONS = [
   {

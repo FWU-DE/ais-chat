@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MundoSearchResult } from '../mundo-search';
+
 import { MUNDO_SEARCH_QUERY_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
+
+import type { MundoSearchResult } from '../mundo-search';
 
 const mocks = vi.hoisted(() => ({
   mundoSearchMock: vi.fn(),

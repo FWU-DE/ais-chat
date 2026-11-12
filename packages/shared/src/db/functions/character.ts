@@ -14,6 +14,7 @@ import {
   or,
   sql,
 } from 'drizzle-orm';
+
 import { db } from '..';
 import {
   CharacterFileMapping,
@@ -28,6 +29,7 @@ import {
   sharedCharacter,
   SharedCharacterChatUsageTrackingInsertModel,
   sharedCharacterChatUsageTrackingTable,
+  userFavoriteTable,
   userTable,
 } from '../schema';
 import { PgTransactionObject } from '../types';
@@ -73,19 +75,6 @@ function latestActiveCharacterShare(user: Pick<UserModel, 'id'>) {
  * regardless of whether it is active or expired. Used to surface the last share's settings
  * (tokenPointsLimit, maxUsageTimeLimit) as defaults when no active share exists.
  */
-function latestCharacterShare(
-  user: Pick<UserModel, 'id'>,
-): ReturnType<typeof latestActiveCharacterShare> {
-  return db
-    .selectDistinctOn([sharedCharacter.characterId], {
-      ...getTableColumns(sharedCharacter),
-    })
-    .from(sharedCharacter)
-    .where(eq(sharedCharacter.userId, user.id))
-    .orderBy(sharedCharacter.characterId, desc(sharedCharacter.startedAt))
-    .as('latest_share');
-}
-
 /**
  * Returns a subquery that selects the single most-recent non-manually-stopped share per character
  * for a given user. This includes shares that have already expired, so the caller has
@@ -191,21 +180,6 @@ export async function dbGetCharacterByIdWithShareData({
   return row;
 }
 
-export async function dbGetCharacterByIdOptionalShareData({
-  characterId,
-  user,
-  includeDeleted,
-}: {
-  characterId: string;
-  user: Pick<UserModel, 'id'>;
-} & IncludeDeletedOption): Promise<CharacterOptionalShareDataModel | undefined> {
-  const latestShare = latestCharacterShare(user);
-  const [row] = await baseCharacterWithShareQuery(latestShare)
-    .leftJoin(latestShare, eq(latestShare.characterId, characterTable.id))
-    .where(and(eq(characterTable.id, characterId), excludeDeletedCharacters({ includeDeleted })));
-  return row;
-}
-
 /**
  * The returned entity has no shared data attached. These are found in the SharedCharacter table.
  */
@@ -256,6 +230,46 @@ export async function dbGetCharactersByIds({
   return baseCharacterQuery().where(
     and(inArray(characterTable.id, characterIds), excludeDeletedCharacters({ includeDeleted })),
   );
+}
+
+export async function dbGetCharactersByIdsOptionalShareData({
+  characterIds,
+  user,
+  includeDeleted,
+}: {
+  characterIds: string[];
+  user: Pick<UserModel, 'id'>;
+} & IncludeDeletedOption): Promise<CharacterOptionalShareDataModel[]> {
+  if (characterIds.length === 0) {
+    return [];
+  }
+
+  const activeShare = latestActiveCharacterShare(user);
+  return baseCharacterWithShareQuery(activeShare)
+    .leftJoin(activeShare, eq(activeShare.characterId, characterTable.id))
+    .where(
+      and(inArray(characterTable.id, characterIds), excludeDeletedCharacters({ includeDeleted })),
+    )
+    .orderBy(desc(characterTable.createdAt));
+}
+
+export async function dbGetCharactersByUserFavorite({
+  user,
+}: {
+  user: Pick<UserModel, 'id'>;
+}): Promise<CharacterOptionalShareDataModel[]> {
+  const activeShare = latestActiveCharacterShare(user);
+  return baseCharacterWithShareQuery(activeShare)
+    .leftJoin(activeShare, eq(activeShare.characterId, characterTable.id))
+    .innerJoin(
+      userFavoriteTable,
+      and(
+        eq(userFavoriteTable.characterId, characterTable.id),
+        eq(userFavoriteTable.userId, user.id),
+      ),
+    )
+    .where(excludeDeletedCharacters())
+    .orderBy(desc(characterTable.createdAt));
 }
 
 export async function dbGetCopyTemplateCharacter({

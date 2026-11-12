@@ -1,13 +1,8 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { TemplateModel } from '@shared/templates/template';
 import { type ColumnFiltersState } from '@tanstack/react-table';
 import { Button } from '@ui/components/button';
-import { Checkbox } from '@ui/components/checkbox';
-import { Input } from '@ui/components/input';
-import { DataTable } from '@ui/components/data-table';
-import { getTemplatesAction } from './actions';
-import { FieldLabel } from '@ui/components/field';
 import {
   Card,
   CardAction,
@@ -16,12 +11,19 @@ import {
   CardHeader,
   CardTitle,
 } from '@ui/components/card';
-import { TemplateModel } from '@shared/templates/template';
+import { Checkbox } from '@ui/components/checkbox';
+import { DataTable } from '@ui/components/data-table';
+import { FieldLabel } from '@ui/components/field';
+import { Input } from '@ui/components/input';
 import { Skeleton } from '@ui/components/skeleton';
-import { CreateTemplateModal } from './CreateTemplateModal';
-import { columns } from './columns';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState, useTransition } from 'react';
+
 import { ROUTES } from '@/consts/routes';
+
+import { getTemplatesAction } from './actions';
+import { columns } from './columns';
+import { CreateTemplateModal } from './CreateTemplateModal';
 
 export default function TemplateListView() {
   const router = useRouter();

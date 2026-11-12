@@ -7,6 +7,7 @@ import type {
 import type { NotFoundError } from '@shared/error';
 import { isToolRelatedMessage } from '@shared/utils/tool-related-message';
 import z from 'zod';
+
 import { aiActivityStepSchema } from './ai-activity';
 
 /**

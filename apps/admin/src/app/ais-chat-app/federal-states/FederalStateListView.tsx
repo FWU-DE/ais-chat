@@ -1,16 +1,7 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
-import { getFederalStatesAction } from './actions';
-import { CreateFederalStateModal } from './CreateFederalStateModal';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@ui/components/table';
+import { FederalStateModel } from '@shared/federal-states/types';
+import { Button } from '@ui/components/button';
 import {
   Card,
   CardAction,
@@ -19,11 +10,22 @@ import {
   CardHeader,
   CardTitle,
 } from '@ui/components/card';
-import { Button } from '@ui/components/button';
-import { ClickableTableRow } from '@/components/common/ClickableTableRow';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@ui/components/table';
+import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
+
+import { ClickableTableRow } from '@/components/common/ClickableTableRow';
 import { ROUTES } from '@/consts/routes';
-import { FederalStateModel } from '@shared/federal-states/types';
+
+import { getFederalStatesAction } from './actions';
+import { CreateFederalStateModal } from './CreateFederalStateModal';
 
 export default function FederalStateListView() {
   const [federalStates, setFederalStates] = useState<FederalStateModel[]>([]);

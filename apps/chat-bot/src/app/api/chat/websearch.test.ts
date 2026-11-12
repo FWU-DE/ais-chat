@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { UserAndContext } from '@/auth/types';
 import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { UserAndContext } from '@/auth/types';
 
 const mocks = vi.hoisted(() => ({
   dbInsertConversationToolCallUsageMock: vi.fn(),

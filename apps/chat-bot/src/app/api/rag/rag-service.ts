@@ -1,10 +1,12 @@
 import { ChunkInsertModel, ChunkSourceType, FileModel } from '@shared/db/schema';
+import { logError } from '@shared/logging';
+
+import { VECTOR_SEARCH_LIMIT } from '@/configuration-text-inputs/const';
+
 import { chunkText } from './chunking';
-import { embedText, embedChunks } from './embedding';
+import { embedChunks, embedText } from './embedding';
 import { vectorSearch } from './retrieval';
 import { RetrievedChunk, UnembeddedChunk } from './types';
-import { VECTOR_SEARCH_LIMIT } from '@/configuration-text-inputs/const';
-import { logError } from '@shared/logging';
 
 /**
  * Chunks and embeds text.

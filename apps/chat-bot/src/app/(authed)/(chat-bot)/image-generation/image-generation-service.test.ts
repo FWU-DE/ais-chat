@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TokenPointsExceededError } from '@ais-chat/ai-core/errors';
 import type { LlmModelSelectModel } from '@shared/db/schema';
 import { NotFoundError } from '@shared/error';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   checkProductAccess: vi.fn(),

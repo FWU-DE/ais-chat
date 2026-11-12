@@ -1,8 +1,9 @@
 import { syncAllBifrostProviders } from '@ais-chat/api-database/bifrost-provider-sync';
 import { isBifrostProviderSyncError } from '@ais-chat/api-database/bifrost-provider-sync/error';
-import { env } from '@/consts/env';
-import { logError, logInfo, logWarning } from '@shared/logging';
 import { InvalidArgumentError } from '@shared/error';
+import { logError, logInfo, logWarning } from '@shared/logging';
+
+import { env } from '@/consts/env';
 
 export async function syncBifrostProviders(): Promise<void> {
   await syncAllBifrostProviders({

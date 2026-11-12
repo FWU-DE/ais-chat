@@ -1,90 +1,93 @@
 'use client';
 
-import z from 'zod';
-import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
-import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
+import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
 import {
-  CharacterOptionalShareDataModel,
-  FileModel,
-  schoolTypesSchema,
-  gradeRangesSchema,
-  subjectsSchema,
   categoriesSchema,
+  CharacterOptionalShareDataModel,
   federalStatesSchema,
+  FileModel,
+  gradeRangesSchema,
   languagesSchema,
-  webSearchScopeSchema,
+  schoolTypesSchema,
   type SpeechVoice,
+  subjectsSchema,
+  webSearchScopeSchema,
 } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
+import { Card, CardContent } from '@ui/components/card';
+import { FieldGroup } from '@ui/components/field';
+import { FormField } from '@ui/components/form/form-field';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useForceReloadOnBrowserBackButton } from '@/hooks/use-force-reload-on-browser-back-button';
-import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  deleteCharacterAction,
-  deleteFileMappingAndEntityAction,
-  downloadFileFromCharacterAction,
-  getCharacterShareDataAction,
-  linkFileToCharacterAction,
-  createCommunityTemplateRequestAction,
-  cancelCommunityTemplateRequestAction,
-  sendMessageToEditorAction,
-  getCharacterSharingStateAction,
-  shareCharacterAction,
-  unshareCharacterAction,
-  updateCharacterSchoolSharingAction,
-  extendCharacterShareExpirationAction,
-  updateCharacterShareTokenPointsLimitAction,
-  updateCharacterAction,
-  uploadAvatarPictureForCharacterAction,
-} from './actions';
-import { useFormAutosave } from '@/hooks/use-form-autosave';
-import { useEntitySharing } from '@/hooks/use-entity-sharing';
-import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
-import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
-import { usePendingChangesGuard } from '@/hooks/use-pending-changes-guard';
+import { useCallback, useMemo } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import z from 'zod';
+
 import { BackButton } from '@/components/common/back-button';
-import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
-import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
+import { RichText, stripRichTextTags } from '@/components/common/rich-text';
+import { useToast } from '@/components/common/toast';
 import { CustomChatActionDelete } from '@/components/custom-chat/custom-chat-action-delete';
 import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
-import { CustomChatShareInfo } from '@/components/custom-chat/custom-chat-share-info';
-import { CustomChatShareWithLearners } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners';
+import { CustomChatActionFavorite } from '@/components/custom-chat/custom-chat-action-favorite';
+import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
+import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
+import { CustomChatHeaderContent } from '@/components/custom-chat/custom-chat-header-content';
 import { CustomChatHeading2 } from '@/components/custom-chat/custom-chat-heading2';
 import { CustomChatImageUpload } from '@/components/custom-chat/custom-chat-image-upload';
-import { FieldGroup } from '@ui/components/field';
-import { Card, CardContent } from '@ui/components/card';
-import {
-  LICENSE_INFORMATION_LENGTH_LIMIT,
-  DIDACTIC_COMMENTARY_LENGTH_LIMIT,
-  SMALL_TEXT_INPUT_FIELDS_LIMIT,
-  TEXT_INPUT_FIELDS_LENGTH_LIMIT,
-  TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS,
-} from '@/configuration-text-inputs/const';
-import { useToast } from '@/components/common/toast';
-import { useRouter } from 'next/navigation';
-import { useCallback, useMemo } from 'react';
-import { CustomChatHeaderContent } from '@/components/custom-chat/custom-chat-header-content';
-import { useLlmModels } from '@/components/providers/llm-model-provider';
-import { useForm, useWatch } from 'react-hook-form';
-import { CustomChatModelSelect } from '@/components/custom-chat/custom-chat-model-select';
-import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
-import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
-import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
-import { resolveInitialVoice } from '@/components/custom-chat/speech/resolve-initial-voice';
-import CustomShareSection from '@/components/custom-chat/custom-chat-share-section';
-import { FormField } from '@ui/components/form/form-field';
-import { createNewCharacterAction } from '../../actions';
 import { CustomChatInstructionsExampleDialog } from '@/components/custom-chat/custom-chat-instructions-example-dialog';
-import { RichText, stripRichTextTags } from '@/components/common/rich-text';
+import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
+import { CustomChatModelSelect } from '@/components/custom-chat/custom-chat-model-select';
+import { CustomChatShareInfo } from '@/components/custom-chat/custom-chat-share-info';
+import CustomShareSection from '@/components/custom-chat/custom-chat-share-section';
 import { CustomChatSuspensionError } from '@/components/custom-chat/custom-chat-suspension-error';
+import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
+import { CustomChatDidacticCommentaryEditView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-edit-view';
+import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
 import FilterSelectSection from '@/components/custom-chat/filter/custom-chat-filter-select-section';
 import {
   extractFilterValues,
   toFilterGroup,
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
-import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
 import { CustomChatLicenseInformationEditView } from '@/components/custom-chat/license-information/custom-chat-license-information-edit-view';
-import { CustomChatDidacticCommentaryEditView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-edit-view';
+import { CustomChatShareWithLearners } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners';
+import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
+import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
+import { resolveInitialVoice } from '@/components/custom-chat/speech/resolve-initial-voice';
+import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
+import { useLlmModels } from '@/components/providers/llm-model-provider';
+import {
+  DIDACTIC_COMMENTARY_LENGTH_LIMIT,
+  LICENSE_INFORMATION_LENGTH_LIMIT,
+  SMALL_TEXT_INPUT_FIELDS_LIMIT,
+  TEXT_INPUT_FIELDS_LENGTH_LIMIT,
+  TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS,
+} from '@/configuration-text-inputs/const';
+import { useEntitySharing } from '@/hooks/use-entity-sharing';
+import { useForceReloadOnBrowserBackButton } from '@/hooks/use-force-reload-on-browser-back-button';
+import { useFormAutosave } from '@/hooks/use-form-autosave';
+import { usePendingChangesGuard } from '@/hooks/use-pending-changes-guard';
+
+import { createNewCharacterAction } from '../../actions';
+import {
+  cancelCommunityTemplateRequestAction,
+  createCommunityTemplateRequestAction,
+  deleteCharacterAction,
+  deleteFileMappingAndEntityAction,
+  downloadFileFromCharacterAction,
+  extendCharacterShareExpirationAction,
+  getCharacterShareDataAction,
+  getCharacterSharingStateAction,
+  linkFileToCharacterAction,
+  sendMessageToEditorAction,
+  shareCharacterAction,
+  unshareCharacterAction,
+  updateCharacterAction,
+  updateCharacterSchoolSharingAction,
+  updateCharacterShareTokenPointsLimitAction,
+  uploadAvatarPictureForCharacterAction,
+} from './actions';
 
 type CharacterTranslator = ReturnType<typeof useTranslations<'characters'>>;
 
@@ -159,6 +162,7 @@ export function CharacterEdit({
   isWebSearchAvailable,
   isSpeechAvailable,
   speechVoices,
+  initialIsFavorite,
 }: {
   character: CharacterOptionalShareDataModel;
   relatedFiles: FileModel[];
@@ -171,6 +175,7 @@ export function CharacterEdit({
   isWebSearchAvailable: boolean;
   isSpeechAvailable: boolean;
   speechVoices: SpeechVoice[];
+  initialIsFavorite: boolean;
 }) {
   useForceReloadOnBrowserBackButton();
   const router = useRouter();
@@ -397,6 +402,10 @@ export function CharacterEdit({
         onClick={handleDeleteCharacter}
         modalTitle={t('delete-modal-title')}
         modalDescription={t('delete-modal-description')}
+      />
+      <CustomChatActionFavorite
+        entityRef={{ entityType: 'character', entityId: character.id }}
+        initialIsFavorite={initialIsFavorite}
       />
     </CustomChatActions>
   );

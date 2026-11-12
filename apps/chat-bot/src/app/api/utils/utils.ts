@@ -1,4 +1,3 @@
-import { PRICE_AND_CENT_MULTIPLIER } from '@/db/const';
 import { dbGetFederalStateWithDecryptedApiKeyWithResult } from '@shared/db/functions/federal-state';
 import {
   dbGetLlmModelsByFederalStateId,
@@ -14,6 +13,8 @@ import { getFirstTextModel } from '@shared/llm-models/llm-model-utils';
 import { logError } from '@shared/logging';
 import { errorifyAsyncFn } from '@shared/utils/error';
 import { isValidPositiveNumber } from '@shared/utils/number';
+
+import { PRICE_AND_CENT_MULTIPLIER } from '@/db/const';
 
 export function getSearchParamsFromUrl(url: string) {
   const [, ...rest] = url.split('?');

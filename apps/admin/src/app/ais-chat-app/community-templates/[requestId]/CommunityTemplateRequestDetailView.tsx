@@ -1,6 +1,18 @@
 'use client';
 
+import { CheckIcon, FloppyDiskIcon } from '@phosphor-icons/react';
+import { CommunityTemplateRequestWithEventsAdmin } from '@shared/community-templates/community-template-service.admin';
+import { Button } from '@ui/components/button';
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@ui/components/card';
+import { Textarea } from '@ui/components/textarea';
+import { cn } from '@ui/lib/utils';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+
+import { ExternalLink } from '@/components/navigation/ExternalLink';
+import { mapEntityTypeToLabel } from '@/utils/mapEntityTypeToLabel';
+
+import { mapStateToLabel } from '../columns';
 import {
   approveRequestAction,
   getCommunityTemplateRequestWithEventsForAdminAction,
@@ -8,18 +20,8 @@ import {
   sendMessageToAuthorAction,
   updateInternalNoteAction,
 } from './actions';
-import { CommunityTemplateRequestWithEventsAdmin } from '@shared/community-templates/community-template-service.admin';
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@ui/components/card';
-import { Button } from '@ui/components/button';
-import { Textarea } from '@ui/components/textarea';
-import { ExternalLink } from '@/components/navigation/ExternalLink';
-import { mapEntityTypeToLabel } from '@/utils/mapEntityTypeToLabel';
-import { mapStateToLabel } from '../columns';
 import RejectCommunityTemplateRequestDialog from './RejectCommunityTemplateRequestDialog';
 import SendMessageToAuthorDialog from './SendMessageToAuthorDialog';
-import { CheckIcon, FloppyDiskIcon } from '@phosphor-icons/react';
-import { cn } from '@ui/lib/utils';
-import { toast } from 'sonner';
 
 export type CommunityTemplateRequestDetailViewProps = {
   requestId: string;

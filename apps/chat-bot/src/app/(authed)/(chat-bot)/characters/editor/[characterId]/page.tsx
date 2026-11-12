@@ -1,15 +1,17 @@
 import { getCharacterForEditView } from '@shared/characters/character-service';
 import { getCommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
+import { WebSource } from '@shared/db/types';
 import { getSpeechModelVoices } from '@shared/llm-models/llm-model-service';
+import { type Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
+
 import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
 import { requireAuth } from '@/auth/requireAuth';
-import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
-import { WebSource } from '@shared/db/types';
-import { CharacterEdit } from './character-edit';
-import { redirect } from 'next/navigation';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
-import { type Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
+
+import { CharacterEdit } from './character-edit';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,11 +33,10 @@ export default async function Page(props: PageProps<'/characters/editor/[charact
     maxBudget,
     usedBudget,
     budgetUsedBySharedChat,
-  } = await getCharacterForEditView({
-    characterId,
-    user,
-    federalState,
-  }).catch(handleErrorInServerComponent);
+    isFavorite: initialIsFavorite,
+  } = await getCharacterForEditView({ characterId, user, federalState }).catch(
+    handleErrorInServerComponent,
+  );
 
   const readOnly = user.id !== character.userId;
 
@@ -68,6 +69,7 @@ export default async function Page(props: PageProps<'/characters/editor/[charact
         relatedFiles={relatedFiles}
         initialLinks={initialLinks}
         avatarPictureUrl={maybeSignedPictureUrl}
+        initialIsFavorite={initialIsFavorite}
         initialCommunityTemplateRequest={communityTemplateRequest}
         usedBudget={usedBudget ?? 0}
         maxBudget={maxBudget ?? 500}

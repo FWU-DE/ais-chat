@@ -1,13 +1,13 @@
 import { dbGetAllProviderKeysWithModels } from '../functions';
 import { BifrostProviderSyncError } from './error';
 import { buildBifrostProviderConfigs } from './provider-config-builder';
+import type { BifrostVirtualKey } from './types';
 import {
   BIFROST_PROVIDERS,
   BifrostProviderSyncLogger,
   BifrostVirtualKeyProviderConfig,
 } from './types';
 import { listBifrostVirtualKeys, updateBifrostVirtualKeyProviders } from './virtual-key-client';
-import type { BifrostVirtualKey } from './types';
 
 const NATIVE_BIFROST_PROVIDERS = new Set<string>(BIFROST_PROVIDERS);
 

@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
 import { dbGetLearningScenarioById } from '@shared/db/functions/learning-scenario';
 import { NotFoundError } from '@shared/error';
 import { copyEntityPictureIfExists } from '@shared/templates/template-service';
+import { describe, expect, it, vi } from 'vitest';
+
 import { duplicateLearningScenario } from './learning-scenario-admin-service';
 
 const { mockDbInsert, mockDbInsertValues, mockDbReturning } = vi.hoisted(() => {

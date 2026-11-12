@@ -1,11 +1,12 @@
-import { describe, test, expect } from 'vitest';
+import { describe, expect, test } from 'vitest';
+
+import type { LlmProviderKeyWithModels } from '../../functions';
+import { buildBifrostProviderConfigs } from './index';
 import {
   buildBifrostNativeProviderConfig,
-  buildOpenAiProviderConfig,
   buildIonosProviderConfig,
+  buildOpenAiProviderConfig,
 } from './providers';
-import { buildBifrostProviderConfigs } from './index';
-import type { LlmProviderKeyWithModels } from '../../functions';
 
 function providerKey(
   overrides: Partial<LlmProviderKeyWithModels> & {

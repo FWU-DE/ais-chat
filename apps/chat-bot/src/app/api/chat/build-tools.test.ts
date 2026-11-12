@@ -1,6 +1,7 @@
-import type { UserAndContext } from '@/auth/types';
 import type { FileModel } from '@shared/db/schema';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { UserAndContext } from '@/auth/types';
 
 const mocks = vi.hoisted(() => ({
   buildWebSearchToolMock: vi.fn(),

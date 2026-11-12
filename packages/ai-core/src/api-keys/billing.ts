@@ -1,12 +1,13 @@
 import {
-  dbCreateImageGenerationUsage,
   dbCreateCompletionUsage,
+  dbCreateImageGenerationUsage,
   dbGetApiKeyLimit,
   dbGetCompletionUsageCostsSinceStartOfCurrentMonth,
   dbGetImageGenerationUsageCostsSinceStartOfCurrentMonth,
 } from '@ais-chat/api-database';
-import { AiModel, Usage } from '../images/types';
+
 import type { AiModel as TextAiModel, TokenUsage } from '../chat/types';
+import { AiModel, Usage } from '../images/types';
 
 const TOKEN_AMOUNT_PER_PRICE = 1_000_000;
 const CENT_MULTIPLIER = 10;
@@ -144,6 +145,34 @@ export async function billTextGenerationUsageToApiKey(
     costsInCent: priceInCent,
   });
   return priceInCent;
+}
+
+/**
+ * Bills speech (TTS) generation usage to the specified API key.
+ *
+ * @param apiKeyId - The unique identifier of the API key to bill
+ * @param modelId - The speech model used for generation
+ * @param costsInCent - The cost of the generation in cents
+ * @returns A promise that resolves to the price in cents charged for the operation
+ */
+export async function billSpeechGenerationUsageToApiKey({
+  apiKeyId,
+  modelId,
+  costsInCent,
+}: {
+  apiKeyId: string;
+  modelId: string;
+  costsInCent: number;
+}): Promise<number> {
+  await dbCreateCompletionUsage({
+    apiKeyId,
+    modelId,
+    completionTokens: 0,
+    promptTokens: 0,
+    totalTokens: 0,
+    costsInCent,
+  });
+  return costsInCent;
 }
 
 export async function isApiKeyOverQuota(apiKeyId: string): Promise<boolean> {

@@ -1,5 +1,5 @@
-import { defineConfig } from '@playwright/test';
 import { config as dotenvConfig } from '@dotenvx/dotenvx';
+import { defineConfig } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
 

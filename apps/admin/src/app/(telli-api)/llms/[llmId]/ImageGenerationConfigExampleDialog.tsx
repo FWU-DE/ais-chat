@@ -1,6 +1,7 @@
 'use client';
 
 import type { ImageGenerationConfig } from '@ais-chat/api-database/types';
+
 import { JsonExamplesDialog } from './JsonExamplesDialog';
 
 // Typed as `ImageGenerationConfig` so schema changes force this example to be

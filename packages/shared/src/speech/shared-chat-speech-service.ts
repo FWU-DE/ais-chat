@@ -1,6 +1,8 @@
+import { billSpeechGenerationUsageToApiKey } from '@ais-chat/ai-core';
 import { requireTeacherRole } from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
 import { dbUpdateTokenUsageByCharacterChatId } from '@shared/db/functions/character';
+import { dbGetFederalState } from '@shared/db/functions/federal-state';
 import { dbUpdateTokenUsageBySharedLearningScenarioId } from '@shared/db/functions/learning-scenario';
 import { ForbiddenError, NotFoundError } from '@shared/error';
 import { FederalStateModel } from '@shared/federal-states/types';
@@ -12,6 +14,7 @@ import {
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
 import { getUserWithFederalState } from '@shared/users/user-service';
+
 import { getSharedChatEntity } from './shared-chat-get-entity';
 import {
   SharedChatCharacter,
@@ -163,6 +166,15 @@ function createSharedChatSpeechStrategy({
           modelId: model.id,
           completionTokens: 0,
           promptTokens: 0,
+          costsInCent,
+        });
+      }
+
+      const { apiKeyId } = await dbGetFederalState(context.federalState.id);
+      if (apiKeyId) {
+        await billSpeechGenerationUsageToApiKey({
+          apiKeyId,
+          modelId: model.id,
           costsInCent,
         });
       }

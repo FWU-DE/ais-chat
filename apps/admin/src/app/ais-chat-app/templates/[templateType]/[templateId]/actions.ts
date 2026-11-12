@@ -1,7 +1,4 @@
 'use server';
-import { requireAdminOrEditorAuth } from '@/auth/requireAdminAuth';
-import { runServerAction } from '@shared/actions/run-server-action';
-import { TemplateToFederalStateMapping, TemplateTypes } from '@shared/templates/template';
 import {
   getFederalStatesWithMappings,
   getTemplateById,
@@ -9,6 +6,10 @@ import {
   updateTemplateDeletedState,
   updateTemplateMappings,
 } from '@ais-chat/shared/templates/template-service';
+import { runServerAction } from '@shared/actions/run-server-action';
+import { TemplateToFederalStateMapping, TemplateTypes } from '@shared/templates/template';
+
+import { requireAdminOrEditorAuth } from '@/auth/requireAdminAuth';
 
 export async function getTemplateByIdAction(templateType: TemplateTypes, templateId: string) {
   await requireAdminOrEditorAuth();

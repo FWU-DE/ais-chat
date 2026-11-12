@@ -1,5 +1,6 @@
-import { expect, type Page, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { expect, type Page, test } from '@playwright/test';
+
 import { AUTH_FILES } from '../utils/const';
 import { waitForChatHistory } from '../utils/utils';
 

@@ -37,3 +37,15 @@ export function createJsonStringSchema<T>(
     }
   });
 }
+
+// Reads a JSON-encoded textarea value for cross-field checks, yielding `undefined`
+// when it is empty, malformed, or does not match `shape`.
+export function parseJsonFormValue<T>(value: string, shape: z.ZodType<T>): T | undefined {
+  if (!value.trim()) return undefined;
+  try {
+    const result = shape.safeParse(JSON.parse(value));
+    return result.success ? result.data : undefined;
+  } catch {
+    return undefined;
+  }
+}

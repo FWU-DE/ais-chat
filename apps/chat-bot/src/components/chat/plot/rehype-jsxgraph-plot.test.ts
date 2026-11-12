@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
 import type { Element, Root } from 'hast';
-import { rehypeJsxGraphPlot, JSXGRAPH_PLOT_HNAME } from './rehype-jsxgraph-plot';
+import { describe, expect, it } from 'vitest';
+
+import { JSXGRAPH_PLOT_HNAME, rehypeJsxGraphPlot } from './rehype-jsxgraph-plot';
 
 function preNode(overrides: Partial<Element> & { lang?: string; meta?: string }): Element {
   const { lang, meta, ...element } = overrides;

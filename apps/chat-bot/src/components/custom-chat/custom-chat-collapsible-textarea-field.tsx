@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import type { Control, FieldPath, FieldValues } from 'react-hook-form';
 import { useController } from 'react-hook-form';
+
 import { CustomChatHeading2 } from './custom-chat-heading2';
 
 type CustomChatCollapsibleTextareaFieldProps<TFieldValues extends FieldValues> = {

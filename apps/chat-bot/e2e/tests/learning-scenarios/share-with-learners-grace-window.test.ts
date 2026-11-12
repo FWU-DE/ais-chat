@@ -1,8 +1,9 @@
+import { nanoid } from 'nanoid';
+
 import { expect, test } from '../../fixtures/test';
 import { AUTH_FILES } from '../../utils/const';
 import { configureLearningScenario, createLearningScenario } from '../../utils/learning-scenario';
 import { startShare, stopShare, waitForAutosave } from '../../utils/utils';
-import { nanoid } from 'nanoid';
 
 test.describe('share learning scenario with 2-hour grace window', () => {
   test.use({ storageState: AUTH_FILES.teacher });

@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
-import { Button } from '@ui/components/button';
 import { PlayIcon } from '@phosphor-icons/react';
+import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
-import Spinner from '@/components/icons/spinner';
+import React from 'react';
+
 import { useToast } from '@/components/common/toast';
+import Spinner from '@/components/icons/spinner';
 
 export function SpeechVoicePreviewButton({ voice }: { voice: string }) {
   const t = useTranslations('custom-chat.speech');

@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useEffect, useRef, useState } from 'react';
+
 import type { AiActivityStep } from '@/types/ai-activity';
+
 import { getAiActivityStepTitle } from './ai-activity';
 
 const MIN_STEP_DISPLAY_MS = 3000;

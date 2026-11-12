@@ -1,10 +1,11 @@
+import type { ToolDefinition } from '@ais-chat/ai-core';
 import { CharacterSelectModel } from '@shared/db/schema';
+
 import {
   constructToolGuidelines,
   FORMAT_GUIDELINES,
   LANGUAGE_GUIDELINES,
 } from '../utils/system-prompt';
-import type { ToolDefinition } from '@ais-chat/ai-core';
 
 export function constructCharacterSystemPrompt({
   character,

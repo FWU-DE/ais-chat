@@ -1,5 +1,12 @@
 'use client';
 
+import { BoxArrowDownIcon, TrashSimpleIcon } from '@phosphor-icons/react';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
+import { Button } from '@ui/components/button';
+import Image from 'next/image';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
 import DownloadSharedConversationButton, {
   fetchSharedConversationDownload,
 } from '@/app/(unauth)/ua/download-shared-conversation-button';
@@ -8,12 +15,7 @@ import { type ChatMessage as Message } from '@/types/chat';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
 import { cn } from '@/utils/tailwind';
 import { reductionBreakpoint } from '@/utils/tailwind/layout';
-import { BoxArrowDownIcon, TrashSimpleIcon } from '@phosphor-icons/react';
-import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
-import { Button } from '@ui/components/button';
-import { useTranslations } from 'next-intl';
-import Image from 'next/image';
-import React from 'react';
+
 import useBreakpoints from '../hooks/use-breakpoints';
 import ProfileMenu from '../navigation/profile-menu';
 import {
@@ -24,6 +26,7 @@ import type { ConversationDownloadFile } from './conversation-download-context';
 
 export function SharedChatHeader({
   chatActive,
+  disableNewChat,
   hasMessages,
   t,
   handleOpenNewChat,
@@ -35,6 +38,7 @@ export function SharedChatHeader({
   imageUrl,
 }: {
   chatActive: boolean;
+  disableNewChat: boolean;
   hasMessages: boolean;
   t: ReturnType<typeof useTranslations>;
   handleOpenNewChat: () => void;
@@ -61,6 +65,7 @@ export function SharedChatHeader({
       id: 'delete-chat',
       label: tCommon('delete'),
       icon: <TrashSimpleIcon className="size-5 text-primary" />,
+      disabled: disableNewChat,
       onSelect: openDeleteConfirm,
     },
     {
@@ -101,6 +106,7 @@ export function SharedChatHeader({
           variant="ghost"
           size="icon-round"
           className="text-primary"
+          disabled={disableNewChat}
           onClick={openDeleteConfirm}
           data-testid="custom-chat-delete-button"
         >
@@ -112,7 +118,7 @@ export function SharedChatHeader({
         {dialogStarted && imageSource && (
           <Image
             src={imageSource ?? ''}
-            alt={title}
+            alt={tCommon('profile-picture')}
             width={30}
             height={30}
             className="rounded-enterprise-sm"

@@ -1,7 +1,7 @@
-import { Sidebar, SidebarItem } from '@/components/navigation/Sidebar';
-import { ROUTES } from '@/consts/routes';
 import { auth } from '@/auth';
 import { canAccessEditorArea } from '@/auth/roles';
+import { Sidebar, SidebarItem } from '@/components/navigation/Sidebar';
+import { ROUTES } from '@/consts/routes';
 
 export async function AdminAppSidebar() {
   const session = await auth();
@@ -16,6 +16,7 @@ export async function AdminAppSidebar() {
           <SidebarItem label="Tool Call Kosten" href={ROUTES.app.toolCallCosts} />
           <SidebarItem label="Statische Modelle" href={ROUTES.app.staticModels} />
           <SidebarItem label="Webseitenpakete" href={ROUTES.app.urlPresets} />
+          <SidebarItem label="Aufgaben" href={ROUTES.app.scheduledTasks} />
         </>
       )}
       {canAccessApp && <SidebarItem label="Vorlagen" href={ROUTES.app.templates} />}

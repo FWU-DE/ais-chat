@@ -1,7 +1,9 @@
-import type { UserAndContext } from '@/auth/types';
-import { VECTOR_SEARCH_LIMIT } from '@/configuration-text-inputs/const';
 import type { FileModel } from '@shared/db/schema';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { UserAndContext } from '@/auth/types';
+import { VECTOR_SEARCH_LIMIT } from '@/configuration-text-inputs/const';
+
 import type { SemanticFileSearchToolResponse } from './retrieve-text-chunks-tool';
 
 const mocks = vi.hoisted(() => ({

@@ -1,3 +1,4 @@
+import { Field, FieldLabel } from '@ui/components/field';
 import {
   Select,
   SelectContent,
@@ -6,7 +7,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/select';
-import { Field, FieldLabel } from '@ui/components/field';
 import { useTranslations } from 'next-intl';
 
 type TimeLimitSelectProps = {

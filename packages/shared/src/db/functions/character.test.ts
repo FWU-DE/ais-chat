@@ -15,6 +15,7 @@ vi.mock('..', () => ({
 }));
 
 import { NotFoundError } from '@shared/error';
+
 import {
   dbExtendSharedCharacterExpiration,
   dbGetAllAccessibleCharacters,
@@ -23,13 +24,14 @@ import {
   dbGetCharacterByIdAndInviteCode,
   dbGetCharacterByIdAndUser,
   dbGetCharacterByIdForConversation,
-  dbGetCharacterByIdOptionalShareData,
   dbGetCharacterByIdWithShareData,
   dbGetCharacterByNameAndUser,
   dbGetCharacters,
   dbGetCharactersByAssociatedSchools,
   dbGetCharactersByIds,
+  dbGetCharactersByIdsOptionalShareData,
   dbGetCharactersByUser,
+  dbGetCharactersByUserFavorite,
   dbGetCommunityCharacters,
   dbGetGlobalCharacterByName,
   dbGetGlobalCharacters,
@@ -149,6 +151,37 @@ describe('db character sharing helpers', () => {
       expect(result).toBe(characters);
     });
 
+    it('dbGetCharactersByIdsOptionalShareData returns an empty array without querying the db when given no ids', async () => {
+      const result = await dbGetCharactersByIdsOptionalShareData({
+        characterIds: [],
+        user: { id: 'user-1' },
+      });
+
+      expect(result).toEqual([]);
+      expect(mocks.select).not.toHaveBeenCalled();
+    });
+
+    it('dbGetCharactersByIdsOptionalShareData queries the db when given ids', async () => {
+      const characters = [{ id: 'character-1' }];
+      mockSelectChain(characters);
+
+      const result = await dbGetCharactersByIdsOptionalShareData({
+        characterIds: ['character-1'],
+        user: { id: 'user-1' },
+      });
+
+      expect(result).toBe(characters);
+    });
+
+    it('dbGetCharactersByUserFavorite returns the characters favorited by the user', async () => {
+      const characters = [{ id: 'character-1' }];
+      mockSelectChain(characters);
+
+      const result = await dbGetCharactersByUserFavorite({ user: { id: 'user-1' } });
+
+      expect(result).toBe(characters);
+    });
+
     it('dbGetCharacterByIdAndInviteCode returns the matching row', async () => {
       const row = { id: 'character-1' };
       mockSelectChain([row]);
@@ -166,18 +199,6 @@ describe('db character sharing helpers', () => {
       mockSelectChain([row]);
 
       const result = await dbGetCharacterByIdWithShareData({
-        characterId: 'character-1',
-        user: { id: 'user-1' },
-      });
-
-      expect(result).toBe(row);
-    });
-
-    it('dbGetCharacterByIdOptionalShareData returns the matching row', async () => {
-      const row = { id: 'character-1' };
-      mockSelectChain([row]);
-
-      const result = await dbGetCharacterByIdOptionalShareData({
         characterId: 'character-1',
         user: { id: 'user-1' },
       });

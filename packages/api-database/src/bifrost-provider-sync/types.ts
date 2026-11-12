@@ -12,13 +12,19 @@ export type BifrostSecret =
       from_env?: boolean;
     };
 
+/**
+ * A Bifrost key alias: the upstream model id, or Azure's object form, which can additionally
+ * route this one model to Azure AI Speech instead of an Azure OpenAI deployment.
+ */
+export type BifrostKeyAlias = string | { model_id: string; use_speech_endpoints?: boolean };
+
 export type BifrostKey = {
   id?: string;
   name: string;
   value: BifrostSecret;
   models: string[];
   weight: number;
-  aliases?: Record<string, string>;
+  aliases?: Record<string, BifrostKeyAlias>;
   azure_key_config?: {
     endpoint: BifrostSecret;
   };

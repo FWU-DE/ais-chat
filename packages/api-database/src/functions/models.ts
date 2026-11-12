@@ -1,12 +1,13 @@
-import { eq, inArray, and } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
+
+import { db } from '../db';
+import type { LlmInsertModel, LlmModel } from '../schema';
 import {
   llmModelApiKeyMappingTable,
   llmModelProviderKeyMappingTable,
   llmModelTable,
 } from '../schema';
-import { db } from '../db';
 import { dbGetAllApiKeys } from './api-key';
-import type { LlmInsertModel, LlmModel } from '../schema';
 
 export async function dbGetAllModels() {
   return db.select().from(llmModelTable).orderBy(llmModelTable.createdAt);
