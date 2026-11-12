@@ -6,6 +6,10 @@ import type { AiActivityToolName } from '@/types/ai-activity';
 import { TOOL_NAMES } from '@/types/tool-names';
 import { isImageFile } from '@/utils/files/generic';
 
+import {
+  buildGenerateDocumentTool,
+  generateDocumentActivity,
+} from './tools/generate-document-tool';
 import { buildJsxgraphTool, createPlotActivity } from './tools/jsxgraph-tool';
 import { buildMathCalculateTool, mathCalculateActivity } from './tools/math-calculate-tool';
 import { buildMundoSearchTool, mundoSearchActivity } from './tools/mundo-search-tool';
@@ -34,6 +38,7 @@ export const toolActivityRegistry = {
   [TOOL_NAMES.mundoSearch]: mundoSearchActivity,
   [TOOL_NAMES.retrieveEntireFile]: retrieveEntireFileActivity,
   [TOOL_NAMES.retrieveTextChunks]: retrieveTextChunksActivity,
+  [TOOL_NAMES.generateDocument]: generateDocumentActivity,
 } satisfies Record<AiActivityToolName, ToolActivity>;
 
 type BuildToolsParams = {
@@ -99,7 +104,7 @@ export function buildTools({
     sourceUrls,
     attachedLinks,
   });
-
+  const generateDocumentTool = buildGenerateDocumentTool();
   // Each tool is built into its own named const and merged via conditional spread (instead of one
   // object with possibly-undefined values filtered afterwards), so TypeScript can drop disabled
   // tools and still infer each key's specific ToolRegistration<T> without a type assertion.
@@ -111,6 +116,7 @@ export function buildTools({
     ...(mundoSearchTool && { [TOOL_NAMES.mundoSearch]: mundoSearchTool }),
     ...(retrieveEntireFileTool && { [TOOL_NAMES.retrieveEntireFile]: retrieveEntireFileTool }),
     ...(retrieveTextChunksTool && { [TOOL_NAMES.retrieveTextChunks]: retrieveTextChunksTool }),
+    ...(generateDocumentTool && { [TOOL_NAMES.generateDocument]: generateDocumentTool }),
   };
 
   return { toolRegistry };

@@ -40,6 +40,10 @@ const TOOLS: Record<AiActivityToolName, { args: unknown; prompt: string }> = {
     args: { description: 'y = x' },
     prompt: 'Zeichne den Graphen der Funktion y = x.',
   },
+  generate_document: {
+    args: { format: 'pdf', title: 'Testdokument', content: '# Testdokument\n\nInhalt.' },
+    prompt: 'Erstelle ein PDF mit einem kurzen Testdokument.',
+  },
 };
 
 // These tools look up an uploaded file in the conversation.

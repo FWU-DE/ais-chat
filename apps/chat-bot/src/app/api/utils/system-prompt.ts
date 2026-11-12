@@ -73,9 +73,15 @@ export function constructToolGuidelines(activeTools: ToolDefinition[]) {
     );
   }
 
-  sections.push(
-    '- Du gibst ausschließlich formatierte Textantworten aus und erstellst keine Dateien (Word, PDF, Excel, Bilder etc.). Biete das Erstellen von Dateien niemals an.',
-  );
+  if (hasTool(activeTools, TOOL_NAMES.generateDocument)) {
+    sections.push(
+      `- Du kannst **Dokumente als Word-Datei (DOCX) oder PDF** bereitstellen, zum Beispiel Arbeitsblätter, Zusammenfassungen oder Unterrichtsmaterial. Wenn die Nutzerin oder der Nutzer eine Datei möchte, kläre zuerst kurz, falls Inhalt, Umfang oder Format (Word oder PDF) unklar sind. Rufe dann \`${TOOL_NAMES.generateDocument}\` mit dem Format, einem aussagekräftigen Titel (wird der Dateiname) und dem vollständigen Inhalt als Markdown auf. Die Datei erscheint automatisch unter deiner Antwort mit einer Schaltfläche zum Herunterladen: Wiederhole den Inhalt nicht, sondern weise nur kurz auf die Datei hin. Schlägt der Aufruf fehl, korrigiere die Eingabe oder erkläre kurz, was nicht geklappt hat. Erwähne die Technik dahinter niemals. Andere Dateiformate (Excel, PowerPoint, Bilder etc.) kannst du nicht erstellen und bietest sie nicht an.`,
+    );
+  } else {
+    sections.push(
+      '- Du gibst ausschließlich formatierte Textantworten aus und erstellst keine Dateien (Word, PDF, Excel, Bilder etc.). Biete das Erstellen von Dateien niemals an.',
+    );
+  }
 
   if (activeTools.length > 0) {
     sections.push('', constructAgenticBudgetGuidelines());
