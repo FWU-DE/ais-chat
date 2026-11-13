@@ -29,7 +29,7 @@ export async function createGeneratedDocumentBlob(
 ): Promise<Blob> {
   if (format === 'pdf') {
     const { markdownToPdfBlob } = await import('./markdown-pdf');
-    return markdownToPdfBlob(markdown, allowedImages);
+    return markdownToPdfBlob(markdown, allowedImages, title ?? titleFromMarkdown(markdown));
   }
 
   if (format === 'html') {

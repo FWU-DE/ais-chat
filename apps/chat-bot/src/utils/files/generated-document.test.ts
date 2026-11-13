@@ -52,11 +52,22 @@ describe('createGeneratedDocumentFileName', () => {
 
 describe('createGeneratedDocumentBlob', () => {
   it('creates a PDF from Markdown', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(Buffer.from('%PDF-test'), {
+        status: 200,
+        headers: { 'Content-Type': 'application/pdf' },
+      }),
+    );
     const blob = await createGeneratedDocumentBlob(MARKDOWN, 'pdf');
     const bytes = await readBytes(blob);
 
     expect(blob.type).toBe('application/pdf');
-    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe('%PDF-');
+    expect(new TextDecoder().decode(bytes)).toBe('%PDF-test');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/generate-document/pdf',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    fetchSpy.mockRestore();
   });
 
   it('creates a DOCX (zip) from Markdown without loading images', async () => {
