@@ -225,15 +225,15 @@ export function FloatingText({
       className={cn(
         'pointer-events-auto flex flex-col z-10 bg-secondary rounded-xl border select-none',
         // using string interpolations is extremely flaky, so we're using a static class name
-        isAtLeast.lg ? 'absolute' : 'sticky',
-        !isAtLeast.lg && 'mx-4',
+        isDraggable ? 'absolute' : 'sticky',
+        !isDraggable && 'mx-4',
         dragCursorClass,
       )}
       style={{
-        left: isAtLeast.lg ? position.x : undefined,
-        top: isAtLeast.lg ? position.y : minMargin,
-        maxWidth: isAtLeast.lg ? getMaxSize(maxWidth, position.x) : '100%',
-        maxHeight: isAtLeast.lg ? getMaxSize(maxHeight, position.y) : '40%',
+        left: isDraggable ? position.x : undefined,
+        top: isDraggable ? position.y : minMargin,
+        maxWidth: isDraggable ? getMaxSize(maxWidth, position.x) : '100%',
+        maxHeight: isDraggable ? getMaxSize(maxHeight, position.y) : '40%',
         width: isResizable ? size?.width : undefined,
         height: isResizable ? size?.height : undefined,
       }}
@@ -320,7 +320,7 @@ export function FloatingText({
     </aside>
   );
 
-  if (isAtLeast.lg && overlayTarget) {
+  if (isDraggable && overlayTarget) {
     return createPortal(floatingTextElement, overlayTarget);
   }
 
