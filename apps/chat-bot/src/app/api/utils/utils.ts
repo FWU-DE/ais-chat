@@ -1,4 +1,4 @@
-import { dbGetFederalStateWithDecryptedApiKeyWithResult } from '@shared/db/functions/federal-state';
+import { dbGetFederalStateWithApiKeyIdWithResult } from '@shared/db/functions/federal-state';
 import {
   dbGetLlmModelsByFederalStateId,
   dbGetModelByIdAndFederalStateId,
@@ -34,21 +34,13 @@ async function getModelAndApiKey({
   federalStateId: string;
   modelId: string;
 }): Promise<{ model: LlmModelSelectModel; apiKeyId: string }> {
-  const [error, federalStateObject] = await dbGetFederalStateWithDecryptedApiKeyWithResult({
+  const [error, federalStateObject] = await dbGetFederalStateWithApiKeyIdWithResult({
     federalStateId,
   });
 
   if (error !== null) {
-    logError('Error fetching federal state with decrypted API key:', error);
+    logError('Error fetching federal state with API key:', error);
     throw new Error(error.message);
-  }
-
-  if (!federalStateObject.apiKeyId) {
-    const apiKeyError = new Error(
-      `Federal state with id ${federalStateId} has no api key associated`,
-    );
-    logError(apiKeyError.message, apiKeyError);
-    throw apiKeyError;
   }
 
   let model = await dbGetModelByIdAndFederalStateId({ modelId, federalStateId });

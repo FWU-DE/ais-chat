@@ -1,10 +1,10 @@
 import test, { expect } from '@playwright/test';
 import { db } from '@shared/db';
+import { dbGetAllLlmModels } from '@shared/db/functions/llm-model';
 import {
   characterTable,
   federalStateTable,
   fileTable,
-  llmModelTable,
   sharedCharacter,
   SharedChatConversationMessageFileMappingTable,
   sharedChatConversationTable,
@@ -78,7 +78,7 @@ test('should not delete an uploaded file belonging to an active shared chat', as
     .returning();
   if (!user) throw new Error('Failed to create user');
 
-  const [model] = await db.select().from(llmModelTable).limit(1);
+  const [model] = await dbGetAllLlmModels();
   if (!model) throw new Error('Failed to find model');
 
   const [character] = await db

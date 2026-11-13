@@ -1,11 +1,7 @@
 import { lookupApiKeys } from '@ais-chat/ai-core/api-keys/lookup';
 import { env as aiEnv } from '@ais-chat/ai-core/env';
 
-import { env } from '../../env';
 import { db } from '..';
-import { decrypt, encrypt } from '../crypto';
-import { dbGetFederalStateWithDecryptedApiKey } from '../functions/federal-state';
-import { dbUpdateLlmModelsForAllFederalStates } from '../functions/llm-model';
 import { FederalStateInsertModel, federalStateTable } from '../schema';
 
 export async function insertFederalStates({ skip = true }: { skip: boolean }) {
@@ -17,38 +13,20 @@ export async function insertFederalStates({ skip = true }: { skip: boolean }) {
     );
   }
 
-  const apiKeysByState: Record<string, string> = {};
-  let apiKeyIdsByState: Record<string, string | null> = {};
+  const apiKeyIdsByState = aiEnv.apiDatabaseUrl
+    ? await lookupApiKeys(
+        Object.fromEntries(FEDERAL_STATES.map(({ id, plainApiKey }) => [id, plainApiKey])),
+      )
+    : {};
 
-  if (aiEnv.apiDatabaseUrl) {
-    // Decrypt API keys and lookup their IDs
-    for (const federalState of FEDERAL_STATES) {
-      apiKeysByState[federalState.id] = decrypt({
-        data: federalState.encryptedApiKey,
-        plainEncryptionKey: env.encryptionKey,
-      });
-    }
-
-    apiKeyIdsByState = await lookupApiKeys(apiKeysByState);
-  }
-
-  for (const federalState of FEDERAL_STATES) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  for (const { plainApiKey, ...federalState } of FEDERAL_STATES) {
     const apiKeyId = apiKeyIdsByState[federalState.id];
     await db
       .insert(federalStateTable)
       .values({ ...federalState, apiKeyId })
       .onConflictDoNothing();
-
-    // upsert models per federal state
-    const federalStateAndApiKey = await dbGetFederalStateWithDecryptedApiKey({
-      federalStateId: federalState.id,
-    });
-    if (federalStateAndApiKey === undefined) {
-      return;
-    }
   }
-
-  await dbUpdateLlmModelsForAllFederalStates();
 
   console.log('federalState seed successful');
 }
@@ -154,10 +132,7 @@ export const FEDERAL_STATES = FEDERAL_STATE_DEFINITIONS.filter((state) => {
   id: state.id,
   studentPriceLimit: 200,
   teacherPriceLimit: 500,
-  encryptedApiKey: encrypt({
-    plainEncryptionKey: env.encryptionKey,
-    text: process.env[state.envKeyName]!,
-  }),
+  plainApiKey: process.env[state.envKeyName]!,
   featureToggles: {
     isStudentAccessEnabled: true,
     isCharacterEnabled: true,
@@ -169,4 +144,4 @@ export const FEDERAL_STATES = FEDERAL_STATE_DEFINITIONS.filter((state) => {
     isWebSearchEnabled: true,
     isSpeechModelEnabled: true,
   },
-})) satisfies Array<FederalStateInsertModel>;
+})) satisfies Array<FederalStateInsertModel & { plainApiKey: string }>;

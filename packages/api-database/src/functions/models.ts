@@ -9,6 +9,57 @@ import {
 } from '../schema';
 import { dbGetAllApiKeys } from './api-key';
 
+// Public model columns for consumers outside the API; never expose provider settings or parameters.
+const catalogModelColumns = {
+  id: llmModelTable.id,
+  provider: llmModelTable.provider,
+  name: llmModelTable.name,
+  displayName: llmModelTable.displayName,
+  description: llmModelTable.description,
+  priceMetadata: llmModelTable.priceMetadata,
+  createdAt: llmModelTable.createdAt,
+  supportedImageFormats: llmModelTable.supportedImageFormats,
+  imageGenerationConfig: llmModelTable.imageGenerationConfig,
+  modelConfig: llmModelTable.modelConfig,
+  isNew: llmModelTable.isNew,
+  isDeleted: llmModelTable.isDeleted,
+};
+
+export type CatalogModel = Pick<LlmModel, keyof typeof catalogModelColumns>;
+
+export async function dbGetAllCatalogModels(): Promise<CatalogModel[]> {
+  return db.select(catalogModelColumns).from(llmModelTable).orderBy(llmModelTable.createdAt);
+}
+
+export async function dbGetCatalogModelById(modelId: string): Promise<CatalogModel | undefined> {
+  const [model] = await db
+    .select(catalogModelColumns)
+    .from(llmModelTable)
+    .where(eq(llmModelTable.id, modelId));
+  return model;
+}
+
+export async function dbGetCatalogModelByName(name: string): Promise<CatalogModel | undefined> {
+  const [model] = await db
+    .select(catalogModelColumns)
+    .from(llmModelTable)
+    .where(eq(llmModelTable.name, name));
+  return model;
+}
+
+/** Returns all models (including deleted ones) the given API key has access to. */
+export async function dbGetCatalogModelsByApiKeyId(apiKeyId: string): Promise<CatalogModel[]> {
+  return db
+    .select(catalogModelColumns)
+    .from(llmModelTable)
+    .innerJoin(
+      llmModelApiKeyMappingTable,
+      eq(llmModelApiKeyMappingTable.llmModelId, llmModelTable.id),
+    )
+    .where(eq(llmModelApiKeyMappingTable.apiKeyId, apiKeyId))
+    .orderBy(llmModelTable.createdAt);
+}
+
 export async function dbGetAllModels() {
   return db.select().from(llmModelTable).orderBy(llmModelTable.createdAt);
 }

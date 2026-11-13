@@ -1,5 +1,6 @@
 import test, { expect } from '@playwright/test';
 import { db } from '@shared/db';
+import { dbGetAllLlmModels } from '@shared/db/functions/llm-model';
 import {
   AssistantFileMapping,
   assistantTable,
@@ -11,7 +12,6 @@ import {
   fileTable,
   LearningScenarioFileMapping,
   learningScenarioTable,
-  llmModelTable,
   userTable,
 } from '@shared/db/schema';
 import { addDays } from '@shared/utils/date';
@@ -42,7 +42,7 @@ test.describe('cleanup', () => {
       }
       userId = user.id;
 
-      const [model] = await tx.select().from(llmModelTable).limit(1);
+      const [model] = await dbGetAllLlmModels();
       if (!model) {
         throw new Error('Failed to find model');
       }

@@ -184,8 +184,9 @@ export function FederalStateView(props: FederalStateViewProps) {
           <FormField
             name="apiKeyId"
             label="API Key ID"
-            description="UUID des API keys aus ais-chat-api für Kostenmanagement und Billing."
+            description="UUID des API keys aus ais-chat-api für Kostenmanagement und Billing. Wird über 'API Key aktualisieren' gesetzt."
             control={control}
+            disabled
           />
           <FormField
             name="appName"

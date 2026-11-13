@@ -1,4 +1,8 @@
-import { dbLookupApiKeyByFullKey } from '@ais-chat/api-database';
+import { dbGetApiKeyById, dbLookupApiKeyByFullKey } from '@ais-chat/api-database';
+
+export async function apiKeyExists(apiKeyId: string): Promise<boolean> {
+  return (await dbGetApiKeyById({ apiKeyId })) !== undefined;
+}
 
 /**
  * Looks up API key IDs by federal state ID.
