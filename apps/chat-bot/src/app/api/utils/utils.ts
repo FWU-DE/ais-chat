@@ -1,12 +1,9 @@
 import { dbGetFederalStateWithApiKeyIdWithResult } from '@shared/db/functions/federal-state';
-import {
-  dbGetLlmModelsByFederalStateId,
-  dbGetModelByIdAndFederalStateId,
-} from '@shared/db/functions/llm-model';
+import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
 import { LlmModelSelectModel } from '@shared/db/schema';
 import {
   findStaticModelByRoleAndFederalStateId,
-  getDefaultModel,
+  getModelByIdOrFallback,
   getSafetyModel,
 } from '@shared/llm-models/llm-model-service';
 import { getFirstTextModel } from '@shared/llm-models/llm-model-utils';
@@ -43,18 +40,14 @@ async function getModelAndApiKey({
     throw new Error(error.message);
   }
 
-  let model = await dbGetModelByIdAndFederalStateId({ modelId, federalStateId });
+  const model = await getModelByIdOrFallback({ modelId, federalStateId });
 
   if (model === undefined) {
-    model = await getDefaultModelByFederalStateId(federalStateId);
-
-    if (model === undefined) {
-      const defaultModelError = new Error(
-        `Could not find default model for federal state with id ${federalStateId}`,
-      );
-      logError(defaultModelError.message, defaultModelError);
-      throw defaultModelError;
-    }
+    const defaultModelError = new Error(
+      `Could not find default model for federal state with id ${federalStateId}`,
+    );
+    logError(defaultModelError.message, defaultModelError);
+    throw defaultModelError;
   }
 
   return {
@@ -195,15 +188,4 @@ export async function getStrongAuxiliaryModel(
   }
 
   return fallbackAuxiliaryModel;
-}
-
-/**
- * Get the default model for the federal state
- * @returns The default model for the federal state
- */
-export async function getDefaultModelByFederalStateId(
-  federalStateId: string,
-): Promise<LlmModelSelectModel | undefined> {
-  const models = await dbGetLlmModelsByFederalStateId({ federalStateId });
-  return getDefaultModel({ federalStateId, models });
 }
