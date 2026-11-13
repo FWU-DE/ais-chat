@@ -1,4 +1,4 @@
-FROM node:24.22.1-alpine
+FROM node:24.22.2-alpine
 WORKDIR /app
 COPY server.mjs .
 EXPOSE 6556
