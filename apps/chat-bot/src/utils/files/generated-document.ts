@@ -1,6 +1,6 @@
 import type { AllowedDocumentImages } from './document-images';
 
-export const GENERATED_DOCUMENT_FORMATS = ['docx', 'html'] as const;
+export const GENERATED_DOCUMENT_FORMATS = ['docx', 'pdf', 'html'] as const;
 
 export type GeneratedDocumentFormat = (typeof GENERATED_DOCUMENT_FORMATS)[number];
 
@@ -27,6 +27,11 @@ export async function createGeneratedDocumentBlob(
   allowedImages: AllowedDocumentImages = new Map(),
   title?: string,
 ): Promise<Blob> {
+  if (format === 'pdf') {
+    const { markdownToPdfBlob } = await import('./markdown-pdf');
+    return markdownToPdfBlob(markdown, allowedImages);
+  }
+
   if (format === 'html') {
     const { markdownToHtmlBlob } = await import('./markdown-html');
     return markdownToHtmlBlob(markdown, title ?? titleFromMarkdown(markdown), allowedImages);
