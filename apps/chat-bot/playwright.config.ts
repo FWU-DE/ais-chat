@@ -1,36 +1,13 @@
-import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-import { parse as parseEnvFile } from '@dotenvx/dotenvx';
 import { defineConfig, devices } from '@playwright/test';
 import type SmartReporter from 'playwright-smart-reporter';
+
+import { adminAppDir, chatBotAppDir, getAppBaseUrl, loadAppEnv } from './e2e/utils/app-env';
 
 type AccessibilityConfig = NonNullable<
   NonNullable<ConstructorParameters<typeof SmartReporter>[0]>['accessibility']
 >;
 
-const chatBotAppDir = fileURLToPath(new URL('.', import.meta.url));
-const adminAppDir = fileURLToPath(new URL('../admin', import.meta.url));
-
-/**
- * Loads an app's own .env.development (committed) and .env.local (gitignored,
- * optional) in isolation. Used to give each webServer its own app's env
- * instead of leaking whichever app's dotenvx-injected env the top-level
- * `playwright test` process happened to be started with (e.g. running
- * chat-bot's `e2e:ui`, which injects chat-bot's .env.local, would otherwise
- * also leak into the admin webServer and shadow admin-specific values like
- * NEXTAUTH_URL or AUTH_SECRET).
- */
-function loadAppEnv(appDir: string): Record<string, string> {
-  const merged: Record<string, string> = {};
-  for (const file of ['.env.development', '.env.local']) {
-    const filePath = path.join(appDir, file);
-    if (!existsSync(filePath)) continue;
-    Object.assign(merged, parseEnvFile(readFileSync(filePath, 'utf8'), { processEnv: {} }));
-  }
-  return merged;
-}
+const chatBotBaseUrl = getAppBaseUrl(chatBotAppDir);
 
 function withAppEnv(appDir: string): Record<string, string> {
   const baseEnv = Object.fromEntries(
@@ -67,7 +44,7 @@ export default defineConfig<{ smartReporterA11y: AccessibilityConfig }>({
   ],
   timeout: 90_000,
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: chatBotBaseUrl,
     trace: 'on-first-retry',
     screenshot: 'on',
     video: 'retain-on-failure',
@@ -151,7 +128,7 @@ export default defineConfig<{ smartReporterA11y: AccessibilityConfig }>({
     {
       command: 'pnpm dev',
       timeout: 60000, // wait 60 seconds for web server at url to be available
-      url: 'http://localhost:3000', // the server to be used for tests
+      url: chatBotBaseUrl, // the server to be used for tests
       reuseExistingServer: true,
       stdout: 'pipe',
       name: 'chat-bot',
@@ -164,7 +141,7 @@ export default defineConfig<{ smartReporterA11y: AccessibilityConfig }>({
       command: 'pnpm dev',
       cwd: adminAppDir,
       timeout: 60000,
-      url: 'http://localhost:3001',
+      url: getAppBaseUrl(adminAppDir),
       reuseExistingServer: true,
       stdout: 'pipe',
       name: 'admin',

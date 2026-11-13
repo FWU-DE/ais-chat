@@ -12,6 +12,7 @@
     "dev:chat-bot": "pnpm --filter ais-chat-app dev",
     "dev:admin": "pnpm --filter ais-chat-admin dev",
     "dev:api": "pnpm --filter ais-chat-api dev",
+    "dev:ports": "node scripts/assign-ports.mjs",
     "format": "prettier --write --cache --log-level warn .",
     "format:check": "prettier --check --cache --log-level warn .",
     "lint": "turbo run lint",

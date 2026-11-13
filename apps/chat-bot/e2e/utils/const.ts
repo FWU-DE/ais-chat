@@ -2,6 +2,8 @@ import path from 'node:path';
 
 import type { AiActivityToolName } from '@/types/ai-activity';
 
+import { adminAppDir, getAppBaseUrl } from './app-env';
+
 export const E2E_FEDERAL_STATE = 'DE-TEST';
 
 /**
@@ -27,7 +29,7 @@ export const AUTH_FILES = {
 /**
  * Base URL of the admin app, used for cross-app tests (e.g. community templates).
  */
-export const ADMIN_BASE_URL = 'http://localhost:3001';
+export const ADMIN_BASE_URL = getAppBaseUrl(adminAppDir);
 
 /**
  * Persisted Playwright auth state for an editor session in the admin app.
