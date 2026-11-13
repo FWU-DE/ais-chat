@@ -8,6 +8,7 @@ import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 
 import { AssistantView } from './assistant-view';
+import { prepareAssistantForView } from './assistant-view-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,7 @@ export default async function Page(props: PageProps<'/assistants/[assistantId]'>
   return (
     <DefaultPageLayout>
       <AssistantView
-        assistant={assistant}
+        assistant={prepareAssistantForView(assistant, user.userRole)}
         fileMappings={fileMappings}
         pictureUrl={pictureUrl}
         initialIsFavorite={initialIsFavorite}
