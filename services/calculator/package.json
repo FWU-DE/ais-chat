@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "execa": "10.2.1",
-    "fastify": "5.12.7"
+    "fastify": "5.12.8"
   },
   "devDependencies": {
     "@types/node": "24.19.2",
