@@ -34,6 +34,8 @@ export function GeneratedDocumentAttachment({
           document.content,
           document.format,
           collectUploadedImageUrls({ fileMapping, messageFileMapping }),
+          // Filename is used as title for HTML documents without extension
+          document.fileName.replace(/\.[^.]+$/, ''),
         ),
         document.fileName,
       );

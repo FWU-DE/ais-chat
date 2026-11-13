@@ -442,7 +442,7 @@ function createDocxOptions({
           if (url === undefined) {
             throw new Error('Image is not an uploaded file');
           }
-          return loadDocumentImage(url);
+          return (await loadDocumentImage(url)).data;
         }
       : exportImages
         ? (url: string) => {
