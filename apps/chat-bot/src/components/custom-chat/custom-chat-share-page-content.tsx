@@ -176,6 +176,7 @@ export default function CustomChatSharePageContent({
             data-testid="qr-code"
             className="w-full h-full max-w-64 sm:max-w-80 md:max-w-96 max-h-64 sm:max-h-80 md:max-h-96"
             value={absoluteShareUrl}
+            aria-hidden="true"
           />
         </section>
       </main>

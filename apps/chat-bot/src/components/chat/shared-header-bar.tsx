@@ -118,7 +118,7 @@ export function SharedChatHeader({
         {dialogStarted && imageSource && (
           <Image
             src={imageSource ?? ''}
-            alt={title}
+            alt={tCommon('profile-picture')}
             width={30}
             height={30}
             className="rounded-enterprise-sm"

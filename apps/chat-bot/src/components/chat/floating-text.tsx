@@ -1,6 +1,7 @@
 'use client';
 
 import { NotchesIcon } from '@phosphor-icons/react';
+import { useTranslations } from 'next-intl';
 import React from 'react';
 import { createPortal } from 'react-dom';
 
@@ -54,6 +55,8 @@ export function FloatingText({
   const isDraggable = isAtLeast.lg;
   const isResizable = isDraggable && !isMinimized;
   const dragCursorClass = isDraggable ? (dragging ? 'cursor-grabbing' : 'cursor-grab') : undefined;
+
+  const t = useTranslations('common');
 
   const getParentElement = React.useCallback(() => {
     return overlayTarget ?? parentElement ?? parentRef?.current ?? null;
@@ -248,7 +251,7 @@ export function FloatingText({
           {title}
         </span>
         <button
-          aria-label="Minimize"
+          aria-label={isMinimized ? t('maximize') : t('minimize')}
           aria-expanded={!isMinimized}
           onClick={() => {
             setIsMinimized(!isMinimized);
