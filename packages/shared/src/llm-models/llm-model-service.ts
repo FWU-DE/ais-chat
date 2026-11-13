@@ -3,6 +3,7 @@ import {
   dbFindModelByIdAndFederalStateId,
   dbGetAllLlmModels,
   dbGetLlmModelById,
+  dbGetLlmModelsByFederalStateId,
   dbGetSpeechModel,
 } from '@shared/db/functions/llm-model';
 import { InvalidArgumentError } from '@shared/error/invalid-argument-error';
@@ -119,6 +120,25 @@ export async function getDefaultModel({
     (await findStaticModelByRoleAndFederalStateId({ role: 'default-chat', federalStateId })) ??
     getFirstTextModel(models)
   );
+}
+
+/**
+ * Resolves a stored text model for a federal state. Falls back to the federal state's default chat
+ * model when the stored model was deleted, is not accessible by the federal state's API key or is
+ * not a text model.
+ */
+export async function getModelByIdOrFallback({
+  modelId,
+  federalStateId,
+}: {
+  modelId: string;
+  federalStateId: string;
+}): Promise<LlmModelSelectModel | undefined> {
+  const models = await dbGetLlmModelsByFederalStateId({ federalStateId });
+  const model = models.find(
+    (candidate) => candidate.id === modelId && candidate.priceMetadata.type === 'text',
+  );
+  return model ?? getDefaultModel({ federalStateId, models });
 }
 
 async function getStaticModelsConfiguration() {

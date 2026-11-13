@@ -1,7 +1,8 @@
 import { dbGetLearningScenarioByIdAndInviteCode } from '@shared/db/functions/learning-scenario';
-import { dbGetLlmModelById } from '@shared/db/functions/llm-model';
 import { dbGetFederalStateByUserId } from '@shared/db/functions/school';
 import { getAvatarPictureUrl } from '@shared/files/fileService';
+import { getModelByIdOrFallback } from '@shared/llm-models/llm-model-service';
+import { logError } from '@shared/logging';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
@@ -40,15 +41,25 @@ export default async function Page(
     notFound();
   }
 
-  const model = await dbGetLlmModelById({ modelId: learningScenario.modelId });
+  const federalState = await dbGetFederalStateByUserId({ userId: learningScenario.startedBy });
+  const model = federalState
+    ? await getModelByIdOrFallback({
+        modelId: learningScenario.modelId,
+        federalStateId: federalState.id,
+      })
+    : undefined;
 
   if (!model) {
+    logError(
+      'No model available for shared learning scenario',
+      new Error('No model available for shared learning scenario'),
+      { learningScenarioId: learningScenario.id, federalStateId: federalState?.id },
+    );
     notFound();
   }
 
   const avatarPictureUrl = await getAvatarPictureUrl(learningScenario.pictureId);
 
-  const federalState = await dbGetFederalStateByUserId({ userId: learningScenario.startedBy });
   const designConfiguration = federalState?.designConfiguration ?? DEFAULT_DESIGN_CONFIGURATION;
   const locale = await resolveSharingLocale({
     customChatVariant: 'learning-scenario',

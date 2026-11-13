@@ -1,7 +1,8 @@
 import { dbGetCharacterByIdAndInviteCode } from '@shared/db/functions/character';
-import { dbGetLlmModelById } from '@shared/db/functions/llm-model';
 import { dbGetFederalStateByUserId } from '@shared/db/functions/school';
 import { getAvatarPictureUrl } from '@shared/files/fileService';
+import { getModelByIdOrFallback } from '@shared/llm-models/llm-model-service';
+import { logError } from '@shared/logging';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
@@ -37,13 +38,23 @@ export default async function Page(props: PageProps<'/ua/characters/[characterId
   if (!character) {
     notFound();
   }
-  const model = await dbGetLlmModelById({ modelId: character.modelId });
+  const federalState = await dbGetFederalStateByUserId({ userId: character.startedBy });
+  const model = federalState
+    ? await getModelByIdOrFallback({
+        modelId: character.modelId,
+        federalStateId: federalState.id,
+      })
+    : undefined;
   const avatarPictureUrl = await getAvatarPictureUrl(character.pictureId);
 
   if (model === undefined) {
+    logError(
+      'No model available for shared character',
+      new Error('No model available for shared character'),
+      { characterId: character.id, federalStateId: federalState?.id },
+    );
     notFound();
   }
-  const federalState = await dbGetFederalStateByUserId({ userId: character.startedBy });
   const designConfiguration = federalState?.designConfiguration ?? DEFAULT_DESIGN_CONFIGURATION;
   const locale = await resolveSharingLocale({
     customChatVariant: 'character',

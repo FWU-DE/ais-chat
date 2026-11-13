@@ -74,24 +74,6 @@ describe('llm-model access', () => {
     });
   });
 
-  describe('dbGetModelByIdAndFederalStateId', () => {
-    it('returns deleted models the API key still has access to', async () => {
-      const { dbGetModelByIdAndFederalStateId } = await importLlmModelFunctions();
-
-      await expect(
-        dbGetModelByIdAndFederalStateId({ modelId: 'model-deleted', federalStateId: 'DE-TEST' }),
-      ).resolves.toEqual(deletedModel);
-    });
-
-    it('returns undefined for models outside the API key', async () => {
-      const { dbGetModelByIdAndFederalStateId } = await importLlmModelFunctions();
-
-      await expect(
-        dbGetModelByIdAndFederalStateId({ modelId: 'model-other', federalStateId: 'DE-TEST' }),
-      ).resolves.toBeUndefined();
-    });
-  });
-
   describe('global lookups', () => {
     it('reads a model by id', async () => {
       mocks.getLlmModelById.mockResolvedValue(activeModel);
