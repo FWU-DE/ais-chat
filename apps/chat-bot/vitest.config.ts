@@ -32,6 +32,8 @@ export default defineConfig({
 
     testTimeout: 5000,
 
+    // remark-pdf's ESM build uses a directory import that Node cannot resolve natively.
+
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'json', 'html'],

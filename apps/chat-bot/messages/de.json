@@ -51,6 +51,11 @@
       "description": "Grafik: {title}",
       "error": "Die Grafik konnte nicht dargestellt werden."
     },
+    "document": {
+      "label": "Dokument",
+      "download": "{fileName} herunterladen",
+      "error": "Das Dokument konnte nicht erstellt werden."
+    },
     "read-aloud": "Nachricht vorlesen",
     "pause-message": "Vorlesen pausieren",
     "read-aloud-error": "Die Sprachausgabe ist fehlgeschlagen.",
@@ -217,7 +222,8 @@
       "retrieve_entire_file": "Datei vollständig gelesen",
       "mundo_search": "Mundo durchsucht",
       "math_calculate": "Berechnung durchgeführt",
-      "create_plot": "Grafik erstellt"
+      "create_plot": "Grafik erstellt",
+      "generate_document": "Datei erstellt"
     }
   },
   "file-interaction": {
