@@ -51,7 +51,7 @@ export const generateDocumentActivity: ToolActivity<GenerateDocumentToolResult> 
 export function buildGenerateDocumentTool(): ToolRegistration<GenerateDocumentToolResult> {
   const definition: ToolDefinition = {
     name: TOOL_NAMES.generateDocument,
-    description: `Creates a downloadable DOCX or HTML file. Use it only when the user wants a file. If the format or the content is unclear, ask the user first instead of calling this tool. For HTML, provide a complete HTML document with inline JavaScript in the content. JavaScript will execute when the user opens the downloaded file locally; warn the user briefly. The file is shown below your answer with a download button automatically: do not repeat the content in your answer. Images: only images the user uploaded in this chat can be embedded. The result is {"status":"created","fileName":"..."} or {"error":"..."}.`,
+    description: `Creates a downloadable DOCX, PDF or interactive HTML file. Use it only when the user wants a file. If the format or the content is unclear, ask the user first instead of calling this tool. For HTML, provide a complete HTML document with inline JavaScript in the content. JavaScript will execute when the user opens the downloaded file locally; warn the user briefly. The file is shown below your answer with a download button automatically: do not repeat the content in your answer. Images: only images the user uploaded in this chat can be embedded. The result is {"status":"created","fileName":"..."} or {"error":"..."}.`,
     parameters: {
       type: 'object',
       properties: {
