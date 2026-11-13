@@ -1,6 +1,5 @@
-import { dbGetAllApiKeys } from '@ais-chat/api-database';
-import { getFederalStateById } from '@shared/federal-states/federal-state-service';
-
+import { getFederalStateByIdAction } from '../actions';
+import { getApiKeyOptionsAction } from './actions';
 import { FederalStateUpdateApiKey } from './FederalStateUpdateApiKey';
 
 export const dynamic = 'force-dynamic';
@@ -10,8 +9,8 @@ export default async function Page(
 ) {
   const { federalStateId } = await props.params;
   const [federalState, apiKeys] = await Promise.all([
-    getFederalStateById(federalStateId),
-    dbGetAllApiKeys(),
+    getFederalStateByIdAction(federalStateId),
+    getApiKeyOptionsAction(),
   ]);
 
   return (
