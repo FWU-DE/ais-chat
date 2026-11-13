@@ -1,3 +1,6 @@
+import { DownloadSimpleIcon } from '@phosphor-icons/react';
+import { Button } from '@ui/components/button';
+
 import { getFileNameAndFileExtension } from '@/utils/files/generic';
 import { cn } from '@/utils/tailwind';
 
@@ -9,6 +12,9 @@ type DisplayFileAttachmentProps = {
   fileName: string;
   status?: 'success' | 'processed' | 'uploading';
   onDeattachFile?: () => void;
+  onDownload?: () => void;
+  downloadLabel?: string;
+  downloadDisabled?: boolean;
   height?: 'default' | 'large';
   width?: 'default' | 'small';
 };
@@ -17,6 +23,9 @@ export default function DisplayFileAttachment({
   fileName,
   status = 'processed',
   onDeattachFile,
+  onDownload,
+  downloadLabel,
+  downloadDisabled = false,
   height = 'default',
   width = 'default',
 }: DisplayFileAttachmentProps) {
@@ -25,7 +34,8 @@ export default function DisplayFileAttachment({
   return (
     <div
       className={cn(
-        'flex w-fit min-w-0 max-w-full shrink-0 items-center justify-start gap-2 pl-4 pr-6 text-sm relative group',
+        'flex w-fit min-w-0 max-w-full shrink-0 items-center justify-start gap-2 pl-4 text-sm relative group',
+        onDownload === undefined ? 'pr-6' : 'pr-2',
         height === 'large' ? 'py-0 h-14' : 'py-2',
       )}
     >
@@ -55,6 +65,19 @@ export default function DisplayFileAttachment({
           </p>
         </div>
       </div>
+      {onDownload !== undefined && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onDownload}
+          disabled={downloadDisabled}
+          aria-label={downloadLabel}
+          title={downloadLabel}
+          className="relative text-primary"
+        >
+          <DownloadSimpleIcon className="size-4" />
+        </Button>
+      )}
     </div>
   );
 }
