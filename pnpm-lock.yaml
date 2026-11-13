@@ -710,8 +710,8 @@ importers:
         specifier: 0.135.0
         version: 0.135.0(zod@4.6.7)
       '@anthropic-ai/vertex-sdk':
-        specifier: 0.21.0
-        version: 0.21.0(supports-color@8.1.1)(zod@4.6.7)
+        specifier: 1.1.2
+        version: 1.1.2(supports-color@8.1.1)(zod@4.6.7)
       '@google/genai':
         specifier: 2.32.0
         version: 2.32.0(@modelcontextprotocol/sdk@1.32.0(@cfworker/json-schema@4.1.4)(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)
@@ -1151,8 +1151,17 @@ packages:
       zod:
         optional: true
 
-  '@anthropic-ai/vertex-sdk@0.21.0':
-    resolution: {integrity: sha512-+l+I2QGfkROJMsK8fU3C8b+cwBYebDYBMLytpHkkWo4a9XhF2uRbWHpz9nm9UpSU0UB6lIrXyvcTTsD/MH2dPQ==}
+  '@anthropic-ai/sdk@1.6.0':
+    resolution: {integrity: sha512-XqiO/46n8S6So8jQ/6/uNCkHntyW6QHHs1gZ+hlwTx1fWDr929g4VmwIXfdMVk7SuBWNdQvAlwyi1G3t6SEIuQ==}
+    hasBin: true
+    peerDependencies:
+      zod: ^3.25.0 || ^4.0.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
+
+  '@anthropic-ai/vertex-sdk@1.1.2':
+    resolution: {integrity: sha512-mLdfLqJjXN/RxqcqWmKAUcDZtSOFFja9IXcqDcBRkpoW1TMxBN1I/AUouLDq5SE67DmIANoNiWLzax28psSOmw==}
 
   '@asamuzakjp/css-color@7.1.9':
     resolution: {integrity: sha512-vZ6JQVq8Ivgz6b/IBlAf90wZviXdluY13cQOPO+nJHbmXwGrPl2GcpqUY7a55/8ZVdfONXpCFMpRijOBCHNlcQ==}
@@ -10306,9 +10315,17 @@ snapshots:
     optionalDependencies:
       zod: 4.6.7
 
-  '@anthropic-ai/vertex-sdk@0.21.0(supports-color@8.1.1)(zod@4.6.7)':
+  '@anthropic-ai/sdk@1.6.0(zod@4.6.7)':
     dependencies:
-      '@anthropic-ai/sdk': 0.135.0(zod@4.6.7)
+      '@opentelemetry/api': 1.10.0
+      json-schema-to-ts: 3.1.1
+      standardwebhooks: 1.1.1
+    optionalDependencies:
+      zod: 4.6.7
+
+  '@anthropic-ai/vertex-sdk@1.1.2(supports-color@8.1.1)(zod@4.6.7)':
+    dependencies:
+      '@anthropic-ai/sdk': 1.6.0(zod@4.6.7)
       '@opentelemetry/api': 1.10.0
       google-auth-library: 10.9.1(supports-color@8.1.1)
     transitivePeerDependencies:
