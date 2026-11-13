@@ -30,7 +30,7 @@ export function CreateNewCharacterButton() {
 
   return (
     <Button type="button" onClick={handleNewCharacter} data-testid="character-create-button">
-      <PlusIcon className="size-5" />
+      <PlusIcon className="size-5" aria-hidden="true" />
       {t('form.create-character')}
     </Button>
   );

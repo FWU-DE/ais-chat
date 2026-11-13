@@ -53,7 +53,7 @@ test('teacher can create shared chat with web sources, student can join chat and
   const schoolChatPagePromise = page.waitForEvent('popup');
   await page.getByRole('link', { name: 'Chat öffnen' }).click();
   const schoolChatPage = await schoolChatPagePromise;
-  await schoolChatPage.getByLabel('profileDropdown').waitFor();
+  await schoolChatPage.getByTestId('profile-dropdown').waitFor();
 
   // send first message
   const button = schoolChatPage.getByTestId('start-dialog-button');

@@ -3,6 +3,7 @@
 import { Button } from '@ui/components/button';
 import { useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 
 import LogoWithName from '@/assets/logo-with-name.svg';
 import { getSafeCallbackUrl } from '@/auth/callback-url';
@@ -13,10 +14,15 @@ export default function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = getSafeCallbackUrl(searchParams.get('callbackUrl'));
 
+  const tCommon = useTranslations('common');
+
   return (
     <main className="w-full flex flex-col justify-center items-center max-w-72 mx-auto py-4 h-full">
       <div className="my-auto flex flex-col items-center w-full">
-        <LogoWithName className="text-primary my-8 sm:my-16 h-13" />
+        <LogoWithName
+          className="text-primary my-8 sm:my-16 h-13"
+          aria-label={tCommon('ais-chat-logo')}
+        />
         <SharedChatLoginForm />
         <div className="flex gap-2 items-center w-full justify-center py-8">
           <hr className="grow border-t border-gray-200" />
