@@ -82,6 +82,6 @@ function transformToModel(federalState: FederalStateSelectModel): FederalStateMo
 
   return {
     ...federalStateWithoutApiKey,
-    hasApiKeyAssigned: !!federalState.encryptedApiKey,
+    hasApiKeyAssigned: !!federalState.apiKeyId,
   };
 }
