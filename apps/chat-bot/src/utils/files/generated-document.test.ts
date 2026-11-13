@@ -42,9 +42,23 @@ describe('createGeneratedDocumentFileName', () => {
     const fileName = createGeneratedDocumentFileName('a'.repeat(300), 'docx', 'Dokument');
     expect(fileName).toBe(`${'a'.repeat(80)}.docx`);
   });
+
+  it('uses the PDF extension', () => {
+    expect(createGeneratedDocumentFileName('Arbeitsblatt', 'pdf', 'Dokument')).toBe(
+      'Arbeitsblatt.pdf',
+    );
+  });
 });
 
 describe('createGeneratedDocumentBlob', () => {
+  it('creates a PDF from Markdown', async () => {
+    const blob = await createGeneratedDocumentBlob(MARKDOWN, 'pdf');
+    const bytes = await readBytes(blob);
+
+    expect(blob.type).toBe('application/pdf');
+    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe('%PDF-');
+  });
+
   it('creates a DOCX (zip) from Markdown without loading images', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const blob = await createGeneratedDocumentBlob(MARKDOWN, 'docx');
