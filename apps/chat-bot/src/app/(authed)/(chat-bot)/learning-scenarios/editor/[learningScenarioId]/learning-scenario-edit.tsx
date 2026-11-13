@@ -61,6 +61,7 @@ import {
   DIDACTIC_COMMENTARY_LENGTH_LIMIT,
   LICENSE_INFORMATION_LENGTH_LIMIT,
   SMALL_TEXT_INPUT_FIELDS_LIMIT,
+  STUDENT_EXERCISE_LENGTH_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS,
 } from '@/configuration-text-inputs/const';
@@ -115,9 +116,9 @@ function createLearningScenarioFieldValidationConfig(t: LearningScenarioTranslat
       }),
     },
     studentExercise: {
-      maxLength: TEXT_INPUT_FIELDS_LENGTH_LIMIT,
+      maxLength: STUDENT_EXERCISE_LENGTH_LIMIT,
       maxLengthErrorMessage: t('student-exercise-max-length', {
-        maxLength: TEXT_INPUT_FIELDS_LENGTH_LIMIT,
+        maxLength: STUDENT_EXERCISE_LENGTH_LIMIT,
       }),
     },
   };
@@ -589,7 +590,7 @@ export function LearningScenarioEdit({
                     testId="learning-scenario-student-exercise-input"
                     onBlur={handleAutoSave}
                     type="textArea"
-                    className="h-27 resize-none"
+                    className="h-27"
                   />
                 </FieldGroup>
               </CardContent>
