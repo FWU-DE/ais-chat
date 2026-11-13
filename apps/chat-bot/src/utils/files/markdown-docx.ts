@@ -32,6 +32,12 @@ import { activateLivePlots } from '@/components/chat/plot/live-plots';
 import { renderPlotPng } from '@/components/chat/plot/png-export';
 import { getPlotKey, getRenderedPlot } from '@/components/chat/plot/rendered-plots';
 import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
+import {
+  type AllowedDocumentImages,
+  findAllowedImageUrl,
+  loadDocumentImage,
+} from '@/utils/files/document-images';
+import { remarkNormalizeHtml, remarkRemoveUnapprovedImages } from '@/utils/files/document-markdown';
 import { isImageFile } from '@/utils/files/generic';
 import { type BoundingBox, parsePlotSpec } from '@/utils/plot/plot-spec';
 
@@ -425,16 +431,28 @@ async function loadImageForDocx(url: string): Promise<ArrayBuffer> {
   return response.arrayBuffer();
 }
 
-function createDocxOptions({ exportImages = false }: MarkdownToDocxOptions = {}): DocxOptions {
-  const loadImage = exportImages
-    ? (url: string) => {
-        const exportUrl = new URL(url, window.location.origin);
-        if (exportUrl.origin === window.location.origin) {
-          exportUrl.searchParams.set('export', 'true');
+function createDocxOptions({
+  exportImages = false,
+  allowedImages,
+}: MarkdownToDocxOptions = {}): DocxOptions {
+  const loadImage =
+    allowedImages !== undefined
+      ? async (reference: string) => {
+          const url = findAllowedImageUrl(reference, allowedImages);
+          if (url === undefined) {
+            throw new Error('Image is not an uploaded file');
+          }
+          return loadDocumentImage(url);
         }
-        return loadImageForDocx(exportUrl.toString());
-      }
-    : loadImageForDocx;
+      : exportImages
+        ? (url: string) => {
+            const exportUrl = new URL(url, window.location.origin);
+            if (exportUrl.origin === window.location.origin) {
+              exportUrl.searchParams.set('export', 'true');
+            }
+            return loadImageForDocx(exportUrl.toString());
+          }
+        : loadImageForDocx;
 
   return {
     plugins: [
@@ -480,6 +498,10 @@ function createDocxOptions({ exportImages = false }: MarkdownToDocxOptions = {})
 
 type MarkdownToDocxOptions = {
   exportImages?: boolean;
+  // When set, only these uploaded images (by file name) are embedded; all other images are skipped.
+  allowedImages?: AllowedDocumentImages;
+  // Turns <br> into line breaks and drops other raw HTML instead of printing it as text.
+  normalizeHtml?: boolean;
 };
 
 async function waitForPlotActivation() {
@@ -502,9 +524,16 @@ export async function markdownToDocxBlob(
     .use(RemarkMathPlugin)
     .use(remarkGfm)
     .use(remarkDocx, createDocxOptions(options));
-  const roots = exportDocument.markdownBlocks.map(
-    ({ markdown }) => processor.parse(markdown) as Root,
-  );
+  const roots = exportDocument.markdownBlocks.map(({ markdown }) => {
+    const root = processor.parse(markdown) as Root;
+    if (options?.normalizeHtml === true) {
+      remarkNormalizeHtml()(root);
+    }
+    if (options?.allowedImages !== undefined) {
+      remarkRemoveUnapprovedImages(options.allowedImages)(root);
+    }
+    return root;
+  });
   const plotKeys = new Set<string>();
   roots.forEach((root) => preparePlotCodeBlocks(root, plotKeys));
   const restoreLivePlots = plotKeys.size > 0 ? activateLivePlots(plotKeys) : undefined;
@@ -519,6 +548,13 @@ export async function markdownToDocxBlob(
       type: 'root',
       children: processedRoots.flatMap((root) => root.children),
     };
+    // Word needs a paragraph after a trailing table, otherwise it reports unreadable content.
+    if (combinedRoot.children.at(-1)?.type === 'table') {
+      combinedRoot.children.push({
+        type: 'paragraph',
+        children: [{ type: 'text', value: PARAGRAPH_SPACER }],
+      });
+    }
     const arrayBuffer = await processor.stringify(combinedRoot);
 
     return new Blob([arrayBuffer], {

@@ -5,13 +5,22 @@ import { useTranslations } from 'next-intl';
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import { type ChatStatus, type UIMessage } from '@/types/chat';
-import { replacePlotBlocks } from '@/utils/code-blocks';
+import { TOOL_NAMES } from '@/types/tool-names';
+import {
+  extractDocumentBlocks,
+  removeDocumentBlocks,
+  removeGeneratedDocumentImages,
+  removeGeneratedDocumentLinks,
+  replacePlotBlocks,
+} from '@/utils/code-blocks';
+import { createGeneratedDocumentFileName } from '@/utils/files/generated-document';
 import { isImageFile } from '@/utils/files/generic';
 import { cn } from '@/utils/tailwind';
 
 import useBreakpoints from '../hooks/use-breakpoints';
 import { AiActivityPanel } from './activity/ai-activity';
 import DisplayFileAttachment from './display-file-attachment';
+import { GeneratedDocumentAttachment } from './document/generated-document-attachment';
 import MarkdownDisplay from './markdown-display';
 import { MessageActions } from './message-actions';
 import MessageImageAttachment, { type MessageFileModel } from './message-image-attachment';
@@ -154,13 +163,23 @@ export function ChatBox({
   const margin =
     allFiles !== undefined || userWebSources.length > 0 || AiActivity !== null ? 'm-0 mt-4' : 'm-4';
 
+  const documentBlocks = message.role === 'assistant' ? extractDocumentBlocks(message.content) : [];
+  const hasGeneratedDocument =
+    documentBlocks.length > 0 ||
+    activitySteps.some((step) => step.kind === 'tool' && step.tool === TOOL_NAMES.generateDocument);
+  const visibleMessageContent = hasGeneratedDocument
+    ? removeGeneratedDocumentImages(
+        removeGeneratedDocumentLinks(removeDocumentBlocks(message.content)),
+      )
+    : message.content;
+
   // Short description instead of the raw plot JSON for copy, read-aloud and audio.
   const plainText = useMemo(
     () =>
-      replacePlotBlocks(message.content, (title) =>
+      replacePlotBlocks(visibleMessageContent, (title) =>
         title ? tCommon('plot.description', { title }) : tCommon('plot.label'),
       ),
-    [message.content, tCommon],
+    [visibleMessageContent, tCommon],
   );
 
   const isAssistantSpeechOnly = message.role === 'assistant' && speechOnly && isSpeechModelEnabled;
@@ -232,9 +251,46 @@ export function ChatBox({
 
   const messageContent = (
     <PlotStreamingContext.Provider value={status === 'streaming' && isLastNonUser}>
-      <MarkdownDisplay>{message.content}</MarkdownDisplay>
+      <MarkdownDisplay>{visibleMessageContent}</MarkdownDisplay>
     </PlotStreamingContext.Provider>
   );
+
+  const activityDocuments = activitySteps.flatMap((step) =>
+    step.kind === 'tool' &&
+    step.tool === TOOL_NAMES.generateDocument &&
+    step.failed !== true &&
+    step.document !== undefined
+      ? [{ id: step.id, document: step.document }]
+      : [],
+  );
+  const generatedDocuments =
+    activityDocuments.length > 0
+      ? activityDocuments
+      : documentBlocks.map((document, documentIndex) => ({
+          id: `document-${message.id}-${documentIndex}`,
+          document: {
+            fileName: createGeneratedDocumentFileName(
+              document.title,
+              document.format,
+              tCommon('document.label'),
+            ),
+            format: document.format,
+            content: document.content,
+          },
+        }));
+  const maybeGeneratedDocuments =
+    generatedDocuments.length > 0 ? (
+      <div className="flex w-full min-w-0 flex-row flex-wrap gap-2">
+        {generatedDocuments.map(({ id, document }) => (
+          <GeneratedDocumentAttachment
+            key={id}
+            document={document}
+            fileMapping={fileMapping}
+            messageFileMapping={messageFileMapping}
+          />
+        ))}
+      </div>
+    ) : null;
 
   return (
     <>
@@ -251,6 +307,7 @@ export function ChatBox({
               )}
             >
               {showMessageText && messageContent}
+              {maybeGeneratedDocuments}
               {maybeAudioPlayer}
               {maybeShowMessageIcons}
             </div>
