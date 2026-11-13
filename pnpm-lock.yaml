@@ -713,8 +713,8 @@ importers:
         specifier: 0.21.0
         version: 0.21.0(supports-color@8.1.1)(zod@4.6.7)
       '@google/genai':
-        specifier: 2.32.0
-        version: 2.32.0(@modelcontextprotocol/sdk@1.32.0(@cfworker/json-schema@4.1.4)(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)
+        specifier: 3.0.0
+        version: 3.0.0(@modelcontextprotocol/sdk@1.32.0(@cfworker/json-schema@4.1.4)(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)
       '@opentelemetry/api':
         specifier: 1.10.0
         version: 1.10.0
@@ -2507,9 +2507,9 @@ packages:
   '@formatjs/intl-localematcher@0.8.14':
     resolution: {integrity: sha512-8O7V38QmbB11+ryJ3KM/znrzXtiqgpXzqNoqDsndHZZ5/zDKTTL+cf5F0mzXkQEwhx8IlWnqYvEovf2S5EwLTw==}
 
-  '@google/genai@2.32.0':
-    resolution: {integrity: sha512-60c79uXpR0a47bmGqDxbXEBuQUalNmwo5mx5kqb91jIW4FoqpsLSt86DeVhRhtH5+s/16Wqxt3sXzFQn2U1OHQ==}
-    engines: {node: '>=20.0.0'}
+  '@google/genai@3.0.0':
+    resolution: {integrity: sha512-0o2uBXPWBNUu0jWg2Id5iBtCnsd7lnxKPQfnijKvNublG/zj40CToERvz/eyfNjzzXt2kwuvxpouLUrRCZ2WUQ==}
+    engines: {node: '>=22.0.0'}
     peerDependencies:
       '@modelcontextprotocol/sdk': 1.32.0
     peerDependenciesMeta:
@@ -11735,7 +11735,7 @@ snapshots:
     dependencies:
       '@formatjs/fast-memoize': 3.1.7
 
-  '@google/genai@2.32.0(@modelcontextprotocol/sdk@1.32.0(@cfworker/json-schema@4.1.4)(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)':
+  '@google/genai@3.0.0(@modelcontextprotocol/sdk@1.32.0(@cfworker/json-schema@4.1.4)(supports-color@8.1.1)(zod@4.6.7))(supports-color@8.1.1)':
     dependencies:
       google-auth-library: 10.9.1(supports-color@8.1.1)
       p-retry: 4.6.2
