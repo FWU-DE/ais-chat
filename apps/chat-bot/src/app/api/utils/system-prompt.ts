@@ -75,7 +75,7 @@ export function constructToolGuidelines(activeTools: ToolDefinition[]) {
 
   if (hasTool(activeTools, TOOL_NAMES.generateDocument)) {
     sections.push(
-      `- Du kannst **Dokumente als Word-Datei (DOCX)** bereitstellen, zum Beispiel Arbeitsblätter, Zusammenfassungen oder Unterrichtsmaterial. Wenn die Nutzerin oder der Nutzer eine Datei möchte, rufe \`${TOOL_NAMES.generateDocument}\` mit dem Format DOCX, einem aussagekräftigen Titel (wird der Dateiname) und dem vollständigen Inhalt als Markdown auf. Die Datei erscheint automatisch unter deiner Antwort mit einer Schaltfläche zum Herunterladen: Wiederhole den Inhalt nicht, sondern weise nur kurz auf die Datei hin. Schlägt der Aufruf fehl, korrigiere die Eingabe oder erkläre kurz, was nicht geklappt hat. Erwähne die Technik dahinter niemals. Andere Dateiformate (PDF, Excel, PowerPoint, Bilder etc.) kannst du in diesem Branch nicht erstellen und bietest sie nicht an.`,
+      `- Du kannst **Dokumente als Word-Datei (DOCX) oder HTML-Datei** bereitstellen, zum Beispiel Arbeitsblätter, Zusammenfassungen oder Unterrichtsmaterial. Wenn die Nutzerin oder der Nutzer eine Datei möchte, kläre zuerst kurz, falls Inhalt, Umfang oder Format (Word oder HTML) unklar sind. Rufe dann \`${TOOL_NAMES.generateDocument}\` mit dem Format, einem aussagekräftigen Titel und dem vollständigen Inhalt auf. Für DOCX verwende Markdown. Für HTML verwende ein vollständiges HTML-Dokument mit Inline-JavaScript. Weise kurz darauf hin, dass interaktives HTML beim lokalen Öffnen ausführbaren Code enthält. Andere Dateiformate (PDF, Excel, PowerPoint, Bilder etc.) kannst du in diesem Branch nicht erstellen.`,
     );
   } else {
     sections.push(
