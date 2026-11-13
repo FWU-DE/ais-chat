@@ -1,5 +1,6 @@
 import {
   ApiKeyQuotaExceededError,
+  ApiKeyUnusableError,
   EmptyResponseError,
   InvalidModelError,
   ProviderRateLimitExceededError,
@@ -24,6 +25,9 @@ describe('getErrorMessageByType', () => {
     );
     expect(getErrorMessageByType(new ApiKeyQuotaExceededError('Quota exceeded'))).toBe(
       'api-key-quota-error',
+    );
+    expect(getErrorMessageByType(new ApiKeyUnusableError({ apiKeyId: 'key-1', reason: 'x' }))).toBe(
+      'api-key-unusable-error',
     );
     expect(getErrorMessageByType(new ProviderRateLimitExceededError('Rate limit'))).toBe(
       'provider-rate-limit-error',

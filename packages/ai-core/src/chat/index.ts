@@ -1,6 +1,7 @@
-import { billTextGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
+import { assertApiKeyCanUseModel } from '../api-keys/access';
+import { billTextGenerationUsageToApiKey } from '../api-keys/billing';
 import { hasAccessToModel } from '../api-keys/model-access';
-import { ApiKeyQuotaExceededError, InvalidModelError, normalizeAiGenerationError } from '../errors';
+import { normalizeAiGenerationError } from '../errors';
 import { getTextModelById, getTextModelByName } from '../models';
 import { getUsedModelId, normalizeModelSelection } from './model-selection';
 import { generateText, generateTextStream } from './providers';
@@ -54,19 +55,7 @@ export async function generateTextWithBilling(
   const [modelId, ...fallbackModelIds] = selection.modelIds;
   const model = await getTextModelById(modelId);
 
-  // Run access check and quota check in parallel for better performance
-  const [hasAccess, isOverQuota] = await Promise.all([
-    hasAccessToModel(apiKeyId, model),
-    isApiKeyOverQuota(apiKeyId),
-  ]);
-
-  if (!hasAccess) {
-    throw new InvalidModelError(`API key does not have access to the text model: ${model.name}`);
-  }
-
-  if (isOverQuota) {
-    throw new ApiKeyQuotaExceededError(`API key has exceeded its monthly quota`);
-  }
+  await assertApiKeyCanUseModel(apiKeyId, model, 'text');
 
   try {
     const fallbackModels = await resolveFallbackModels(fallbackModelIds, apiKeyId);
@@ -123,19 +112,7 @@ export async function* generateTextStreamWithBilling(
   const [modelId, ...fallbackModelIds] = selection.modelIds;
   const model = await getTextModelById(modelId);
 
-  // Run access check and quota check in parallel for better performance
-  const [hasAccess, isOverQuota] = await Promise.all([
-    hasAccessToModel(apiKeyId, model),
-    isApiKeyOverQuota(apiKeyId),
-  ]);
-
-  if (!hasAccess) {
-    throw new InvalidModelError(`API key does not have access to the text model: ${model.name}`);
-  }
-
-  if (isOverQuota) {
-    throw new ApiKeyQuotaExceededError(`API key has exceeded its monthly quota`);
-  }
+  await assertApiKeyCanUseModel(apiKeyId, model, 'text');
 
   try {
     const fallbackModels = await resolveFallbackModels(fallbackModelIds, apiKeyId);
