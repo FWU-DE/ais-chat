@@ -49,14 +49,16 @@ export async function dbGetCatalogModelByName(name: string): Promise<CatalogMode
 
 /** Returns all models (including deleted ones) the given API key has access to. */
 export async function dbGetCatalogModelsByApiKeyId(apiKeyId: string): Promise<CatalogModel[]> {
+  // Subquery instead of a join: mapping rows are not unique per (model, api key)
+  const mappedModelIds = db
+    .select({ id: llmModelApiKeyMappingTable.llmModelId })
+    .from(llmModelApiKeyMappingTable)
+    .where(eq(llmModelApiKeyMappingTable.apiKeyId, apiKeyId));
+
   return db
     .select(catalogModelColumns)
     .from(llmModelTable)
-    .innerJoin(
-      llmModelApiKeyMappingTable,
-      eq(llmModelApiKeyMappingTable.llmModelId, llmModelTable.id),
-    )
-    .where(eq(llmModelApiKeyMappingTable.apiKeyId, apiKeyId))
+    .where(inArray(llmModelTable.id, mappedModelIds))
     .orderBy(llmModelTable.createdAt);
 }
 

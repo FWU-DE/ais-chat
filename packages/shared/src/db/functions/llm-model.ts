@@ -79,15 +79,3 @@ export async function dbFindModelByIdAndFederalStateId({
   const models = await dbGetLlmModelsByFederalStateId({ federalStateId });
   return models.find((model) => model.id === modelId);
 }
-
-/** Finds a model the federal state's API key has access to, including deleted ones. */
-export async function dbGetModelByIdAndFederalStateId({
-  modelId,
-  federalStateId,
-}: {
-  modelId: string;
-  federalStateId: string;
-}): Promise<LlmModelSelectModel | undefined> {
-  const models = await getModelsByFederalStateId(federalStateId);
-  return models.find((model) => model.id === modelId);
-}
