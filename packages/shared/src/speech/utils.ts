@@ -19,10 +19,10 @@ export function calculateSpeechCostsInCent(model: LlmModelSelectModel, usage: Sp
     return 0;
   }
 
-  const inputTextTokenPrice = usage.inputTextTokens * model.priceMetadata.inputTextTokenPrice;
-  const outputAudioTokenPrice = usage.outputAudioTokens * model.priceMetadata.outputAudioTokenPrice;
-
-  return (inputTextTokenPrice + outputAudioTokenPrice) / TOKEN_AMOUNT_PER_PRICE;
+  return (
+    (usage.characters * model.priceMetadata.priceInCentPer1MillionCharacters) /
+    TOKEN_AMOUNT_PER_PRICE
+  );
 }
 
 /**

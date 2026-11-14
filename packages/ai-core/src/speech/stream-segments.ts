@@ -6,10 +6,9 @@ type SegmentStream = SpeechStreamResult & { timeoutSignal: AbortSignal };
 function sumUsages(usages: SpeechUsage[]): SpeechUsage {
   return usages.reduce(
     (acc, usage) => ({
-      inputTextTokens: acc.inputTextTokens + usage.inputTextTokens,
-      outputAudioTokens: acc.outputAudioTokens + usage.outputAudioTokens,
+      characters: acc.characters + usage.characters,
     }),
-    { inputTextTokens: 0, outputAudioTokens: 0 },
+    { characters: 0 },
   );
 }
 

@@ -79,8 +79,7 @@ const mockSpeech: LlmInsertModel = {
   },
   priceMetadata: {
     type: 'speech',
-    inputTextTokenPrice: 0,
-    outputAudioTokenPrice: 0,
+    priceInCentPer1MillionCharacters: 0,
   },
   modelConfig: {
     voices: [{ name: 'alloy', displayName: 'Alloy' }],
