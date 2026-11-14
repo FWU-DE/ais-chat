@@ -1,3 +1,4 @@
+import { dbGetAllApiKeys } from '@ais-chat/api-database';
 import { getFederalStateById } from '@shared/federal-states/federal-state-service';
 
 import { FederalStateUpdateApiKey } from './FederalStateUpdateApiKey';
@@ -8,11 +9,14 @@ export default async function Page(
   props: PageProps<'/ais-chat-app/federal-states/[federalStateId]/api-key'>,
 ) {
   const { federalStateId } = await props.params;
-  const federalState = await getFederalStateById(federalStateId);
+  const [federalState, apiKeys] = await Promise.all([
+    getFederalStateById(federalStateId),
+    dbGetAllApiKeys(),
+  ]);
 
   return (
     <div>
-      <FederalStateUpdateApiKey federalState={federalState} />
+      <FederalStateUpdateApiKey federalState={federalState} apiKeys={apiKeys} />
     </div>
   );
 }

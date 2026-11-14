@@ -1,14 +1,16 @@
 'use server';
 
-import { updateApiKey } from '@shared/federal-states/federal-state-service';
+import { updateApiKeyId } from '@shared/federal-states/federal-state-service';
 import type { FederalStateModel } from '@shared/federal-states/types';
+import { z } from 'zod';
 
 import { requireAdminAuth } from '@/auth/requireAdminAuth';
 
-export async function updateApiKeyAction(
+export async function updateApiKeyIdAction(
   federalStateId: string,
-  decryptedApiKey: string,
+  apiKeyId: string,
 ): Promise<FederalStateModel> {
   await requireAdminAuth();
-  return updateApiKey(federalStateId, decryptedApiKey);
+
+  return updateApiKeyId(federalStateId, z.uuid().parse(apiKeyId));
 }

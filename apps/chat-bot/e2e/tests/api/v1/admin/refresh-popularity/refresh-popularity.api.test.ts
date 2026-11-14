@@ -1,5 +1,6 @@
 import test, { expect } from '@playwright/test';
 import { db } from '@shared/db';
+import { dbGetAllLlmModels } from '@shared/db/functions/llm-model';
 import { USAGE_WINDOW_DAYS } from '@shared/db/functions/popularity';
 import {
   assistantTable,
@@ -7,7 +8,6 @@ import {
   conversationTable,
   conversationUsageTracking,
   learningScenarioTable,
-  llmModelTable,
   sharedCharacterChatUsageTrackingTable,
   sharedLearningScenarioUsageTracking,
   userTable,
@@ -47,7 +47,7 @@ test.describe('refresh popularity', () => {
       .insert(userTable)
       .values({ schoolIds: [], userRole: 'teacher' })
       .returning();
-    const [model] = await db.select().from(llmModelTable).limit(1);
+    const [model] = await dbGetAllLlmModels();
     if (!user || !model) {
       throw new Error('Failed to create user or find model');
     }

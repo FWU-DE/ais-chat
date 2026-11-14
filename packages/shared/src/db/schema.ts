@@ -569,9 +569,8 @@ export const characterTable = pgTable(
     userId: uuid('user_id')
       .references(() => userTable.id)
       .notNull(),
-    modelId: uuid('model_id')
-      .notNull()
-      .references(() => llmModelTable.id),
+    // References llm_model in the API database, so no FK constraint
+    modelId: uuid('model_id').notNull(),
     // required
     name: text('name').notNull(),
     description: text('description').notNull().default(''),
@@ -867,9 +866,8 @@ export const learningScenarioTable = pgTable(
     author: text('author').notNull().default(''),
     name: text('name').notNull(),
     description: text('description').notNull().default(''),
-    modelId: uuid('model_id')
-      .notNull()
-      .references(() => llmModelTable.id),
+    // References llm_model in the API database, so no FK constraint
+    modelId: uuid('model_id').notNull(),
     userId: uuid('user_id')
       .references(() => userTable.id)
       .notNull(),
@@ -1180,13 +1178,6 @@ export const sharedLearningScenarioUsageTracking = pgTable(
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    foreignKey({
-      columns: [table.modelId],
-      foreignColumns: [llmModelTable.id],
-      // Set a custom name because the auto-generated name is too long and will be silently truncated to 63 characters
-      // The custom name can only be set with foreignKey() function
-      name: 'shared_learning_scenario_usage_tracking_model_id_fk',
-    }),
     index('shared_learning_scenario_usage_tracking_conversation_id_index').on(
       table.learningScenarioId,
     ),
@@ -1235,7 +1226,7 @@ export const conversationUsageTracking = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     // Exactly one billing source is stored per row: either a model call or a tool call.
-    modelId: uuid('model_id').references(() => llmModelTable.id),
+    modelId: uuid('model_id'),
     toolCallName: toolCallNameEnum('tool_call_name'),
     // these rows will be kept forever even if conversations are deleted, therefore we cannot enforce a foreign key constraint here
     conversationId: uuid('conversation_id').notNull(),
@@ -1354,7 +1345,7 @@ export const sharedCharacterChatUsageTrackingTable = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     // Exactly one billing source is stored per row: either a model call or a tool call.
-    modelId: uuid('model_id').references(() => llmModelTable.id),
+    modelId: uuid('model_id'),
     toolCallName: toolCallNameEnum('tool_call_name'),
     characterId: uuid('character_id').notNull(),
     userId: uuid('user_id').notNull(),

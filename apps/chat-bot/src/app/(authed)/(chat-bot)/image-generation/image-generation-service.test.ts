@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   dbDeleteFileAndDetachFromConversation: vi.fn(),
   dbDetachFilesFromConversationMessages: vi.fn(),
   dbDeleteRegeneratedConversationMessage: vi.fn(),
-  dbGetFederalStateWithDecryptedApiKeyWithResult: vi.fn(),
+  dbGetFederalStateWithApiKeyIdWithResult: vi.fn(),
   dbGetConversationAndMessages: vi.fn(),
   dbGetOrCreateConversation: vi.fn(),
   dbInsertChatContent: vi.fn(),
@@ -69,8 +69,7 @@ vi.mock('@/auth/utils', () => ({
 vi.mock('@/app/api/utils/utils', () => ({ getSafetyModel: mocks.getSafetyModel }));
 vi.mock('@/utils/vidis/access', () => ({ checkProductAccess: mocks.checkProductAccess }));
 vi.mock('@shared/db/functions/federal-state', () => ({
-  dbGetFederalStateWithDecryptedApiKeyWithResult:
-    mocks.dbGetFederalStateWithDecryptedApiKeyWithResult,
+  dbGetFederalStateWithApiKeyIdWithResult: mocks.dbGetFederalStateWithApiKeyIdWithResult,
 }));
 vi.mock('@shared/db/functions/token-usage', () => ({
   dbInsertConversationUsage: mocks.dbInsertConversationUsage,
@@ -115,7 +114,7 @@ function prepareExistingConversation() {
   mocks.getUser.mockResolvedValue({ id: 'user-id', federalState: { id: 'DE-TEST' } });
   mocks.userHasCompletedTraining.mockResolvedValue(true);
   mocks.checkProductAccess.mockReturnValue({ hasAccess: true });
-  mocks.dbGetFederalStateWithDecryptedApiKeyWithResult.mockResolvedValue([
+  mocks.dbGetFederalStateWithApiKeyIdWithResult.mockResolvedValue([
     null,
     { apiKeyId: 'api-key-id' },
   ]);
