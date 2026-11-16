@@ -52,6 +52,7 @@ export function FloatingText({
   } | null>(null);
   const isDraggable = isAtLeast.lg;
   const isResizable = isDraggable && !isMinimized;
+  const shareFreeSpace = !isMinimized || !isDraggable;
   const dragCursorClass = isDraggable ? (dragging ? 'cursor-grabbing' : 'cursor-grab') : undefined;
 
   const t = useTranslations('common');
@@ -251,11 +252,12 @@ export function FloatingText({
           id="floating-text-title"
           // While expanded, the title and the button side share the free space equally, so the handle
           // is centered. `min-w-max` keeps the title from shrinking, the handle then sits next to it.
-          // Minimized, the window is only as wide as its content, so there is nothing to center.
+          // Minimized and floating, the window is only as wide as its content, so there is nothing
+          // to center. Below lg the window spans the full width, so the button stays on the right.
           className={cn(
             dragCursorClass,
             'min-w-max pl-4 font-semibold text-base',
-            !isMinimized && 'flex-1 basis-0',
+            shareFreeSpace && 'flex-1 basis-0',
           )}
         >
           {title}
@@ -263,7 +265,7 @@ export function FloatingText({
         {isDraggable && (
           <DotsSixIcon className="mx-2 size-5 opacity-60" weight="bold" aria-hidden="true" />
         )}
-        <div className={cn('flex justify-end', !isMinimized && 'flex-1 basis-0 pl-4')}>
+        <div className={cn('flex justify-end', shareFreeSpace && 'flex-1 basis-0 pl-4')}>
           <button
             aria-label={isMinimized ? t('maximize') : t('minimize')}
             aria-expanded={!isMinimized}
