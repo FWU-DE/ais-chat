@@ -1,6 +1,6 @@
 'use client';
 
-import { NotchesIcon } from '@phosphor-icons/react';
+import { CaretDownIcon, CaretUpIcon, DotsSixIcon, NotchesIcon } from '@phosphor-icons/react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { createPortal } from 'react-dom';
@@ -9,8 +9,6 @@ import { useChatOverlayRoot } from '@/components/layout/chat-overlay-root-contex
 import { cn } from '@/utils/tailwind';
 
 import useBreakpoints from '../hooks/use-breakpoints';
-import ChevronDownIcon from '../icons/chevron-down';
-import ChevronRightIcon from '../icons/chevron-right';
 import MarkdownDisplay from './markdown-display';
 
 export const dynamic = 'force-dynamic';
@@ -243,63 +241,78 @@ export function FloatingText({
     >
       <div
         role="presentation"
-        className="flex items-center justify-between pl-4 py-2 rounded-t-xl mr-1"
+        className="flex items-center py-2 rounded-t-xl"
         onMouseDown={isDraggable ? handleMouseDown : undefined}
         onTouchStart={isDraggable ? handleTouchStart : undefined}
       >
-        <span id="floating-text-title" className={cn(dragCursorClass, 'font-semibold text-base')}>
+        <span
+          id="floating-text-title"
+          // While expanded, the title and the button side share the free space equally, so the handle
+          // is centered. `min-w-max` keeps the title from shrinking, the handle then sits next to it.
+          // Minimized, the window is only as wide as its content, so there is nothing to center.
+          className={cn(
+            dragCursorClass,
+            'min-w-max pl-4 font-semibold text-base',
+            !isMinimized && 'flex-1 basis-0',
+          )}
+        >
           {title}
         </span>
-        <button
-          aria-label={isMinimized ? t('maximize') : t('minimize')}
-          aria-expanded={!isMinimized}
-          onClick={() => {
-            setIsMinimized(!isMinimized);
-            // The max size depends on the position, so a resized panel must be moved back into view
-            // using its saved size before it expands. Measuring it afterwards would see the capped size.
-            if (isMinimized && size !== null) {
-              setPosition(
-                clampPosition({
-                  ...position,
-                  containerWidth: size.width,
-                  containerHeight: size.height,
-                }),
-              );
-              return;
-            }
-            setTimeout(() => {
-              const parent = getParentElement();
-              if (containerRef.current && parent) {
-                const parentRect = parent.getBoundingClientRect();
-                const rect = containerRef.current.getBoundingClientRect();
-                const newPos = {
-                  x: Math.max(
-                    minMargin,
-                    Math.min(position.x, parentRect.width - rect.width - minMargin),
-                  ),
-                  y: Math.max(
-                    minMargin,
-                    Math.min(position.y, parentRect.height - rect.height - minMargin),
-                  ),
-                };
-                if (newPos.x !== position.x || newPos.y !== position.y) {
-                  setPosition(newPos);
-                }
+        {isDraggable && (
+          <DotsSixIcon className="mx-2 size-5 opacity-60" weight="bold" aria-hidden="true" />
+        )}
+        <div className={cn('flex justify-end', !isMinimized && 'flex-1 basis-0 pl-4')}>
+          <button
+            aria-label={isMinimized ? t('maximize') : t('minimize')}
+            aria-expanded={!isMinimized}
+            onClick={() => {
+              setIsMinimized(!isMinimized);
+              // The max size depends on the position, so a resized panel must be moved back into view
+              // using its saved size before it expands. Measuring it afterwards would see the capped size.
+              if (isMinimized && size !== null) {
+                setPosition(
+                  clampPosition({
+                    ...position,
+                    containerWidth: size.width,
+                    containerHeight: size.height,
+                  }),
+                );
+                return;
               }
-            }, 0);
-          }}
-          className="flex items-center justify-center bg-none border-none cursor-pointer w-6 h-6"
-        >
-          {isMinimized ? (
-            <ChevronRightIcon className="w-4 h-4" />
-          ) : (
-            <ChevronDownIcon className="w-4 h-4" />
-          )}
-        </button>
+              setTimeout(() => {
+                const parent = getParentElement();
+                if (containerRef.current && parent) {
+                  const parentRect = parent.getBoundingClientRect();
+                  const rect = containerRef.current.getBoundingClientRect();
+                  const newPos = {
+                    x: Math.max(
+                      minMargin,
+                      Math.min(position.x, parentRect.width - rect.width - minMargin),
+                    ),
+                    y: Math.max(
+                      minMargin,
+                      Math.min(position.y, parentRect.height - rect.height - minMargin),
+                    ),
+                  };
+                  if (newPos.x !== position.x || newPos.y !== position.y) {
+                    setPosition(newPos);
+                  }
+                }
+              }, 0);
+            }}
+            className="flex items-center justify-center bg-none border-none cursor-pointer w-6 h-6 mr-1"
+          >
+            {isMinimized ? (
+              <CaretDownIcon className="size-4" />
+            ) : (
+              <CaretUpIcon className="size-4" />
+            )}
+          </button>
+        </div>
       </div>
       {!isMinimized && (
         <div className="flex min-h-0 flex-1 pt-2 pb-3 lg:pb-5 pl-4 pr-2">
-          <div className="min-h-0 flex-1 cursor-text select-text overflow-auto pr-2">
+          <div className="scrollbar-on-secondary min-h-0 flex-1 cursor-text select-text overflow-auto pr-2">
             <MarkdownDisplay>{learningContext ?? ''}</MarkdownDisplay>
           </div>
         </div>
