@@ -17,11 +17,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  artifact-metadata: write
-  contents: write
-  packages: write
-  id-token: write
-  attestations: write
+  contents: read
 
 jobs:
   # Each image is built natively per platform (no QEMU emulation) and pushed by digest only.
@@ -33,7 +29,12 @@ jobs:
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository &&
        github.event.workflow_run.head_branch == 'main')
+    permissions:
+      contents: read
+      packages: write
     env:
       is_dry_run: ${{ github.event_name == 'workflow_dispatch' }}
       TURBO_TELEMETRY_DISABLED: 1
@@ -84,6 +85,7 @@ jobs:
         with:
           ref: ${{ env.resolved_sha }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -195,7 +197,15 @@ jobs:
       !cancelled() &&
       github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
       github.event.workflow_run.head_branch == 'main'
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     env:
       resolved_sha: ${{ github.event.workflow_run.head_sha }}
 
