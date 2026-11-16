@@ -1,10 +1,10 @@
 import {
-  getAllCatalogModels,
-  getCatalogModelById,
-  getCatalogModelByName,
-  getCatalogModelsByApiKeyId,
+  getAllLlmModels,
+  getLlmModelById,
+  getLlmModelByName,
+  getLlmModelsByApiKeyId,
   type LlmModel,
-} from '@ais-chat/ai-core/models/catalog';
+} from '@ais-chat/ai-core/models/llm-models';
 
 import { LlmModelSelectModel } from '../schema';
 import { dbGetFederalStateById } from './federal-state';
@@ -12,7 +12,7 @@ import { dbGetFederalStateById } from './federal-state';
 async function getModelsByFederalStateId(federalStateId: string): Promise<LlmModel[]> {
   const federalState = await dbGetFederalStateById(federalStateId);
   if (!federalState?.apiKeyId) return [];
-  return getCatalogModelsByApiKeyId(federalState.apiKeyId);
+  return getLlmModelsByApiKeyId(federalState.apiKeyId);
 }
 
 export async function dbGetLlmModelById({
@@ -21,15 +21,15 @@ export async function dbGetLlmModelById({
   modelId: string | undefined;
 }): Promise<LlmModelSelectModel | undefined> {
   if (modelId === undefined) return undefined;
-  return getCatalogModelById(modelId);
+  return getLlmModelById(modelId);
 }
 
 export async function dbGetModelByName(name: string): Promise<LlmModelSelectModel | undefined> {
-  return getCatalogModelByName(name);
+  return getLlmModelByName(name);
 }
 
 export async function dbGetAllLlmModels(): Promise<LlmModelSelectModel[]> {
-  return getAllCatalogModels();
+  return getAllLlmModels();
 }
 
 export async function dbGetSpeechModel() {

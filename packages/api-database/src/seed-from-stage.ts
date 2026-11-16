@@ -5,7 +5,6 @@ import { db as localDb } from './index';
 import {
   ApiKeyModel,
   apiKeyTable,
-  SensitiveLlmModel,
   LlmModelApiKeyMappingModel,
   llmModelApiKeyMappingTable,
   LlmModelProviderKeyMappingModel,
@@ -15,6 +14,7 @@ import {
   llmProviderKeyTable,
   ProjectModel,
   projectTable,
+  SensitiveLlmModel,
 } from './schema';
 import { normalizeSeedModelsForBifrost, syncSeedModelsToBifrost } from './seed-bifrost';
 

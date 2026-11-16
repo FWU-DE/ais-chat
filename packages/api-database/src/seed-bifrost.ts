@@ -7,9 +7,9 @@ import { db } from './db';
 import { isLlmProvider } from './llm-model';
 import {
   LlmInsertModel,
-  SensitiveLlmModel,
   llmModelProviderKeyMappingTable,
   llmProviderKeyTable,
+  SensitiveLlmModel,
 } from './schema';
 
 const BIFROST_UPSTREAM_PROVIDERS = new Set(['azure', 'openai', 'ionos', 'google']);

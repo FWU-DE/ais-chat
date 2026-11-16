@@ -64,5 +64,8 @@ function transformToModel(federalState: FederalStateSelectModel): FederalStateMo
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { encryptedApiKey, ...federalStateWithoutApiKey } = federalState;
 
-  return federalStateWithoutApiKey;
+  return {
+    ...federalStateWithoutApiKey,
+    hasApiKeyAssigned: !!federalState.apiKeyId,
+  };
 }

@@ -30,13 +30,20 @@ describe('federal-state-service', () => {
     vi.clearAllMocks();
   });
 
-  it('does not expose the encrypted api key', async () => {
-    mocks.dbGetFederalState.mockResolvedValue(federalState);
+  it.each([
+    { apiKeyId: 'a1b2c3d4-0000-4000-8000-000000000000', hasApiKeyAssigned: true },
+    { apiKeyId: null, hasApiKeyAssigned: false },
+  ])(
+    'derives hasApiKeyAssigned=$hasApiKeyAssigned from apiKeyId',
+    async ({ apiKeyId, hasApiKeyAssigned }) => {
+      mocks.dbGetFederalState.mockResolvedValue({ ...federalState, apiKeyId });
 
-    const result = await getFederalStateById('DE-TEST');
+      const result = await getFederalStateById('DE-TEST');
 
-    expect(result).not.toHaveProperty('encryptedApiKey');
-  });
+      expect(result.hasApiKeyAssigned).toBe(hasApiKeyAssigned);
+      expect(result).not.toHaveProperty('encryptedApiKey');
+    },
+  );
 
   it('updateFederalState stores a known api key id', async () => {
     const apiKeyId = 'a1b2c3d4-0000-4000-8000-000000000000';
@@ -47,7 +54,7 @@ describe('federal-state-service', () => {
 
     expect(mocks.apiKeyExists).toHaveBeenCalledWith(apiKeyId);
     expect(mocks.dbUpdateFederalState).toHaveBeenCalledWith({ id: 'DE-TEST', apiKeyId });
-    expect(result).toMatchObject({ id: 'DE-TEST', apiKeyId });
+    expect(result).toMatchObject({ id: 'DE-TEST', apiKeyId, hasApiKeyAssigned: true });
   });
 
   it('updateFederalState rejects unknown API keys', async () => {

@@ -1,18 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  getAllCatalogModels: vi.fn(),
-  getCatalogModelById: vi.fn(),
-  getCatalogModelByName: vi.fn(),
-  getCatalogModelsByApiKeyId: vi.fn(),
+  getAllLlmModels: vi.fn(),
+  getLlmModelById: vi.fn(),
+  getLlmModelByName: vi.fn(),
+  getLlmModelsByApiKeyId: vi.fn(),
   dbGetFederalStateById: vi.fn(),
 }));
 
-vi.mock('@ais-chat/ai-core/models/catalog', () => ({
-  getAllCatalogModels: mocks.getAllCatalogModels,
-  getCatalogModelById: mocks.getCatalogModelById,
-  getCatalogModelByName: mocks.getCatalogModelByName,
-  getCatalogModelsByApiKeyId: mocks.getCatalogModelsByApiKeyId,
+vi.mock('@ais-chat/ai-core/models/llm-models', () => ({
+  getAllLlmModels: mocks.getAllLlmModels,
+  getLlmModelById: mocks.getLlmModelById,
+  getLlmModelByName: mocks.getLlmModelByName,
+  getLlmModelsByApiKeyId: mocks.getLlmModelsByApiKeyId,
 }));
 vi.mock('./federal-state', () => ({ dbGetFederalStateById: mocks.dbGetFederalStateById }));
 
@@ -24,11 +24,11 @@ async function importLlmModelFunctions() {
   return import('./llm-model');
 }
 
-describe('llm-model catalog access', () => {
+describe('llm-model access', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.dbGetFederalStateById.mockResolvedValue({ id: 'DE-TEST', apiKeyId: 'api-key-1' });
-    mocks.getCatalogModelsByApiKeyId.mockResolvedValue([activeModel, deletedModel]);
+    mocks.getLlmModelsByApiKeyId.mockResolvedValue([activeModel, deletedModel]);
   });
 
   describe('dbGetLlmModelsByFederalStateId', () => {
@@ -38,7 +38,7 @@ describe('llm-model catalog access', () => {
       const models = await dbGetLlmModelsByFederalStateId({ federalStateId: 'DE-TEST' });
 
       expect(mocks.dbGetFederalStateById).toHaveBeenCalledWith('DE-TEST');
-      expect(mocks.getCatalogModelsByApiKeyId).toHaveBeenCalledWith('api-key-1');
+      expect(mocks.getLlmModelsByApiKeyId).toHaveBeenCalledWith('api-key-1');
       expect(models).toEqual([activeModel]);
     });
 
@@ -51,7 +51,7 @@ describe('llm-model catalog access', () => {
         const models = await dbGetLlmModelsByFederalStateId({ federalStateId: 'DE-TEST' });
 
         expect(models).toEqual([]);
-        expect(mocks.getCatalogModelsByApiKeyId).not.toHaveBeenCalled();
+        expect(mocks.getLlmModelsByApiKeyId).not.toHaveBeenCalled();
       },
     );
   });
@@ -93,31 +93,31 @@ describe('llm-model catalog access', () => {
   });
 
   describe('global lookups', () => {
-    it('reads a model by id from the catalog', async () => {
-      mocks.getCatalogModelById.mockResolvedValue(activeModel);
+    it('reads a model by id', async () => {
+      mocks.getLlmModelById.mockResolvedValue(activeModel);
       const { dbGetLlmModelById } = await importLlmModelFunctions();
 
       await expect(dbGetLlmModelById({ modelId: 'model-active' })).resolves.toEqual(activeModel);
-      expect(mocks.getCatalogModelById).toHaveBeenCalledWith('model-active');
+      expect(mocks.getLlmModelById).toHaveBeenCalledWith('model-active');
     });
 
     it('returns undefined without querying when no model id is given', async () => {
       const { dbGetLlmModelById } = await importLlmModelFunctions();
 
       await expect(dbGetLlmModelById({ modelId: undefined })).resolves.toBeUndefined();
-      expect(mocks.getCatalogModelById).not.toHaveBeenCalled();
+      expect(mocks.getLlmModelById).not.toHaveBeenCalled();
     });
 
-    it('reads a model by name from the catalog', async () => {
-      mocks.getCatalogModelByName.mockResolvedValue(activeModel);
+    it('reads a model by name', async () => {
+      mocks.getLlmModelByName.mockResolvedValue(activeModel);
       const { dbGetModelByName } = await importLlmModelFunctions();
 
       await expect(dbGetModelByName('model-name')).resolves.toEqual(activeModel);
-      expect(mocks.getCatalogModelByName).toHaveBeenCalledWith('model-name');
+      expect(mocks.getLlmModelByName).toHaveBeenCalledWith('model-name');
     });
 
     it('finds the non-deleted speech model', async () => {
-      mocks.getAllCatalogModels.mockResolvedValue([
+      mocks.getAllLlmModels.mockResolvedValue([
         { ...speechModel, id: 'deleted-speech', isDeleted: true },
         activeModel,
         speechModel,

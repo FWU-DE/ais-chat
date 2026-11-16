@@ -10,7 +10,7 @@ import {
 import { dbGetAllApiKeys } from './api-key';
 
 // Public model columns for consumers outside the API; never expose provider settings or parameters.
-const catalogModelColumns: { [K in keyof LlmModel]: (typeof llmModelTable)[K] } = {
+const llmModelColumns: { [K in keyof LlmModel]: (typeof llmModelTable)[K] } = {
   id: llmModelTable.id,
   provider: llmModelTable.provider,
   name: llmModelTable.name,
@@ -25,27 +25,27 @@ const catalogModelColumns: { [K in keyof LlmModel]: (typeof llmModelTable)[K] } 
   isDeleted: llmModelTable.isDeleted,
 };
 
-// Catalog reads are cached (when a TTL is configured) since they are queried frequently by ais-chat-app.
-export async function dbGetAllCatalogModels(): Promise<LlmModel[]> {
+// LlmModel reads are cached (when a TTL is configured) since they are queried frequently by ais-chat-app.
+export async function dbGetAllLlmModels(): Promise<LlmModel[]> {
   return db
-    .select(catalogModelColumns)
+    .select(llmModelColumns)
     .from(llmModelTable)
     .orderBy(llmModelTable.createdAt)
     .$withCache();
 }
 
-export async function dbGetCatalogModelById(modelId: string): Promise<LlmModel | undefined> {
+export async function dbGetLlmModelById(modelId: string): Promise<LlmModel | undefined> {
   const [model] = await db
-    .select(catalogModelColumns)
+    .select(llmModelColumns)
     .from(llmModelTable)
     .where(eq(llmModelTable.id, modelId))
     .$withCache();
   return model;
 }
 
-export async function dbGetCatalogModelByName(name: string): Promise<LlmModel | undefined> {
+export async function dbGetLlmModelByName(name: string): Promise<LlmModel | undefined> {
   const [model] = await db
-    .select(catalogModelColumns)
+    .select(llmModelColumns)
     .from(llmModelTable)
     .where(eq(llmModelTable.name, name))
     .$withCache();
@@ -53,7 +53,7 @@ export async function dbGetCatalogModelByName(name: string): Promise<LlmModel | 
 }
 
 /** Returns all models (including deleted ones) the given API key has access to. */
-export async function dbGetCatalogModelsByApiKeyId(apiKeyId: string): Promise<LlmModel[]> {
+export async function dbGetLlmModelsByApiKeyId(apiKeyId: string): Promise<LlmModel[]> {
   // Subquery instead of a join: mapping rows are not unique per (model, api key)
   const mappedModelIds = db
     .select({ id: llmModelApiKeyMappingTable.llmModelId })
@@ -61,7 +61,7 @@ export async function dbGetCatalogModelsByApiKeyId(apiKeyId: string): Promise<Ll
     .where(eq(llmModelApiKeyMappingTable.apiKeyId, apiKeyId));
 
   return db
-    .select(catalogModelColumns)
+    .select(llmModelColumns)
     .from(llmModelTable)
     .where(inArray(llmModelTable.id, mappedModelIds))
     .orderBy(llmModelTable.createdAt)
