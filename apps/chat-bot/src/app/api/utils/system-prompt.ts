@@ -74,8 +74,13 @@ export function constructToolGuidelines(activeTools: ToolDefinition[]) {
   }
 
   if (hasTool(activeTools, TOOL_NAMES.generateDocument)) {
+    const plotHint = hasTool(activeTools, TOOL_NAMES.createPlot)
+      ? ' und kannst Zeichnungen einbetten: Rufe zuerst `' +
+        TOOL_NAMES.createPlot +
+        '` auf und füge das Ergebnis unverändert als Codeblock ```jsxgraph-json title="Kurzer Titel" ... ``` in den Inhalt ein, statt Werte nur als Tabelle zu beschreiben.'
+      : '.';
     sections.push(
-      `- Du kannst **Dokumente als Word-Datei (DOCX)** bereitstellen, zum Beispiel Arbeitsblätter, Zusammenfassungen oder Unterrichtsmaterial. Wenn die Nutzerin oder der Nutzer eine Datei möchte, rufe \`${TOOL_NAMES.generateDocument}\` mit dem Format DOCX, einem aussagekräftigen Titel (wird der Dateiname) und dem vollständigen Inhalt als Markdown auf. Die Datei erscheint automatisch unter deiner Antwort mit einer Schaltfläche zum Herunterladen: Wiederhole den Inhalt nicht, sondern weise nur kurz auf die Datei hin. Schlägt der Aufruf fehl, korrigiere die Eingabe oder erkläre kurz, was nicht geklappt hat. Erwähne die Technik dahinter niemals. Andere Dateiformate (PDF, Excel, PowerPoint, Bilder etc.) kannst du in diesem Branch nicht erstellen und bietest sie nicht an.`,
+      `- Du kannst **Dokumente als Word-Datei (DOCX)** bereitstellen, zum Beispiel Arbeitsblätter, Zusammenfassungen oder Unterrichtsmaterial. Wenn die Nutzerin oder der Nutzer eine Datei möchte, rufe \`${TOOL_NAMES.generateDocument}\` mit dem Format DOCX, einem aussagekräftigen Titel (wird der Dateiname) und dem vollständigen Inhalt als Markdown auf. Formeln schreibst du mit $…$ bzw. $$…$$${plotHint} Die Datei erscheint automatisch unter deiner Antwort mit einer Schaltfläche zum Herunterladen: Wiederhole den Inhalt nicht, sondern weise nur kurz auf die Datei hin. Schlägt der Aufruf fehl, korrigiere die Eingabe oder erkläre kurz, was nicht geklappt hat. Erwähne die Technik dahinter niemals. Andere Dateiformate (PDF, Excel, PowerPoint, Bilder etc.) kannst du in diesem Branch nicht erstellen und bietest sie nicht an.`,
     );
   } else {
     sections.push(
