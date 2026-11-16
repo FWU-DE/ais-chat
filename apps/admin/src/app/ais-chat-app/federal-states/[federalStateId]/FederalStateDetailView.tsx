@@ -8,11 +8,19 @@ import { logError } from '@shared/logging';
 import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
 import { Button } from '@ui/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/components/card';
+import { Field, FieldDescription, FieldError, FieldLabel } from '@ui/components/field';
 import { FormField } from '@ui/components/form/form-field';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@ui/components/select';
 import { DesignConfigurationSchema } from '@ui/types/design-configuration';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import z from 'zod';
 
@@ -24,6 +32,7 @@ import { deleteFederalStateAction, updateFederalStateAction } from './actions';
 
 export type FederalStateViewProps = {
   federalState: FederalStateModel;
+  apiKeys: { id: string; name: string }[];
 };
 
 // Form-specific schema that extends the base schema with UI adaptations
@@ -75,7 +84,7 @@ function transformToFederalStateEditForm(federalState: FederalStateModel): Feder
 }
 
 export function FederalStateView(props: FederalStateViewProps) {
-  const { federalState } = props;
+  const { federalState, apiKeys } = props;
   const router = useRouter();
   const { dialogProps: deleteDialogProps, confirm: confirmDelete } = useConfirmAlertDialog();
 
@@ -181,12 +190,31 @@ export function FederalStateView(props: FederalStateViewProps) {
             control={control}
             disabled
           />
-          <FormField
+          <Controller
             name="apiKeyId"
-            label="API Key ID"
-            description="UUID des API keys aus ais-chat-api für Kostenmanagement und Billing. Wird über 'API Key aktualisieren' gesetzt."
             control={control}
-            disabled
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="apiKeyId">API Key</FieldLabel>
+                <FieldDescription>
+                  API Key aus dem ais-chat-api Projekt {federalState.id}. Darüber werden verfügbare
+                  Modelle, Zugriff und Abrechnung gesteuert.
+                </FieldDescription>
+                <Select value={field.value ?? undefined} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-full" id="apiKeyId">
+                    <SelectValue placeholder="API Key auswählen" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" align="start">
+                    {apiKeys.map((apiKey) => (
+                      <SelectItem key={apiKey.id} value={apiKey.id}>
+                        {apiKey.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldError errors={[fieldState.error]} />
+              </Field>
+            )}
           />
           <FormField
             name="appName"

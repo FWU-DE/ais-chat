@@ -5,7 +5,7 @@ import { db as localDb } from './index';
 import {
   ApiKeyModel,
   apiKeyTable,
-  LlmModel,
+  SensitiveLlmModel,
   LlmModelApiKeyMappingModel,
   llmModelApiKeyMappingTable,
   LlmModelProviderKeyMappingModel,
@@ -41,7 +41,7 @@ async function getApiKeys(): Promise<ApiKeyModel[]> {
   return await stageDb.select().from(apiKeyTable);
 }
 
-async function getModels(): Promise<LlmModel[]> {
+async function getModels(): Promise<SensitiveLlmModel[]> {
   return await stageDb.select().from(llmModelTable);
 }
 

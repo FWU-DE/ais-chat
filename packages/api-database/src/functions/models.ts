@@ -1,7 +1,7 @@
 import { and, eq, inArray } from 'drizzle-orm';
 
 import { db } from '../db';
-import type { LlmInsertModel, LlmModel } from '../schema';
+import type { LlmInsertModel, LlmModel, SensitiveLlmModel } from '../schema';
 import {
   llmModelApiKeyMappingTable,
   llmModelProviderKeyMappingTable,
@@ -10,7 +10,7 @@ import {
 import { dbGetAllApiKeys } from './api-key';
 
 // Public model columns for consumers outside the API; never expose provider settings or parameters.
-const catalogModelColumns = {
+const catalogModelColumns: { [K in keyof LlmModel]: (typeof llmModelTable)[K] } = {
   id: llmModelTable.id,
   provider: llmModelTable.provider,
   name: llmModelTable.name,
@@ -25,30 +25,35 @@ const catalogModelColumns = {
   isDeleted: llmModelTable.isDeleted,
 };
 
-export type CatalogModel = Pick<LlmModel, keyof typeof catalogModelColumns>;
-
-export async function dbGetAllCatalogModels(): Promise<CatalogModel[]> {
-  return db.select(catalogModelColumns).from(llmModelTable).orderBy(llmModelTable.createdAt);
+// Catalog reads are cached (when a TTL is configured) since they are queried frequently by ais-chat-app.
+export async function dbGetAllCatalogModels(): Promise<LlmModel[]> {
+  return db
+    .select(catalogModelColumns)
+    .from(llmModelTable)
+    .orderBy(llmModelTable.createdAt)
+    .$withCache();
 }
 
-export async function dbGetCatalogModelById(modelId: string): Promise<CatalogModel | undefined> {
+export async function dbGetCatalogModelById(modelId: string): Promise<LlmModel | undefined> {
   const [model] = await db
     .select(catalogModelColumns)
     .from(llmModelTable)
-    .where(eq(llmModelTable.id, modelId));
+    .where(eq(llmModelTable.id, modelId))
+    .$withCache();
   return model;
 }
 
-export async function dbGetCatalogModelByName(name: string): Promise<CatalogModel | undefined> {
+export async function dbGetCatalogModelByName(name: string): Promise<LlmModel | undefined> {
   const [model] = await db
     .select(catalogModelColumns)
     .from(llmModelTable)
-    .where(eq(llmModelTable.name, name));
+    .where(eq(llmModelTable.name, name))
+    .$withCache();
   return model;
 }
 
 /** Returns all models (including deleted ones) the given API key has access to. */
-export async function dbGetCatalogModelsByApiKeyId(apiKeyId: string): Promise<CatalogModel[]> {
+export async function dbGetCatalogModelsByApiKeyId(apiKeyId: string): Promise<LlmModel[]> {
   // Subquery instead of a join: mapping rows are not unique per (model, api key)
   const mappedModelIds = db
     .select({ id: llmModelApiKeyMappingTable.llmModelId })
@@ -59,7 +64,8 @@ export async function dbGetCatalogModelsByApiKeyId(apiKeyId: string): Promise<Ca
     .select(catalogModelColumns)
     .from(llmModelTable)
     .where(inArray(llmModelTable.id, mappedModelIds))
-    .orderBy(llmModelTable.createdAt);
+    .orderBy(llmModelTable.createdAt)
+    .$withCache();
 }
 
 export async function dbGetAllModels() {
@@ -138,7 +144,7 @@ export async function dbCreateLlmModel(llmModel: LlmInsertModel) {
   return modelCreated[0];
 }
 
-export async function dbUpdateLlmModel(id: string, llmModel: Partial<LlmModel>) {
+export async function dbUpdateLlmModel(id: string, llmModel: Partial<SensitiveLlmModel>) {
   const updatedModel = (
     await db
       .update(llmModelTable)
@@ -195,7 +201,7 @@ export async function dbCreateModelWithApiKeyLinks({
       error: string;
     }
   | {
-      model: LlmModel;
+      model: SensitiveLlmModel;
       linkedApiKeys: { id: string; name: string }[];
     }
 > {

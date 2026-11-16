@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  env: { dbCacheTtlSeconds: undefined as number | undefined },
   getAllCatalogModels: vi.fn(),
   getCatalogModelById: vi.fn(),
   getCatalogModelByName: vi.fn(),
@@ -15,7 +14,6 @@ vi.mock('@ais-chat/ai-core/models/catalog', () => ({
   getCatalogModelByName: mocks.getCatalogModelByName,
   getCatalogModelsByApiKeyId: mocks.getCatalogModelsByApiKeyId,
 }));
-vi.mock('../env', () => ({ env: mocks.env }));
 vi.mock('./federal-state', () => ({ dbGetFederalStateById: mocks.dbGetFederalStateById }));
 
 const activeModel = { id: 'model-active', isDeleted: false, priceMetadata: { type: 'text' } };
@@ -23,16 +21,12 @@ const deletedModel = { id: 'model-deleted', isDeleted: true, priceMetadata: { ty
 const speechModel = { id: 'model-speech', isDeleted: false, priceMetadata: { type: 'speech' } };
 
 async function importLlmModelFunctions() {
-  // Fresh module per test so the in-process catalog cache starts empty
-  vi.resetModules();
   return import('./llm-model');
 }
 
 describe('llm-model catalog access', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useRealTimers();
-    mocks.env.dbCacheTtlSeconds = undefined;
     mocks.dbGetFederalStateById.mockResolvedValue({ id: 'DE-TEST', apiKeyId: 'api-key-1' });
     mocks.getCatalogModelsByApiKeyId.mockResolvedValue([activeModel, deletedModel]);
   });
@@ -131,44 +125,6 @@ describe('llm-model catalog access', () => {
       const { dbGetSpeechModel } = await importLlmModelFunctions();
 
       await expect(dbGetSpeechModel()).resolves.toEqual(speechModel);
-    });
-  });
-
-  describe('caching', () => {
-    it('does not cache when no TTL is configured', async () => {
-      const { dbGetLlmModelsByFederalStateId } = await importLlmModelFunctions();
-
-      await dbGetLlmModelsByFederalStateId({ federalStateId: 'DE-TEST' });
-      await dbGetLlmModelsByFederalStateId({ federalStateId: 'DE-TEST' });
-
-      expect(mocks.getCatalogModelsByApiKeyId).toHaveBeenCalledTimes(2);
-    });
-
-    it('serves cached results until the TTL expires', async () => {
-      vi.useFakeTimers();
-      mocks.env.dbCacheTtlSeconds = 60;
-      const { dbGetLlmModelsByFederalStateId } = await importLlmModelFunctions();
-
-      await dbGetLlmModelsByFederalStateId({ federalStateId: 'DE-TEST' });
-      await dbGetLlmModelsByFederalStateId({ federalStateId: 'DE-TEST' });
-      expect(mocks.getCatalogModelsByApiKeyId).toHaveBeenCalledTimes(1);
-
-      vi.advanceTimersByTime(60_001);
-      await dbGetLlmModelsByFederalStateId({ federalStateId: 'DE-TEST' });
-      expect(mocks.getCatalogModelsByApiKeyId).toHaveBeenCalledTimes(2);
-    });
-
-    it('does not cache failed catalog reads', async () => {
-      mocks.env.dbCacheTtlSeconds = 60;
-      mocks.getCatalogModelsByApiKeyId.mockRejectedValueOnce(new Error('db down'));
-      const { dbGetLlmModelsByFederalStateId } = await importLlmModelFunctions();
-
-      await expect(dbGetLlmModelsByFederalStateId({ federalStateId: 'DE-TEST' })).rejects.toThrow(
-        'db down',
-      );
-      await expect(dbGetLlmModelsByFederalStateId({ federalStateId: 'DE-TEST' })).resolves.toEqual([
-        activeModel,
-      ]);
     });
   });
 });

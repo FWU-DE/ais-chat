@@ -17,7 +17,7 @@ vi.mock('@shared/db/functions/federal-state', () => ({
 
 import { NotFoundError } from '@shared/error';
 
-import { getFederalStateById, updateApiKeyId } from './federal-state-service';
+import { getFederalStateById, updateFederalState } from './federal-state-service';
 
 const federalState = {
   id: 'DE-TEST',
@@ -45,23 +45,23 @@ describe('federal-state-service', () => {
     },
   );
 
-  it('updateApiKeyId stores only the api key id', async () => {
+  it('updateFederalState stores a known api key id', async () => {
     const apiKeyId = 'a1b2c3d4-0000-4000-8000-000000000000';
     mocks.apiKeyExists.mockResolvedValue(true);
     mocks.dbUpdateFederalState.mockResolvedValue({ ...federalState, apiKeyId });
 
-    const result = await updateApiKeyId('DE-TEST', apiKeyId);
+    const result = await updateFederalState({ id: 'DE-TEST', apiKeyId });
 
     expect(mocks.apiKeyExists).toHaveBeenCalledWith(apiKeyId);
     expect(mocks.dbUpdateFederalState).toHaveBeenCalledWith({ id: 'DE-TEST', apiKeyId });
     expect(result).toMatchObject({ id: 'DE-TEST', apiKeyId, hasApiKeyAssigned: true });
   });
 
-  it('updateApiKeyId rejects unknown API keys', async () => {
+  it('updateFederalState rejects unknown API keys', async () => {
     const apiKeyId = 'a1b2c3d4-0000-4000-8000-000000000000';
     mocks.apiKeyExists.mockResolvedValue(false);
 
-    await expect(updateApiKeyId('DE-TEST', apiKeyId)).rejects.toThrow(NotFoundError);
+    await expect(updateFederalState({ id: 'DE-TEST', apiKeyId })).rejects.toThrow(NotFoundError);
     expect(mocks.dbUpdateFederalState).not.toHaveBeenCalled();
   });
 });

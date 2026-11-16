@@ -10,6 +10,7 @@
     "./bifrost-provider-sync": "./src/bifrost-provider-sync/index.ts",
     "./bifrost-provider-sync/error": "./src/bifrost-provider-sync/error.ts",
     "./llm-model": "./src/llm-model/index.ts",
+    "./memory-cache": "./src/memory-cache.ts",
     "./types": "./src/types.ts",
     "./utils": "./src/api-utils/index.ts"
   },
@@ -28,6 +29,7 @@
   },
   "dependencies": {
     "@ais-chat/shared-core": "workspace:*",
+    "@sentry/core": "11.10.0",
     "@t3-oss/env-core": "0.13.11",
     "bcryptjs": "3.0.3",
     "drizzle-orm": "0.45.4",

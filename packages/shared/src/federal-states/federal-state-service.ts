@@ -35,26 +35,11 @@ export async function updateFederalState(
   federalState: Omit<FederalStateUpdateModel, 'encryptedApiKey' | 'createdAt'>,
 ): Promise<FederalStateModel> {
   const values = updateSchema.parse(federalState);
+  if (values.apiKeyId && !(await apiKeyExists(values.apiKeyId))) {
+    throw new NotFoundError(`API key ${values.apiKeyId} not found`);
+  }
+
   const updated = await dbUpdateFederalState(values);
-  return transformToModel(updated);
-}
-
-export async function updateApiKeyId(
-  federalStateId: string,
-  apiKeyId: string,
-): Promise<FederalStateModel> {
-  if (!(await apiKeyExists(apiKeyId))) {
-    throw new NotFoundError(`API key ${apiKeyId} not found`);
-  }
-
-  const updated = await dbUpdateFederalState({
-    id: federalStateId,
-    apiKeyId,
-  });
-
-  if (!updated) {
-    throw new Error(`Failed to update federal state with id ${federalStateId}`);
-  }
   return transformToModel(updated);
 }
 

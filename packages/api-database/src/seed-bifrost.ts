@@ -7,14 +7,14 @@ import { db } from './db';
 import { isLlmProvider } from './llm-model';
 import {
   LlmInsertModel,
-  LlmModel,
+  SensitiveLlmModel,
   llmModelProviderKeyMappingTable,
   llmProviderKeyTable,
 } from './schema';
 
 const BIFROST_UPSTREAM_PROVIDERS = new Set(['azure', 'openai', 'ionos', 'google']);
 
-type SeedModel = LlmInsertModel | LlmModel;
+type SeedModel = LlmInsertModel | SensitiveLlmModel;
 
 export function normalizeSeedModelForBifrost<TModel extends SeedModel>(model: TModel): TModel {
   if (!BIFROST_UPSTREAM_PROVIDERS.has(model.setting.provider)) return model;

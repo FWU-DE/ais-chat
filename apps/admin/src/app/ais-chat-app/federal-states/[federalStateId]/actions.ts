@@ -1,4 +1,5 @@
 'use server';
+import { dbGetApiKeyOptionsByProjectId } from '@ais-chat/api-database';
 import { runServerAction } from '@shared/actions/run-server-action';
 import {
   federalStateFeatureTogglesSchema,
@@ -19,6 +20,13 @@ export async function getFederalStateByIdAction(federalStateId: string) {
   await requireAdminAuth();
 
   return getFederalStateById(federalStateId);
+}
+
+// API keys of the ais-chat-api project whose id matches the federal state id
+export async function getApiKeyOptionsAction(federalStateId: string) {
+  await requireAdminAuth();
+
+  return dbGetApiKeyOptionsByProjectId(federalStateId);
 }
 
 export async function createFederalStateAction(

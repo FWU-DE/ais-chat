@@ -54,7 +54,12 @@ export const llmUpdateModelSchema = createUpdateSchema(llmModelTable).omit({
   createdAt: true,
 });
 export type LlmInsertModel = typeof llmModelTable.$inferInsert;
-export type LlmModel = typeof llmModelTable.$inferSelect;
+// Contains provider credentials and parameters; must never be exposed to ais-chat-app.
+export type SensitiveLlmModel = typeof llmModelTable.$inferSelect;
+export type LlmModel = Omit<
+  SensitiveLlmModel,
+  'setting' | 'useBifrost' | 'additionalParameters' | 'safetyFilterEnabled'
+>;
 
 export const llmProviderKeyTable = pgTable(
   'llm_provider_key',

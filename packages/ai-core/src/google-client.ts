@@ -1,4 +1,4 @@
-import type { LlmModel } from '@ais-chat/api-database';
+import type { SensitiveLlmModel } from '@ais-chat/api-database';
 import { isLlmProvider } from '@ais-chat/api-database/llm-model';
 import { GoogleGenAI } from '@google/genai';
 import { instrumentGoogleGenAIClient } from '@sentry/server-utils';
@@ -28,7 +28,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export function getGoogleAuthOptions(
-  settings: Extract<LlmModel['setting'], { provider: 'google' }>,
+  settings: Extract<SensitiveLlmModel['setting'], { provider: 'google' }>,
   requireCredentials = false,
 ): GoogleAuthOptions {
   const authCredentials = settings.authCredentials;
@@ -60,7 +60,7 @@ export function getGoogleAuthOptions(
   }
 }
 
-export function createGoogleAuth(model: LlmModel): GoogleAuth {
+export function createGoogleAuth(model: SensitiveLlmModel): GoogleAuth {
   if (!isLlmProvider(model.setting, 'google')) {
     throw new ProviderConfigurationError('Invalid model configuration for Google');
   }
@@ -69,7 +69,7 @@ export function createGoogleAuth(model: LlmModel): GoogleAuth {
 }
 
 function getCredentialsFingerprint(
-  authCredentials: Extract<LlmModel['setting'], { provider: 'google' }>['authCredentials'],
+  authCredentials: Extract<SensitiveLlmModel['setting'], { provider: 'google' }>['authCredentials'],
 ): string {
   if (authCredentials === undefined) return 'adc';
   const normalized =
@@ -77,7 +77,7 @@ function getCredentialsFingerprint(
   return createHash('sha256').update(normalized).digest('hex');
 }
 
-export function createGoogleClient(model: LlmModel): GoogleClientConfig {
+export function createGoogleClient(model: SensitiveLlmModel): GoogleClientConfig {
   if (!isLlmProvider(model.setting, 'google')) {
     throw new ProviderConfigurationError('Invalid model configuration for Google');
   }

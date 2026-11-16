@@ -3,7 +3,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { isCustomOpenAiProviderId } from '../bifrost-provider-sync/provider-config-builder/openai-compatible';
 import { db } from '../db';
 import {
-  type LlmModel,
+  type SensitiveLlmModel,
   llmModelProviderKeyMappingTable,
   llmModelTable,
   type LlmProviderKeyInsertModel,
@@ -12,7 +12,7 @@ import {
 } from '../schema';
 
 export type LlmProviderKeyWithModels = LlmProviderKeyModel & {
-  models: Array<{ model: LlmModel; upstreamModelName: string }>;
+  models: Array<{ model: SensitiveLlmModel; upstreamModelName: string }>;
 };
 
 export async function dbGetAllProviderKeysWithModels(): Promise<LlmProviderKeyWithModels[]> {
