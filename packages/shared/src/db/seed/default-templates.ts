@@ -7,13 +7,13 @@ import * as path from 'path';
 import { uploadFileToS3 } from '../../s3';
 import { dbUpsertAssistant } from '../functions/assistants';
 import { dbCreateCharacter } from '../functions/character';
+import { dbGetFederalStates } from '../functions/federal-state';
 import {
   AssistantInsertModel,
   CharacterInsertModel,
   LearningScenarioInsertModel,
   learningScenarioTable,
 } from '../schema';
-import { FEDERAL_STATES } from './federal-state';
 import { PLACEHOLDER_USER_ID } from './user-entity';
 
 export async function insertTemplateCharacters() {
@@ -33,7 +33,7 @@ export async function insertTemplateCharacters() {
     await updateTemplateMappings(
       'character',
       id,
-      FEDERAL_STATES.map((fs) => ({ federalStateId: fs.id, isMapped: true })),
+      (await dbGetFederalStates()).map((fs) => ({ federalStateId: fs.id, isMapped: true })),
     );
   }
   console.log('template character seed successful');
@@ -56,7 +56,7 @@ export async function insertTemplateAssistant() {
     await updateTemplateMappings(
       'assistant',
       id,
-      FEDERAL_STATES.map((fs) => ({ federalStateId: fs.id, isMapped: true })),
+      (await dbGetFederalStates()).map((fs) => ({ federalStateId: fs.id, isMapped: true })),
     );
   }
   console.log('template assistant seed successful');
@@ -92,7 +92,7 @@ export async function insertTemplateLearningScenarios() {
     await updateTemplateMappings(
       'learning-scenario',
       newLearningScenario.id,
-      FEDERAL_STATES.map((fs) => ({ federalStateId: fs.id, isMapped: true })),
+      (await dbGetFederalStates()).map((fs) => ({ federalStateId: fs.id, isMapped: true })),
     );
   }
   console.log('template learning scenario seed successful');

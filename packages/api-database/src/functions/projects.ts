@@ -17,7 +17,7 @@ export async function dbGetProjectsWithApiKeys() {
     .select()
     .from(projectTable)
     .innerJoin(apiKeyTable, eq(apiKeyTable.projectId, projectTable.id))
-    .orderBy(projectTable.createdAt);
+    .orderBy(projectTable.createdAt, apiKeyTable.createdAt);
 
   return organizeProjectsWithApiKeys(rows);
 }

@@ -141,7 +141,7 @@ jobs:
 
       - name: Seed ais-chat-api database
         # db:seed will print the generated API KEY on the console
-        # The output is captured in GITHUB_ENV for seeding ais-chat-app
+        # The output is captured in GITHUB_ENV for the API e2e tests (DE_TEST_API_KEY)
         # On fork PRs, the LLM_* secrets below are unavailable and resolve to empty strings;
         # db:seed skips any real-provider model whose credentials aren't set and seeds the
         # mock LLM only, which is all the smoke suite (the suite fork PRs run) needs.
