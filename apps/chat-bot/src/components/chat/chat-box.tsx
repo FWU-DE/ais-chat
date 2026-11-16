@@ -9,8 +9,6 @@ import { TOOL_NAMES } from '@/types/tool-names';
 import {
   extractDocumentBlocks,
   removeDocumentBlocks,
-  removeGeneratedDocumentImages,
-  removeGeneratedDocumentLinks,
   replacePlotBlocks,
 } from '@/utils/code-blocks';
 import { createGeneratedDocumentFileName } from '@/utils/files/generated-document';
@@ -167,11 +165,7 @@ export function ChatBox({
   const hasGeneratedDocument =
     documentBlocks.length > 0 ||
     activitySteps.some((step) => step.kind === 'tool' && step.tool === TOOL_NAMES.generateDocument);
-  const visibleMessageContent = hasGeneratedDocument
-    ? removeGeneratedDocumentImages(
-        removeGeneratedDocumentLinks(removeDocumentBlocks(message.content)),
-      )
-    : message.content;
+  const visibleMessageContent = hasGeneratedDocument ? message.content : message.content;
 
   // Short description instead of the raw plot JSON for copy, read-aloud and audio.
   const plainText = useMemo(

@@ -20,6 +20,10 @@ function htmlToPhrasing(html: string): PhrasingContent[] {
   return nodes;
 }
 
+function isPhrasingContainer(type: string) {
+  return type === 'paragraph' || type === 'heading';
+}
+
 // The exports can't render raw HTML: <br> becomes a line break and all other tags are dropped.
 export function remarkNormalizeHtml() {
   return (tree: Root) => {
@@ -28,12 +32,11 @@ export function remarkNormalizeHtml() {
         return;
       }
       const phrasing = htmlToPhrasing(node.value);
-      const replacement: RootContent[] =
-        parent.type === 'root'
-          ? phrasing.length > 0
-            ? [{ type: 'paragraph', children: phrasing } satisfies Paragraph]
-            : []
-          : phrasing;
+      const replacement: RootContent[] = isPhrasingContainer(parent.type)
+        ? phrasing
+        : phrasing.length > 0
+          ? [{ type: 'paragraph', children: phrasing } satisfies Paragraph]
+          : [];
       (parent.children as RootContent[]).splice(index, 1, ...replacement);
       return [SKIP, index + replacement.length];
     });

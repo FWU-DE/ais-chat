@@ -53,7 +53,8 @@ for (const [tool, { args, prompt }] of Object.entries(TOOLS) as [
   AiActivityToolName,
   { args: unknown; prompt: string },
 ][]) {
-  test(`shows an AI activity step for ${tool}`, async ({ page }) => {
+  const testOptions = tool === 'generate_document' ? { tag: '@smoke' } : {};
+  test(`shows an AI activity step for ${tool}`, testOptions, async ({ page }) => {
     await page.goto('/');
 
     if (TOOLS_REQUIRING_FILE.includes(tool)) {
