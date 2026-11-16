@@ -1,13 +1,72 @@
 import { and, eq, inArray } from 'drizzle-orm';
 
 import { db } from '../db';
-import type { LlmInsertModel, LlmModel } from '../schema';
+import type { LlmInsertModel, LlmModel, SensitiveLlmModel } from '../schema';
 import {
   llmModelApiKeyMappingTable,
   llmModelProviderKeyMappingTable,
   llmModelTable,
 } from '../schema';
 import { dbGetAllApiKeys } from './api-key';
+
+// Public model columns for consumers outside the API; never expose provider settings or parameters.
+const llmModelColumns: { [K in keyof LlmModel]: (typeof llmModelTable)[K] } = {
+  id: llmModelTable.id,
+  provider: llmModelTable.provider,
+  name: llmModelTable.name,
+  displayName: llmModelTable.displayName,
+  description: llmModelTable.description,
+  priceMetadata: llmModelTable.priceMetadata,
+  createdAt: llmModelTable.createdAt,
+  supportedImageFormats: llmModelTable.supportedImageFormats,
+  imageGenerationConfig: llmModelTable.imageGenerationConfig,
+  modelConfig: llmModelTable.modelConfig,
+  isNew: llmModelTable.isNew,
+  isDeleted: llmModelTable.isDeleted,
+};
+
+// LlmModel reads are cached (when a TTL is configured) since they are queried frequently by ais-chat-app.
+export async function dbGetAllLlmModels(): Promise<LlmModel[]> {
+  return db
+    .select(llmModelColumns)
+    .from(llmModelTable)
+    .orderBy(llmModelTable.createdAt)
+    .$withCache();
+}
+
+export async function dbGetLlmModelById(modelId: string): Promise<LlmModel | undefined> {
+  const [model] = await db
+    .select(llmModelColumns)
+    .from(llmModelTable)
+    .where(eq(llmModelTable.id, modelId))
+    .$withCache();
+  return model;
+}
+
+export async function dbGetLlmModelByName(name: string): Promise<LlmModel | undefined> {
+  const [model] = await db
+    .select(llmModelColumns)
+    .from(llmModelTable)
+    .where(eq(llmModelTable.name, name))
+    .$withCache();
+  return model;
+}
+
+/** Returns all models (including deleted ones) the given API key has access to. */
+export async function dbGetLlmModelsByApiKeyId(apiKeyId: string): Promise<LlmModel[]> {
+  // Subquery instead of a join: mapping rows are not unique per (model, api key)
+  const mappedModelIds = db
+    .select({ id: llmModelApiKeyMappingTable.llmModelId })
+    .from(llmModelApiKeyMappingTable)
+    .where(eq(llmModelApiKeyMappingTable.apiKeyId, apiKeyId));
+
+  return db
+    .select(llmModelColumns)
+    .from(llmModelTable)
+    .where(inArray(llmModelTable.id, mappedModelIds))
+    .orderBy(llmModelTable.createdAt)
+    .$withCache();
+}
 
 export async function dbGetAllModels() {
   return db.select().from(llmModelTable).orderBy(llmModelTable.createdAt);
@@ -85,7 +144,7 @@ export async function dbCreateLlmModel(llmModel: LlmInsertModel) {
   return modelCreated[0];
 }
 
-export async function dbUpdateLlmModel(id: string, llmModel: Partial<LlmModel>) {
+export async function dbUpdateLlmModel(id: string, llmModel: Partial<SensitiveLlmModel>) {
   const updatedModel = (
     await db
       .update(llmModelTable)
@@ -142,7 +201,7 @@ export async function dbCreateModelWithApiKeyLinks({
       error: string;
     }
   | {
-      model: LlmModel;
+      model: SensitiveLlmModel;
       linkedApiKeys: { id: string; name: string }[];
     }
 > {

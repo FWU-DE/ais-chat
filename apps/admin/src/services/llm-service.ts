@@ -7,7 +7,6 @@ import {
 } from '@ais-chat/api-database';
 import { imageGenerationConfigSchema, speechConfigSchema } from '@ais-chat/api-database/types';
 import { llmModelPriceMetadataSchema } from '@ais-chat/shared/db/schema';
-import { dbUpdateLlmModelsForAllFederalStates } from '@shared/db/functions/llm-model';
 import { logInfo } from '@shared/logging';
 import { z } from 'zod';
 
@@ -99,7 +98,6 @@ export async function updateLargeLanguageModel(modelId: string, data: UpdateLarg
   });
 
   await syncBifrostProvidersOrThrow();
-  await dbUpdateLlmModelsForAllFederalStates();
   if (!model) throw new Error('Failed to update model');
 
   logInfo('LLM was updated successfully', { modelId, data });
@@ -115,7 +113,6 @@ export async function deleteLargeLanguageModel(modelId: string) {
   if (!deleted) throw new Error('Model not found');
 
   await syncBifrostProvidersOrThrow();
-  await dbUpdateLlmModelsForAllFederalStates();
 
   logInfo('LLM was deleted successfully', { modelId });
 }

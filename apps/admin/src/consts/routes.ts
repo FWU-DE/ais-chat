@@ -18,7 +18,6 @@ export const ROUTES = {
     projectDetails: (projectId: string) => `/projects/${projectId}`,
   },
   app: {
-    apiKey: (federalStateId: string) => `/ais-chat-app/federal-states/${federalStateId}/api-key`,
     page: '/ais-chat-app',
     federalStates: `/ais-chat-app/federal-states`,
     federalStateDetails: (federalStateId: string) =>

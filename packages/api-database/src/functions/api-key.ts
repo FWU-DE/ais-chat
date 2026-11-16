@@ -109,6 +109,14 @@ export async function dbGetAllApiKeysByProjectId(projectId: string) {
   return await db.select().from(apiKeyTable).where(eq(apiKeyTable.projectId, projectId));
 }
 
+export async function dbGetApiKeysByProjectId(projectId: string) {
+  return await db
+    .select({ id: apiKeyTable.id, name: apiKeyTable.name })
+    .from(apiKeyTable)
+    .where(eq(apiKeyTable.projectId, projectId))
+    .orderBy(apiKeyTable.name);
+}
+
 export async function dbGetAllApiKeys() {
   return await db
     .select({

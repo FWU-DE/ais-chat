@@ -1,4 +1,4 @@
-import { encrypt } from '@shared/db/crypto';
+import { apiKeyExists } from '@ais-chat/ai-core/api-keys/lookup';
 import {
   dbDeleteFederalState,
   dbGetFederalState,
@@ -12,7 +12,7 @@ import {
   FederalStateUpdateModel,
   federalStateUpdateSchema,
 } from '@shared/db/schema';
-import { env } from '@shared/env';
+import { NotFoundError } from '@shared/error';
 import { FederalStateModel } from '@shared/federal-states/types';
 
 export async function getFederalStates(): Promise<FederalStateModel[]> {
@@ -35,27 +35,11 @@ export async function updateFederalState(
   federalState: Omit<FederalStateUpdateModel, 'encryptedApiKey' | 'createdAt'>,
 ): Promise<FederalStateModel> {
   const values = updateSchema.parse(federalState);
-  const updated = await dbUpdateFederalState(values);
-  return transformToModel(updated);
-}
-
-export async function updateApiKey(
-  federalStateId: string,
-  decryptedApiKey: string,
-): Promise<FederalStateModel> {
-  const apiKey = encrypt({
-    text: decryptedApiKey,
-    plainEncryptionKey: env.encryptionKey,
-  });
-
-  const updated = await dbUpdateFederalState({
-    id: federalStateId,
-    encryptedApiKey: apiKey,
-  });
-
-  if (!updated) {
-    throw new Error(`Failed to update federal state with id ${federalStateId}`);
+  if (values.apiKeyId && !(await apiKeyExists(values.apiKeyId))) {
+    throw new NotFoundError(`API key ${values.apiKeyId} not found`);
   }
+
+  const updated = await dbUpdateFederalState(values);
   return transformToModel(updated);
 }
 
@@ -82,6 +66,6 @@ function transformToModel(federalState: FederalStateSelectModel): FederalStateMo
 
   return {
     ...federalStateWithoutApiKey,
-    hasApiKeyAssigned: !!federalState.encryptedApiKey,
+    hasApiKeyAssigned: !!federalState.apiKeyId,
   };
 }

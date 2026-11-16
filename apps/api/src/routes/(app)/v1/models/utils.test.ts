@@ -1,9 +1,9 @@
-import type { LlmModel } from '@ais-chat/api-database';
+import type { SensitiveLlmModel } from '@ais-chat/api-database';
 import { describe, expect, it } from 'vitest';
 
 import { obscureModels } from './utils';
 
-const baseModel: LlmModel = {
+const baseModel: SensitiveLlmModel = {
   id: 'model-1',
   provider: 'openai',
   name: 'gpt-4',

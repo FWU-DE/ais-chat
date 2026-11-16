@@ -5,7 +5,6 @@ import {
   dbSetApiKeysForModel,
   dbUpdateModelMappingsForApiKey,
 } from '@ais-chat/api-database';
-import { dbUpdateLlmModelsForAllFederalStates } from '@shared/db/functions/llm-model';
 import { logInfo } from '@shared/logging';
 
 export async function getModelApiKeyMappings(projectId: string, apiKeyId: string) {
@@ -18,8 +17,6 @@ export async function saveModelApiKeyMappings(
   modelIds: string[],
 ) {
   const result = await dbUpdateModelMappingsForApiKey(projectId, apiKeyId, modelIds);
-
-  await dbUpdateLlmModelsForAllFederalStates();
 
   logInfo('API Key mapping was updated successfully', { projectId, apiKeyId, modelIds });
 
@@ -37,8 +34,6 @@ export async function getLlmApiKeyAssignmentsData(modelId: string) {
 
 export async function saveApiKeysForModel(modelId: string, apiKeyIds: string[]) {
   await dbSetApiKeysForModel(modelId, apiKeyIds);
-
-  await dbUpdateLlmModelsForAllFederalStates();
 
   logInfo('Model API key assignments were updated successfully', { modelId, apiKeyIds });
 }

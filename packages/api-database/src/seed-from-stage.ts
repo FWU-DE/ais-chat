@@ -5,7 +5,6 @@ import { db as localDb } from './index';
 import {
   ApiKeyModel,
   apiKeyTable,
-  LlmModel,
   LlmModelApiKeyMappingModel,
   llmModelApiKeyMappingTable,
   LlmModelProviderKeyMappingModel,
@@ -15,6 +14,7 @@ import {
   llmProviderKeyTable,
   ProjectModel,
   projectTable,
+  SensitiveLlmModel,
 } from './schema';
 import { normalizeSeedModelsForBifrost, syncSeedModelsToBifrost } from './seed-bifrost';
 
@@ -41,7 +41,7 @@ async function getApiKeys(): Promise<ApiKeyModel[]> {
   return await stageDb.select().from(apiKeyTable);
 }
 
-async function getModels(): Promise<LlmModel[]> {
+async function getModels(): Promise<SensitiveLlmModel[]> {
   return await stageDb.select().from(llmModelTable);
 }
 

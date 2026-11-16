@@ -1,4 +1,4 @@
-import * as Sentry from '@sentry/nextjs';
+import * as Sentry from '@sentry/core';
 import { Cache, MutationOption } from 'drizzle-orm/cache/core';
 import { CacheConfig } from 'drizzle-orm/cache/core/types';
 import { entityKind } from 'drizzle-orm/entity';
@@ -22,9 +22,7 @@ export class MemoryCache extends Cache {
     string,
     {
       expireTimestamp: number;
-      // any is required for Cache interface of drizzle
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      value: any;
+      value: unknown;
     }
   >();
 
@@ -47,7 +45,7 @@ export class MemoryCache extends Cache {
         attributes: { 'cache.key': [key] },
         op: 'cache.get',
       },
-      (span) => {
+      (span): unknown[] | undefined => {
         let entry = this.cache.get(key);
         const now = new Date().getTime();
         if (entry && entry.expireTimestamp < now) {
@@ -57,7 +55,7 @@ export class MemoryCache extends Cache {
 
         if (entry && entry.value) {
           span.setAttribute('cache.hit', true);
-          return entry.value;
+          return entry.value as unknown[];
         }
 
         span.setAttribute('cache.hit', false);
@@ -68,7 +66,7 @@ export class MemoryCache extends Cache {
     return Promise.resolve(result);
   }
 
-  override async put(
+  override put(
     key: string,
     response: unknown,
     tables: string[],
@@ -93,9 +91,10 @@ export class MemoryCache extends Cache {
         this.cache.set(key, { value: response, expireTimestamp });
       },
     );
+    return Promise.resolve();
   }
 
-  override async onMutate(params: MutationOption) {
+  override onMutate(params: MutationOption): Promise<void> {
     const tags: string[] = Array.isArray(params.tags)
       ? params.tags
       : params.tags
@@ -109,8 +108,9 @@ export class MemoryCache extends Cache {
         op: 'cache.remove',
       },
       () => {
-        tags.forEach(this.cache.delete);
+        tags.forEach((tag) => this.cache.delete(tag));
       },
     );
+    return Promise.resolve();
   }
 }

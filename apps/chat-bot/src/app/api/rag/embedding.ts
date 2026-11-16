@@ -1,5 +1,5 @@
 import { generateEmbeddingsWithBilling } from '@ais-chat/ai-core';
-import { dbGetFederalStateWithDecryptedApiKeyWithResult } from '@shared/db/functions/federal-state';
+import { dbGetFederalStateWithApiKeyIdWithResult } from '@shared/db/functions/federal-state';
 import { dbGetModelByName } from '@shared/db/functions/llm-model';
 import { ChunkInsertModel } from '@shared/db/schema';
 import { logDebug } from '@shared/logging';
@@ -33,16 +33,12 @@ export async function embedText({
 }
 
 async function getFederalStateApiKeyId(federalStateId: string) {
-  const [error, federalStateObject] = await dbGetFederalStateWithDecryptedApiKeyWithResult({
+  const [error, federalStateObject] = await dbGetFederalStateWithApiKeyIdWithResult({
     federalStateId,
   });
 
-  if (error !== null || federalStateObject === undefined) {
-    throw new Error(error?.message ?? 'Error fetching federal state');
-  }
-
-  if (federalStateObject.apiKeyId === null) {
-    throw new Error('Federal state does not have an associated API key');
+  if (error !== null) {
+    throw new Error(error.message);
   }
 
   return federalStateObject.apiKeyId;
