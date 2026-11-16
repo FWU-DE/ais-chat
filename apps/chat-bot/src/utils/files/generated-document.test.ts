@@ -44,6 +44,12 @@ describe('createGeneratedDocumentFileName', () => {
     const fileName = createGeneratedDocumentFileName('a'.repeat(300), 'docx', 'Dokument');
     expect(fileName).toBe(`${'a'.repeat(80)}.docx`);
   });
+
+  it('uses the PDF extension', () => {
+    expect(createGeneratedDocumentFileName('Arbeitsblatt', 'pdf', 'Dokument')).toBe(
+      'Arbeitsblatt.pdf',
+    );
+  });
 });
 
 describe('createGeneratedDocumentBlob', () => {
@@ -80,16 +86,41 @@ describe('createGeneratedDocumentBlob', () => {
     vi.unstubAllGlobals();
   });
 
+  it('creates a PDF from Markdown', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(Buffer.from('%PDF-test'), {
+        status: 200,
+        headers: { 'Content-Type': 'application/pdf' },
+      }),
+    );
+    try {
+      const blob = await createGeneratedDocumentBlob(MARKDOWN, 'pdf');
+      const bytes = await readBytes(blob);
+
+      expect(blob.type).toBe('application/pdf');
+      expect(new TextDecoder().decode(bytes)).toBe('%PDF-test');
+      expect(fetchSpy).toHaveBeenCalledWith(
+        '/api/generate-document/pdf',
+        expect.objectContaining({ method: 'POST' }),
+      );
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  }, 30_000);
+
   it('creates a DOCX (zip) and loads external images from Markdown', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
-    const blob = await createGeneratedDocumentBlob(MARKDOWN, 'docx');
-    const bytes = await readBytes(blob);
+    try {
+      const blob = await createGeneratedDocumentBlob(MARKDOWN, 'docx');
+      const bytes = await readBytes(blob);
 
-    expect(blob.type).toBe(
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    );
-    expect(new TextDecoder().decode(bytes.slice(0, 2))).toBe('PK');
-    expect(fetchSpy).toHaveBeenCalledWith('https://example.com/tracker.png');
-    fetchSpy.mockRestore();
+      expect(blob.type).toBe(
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      );
+      expect(new TextDecoder().decode(bytes.slice(0, 2))).toBe('PK');
+      expect(fetchSpy).toHaveBeenCalledWith('https://example.com/tracker.png');
+    } finally {
+      fetchSpy.mockRestore();
+    }
   }, 30_000);
 });

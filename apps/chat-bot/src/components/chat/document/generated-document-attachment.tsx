@@ -7,50 +7,25 @@ import { useState } from 'react';
 import { useToast } from '@/components/common/toast';
 import type { AiActivityDocument } from '@/types/ai-activity';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
+import { collectUploadedImageUrls } from '@/utils/files/document-images';
 import {
-  type DocumentImageReferences,
-  getDocumentAttachmentReference,
-} from '@/utils/files/document-images';
-import { createGeneratedDocumentBlob } from '@/utils/files/generated-document';
-import { isImageFile } from '@/utils/files/generic';
+  createGeneratedDocumentBlob,
+  type SharedChatDocumentContext,
+} from '@/utils/files/generated-document';
 
 import DisplayFileAttachment from '../display-file-attachment';
-
-type DocumentImageFile = {
-  id: string;
-  name: string;
-  localUrl?: string;
-};
-
-function createImageReferences(
-  fileMapping?: ReadonlyMap<string, readonly DocumentImageFile[]>,
-  messageFileMapping?: ReadonlyMap<string, readonly DocumentImageFile[]>,
-): DocumentImageReferences {
-  const imageReferences = new Map<string, string>();
-  for (const files of [fileMapping?.values(), messageFileMapping?.values()]) {
-    for (const fileList of files ?? []) {
-      for (const file of fileList) {
-        if (!isImageFile(file.name)) {
-          continue;
-        }
-        imageReferences.set(
-          getDocumentAttachmentReference(file.id),
-          file.localUrl ?? `/api/files/${file.id}/scaled-image?width=240&height=240`,
-        );
-      }
-    }
-  }
-  return imageReferences;
-}
+import type { MessageFileModel } from '../message-image-attachment';
 
 export function GeneratedDocumentAttachment({
   document,
   fileMapping,
   messageFileMapping,
+  sharedChat,
 }: {
   document: AiActivityDocument;
-  fileMapping?: ReadonlyMap<string, readonly DocumentImageFile[]>;
-  messageFileMapping?: ReadonlyMap<string, readonly DocumentImageFile[]>;
+  fileMapping?: ReadonlyMap<string, readonly MessageFileModel[]>;
+  messageFileMapping?: ReadonlyMap<string, readonly MessageFileModel[]>;
+  sharedChat?: SharedChatDocumentContext;
 }) {
   const tCommon = useTranslations('common');
   const tFiles = useTranslations('file-interaction');
@@ -64,7 +39,9 @@ export function GeneratedDocumentAttachment({
         await createGeneratedDocumentBlob(
           document.content,
           document.format,
-          createImageReferences(fileMapping, messageFileMapping),
+          collectUploadedImageUrls({ fileMapping, messageFileMapping }),
+          document.fileName.replace(/\.[^.]+$/, ''),
+          sharedChat,
         ),
         document.fileName,
       );
