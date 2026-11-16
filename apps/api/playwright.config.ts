@@ -5,11 +5,10 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Load .env.test for e2e tests.
-// This file should define any environment variables needed by the Playwright tests,
-// e.g. a test API key in sk_ format used for client auth.
-// The API server itself loads .env.local via its own load-env.ts.
-dotenvConfig({ path: path.resolve(__dirname, '.env.test') });
+// The API server itself loads both files via its own load-env.ts.
+dotenvConfig({
+  path: [path.resolve(__dirname, '.env.local'), path.resolve(__dirname, '.env.development')],
+});
 
 export default defineConfig({
   // The monorepo root, shared with the chat-bot/admin configs, so merged smart-reporter

@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 const ADMIN_API_KEY = process.env.API_KEY;
 
 if (!ADMIN_API_KEY) {
-  throw new Error('API_KEY environment variable is required. Set it in apps/api/.env.test');
+  throw new Error('API_KEY environment variable is required. Set it in apps/api/.env.local');
 }
 
 const adminHeader = { Authorization: `Bearer ${ADMIN_API_KEY}` };

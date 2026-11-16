@@ -10,5 +10,6 @@ implementing related features; open the linked doc for full details.
 | [ui-layout.md](ui-layout.md) | Building or changing responsive UI layouts (Tailwind breakpoints, mobile-first design, element reordering across breakpoints) |
 | [api-design.md](api-design.md) | Adding or modifying API routes |
 | [popularity.md](popularity.md) | Changing how assistants, characters and learning scenarios are ranked by popularity |
+| [local-env.md](local-env.md) | Adding or changing env vars, or touching dev scripts and env loading |
 | [external-data-validation.md](external-data-validation.md) | Handling data from outside the system (API requests, third-party/LLM provider responses, webhooks, `JSON.parse`) |
 | [text-to-speech.md](text-to-speech.md) | Changing speech generation, streaming, text splitting or preprocessing for read-aloud |
