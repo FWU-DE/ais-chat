@@ -423,6 +423,12 @@ export default function GenericSharedChat({
                 generateSpeechStreamFn={generateSpeechStreamFn}
                 isSpeechModelEnabled={isSpeechModelEnabled}
                 speechOnly={speechOnly}
+                sharedChat={{
+                  inviteCode,
+                  entityType: sharedEntityType,
+                  entityId: entity.id,
+                  sharedSessionId,
+                }}
               />
             )}
             {/* If there is a TokenPointsExceededError or SharedChatExpiredError we show a dialog instead */}

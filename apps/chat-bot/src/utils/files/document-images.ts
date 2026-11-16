@@ -1,9 +1,43 @@
+import type { FileModel } from '@shared/db/schema';
+
+import { isImageFile } from '@/utils/files/generic';
+
 const MAX_DOCUMENT_IMAGE_SIZE = 240;
 
 export type DocumentImageReferences = ReadonlyMap<string, string>;
+export type AllowedDocumentImages = DocumentImageReferences;
+
+type UploadedFile = Pick<FileModel, 'id' | 'name'> & { localUrl?: string };
+type UploadedFiles = ReadonlyMap<string, readonly UploadedFile[]>;
 
 export function getDocumentAttachmentReference(fileId: string) {
   return `attachment://${encodeURIComponent(fileId)}`;
+}
+
+export function collectUploadedImageUrls({
+  fileMapping,
+  messageFileMapping,
+}: {
+  fileMapping?: UploadedFiles;
+  messageFileMapping?: UploadedFiles;
+}): AllowedDocumentImages {
+  const imageReferences = new Map<string, string>();
+  for (const files of [fileMapping?.values(), messageFileMapping?.values()]) {
+    for (const fileList of files ?? []) {
+      for (const file of fileList) {
+        if (!isImageFile(file.name)) continue;
+        const url =
+          file.localUrl ??
+          (fileMapping === undefined
+            ? undefined
+            : `/api/files/${file.id}/scaled-image?width=${MAX_DOCUMENT_IMAGE_SIZE}&height=${MAX_DOCUMENT_IMAGE_SIZE}`);
+        if (url !== undefined) {
+          imageReferences.set(getDocumentAttachmentReference(file.id), url);
+        }
+      }
+    }
+  }
+  return imageReferences;
 }
 
 export type LoadedDocumentImage = {
