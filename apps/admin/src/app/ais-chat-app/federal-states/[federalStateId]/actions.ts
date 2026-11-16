@@ -1,5 +1,5 @@
 'use server';
-import { dbGetApiKeyOptionsByProjectId } from '@ais-chat/api-database';
+import { dbGetApiKeysByProjectId } from '@ais-chat/api-database';
 import { runServerAction } from '@shared/actions/run-server-action';
 import {
   federalStateFeatureTogglesSchema,
@@ -26,7 +26,7 @@ export async function getFederalStateByIdAction(federalStateId: string) {
 export async function getApiKeyOptionsAction(federalStateId: string) {
   await requireAdminAuth();
 
-  return dbGetApiKeyOptionsByProjectId(federalStateId);
+  return dbGetApiKeysByProjectId(federalStateId);
 }
 
 export async function createFederalStateAction(

@@ -109,7 +109,7 @@ export async function dbGetAllApiKeysByProjectId(projectId: string) {
   return await db.select().from(apiKeyTable).where(eq(apiKeyTable.projectId, projectId));
 }
 
-export async function dbGetApiKeyOptionsByProjectId(projectId: string) {
+export async function dbGetApiKeysByProjectId(projectId: string) {
   return await db
     .select({ id: apiKeyTable.id, name: apiKeyTable.name })
     .from(apiKeyTable)
