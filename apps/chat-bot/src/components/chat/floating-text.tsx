@@ -13,7 +13,7 @@ import MarkdownDisplay from './markdown-display';
 
 export const dynamic = 'force-dynamic';
 
-const MIN_WIDTH = 240;
+const MIN_WIDTH_REM = 15;
 const MIN_HEIGHT = 120;
 
 // Floating, minimizable, movable learning context dialog (desktop only) on mobile it's sticky on the top
@@ -195,11 +195,11 @@ export function FloatingText({
     const parentRect = getParentElement()?.getBoundingClientRect();
     const availableWidth = parentRect ? parentRect.width - position.x - minMargin : Infinity;
     const availableHeight = parentRect ? parentRect.height - position.y - minMargin : Infinity;
+    const minWidth = containerRef.current
+      ? Number.parseFloat(getComputedStyle(containerRef.current).minWidth)
+      : 0;
     setSize({
-      width: Math.max(
-        MIN_WIDTH,
-        Math.min(start.width + e.clientX - start.pointerX, availableWidth),
-      ),
+      width: Math.max(minWidth, Math.min(start.width + e.clientX - start.pointerX, availableWidth)),
       height: Math.max(
         MIN_HEIGHT,
         Math.min(start.height + e.clientY - start.pointerY, availableHeight),
@@ -235,6 +235,8 @@ export function FloatingText({
         top: isDraggable ? position.y : minMargin,
         maxWidth: isDraggable ? getMaxSize(maxWidth, position.x) : '100%',
         maxHeight: isDraggable ? getMaxSize(maxHeight, position.y) : '40%',
+        // rem, so the minimum grows with the text size and keeps the controls inside the window
+        minWidth: isResizable ? `${MIN_WIDTH_REM}rem` : undefined,
         width: isResizable ? size?.width : undefined,
         height: isResizable ? size?.height : undefined,
       }}

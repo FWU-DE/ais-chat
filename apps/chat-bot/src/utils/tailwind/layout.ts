@@ -2,8 +2,16 @@ import { DesignConfiguration } from '@ui/types/design-configuration';
 
 export const reductionBreakpoint = 'sm';
 
-function darken(color: string | undefined, percent: number) {
-  return `color-mix(in srgb, ${color}, black ${percent}%)`;
+function mixToward({
+  color,
+  target,
+  percent,
+}: {
+  color: string | undefined;
+  target: string | undefined;
+  percent: number;
+}) {
+  return `color-mix(in srgb, ${color}, ${target} ${percent}%)`;
 }
 
 export function constructRootLayoutStyle({
@@ -20,7 +28,15 @@ export function constructRootLayoutStyle({
     '--sidebar-accent': `color-mix(in srgb, ${designConfiguration?.primaryColor} 15%, transparent)`,
     '--sidebar-accent-foreground': designConfiguration?.primaryColor,
     '--sidebar-ring': designConfiguration?.primaryColor,
-    '--scrollbar-on-secondary': darken(designConfiguration?.secondaryColor, 22),
-    '--scrollbar-on-secondary-hover': darken(designConfiguration?.secondaryColor, 45),
+    '--scrollbar-on-secondary': mixToward({
+      color: designConfiguration?.secondaryColor,
+      target: designConfiguration?.secondaryTextColor,
+      percent: 22,
+    }),
+    '--scrollbar-on-secondary-hover': mixToward({
+      color: designConfiguration?.secondaryColor,
+      target: designConfiguration?.secondaryTextColor,
+      percent: 45,
+    }),
   } as React.CSSProperties;
 }
