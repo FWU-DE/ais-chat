@@ -1,6 +1,5 @@
-import { isApiKeyOverQuota } from '../api-keys/billing';
-import { hasAccessToModel } from '../api-keys/model-access';
-import { ApiKeyQuotaExceededError, InvalidModelError, normalizeAiGenerationError } from '../errors';
+import { assertApiKeyCanUseModel } from '../api-keys/access';
+import { normalizeAiGenerationError } from '../errors';
 import { getEmbeddingModelById, getEmbeddingModelByName } from '../models';
 import { generateEmbeddings } from './providers';
 
@@ -24,21 +23,7 @@ export async function generateEmbeddingsWithBilling(
 ) {
   const model = await getEmbeddingModelById(modelId);
 
-  // Run access check and quota check in parallel for better performance
-  const [hasAccess, isOverQuota] = await Promise.all([
-    hasAccessToModel(apiKeyId, model),
-    isApiKeyOverQuota(apiKeyId),
-  ]);
-
-  if (!hasAccess) {
-    throw new InvalidModelError(
-      `API key does not have access to the embedding model: ${model.name}`,
-    );
-  }
-
-  if (isOverQuota) {
-    throw new ApiKeyQuotaExceededError(`API key has exceeded its monthly quota`);
-  }
+  await assertApiKeyCanUseModel(apiKeyId, model, 'embedding');
 
   try {
     const embeddingResponse = await generateEmbeddings(model, texts);

@@ -147,6 +147,26 @@ export class ProviderConfigurationError extends AiGenerationError {
 }
 
 /**
+ * Error thrown when the API key is expired, inactive, deleted or missing.
+ */
+export class ApiKeyUnusableError extends AiGenerationError {
+  readonly reason: string;
+
+  constructor({ apiKeyId, reason }: { apiKeyId: string; reason: string }) {
+    super(`API key ${apiKeyId} is not usable: ${reason}`);
+    this.name = 'ApiKeyUnusableError';
+    this.reason = reason;
+  }
+
+  static is(error: unknown): error is ApiKeyUnusableError {
+    if (error && typeof error === 'object') {
+      return 'name' in error && error.name === 'ApiKeyUnusableError';
+    }
+    return false;
+  }
+}
+
+/**
  * Error thrown when the user has exceeded their token points limit.
  */
 export class TokenPointsExceededError extends AiGenerationError {
@@ -268,6 +288,7 @@ export const aiGenerationErrorTypes = [
   ResponsibleAIError,
   RateLimitExceededError,
   ApiKeyQuotaExceededError,
+  ApiKeyUnusableError,
   ProviderRateLimitExceededError,
   InvalidModelError,
   ProviderConfigurationError,
