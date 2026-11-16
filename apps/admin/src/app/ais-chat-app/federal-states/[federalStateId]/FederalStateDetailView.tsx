@@ -65,6 +65,9 @@ function transformToFederalStateEditForm(federalState: FederalStateModel): Feder
   return {
     ...federalState,
     // Only transform the fields that need UI-specific formatting
+    appName: federalState.appName ?? '',
+    trainingLink: federalState.trainingLink ?? '',
+    mandatoryCertificationTeacher: federalState.mandatoryCertificationTeacher ?? false,
     featureToggles: {
       ...federalState.featureToggles,
       isImageGenerationEnabled: federalState.featureToggles.isImageGenerationEnabled ?? false,
@@ -130,6 +133,8 @@ export function FederalStateView(props: FederalStateViewProps) {
       // Update existing federal state
       await updateFederalStateAction({
         ...data,
+        appName: data.appName || null,
+        trainingLink: data.trainingLink || null,
         supportContacts:
           data.supportContacts.length > 0 ? data.supportContacts.map((s) => s.value) : [],
         designConfiguration: parsedDesignConfiguration,
