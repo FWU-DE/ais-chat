@@ -181,6 +181,8 @@ You can now start the application from the root directory:
 pnpm dev
 ```
 
+To run several copies at once (e.g. in git worktrees), run `pnpm dev:ports` before starting the apps: it writes free ports into `apps/*/.env.local`. The copies share one docker stack and database, and Keycloak backchannel logout and login sessions only work for one copy at a time (see [docs/concepts/local-env.md](docs/concepts/local-env.md)).
+
 ### Keycloak
 
 Keycloak is used for logins both locally and in e2e tests.

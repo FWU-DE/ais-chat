@@ -93,6 +93,12 @@ pnpm dev:admin           # Run admin only
 pnpm dev:api             # Run API only
 ```
 
+See [docs/concepts/local-env.md](docs/concepts/local-env.md) for env files and ports.
+
+- The apps default to ports 3000 / 3001 / 3002. If you need other ports (e.g. running in a second git worktree), stop the apps, run `pnpm dev:ports` once, then start the apps or e2e. It rewrites `PORT`, `API_URL` and `CHAT_BOT_BASE_URL` in `apps/*/.env.local`.
+- Never hardcode ports or URLs; read `PORT`, `API_URL`, `CHAT_BOT_BASE_URL`.
+- Don't commit `.env.local`.
+
 ### Database Management
 
 **Both databases required:**

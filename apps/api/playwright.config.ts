@@ -6,9 +6,13 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // The API server itself loads both files via its own load-env.ts.
+// PORT comes from the same env files (.env.local overrides .env.development).
 dotenvConfig({
   path: [path.resolve(__dirname, '.env.local'), path.resolve(__dirname, '.env.development')],
 });
+
+const port = process.env.PORT;
+if (!port) throw new Error('PORT is not set in apps/api/.env.development or .env.local');
 
 export default defineConfig({
   // The monorepo root, shared with the chat-bot/admin configs, so merged smart-reporter
@@ -27,7 +31,7 @@ export default defineConfig({
   ],
   timeout: 60_000,
   use: {
-    baseURL: `http://localhost:${process.env.PORT ?? '3002'}`,
+    baseURL: `http://localhost:${port}`,
   },
   projects: [
     {
@@ -39,7 +43,7 @@ export default defineConfig({
   webServer: {
     command: 'pnpm dev',
     timeout: 30_000,
-    url: 'http://localhost:3002/health',
+    url: `http://localhost:${port}/health`,
     reuseExistingServer: true,
     stdout: 'pipe',
   },
