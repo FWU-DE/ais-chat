@@ -193,7 +193,7 @@ export function FederalStateView(props: FederalStateViewProps) {
                   API Key aus dem ais-chat-api Projekt {federalState.id}. Darüber werden verfügbare
                   Modelle, Zugriff und Abrechnung gesteuert.
                 </FieldDescription>
-                <Select value={field.value ?? undefined} onValueChange={field.onChange}>
+                <Select value={field.value ?? ''} onValueChange={field.onChange}>
                   <SelectTrigger className="w-full" id="apiKeyId">
                     <SelectValue placeholder="API Key auswählen" />
                   </SelectTrigger>
