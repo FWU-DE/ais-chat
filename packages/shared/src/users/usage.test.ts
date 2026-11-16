@@ -58,7 +58,6 @@ const mockFederalState = (): FederalStateModel =>
     appName: null,
     pictureUrls: null,
     apiKeyId: null,
-    hasApiKeyAssigned: false,
   }) as unknown as FederalStateModel;
 
 describe('sharedChatHasExpired', () => {

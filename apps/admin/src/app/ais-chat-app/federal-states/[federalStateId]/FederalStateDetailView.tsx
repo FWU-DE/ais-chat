@@ -183,13 +183,6 @@ export function FederalStateView(props: FederalStateViewProps) {
             control={control}
             disabled
           />
-          <FormFieldCheckbox
-            name="hasApiKeyAssigned"
-            label="API Key vorhanden?"
-            description="Zeigt an ob bereits ein API Key erstellt wurde. Dieser ist zwingend für die Kommunikation mit ais-chat-api erforderlich."
-            control={control}
-            disabled
-          />
           <Controller
             name="apiKeyId"
             control={control}

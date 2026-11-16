@@ -7,7 +7,6 @@ export const federalStateSchema = federalStateSelectSchema
   })
   .extend({
     createdAt: z.coerce.date(),
-    hasApiKeyAssigned: z.boolean(),
     apiKeyId: z.string().nullable().optional(),
   });
 
