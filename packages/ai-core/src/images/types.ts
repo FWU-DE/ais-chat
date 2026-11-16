@@ -10,7 +10,7 @@ export type Usage = {
 export type ImageResponse = {
   // Base64-encoded images
   data: Array<string>;
-  output_format?: 'png' | 'webp' | 'jpeg';
+  output_format?: 'png' | 'webp' | 'jpeg' | 'gif' | 'svg';
   usage?: Usage;
   /** The real upstream provider that served the request, when the provider reports it. */
   provider?: string;
