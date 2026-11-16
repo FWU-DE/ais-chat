@@ -196,16 +196,21 @@ export function FloatingText({
     const parentRect = getParentElement()?.getBoundingClientRect();
     const availableWidth = parentRect ? parentRect.width - position.x - minMargin : Infinity;
     const availableHeight = parentRect ? parentRect.height - position.y - minMargin : Infinity;
-    const minWidth = containerRef.current
-      ? Number.parseFloat(getComputedStyle(containerRef.current).minWidth)
-      : 0;
     setSize({
-      width: Math.max(minWidth, Math.min(start.width + e.clientX - start.pointerX, availableWidth)),
+      width: Math.max(
+        getMinWidth(),
+        Math.min(start.width + e.clientX - start.pointerX, availableWidth),
+      ),
       height: Math.max(
         MIN_HEIGHT,
         Math.min(start.height + e.clientY - start.pointerY, availableHeight),
       ),
     });
+  }
+
+  // The minimum is in rem, so it changes with the text size while the saved size does not.
+  function getMinWidth() {
+    return MIN_WIDTH_REM * Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
   }
 
   function handleResizePointerEnd(e: React.PointerEvent<HTMLDivElement>) {
@@ -277,7 +282,7 @@ export function FloatingText({
                 setPosition(
                   clampPosition({
                     ...position,
-                    containerWidth: size.width,
+                    containerWidth: Math.max(size.width, getMinWidth()),
                     containerHeight: size.height,
                   }),
                 );
