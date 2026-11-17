@@ -16,6 +16,11 @@
       "description": "Изображение: {title}",
       "error": "Не удалось отобразить изображение."
     },
+    "document": {
+      "label": "Документ",
+      "download": "Скачать {fileName}",
+      "error": "Не удалось создать документ."
+    },
     "read-aloud": "Прочитать сообщение вслух",
     "pause-message": "Приостановить чтение",
     "read-aloud-error": "Не удалось выполнить озвучивание.",
@@ -83,7 +88,8 @@
       "retrieve_entire_file": "Файл прочитан полностью",
       "mundo_search": "Поиск в Mundo",
       "math_calculate": "Выполнено вычисление",
-      "create_plot": "Изображение создано"
+      "create_plot": "Изображение создано",
+      "generate_document": "Файл создан"
     }
   }
 }
