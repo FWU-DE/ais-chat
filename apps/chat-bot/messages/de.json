@@ -45,6 +45,7 @@
     "message-copy": "Nachricht kopieren",
     "message-download": "Nachricht als Word-Datei herunterladen",
     "message-download-error": "Der Download der Nachricht ist fehlgeschlagen.",
+    "code-download": "Datei herunterladen",
     "regenerate-message-button": "Antwort erneut generieren",
     "plot": {
       "label": "Grafik",
