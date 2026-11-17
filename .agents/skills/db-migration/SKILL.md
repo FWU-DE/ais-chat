@@ -21,7 +21,8 @@ Use this skill when the user asks to:
   ```
   echo "DATABASE_URL=postgres://dummy" > ../../apps/chat-bot/.env.local
   ```
-- run `pnpm run db:generate` OR `pnpm run db:generate --custom` if there are no schema changes
+- run `pnpm run db:generate --name <snake_case_description>` OR `pnpm run db:generate --custom --name <snake_case_description>` if there are no schema changes
+- always pass a descriptive `--name` (e.g. `add_assistant_visibility`, `drop_unused_chat_columns`) summarizing the change; never keep the random name drizzle generates by default (e.g. `fearless_lethal_legion`)
 - for each migration 2 files will be created:
   - a .json file in 'packages/shared/migrations/meta' containing the current database schema metadata
   - a .sql file in 'packages/shared/migrations' with the SQL code for the migration
