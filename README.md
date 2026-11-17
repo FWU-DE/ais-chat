@@ -181,6 +181,20 @@ pnpm dev
 
 To run several copies at once (e.g. in git worktrees), run `pnpm dev:ports` before starting the apps: it writes free ports into `apps/*/.env.local`. The copies share one docker stack and database, and Keycloak backchannel logout and login sessions only work for one copy at a time (see [docs/concepts/local-env.md](docs/concepts/local-env.md)).
 
+### Run as Docker container
+
+To run an app image locally with the same behavior as `pnpm dev` (host network, local env files):
+
+```sh
+pnpm build:docker:chat-bot
+docker run --rm --network host \
+  --env-file apps/chat-bot/.env.development \
+  --env-file apps/chat-bot/.env.local \
+  ais-chat-app
+```
+
+If you have no `.env.local`, omit its `--env-file` line. Don't quote values in env files, Docker keeps the quotes. The same works for `admin` (`ais-chat-admin`) and `api` (`ais-chat-api`) with their `apps/<app>/` env files.
+
 ### Keycloak
 
 Keycloak is used for logins both locally and in e2e tests.
