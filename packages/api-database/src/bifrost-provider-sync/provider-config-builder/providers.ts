@@ -1,6 +1,11 @@
 import type { LlmProviderKeyWithModels } from '../../functions';
 import { DEFAULT_OPENAI_BASE_URL, isBifrostNativeSettings, isLlmProvider } from '../../llm-model';
-import type { BifrostKey, BifrostKeyAlias, BifrostProviderConfig } from '../types';
+import type {
+  BifrostKey,
+  BifrostKeyAlias,
+  BifrostPromptCacheConfig,
+  BifrostProviderConfig,
+} from '../types';
 import {
   buildCustomOpenAiProviderId,
   buildOpenAiCompatibleProviderConfig,
@@ -95,6 +100,16 @@ export function buildIonosProviderConfig(
   );
 }
 
+// Caches the system prompt and everything up to the latest user message for the next turn.
+// Bifrost only injects markers for Claude models; Gemini on Vertex is left untouched.
+const VERTEX_PROMPT_CACHE: BifrostPromptCacheConfig = {
+  auto_inject: true,
+  cache_control_injection_points: [
+    { location: 'message', role: 'system' },
+    { location: 'message', role: 'user', index: -1 },
+  ],
+};
+
 export function buildVertexProviderConfig(
   providerKey: LlmProviderKeyWithModels,
 ): BifrostProviderConfig | undefined {
@@ -107,6 +122,7 @@ export function buildVertexProviderConfig(
       : JSON.stringify(settings.authCredentials);
   return {
     provider: 'vertex',
+    prompt_cache: VERTEX_PROMPT_CACHE,
     keys: [
       buildKey('vertex', providerKey, '', {
         vertex_key_config: {

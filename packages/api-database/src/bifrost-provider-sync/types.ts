@@ -36,8 +36,24 @@ export type BifrostKey = {
   enabled?: boolean;
 };
 
+/**
+ * Bifrost injects prompt-cache breakpoints (`cache_control`) for models that support explicit
+ * caching (e.g. Claude on Vertex) when the request carries none.
+ * https://docs.getbifrost.ai/features/prompt-caching
+ */
+export type BifrostPromptCacheConfig = {
+  auto_inject: boolean;
+  ttl?: '1h';
+  cache_control_injection_points?: {
+    location: 'message';
+    role?: 'system' | 'developer' | 'user' | 'assistant';
+    index?: number;
+  }[];
+};
+
 export type BifrostProviderConfig = {
   provider: BifrostProvider;
+  prompt_cache?: BifrostPromptCacheConfig;
   network_config?: {
     base_url?: string;
     allow_private_network?: boolean;
