@@ -1,12 +1,13 @@
 'use client';
 
+import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
 import type { ComponentProps, ReactNode } from 'react';
 import React from 'react';
 
-import CheckIcon from '../icons/check';
-import ClipboardLightIcon from '../icons/clipboard-light';
+import { cn } from '@/utils/tailwind';
+
 import { useToast } from './toast';
 
 type CopyToClipboardButtonProps = {
@@ -72,9 +73,9 @@ export default function CopyToClipboardButton({
     >
       {defaultIcons &&
         (isCopied ? (
-          <CheckIcon className={className} />
+          <CheckIcon className={cn('size-4', className)} aria-hidden="true" />
         ) : (
-          <ClipboardLightIcon className={className} />
+          <CopyIcon className={cn('size-4', className)} aria-hidden="true" />
         ))}
       {children}
     </Button>

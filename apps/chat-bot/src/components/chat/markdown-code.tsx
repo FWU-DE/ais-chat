@@ -45,9 +45,9 @@ export function MarkdownCode({
         <span className="min-w-0 grow truncate">
           {[language, title].filter(Boolean).join(' – ')}
         </span>
-        <div className="shrink-0 flex items-center">
+        <div className="shrink-0 flex items-center gap-1 [&_button]:hover:bg-foreground/10">
           <DownloadCodeButton code={sanitizedText} language={rawToken} title={title} />
-          <CopyToClipboardButton text={sanitizedText} />
+          <CopyToClipboardButton text={sanitizedText} size="icon-sm" />
         </div>
       </div>
       <SyntaxHighlighter

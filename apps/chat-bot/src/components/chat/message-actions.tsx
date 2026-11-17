@@ -66,7 +66,6 @@ export function MessageActions({
     >
       <CopyToClipboardButton
         text={plainText}
-        className="size-5"
         size="icon-sm"
         title={tCommon('message-copy')}
         aria-label={tCommon('message-copy')}
