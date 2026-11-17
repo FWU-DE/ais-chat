@@ -34,14 +34,14 @@ export default function DownloadCodeButton({ code, language, title }: DownloadCo
     <Button
       type="button"
       variant="ghost"
-      size="icon-round"
+      size="icon-sm"
       aria-label={label}
       title={label}
       data-testid="download-code"
       onClick={handleDownload}
       className="text-primary"
     >
-      <DownloadSimpleIcon className="size-3" aria-hidden="true" />
+      <DownloadSimpleIcon className="size-4" aria-hidden="true" />
     </Button>
   );
 }

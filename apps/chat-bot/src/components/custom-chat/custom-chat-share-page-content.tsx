@@ -149,7 +149,7 @@ export default function CustomChatSharePageContent({
               <p data-testid="join-code" className="text-3xl sm:text-5xl text-primary font-bold">
                 {formattedInviteCode}
               </p>
-              <CopyToClipboardButton text={formattedInviteCode} className="size-7 sm:size-9" />
+              <CopyToClipboardButton text={formattedInviteCode} className="size-6 sm:size-7" />
             </div>
           </div>
           <div className="flex flex-col items-center gap-4 sm:mt-auto">
