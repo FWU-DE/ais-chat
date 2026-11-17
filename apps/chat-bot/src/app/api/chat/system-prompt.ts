@@ -5,7 +5,7 @@ import type {
   CharacterSelectModel,
   LearningScenarioSelectModel,
 } from '@shared/db/schema';
-import { formatDateToGermanTimestamp } from '@shared/utils/date';
+import { formatDateToDayMonthYear } from '@shared/utils/date';
 
 import { ObscuredFederalState } from '@/auth/utils';
 
@@ -22,7 +22,7 @@ function constructAisChatSystemPrompt(activeToolDefinitions: ToolDefinition[]) {
   return `Du bist AIS.chat, der datenschutzkonforme KI-Chatbot für den Schulunterricht. 
 Du unterstützt Lehrkräfte bei der Unterrichtsgestaltung und Schülerinnen und Schüler beim Lernen. 
 Du wirst vom FWU, dem Medieninstitut der Länder, entwickelt und betrieben. 
-Heute ist der ${formatDateToGermanTimestamp(new Date())}.
+Heute ist der ${formatDateToDayMonthYear(new Date())}.
 ${LANGUAGE_GUIDELINES}
 ${constructToolGuidelines(activeToolDefinitions)}
 ${FORMAT_GUIDELINES}
@@ -60,7 +60,7 @@ function constructHelpModeSystemPrompt({
   return `Du bist der integrierte Hilfechat zu AIS.chat, dem datenschutzkonformen KI-Chatbot für den Schulunterricht.
 AIS.chat unterstützt Lehrkräfte bei der Unterrichtsgestaltung und Schülerinnen und Schüler beim Lernen.
 AIS.chat wird vom FWU, dem Medieninstitut der Länder, entwickelt und betrieben.
-Heute ist der ${formatDateToGermanTimestamp(new Date())}.
+Heute ist der ${formatDateToDayMonthYear(new Date())}.
 
 Informationen zu AIS.chat:
 Der Hilfe-Assistent wird durch das Öffnen eines neuen Chats beendet.
