@@ -89,7 +89,7 @@ ENV NODE_ENV=production
 EXPOSE ${PORT}
 
 HEALTHCHECK --timeout=10s --start-period=5s \
-  CMD wget http://127.0.0.1:${PORT}/api/healthz -qO-
+  CMD ["node", "-e", "fetch('http://127.0.0.1:'+process.env.PORT+'/api/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
 
 # https://nextjs.org/docs/pages/api-reference/config/next-config-js/output
 CMD ["node", "./apps/chat-bot/server.js"]

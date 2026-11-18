@@ -88,5 +88,5 @@ EXPOSE ${PORT}
 
 WORKDIR /app/apps/api
 HEALTHCHECK --timeout=10s --start-period=5s \
-  CMD wget http://127.0.0.1:${PORT}/health -qO-
+  CMD ["node", "-e", "fetch('http://127.0.0.1:'+process.env.PORT+'/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
 CMD ["node", "index.cjs"]
