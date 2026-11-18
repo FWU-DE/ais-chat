@@ -1,4 +1,9 @@
-export { billSpeechGenerationUsageToApiKey } from '../api-keys/billing';
+export {
+  billSpeechGenerationUsageToApiKey,
+  billSpeechUsageToApiKey,
+  calculatePriceInCentBySpeechModelAndUsage,
+} from '../api-keys/billing';
+export { generateSpeechStreamByNameWithBilling, generateSpeechStreamWithBilling } from './billing';
 export { generateSpeechById } from './generate';
 export { streamSpeechById } from './generate-stream';
 export {

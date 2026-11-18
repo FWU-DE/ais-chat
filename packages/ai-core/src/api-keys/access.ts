@@ -3,6 +3,7 @@ import { dbValidateApiKeyById } from '@ais-chat/api-database';
 import type { AiModel as TextAiModel } from '../chat/types';
 import { ApiKeyQuotaExceededError, ApiKeyUnusableError, InvalidModelError } from '../errors';
 import { AiModel } from '../images/types';
+import type { AiModel as SpeechAiModel } from '../speech/types';
 import { isApiKeyOverQuota } from './billing';
 import { hasAccessToModel } from './model-access';
 
@@ -15,8 +16,8 @@ import { hasAccessToModel } from './model-access';
  */
 export async function assertApiKeyCanUseModel(
   apiKeyId: string,
-  model: AiModel | TextAiModel,
-  modelKind: 'text' | 'embedding' | 'image',
+  model: AiModel | TextAiModel | SpeechAiModel,
+  modelKind: 'text' | 'embedding' | 'image' | 'speech',
 ): Promise<void> {
   // Run all checks in parallel for better performance
   const [hasAccess, isOverQuota, apiKeyValidation] = await Promise.all([

@@ -195,7 +195,6 @@ services:
       DATABASE_URL: postgresql://admin:test1234@postgres:5432/api_db
 
       # API Configuration
-      API_NAME: ais-chat
       API_KEY: ais-chat-api_api-key
       PORT: 3002
 

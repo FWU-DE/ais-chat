@@ -1,8 +1,6 @@
-import { SpeechUsage } from '@ais-chat/ai-core';
+import { calculatePriceInCentBySpeechModelAndUsage, SpeechUsage } from '@ais-chat/ai-core';
 import { LlmModelSelectModel } from '@shared/db/schema';
 import { logError } from '@shared/logging';
-
-import { TOKEN_AMOUNT_PER_PRICE } from './types';
 
 /**
  * Calculates the cost of a speech generation in cent.
@@ -19,10 +17,10 @@ export function calculateSpeechCostsInCent(model: LlmModelSelectModel, usage: Sp
     return 0;
   }
 
-  return (
-    (usage.characters * model.priceMetadata.priceInCentPer1MillionCharacters) /
-    TOKEN_AMOUNT_PER_PRICE
-  );
+  return calculatePriceInCentBySpeechModelAndUsage({
+    priceMetadata: model.priceMetadata,
+    usage,
+  });
 }
 
 /**
