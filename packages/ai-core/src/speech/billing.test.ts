@@ -136,6 +136,37 @@ describe('generateSpeechStreamWithBilling', () => {
     expect(mockBillSpeechUsageToApiKey).toHaveBeenCalledOnce();
   });
 
+  it('closes the provider stream and bills when cancelled before iteration', async () => {
+    let providerClosed = false;
+    async function* providerChunks() {
+      try {
+        yield Buffer.from('first');
+      } finally {
+        providerClosed = true;
+      }
+    }
+    const providerStream = providerChunks();
+    await providerStream.next();
+    mockStreamSpeechForModel.mockResolvedValue(makeStream(providerStream));
+    const onComplete = vi.fn();
+    const result = await generateSpeechStreamWithBilling(
+      'speech-model',
+      'hello',
+      'alloy',
+      'api-key',
+      { onComplete },
+    );
+
+    await expect(result.chunks.return()).resolves.toEqual({ done: true, value: undefined });
+    await expect(result.priceInCents).resolves.toBe(10);
+    expect(providerClosed).toBe(true);
+    expect(mockBillSpeechUsageToApiKey).toHaveBeenCalledOnce();
+    expect(onComplete).toHaveBeenCalledOnce();
+
+    await result.chunks.return();
+    expect(mockBillSpeechUsageToApiKey).toHaveBeenCalledOnce();
+  });
+
   it('bills after a mid-stream error and normalizes the stream error', async () => {
     async function* failingChunks() {
       yield Buffer.from('first');

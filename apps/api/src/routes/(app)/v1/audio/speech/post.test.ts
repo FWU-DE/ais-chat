@@ -199,17 +199,16 @@ describe('POST /v1/audio/speech', () => {
       })(),
     });
 
-    try {
+    const fetchAndRead = async () => {
       const response = await fetch(`${baseUrl}/audio/speech`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: 'tts', voice: 'alloy', input: 'Hallo' }),
       });
+      return response.arrayBuffer();
+    };
 
-      await expect(response.arrayBuffer()).rejects.toThrow();
-    } catch (error) {
-      expect(error).toBeInstanceOf(Error);
-    }
+    await expect(fetchAndRead()).rejects.toThrow();
   });
 
   it('closes the connection when billing fails after streaming audio', async () => {
@@ -224,17 +223,16 @@ describe('POST /v1/audio/speech', () => {
     });
     const logError = vi.spyOn(app.log, 'error');
 
-    try {
+    const fetchAndRead = async () => {
       const response = await fetch(`${baseUrl}/audio/speech`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: 'tts', voice: 'alloy', input: 'Hallo' }),
       });
+      return response.arrayBuffer();
+    };
 
-      await expect(response.arrayBuffer()).rejects.toThrow();
-    } catch (error) {
-      expect(error).toBeInstanceOf(Error);
-    }
+    await expect(fetchAndRead()).rejects.toThrow();
     expect(logError).toHaveBeenCalledWith(billingError, 'Error processing speech stream');
     logError.mockRestore();
   });

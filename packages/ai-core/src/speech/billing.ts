@@ -106,8 +106,43 @@ function withBilling(
     }
   }
 
+  const billedChunks = chunks();
+  let started = false;
+
+  // A generator's `finally` only runs once iteration has started. Cancelling before the first
+  // `next()` must still close the provider stream (which settles `usage`) and bill.
+  const cancellableChunks: AsyncGenerator<Buffer, void, unknown> = {
+    next: (...args) => {
+      started = true;
+      return billedChunks.next(...args);
+    },
+    return: async (value) => {
+      if (started) {
+        return billedChunks.return(value);
+      }
+      started = true;
+      await billedChunks.return(value);
+      await stream.chunks.return(undefined);
+      const billingError = await finalize();
+      if (billingError !== undefined) {
+        rethrow(billingError);
+      }
+      return { done: true, value: undefined };
+    },
+    throw: (error) => {
+      started = true;
+      return billedChunks.throw(error);
+    },
+    [Symbol.asyncIterator]() {
+      return this;
+    },
+    [Symbol.asyncDispose]: async () => {
+      await cancellableChunks.return(undefined);
+    },
+  };
+
   return {
-    chunks: chunks(),
+    chunks: cancellableChunks,
     mimeType: stream.mimeType,
     usage: stream.usage,
     priceInCents,
