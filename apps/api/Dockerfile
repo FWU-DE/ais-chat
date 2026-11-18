@@ -3,7 +3,7 @@
 ARG APP_VERSION
 ARG CI=true
 
-FROM node:24.22.2-alpine AS base
+FROM node:24.22.2-trixie-slim@sha256:0820eaa85e07d0490446dd01d14707e17e6108a36988cf374899cd057eb3812d AS base
 ENV TURBO_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
@@ -30,7 +30,9 @@ FROM builder-base AS builder
 WORKDIR /app
 
 # Git is required for sentry
-RUN apk add --no-cache git
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy lockfile and package.json's of isolated subworkspace
 COPY --from=pruner /app/out/pnpm-lock.yaml .
@@ -66,22 +68,23 @@ RUN rm -rf node_modules
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod --shamefully-hoist --prefer-offline
 
-FROM base AS runner
+# Distroless runtime image: no shell, package manager or busybox
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:6abfcb367ebc291572c774c1592a986be2ab26a2486f73093401327495a5962a AS runner
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nodejs
-USER nodejs
+# distroless has no node on PATH; keeps `node` resolvable for exec hooks like preStop
+ENV PATH=/nodejs/bin:$PATH
 
 WORKDIR /app
 
-COPY --from=builder --chown=nodejs:nodejs /app/apps/api/dist apps/api
-COPY --from=builder --chown=nodejs:nodejs /app/packages/api-database/migrations packages/api-database/migrations
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules node_modules
+COPY --from=builder --chown=nonroot:nonroot /app/apps/api/dist apps/api
+COPY --from=builder --chown=nonroot:nonroot /app/packages/api-database/migrations packages/api-database/migrations
+COPY --from=builder --chown=nonroot:nonroot /app/node_modules node_modules
 
 ARG APP_VERSION
 ARG PORT=3000
 
 ENV APP_VERSION=${APP_VERSION}
+ENV NODE_ENV=production
 ENV PORT=${PORT}
 
 EXPOSE ${PORT}
@@ -89,4 +92,4 @@ EXPOSE ${PORT}
 WORKDIR /app/apps/api
 HEALTHCHECK --timeout=10s --start-period=5s \
   CMD ["node", "-e", "fetch('http://127.0.0.1:'+process.env.PORT+'/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
-CMD ["node", "index.cjs"]
+CMD ["index.cjs"]
