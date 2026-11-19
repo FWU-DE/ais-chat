@@ -22,15 +22,10 @@ export const generateDocumentArgsSchema = z.object({
   content: z.string().trim().min(1).max(MAX_DOCUMENT_CONTENT_LENGTH),
 });
 
-// The presence of a file name otherwise causes model display download link for the generated document in the UI
-const CREATED_INSTRUCTION =
-  'The file is shown below your answer with a download button. Reply with one short sentence only: no link, no URL, no file name, only a short hint for the content of the document';
-
 export type GenerateDocumentToolResult = {
   status: 'created';
   fileName: string;
   format: GeneratedDocumentFormat;
-  instruction: string;
 };
 
 export const generateDocumentActivity: ToolActivity<GenerateDocumentToolResult> = {
@@ -99,7 +94,6 @@ export function buildGenerateDocumentTool(): ToolRegistration<GenerateDocumentTo
       status: 'created',
       fileName: createGeneratedDocumentFileName(title, format, FALLBACK_FILE_NAME),
       format,
-      instruction: CREATED_INSTRUCTION,
     };
   };
 
