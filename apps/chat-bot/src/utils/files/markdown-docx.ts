@@ -55,6 +55,11 @@ const TABLE_BORDER = {
 const plotCodeNodes = new WeakSet<object>();
 const plotExportMetadata = new WeakMap<object, { imageKey: string }>();
 
+// encodeURIComponent leaves parentheses untouched, but an unescaped ')' can end a Markdown image destination early.
+function encodeMarkdownImageDestination(value: string) {
+  return encodeURIComponent(value).replaceAll('(', '%28').replaceAll(')', '%29');
+}
+
 const paddedCodeBlockPlugin: RemarkDocxPlugin = (() => {
   const highlightCodeBlocks = shikiPlugin({ theme: 'night-owl' });
 
@@ -379,7 +384,9 @@ export function formatConversationExport({
     const messageHeading = role === 'user' ? 'Nutzer/in' : 'AIS.chat';
     markdownBlocks.push({ markdown: `### ${messageHeading}:` }, { markdown: content });
     markdownBlocks.push(
-      ...images.map(({ alt }) => ({ markdown: `![${alt}](${encodeURIComponent(alt)})` })),
+      ...images.map(({ alt }) => ({
+        markdown: `![${alt}](${encodeMarkdownImageDestination(alt)})`,
+      })),
     );
   }
 

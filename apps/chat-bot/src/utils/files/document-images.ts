@@ -26,7 +26,10 @@ export function createAllowedImages(
 ): AllowedDocumentImages {
   const allowedImages = new Map<string, string>();
   for (const { name, url } of images) {
-    allowedImages.set(normalizeImageReference(name), url);
+    const key = normalizeImageReference(name);
+    if (!allowedImages.has(key)) {
+      allowedImages.set(key, url);
+    }
   }
   return allowedImages;
 }
@@ -92,7 +95,12 @@ export async function loadDocumentImage(url: string): Promise<ArrayBuffer> {
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  const context = canvas.getContext('2d');
+  if (context === null) {
+    bitmap.close();
+    throw new Error('Failed to create image canvas context');
+  }
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
 
   const png = await new Promise<Blob>((resolve, reject) => {
