@@ -283,6 +283,7 @@ export type ConversationExportMessage = {
 
 export type ConversationExport = {
   markdownBlocks: Array<{ markdown: string }>;
+  allowedImages?: AllowedDocumentImages;
 };
 
 export function createConversationExportMessages({
@@ -326,6 +327,7 @@ export function formatConversationExport({
     timeZone: 'Europe/Berlin',
   }).format(new Date(createdAt));
   const markdownBlocks: ConversationExport['markdownBlocks'] = [];
+  const allowedImages = new Map<string, string>();
 
   if (conversationTitle !== undefined) {
     markdownBlocks.push({ markdown: `# Konversation: ${conversationTitle}` });
@@ -336,7 +338,12 @@ export function formatConversationExport({
     markdownBlocks.push({ markdown: PARAGRAPH_SPACER });
     const messageHeading = role === 'user' ? 'Nutzer/in' : 'AIS.chat';
     markdownBlocks.push({ markdown: `### ${messageHeading}:` }, { markdown: content });
-    markdownBlocks.push(...images.map(({ alt, url }) => ({ markdown: `![${alt}](${url})` })));
+    markdownBlocks.push(
+      ...images.map(({ alt, url }) => {
+        allowedImages.set(alt, url);
+        return { markdown: `![${alt}](${encodeURIComponent(alt)})` };
+      }),
+    );
   }
 
   markdownBlocks.push(
@@ -345,40 +352,17 @@ export function formatConversationExport({
     { markdown: `#### Generiert von AIS.chat unter Nutzung von ${modelName}` },
   );
 
-  return { markdownBlocks };
+  return { markdownBlocks, allowedImages };
 }
 
-async function loadImageForDocx(url: string): Promise<ArrayBuffer> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to load image: ${response.status}`);
-  }
-
-  return response.arrayBuffer();
-}
-
-function createDocxOptions({
-  exportImages = false,
-  allowedImages,
-}: MarkdownToDocxOptions = {}): DocxOptions {
-  const loadImage =
-    allowedImages !== undefined
-      ? async (reference: string) => {
-          const url = findAllowedImageUrl(reference, allowedImages);
-          if (url === undefined) {
-            throw new Error('Image is not an uploaded file');
-          }
-          return loadDocumentImage(url);
-        }
-      : exportImages
-        ? (url: string) => {
-            const exportUrl = new URL(url, window.location.origin);
-            if (exportUrl.origin === window.location.origin) {
-              exportUrl.searchParams.set('export', 'true');
-            }
-            return loadImageForDocx(exportUrl.toString());
-          }
-        : loadImageForDocx;
+function createDocxOptions({ allowedImages = new Map() }: MarkdownToDocxOptions = {}): DocxOptions {
+  const loadImage = async (reference: string) => {
+    const url = findAllowedImageUrl(reference, allowedImages);
+    if (url === undefined) {
+      throw new Error('Image is not an uploaded file');
+    }
+    return loadDocumentImage(url);
+  };
 
   return {
     plugins: [
@@ -423,7 +407,6 @@ function createDocxOptions({
 }
 
 type MarkdownToDocxOptions = {
-  exportImages?: boolean;
   // When set, only these uploaded images (by file name) are embedded; all other images are skipped.
   allowedImages?: AllowedDocumentImages;
   // Turns <br> into line breaks and drops other raw HTML instead of printing it as text.
@@ -434,19 +417,19 @@ export async function markdownToDocxBlob(
   exportDocument: ConversationExport,
   options?: MarkdownToDocxOptions,
 ): Promise<Blob> {
+  const allowedImages = options?.allowedImages ?? exportDocument.allowedImages ?? new Map();
+  const docxOptions = { ...options, allowedImages };
   const processor = unified()
     .use(remarkParse)
     .use(RemarkMathPlugin)
     .use(remarkGfm)
-    .use(remarkDocx, createDocxOptions(options));
+    .use(remarkDocx, createDocxOptions(docxOptions));
   const roots = exportDocument.markdownBlocks.map(({ markdown }) => {
     const root = processor.parse(markdown) as Root;
     if (options?.normalizeHtml === true) {
       remarkNormalizeHtml()(root);
     }
-    if (options?.allowedImages !== undefined) {
-      remarkRemoveUnapprovedImages(options.allowedImages)(root);
-    }
+    remarkRemoveUnapprovedImages(allowedImages)(root);
     return root;
   });
   const plotKeys = new Set<string>();

@@ -56,17 +56,17 @@ export async function fetchSharedConversationDownload({
       : sharedConversationName !== undefined
         ? `${currentDate}-Dialog über ${sharedConversationName}.docx`
         : 'AIS-chat-Konversation.docx';
+  const exportDocument = formatConversationExport({
+    messages,
+    createdAt: new Date().toISOString(),
+    modelName: 'AIS.chat',
+    conversationTitle: sharedConversationName ?? characterName,
+  });
 
   return {
-    blob: await markdownToDocxBlob(
-      formatConversationExport({
-        messages,
-        createdAt: new Date().toISOString(),
-        modelName: 'AIS.chat',
-        conversationTitle: sharedConversationName ?? characterName,
-      }),
-      { exportImages: true },
-    ),
+    blob: await markdownToDocxBlob(exportDocument, {
+      allowedImages: exportDocument.allowedImages,
+    }),
     fileName,
   };
 }
