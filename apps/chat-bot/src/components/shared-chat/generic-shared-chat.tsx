@@ -26,6 +26,7 @@ import {
   newSharedChatSessionId,
   saveSharedChat,
 } from '@/utils/shared-chat-storage';
+import { cn } from '@/utils/tailwind';
 
 import { ErrorChatPlaceholder } from '../chat/error-chat-placeholder';
 import { FloatingText } from '../chat/floating-text';
@@ -411,7 +412,10 @@ export default function GenericSharedChat({
                 status={status}
                 reload={handleReload}
                 assistantIcon={assistantIcon}
-                containerClassName="flex flex-col gap-4"
+                containerClassName={cn(
+                  'flex flex-col gap-4',
+                  hasExerciseDescription && 'max-lg:mt-4',
+                )}
                 messageFileMapping={messageFileMapping}
                 activitySteps={chat.activitySteps}
                 showActivityDialog={showActivityDialog}
