@@ -33,7 +33,17 @@ export async function startExpiredShare(
 }
 
 export async function extendShare(page: Page) {
-  await page.getByTestId('add-additional-time-button').click();
-  await page.getByTestId('add-additional-time-confirm-button').click();
-  await expect(page.getByTestId('add-additional-time-confirm-button')).not.toBeVisible();
+  const openButton = page.getByTestId('add-additional-time-button');
+  const confirmButton = page.getByTestId('add-additional-time-confirm-button');
+
+  // The click can land before hydration, so retry until the dialog opens.
+  await expect(async () => {
+    if (!(await confirmButton.isVisible())) {
+      await openButton.click();
+    }
+    await expect(confirmButton).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
+
+  await confirmButton.click();
+  await expect(confirmButton).not.toBeVisible();
 }
