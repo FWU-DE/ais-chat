@@ -14,6 +14,7 @@ The input is markdown. It may contain several languages and single foreign words
 - Remove all markdown syntax (#, *, _, backticks, >, |, list markers) instead of reading it aloud.
 - Headings: add a short pause before and after the heading, and speak it with moderate emphasis.
 - Bold and italic text: use <emphasis>.
+- Horizontal rules (---, ***, ___ on their own line): do not read them aloud; insert <break time="1s"/> between the surrounding blocks instead.
 - Lists: read each item as its own block with a short pause between items. Read the numbers of numbered lists.
 - Tables: read every row in full as a natural sentence that names the column headers with their values. Do not summarize or skip rows.
 - Code blocks and inline code that is not a plain word: briefly describe in words what the code does, in the language of the text. Do not read code literally.
