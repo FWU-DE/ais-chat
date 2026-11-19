@@ -94,8 +94,9 @@ export async function expectNoRequestCard(page: Page): Promise<void> {
 /**
  * Opens the admin community template request detail view for the given entity
  * name by filtering the list and clicking the resulting row.
+ * The detail view opens in a new tab, which is returned.
  */
-export async function openRequestInAdmin(adminPage: Page, entityName: string): Promise<void> {
+export async function openRequestInAdmin(adminPage: Page, entityName: string): Promise<Page> {
   await adminPage.goto('/ais-chat-app/community-templates');
 
   // list data loads client-side after mount; wait for it before filtering
@@ -105,9 +106,10 @@ export async function openRequestInAdmin(adminPage: Page, entityName: string): P
 
   const row = adminPage.getByTestId('data-table-row');
   await expect(row).toHaveCount(1);
-  await row.click();
+  const [detailPage] = await Promise.all([adminPage.context().waitForEvent('page'), row.click()]);
 
-  await adminPage.waitForURL('**/ais-chat-app/community-templates/**');
+  await detailPage.waitForURL('**/ais-chat-app/community-templates/**');
+  return detailPage;
 }
 
 /**
