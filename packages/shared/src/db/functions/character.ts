@@ -71,10 +71,31 @@ function latestActiveCharacterShare(user: Pick<UserModel, 'id'>) {
 }
 
 /**
- * Returns a subquery that selects the single most-recent share per character for a given user,
- * regardless of whether it is active or expired. Used to surface the last share's settings
- * (tokenPointsLimit, maxUsageTimeLimit) as defaults when no active share exists.
+ * Returns a subquery that selects the single most-recent manageable share per character for a
+ * given user: not manually stopped and either running or expired within the grace window
+ * (`SHARE_EXTENSION_WINDOW_MS`), so it can still be extended or adjusted.
  */
+function latestManageableCharacterShare(
+  user: Pick<UserModel, 'id'>,
+): ReturnType<typeof latestActiveCharacterShare> {
+  const graceWindowStart = new Date(Date.now() - SHARE_EXTENSION_WINDOW_MS);
+
+  return db
+    .selectDistinctOn([sharedCharacter.characterId], {
+      ...getTableColumns(sharedCharacter),
+    })
+    .from(sharedCharacter)
+    .where(
+      and(
+        eq(sharedCharacter.userId, user.id),
+        isNull(sharedCharacter.manuallyStoppedAt),
+        gte(sharedCharacter.expiredAt, graceWindowStart),
+      ),
+    )
+    .orderBy(sharedCharacter.characterId, desc(sharedCharacter.startedAt))
+    .as('latest_share');
+}
+
 /**
  * Returns a subquery that selects the single most-recent non-manually-stopped share per character
  * for a given user. This includes shares that have already expired, so the caller has
@@ -232,6 +253,10 @@ export async function dbGetCharactersByIds({
   );
 }
 
+/**
+ * Attaches the latest manageable share (running or within the grace window) of the user, if any.
+ * Expired shares stay visible so the detail and editor views can offer to extend them.
+ */
 export async function dbGetCharactersByIdsOptionalShareData({
   characterIds,
   user,
@@ -244,9 +269,9 @@ export async function dbGetCharactersByIdsOptionalShareData({
     return [];
   }
 
-  const activeShare = latestActiveCharacterShare(user);
-  return baseCharacterWithShareQuery(activeShare)
-    .leftJoin(activeShare, eq(activeShare.characterId, characterTable.id))
+  const manageableShare = latestManageableCharacterShare(user);
+  return baseCharacterWithShareQuery(manageableShare)
+    .leftJoin(manageableShare, eq(manageableShare.characterId, characterTable.id))
     .where(
       and(inArray(characterTable.id, characterIds), excludeDeletedCharacters({ includeDeleted })),
     )

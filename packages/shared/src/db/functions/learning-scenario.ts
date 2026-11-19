@@ -73,10 +73,34 @@ function latestActiveLearningScenarioShare(user: Pick<UserModel, 'id'>) {
 }
 
 /**
- * Returns a subquery that selects the single most-recent share per learning scenario for a given
- * user, regardless of whether it is active or expired. Used to surface the last share's settings
- * (tokenPointsLimit, maxUsageTimeLimit) as defaults when no active share exists.
+ * Returns a subquery that selects the single most-recent manageable share per learning scenario
+ * for a given user: not manually stopped and either running or expired within the grace window
+ * (`SHARE_EXTENSION_WINDOW_MS`), so it can still be extended or adjusted.
  */
+function latestManageableLearningScenarioShare(
+  user: Pick<UserModel, 'id'>,
+): ReturnType<typeof latestActiveLearningScenarioShare> {
+  const graceWindowStart = new Date(Date.now() - SHARE_EXTENSION_WINDOW_MS);
+
+  return db
+    .selectDistinctOn([sharedLearningScenarioTable.learningScenarioId], {
+      ...getTableColumns(sharedLearningScenarioTable),
+    })
+    .from(sharedLearningScenarioTable)
+    .where(
+      and(
+        eq(sharedLearningScenarioTable.userId, user.id),
+        isNull(sharedLearningScenarioTable.manuallyStoppedAt),
+        gte(sharedLearningScenarioTable.expiredAt, graceWindowStart),
+      ),
+    )
+    .orderBy(
+      sharedLearningScenarioTable.learningScenarioId,
+      desc(sharedLearningScenarioTable.startedAt),
+    )
+    .as('latest_share');
+}
+
 /**
  * Returns a subquery that selects the single most-recent non-manually-stopped share per learning
  * scenario for a given user. This includes shares that have already expired, so the caller has
@@ -355,6 +379,10 @@ export async function dbGetLearningScenariosByIds({
   );
 }
 
+/**
+ * Attaches the latest manageable share (running or within the grace window) of the user, if any.
+ * Expired shares stay visible so the detail and editor views can offer to extend them.
+ */
 export async function dbGetLearningScenariosByIdsOptionalShareData({
   learningScenarioIds,
   user,
@@ -367,9 +395,9 @@ export async function dbGetLearningScenariosByIdsOptionalShareData({
     return [];
   }
 
-  const activeShare = latestActiveLearningScenarioShare(user);
-  return baseLearningScenarioWithShareQuery(activeShare)
-    .leftJoin(activeShare, eq(activeShare.learningScenarioId, learningScenarioTable.id))
+  const manageableShare = latestManageableLearningScenarioShare(user);
+  return baseLearningScenarioWithShareQuery(manageableShare)
+    .leftJoin(manageableShare, eq(manageableShare.learningScenarioId, learningScenarioTable.id))
     .where(
       and(
         inArray(learningScenarioTable.id, learningScenarioIds),
