@@ -26,8 +26,9 @@ the chat and shared-chat pipelines rewrite the text before synthesis. The extern
 voice preview are not affected.
 
 - `runSpeechPipeline` calls `rewriteTextToSsml` (`packages/shared/src/speech/ssml-rewrite/`) after
-  the access and budget checks. It sends the whole text to the strong auxiliary model with a 30 s
-  timeout and the client's abort signal.
+  the access and budget checks. It sends the whole text to the speech auxiliary model (static model
+  role `speech-auxiliary`, falling back to the strong auxiliary model if unset or unavailable for the
+  federal state) with a 30 s timeout and the client's abort signal.
 - The model returns only the body of the `<voice>` element: one outer `<lang xml:lang>` with the
   main language, a `<p>` per block, and nested `<lang>` for foreign words. Prose is kept word for
   word; tables are read row by row, code is described, formulas are read in words.

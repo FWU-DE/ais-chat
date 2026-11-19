@@ -57,3 +57,18 @@ export async function getStrongAuxiliaryModel(
 
   return fallbackAuxiliaryModel;
 }
+
+/**
+ * Get the model that prepares text for speech output (SSML rewrite).
+ * Falls back to the strong auxiliary model if no speech auxiliary model is configured or available.
+ * @returns The speech auxiliary model for the federal state
+ */
+export async function getSpeechAuxiliaryModel(
+  federalStateId: string,
+): Promise<LlmModelSelectModel> {
+  const speechAuxiliaryModel = await findStaticModelByRoleAndFederalStateId({
+    role: 'speech-auxiliary',
+    federalStateId,
+  });
+  return speechAuxiliaryModel ?? getStrongAuxiliaryModel(federalStateId);
+}

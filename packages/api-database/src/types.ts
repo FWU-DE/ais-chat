@@ -27,7 +27,7 @@ export const speechConfigSchema = z.object({
   // Opt-in for Azure AI Speech (`{endpoint}/tts/cognitiveservices/v1`). Azure OpenAI TTS
   // deployments are speech models too, but must keep the Azure OpenAI deployment route.
   useAzureSpeechEndpoint: z.boolean().optional(),
-  // Rewrites the text with the strong auxiliary model into SSML before synthesis, so markdown,
+  // Rewrites the text with the speech auxiliary model into SSML before synthesis, so markdown,
   // tables and formulas are read aloud naturally. Only enable it for models that accept SSML.
   enableSsmlRewrite: z.boolean().optional(),
 });

@@ -26,14 +26,28 @@ import { toast } from 'sonner';
 
 import { updateStaticModelConfigurationAction } from './actions';
 
-const roles: { role: StaticModelRole; label: string; type: 'text' | 'image' | 'safety' }[] = [
+const roles: {
+  role: StaticModelRole;
+  label: string;
+  type: 'text' | 'image' | 'safety';
+  optional?: boolean;
+  description?: string;
+}[] = [
   { role: 'default-chat', label: 'Standard-Chatmodell', type: 'text' },
   { role: 'fallback', label: 'Fallback-Modell', type: 'text' },
   { role: 'auxiliary', label: 'Hilfsmodell', type: 'text' },
   { role: 'strong-auxiliary', label: 'Starkes Hilfsmodell', type: 'text' },
+  {
+    role: 'speech-auxiliary',
+    label: 'Sprachausgabe-Hilfsmodell',
+    type: 'text',
+    optional: true,
+    description:
+      'Bereitet Texte für die Sprachausgabe als SSML auf. Ohne Auswahl wird das starke Hilfsmodell verwendet.',
+  },
   { role: 'auxiliary-fallback', label: 'Fallback-Hilfsmodell', type: 'text' },
   { role: 'default-image', label: 'Standard-Bildmodell', type: 'image' },
-  { role: 'safety', label: 'Sicherheitsmodell', type: 'safety' },
+  { role: 'safety', label: 'Sicherheitsmodell', type: 'safety', optional: true },
 ];
 
 type Props = {
@@ -48,7 +62,7 @@ export default function StaticModelConfigurationView({ models, configuration }: 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isComplete = roles
-    .filter((role) => role.role !== 'safety')
+    .filter((role) => !role.optional)
     .every((role) => selected[role.role] !== undefined);
 
   async function save() {
@@ -81,9 +95,10 @@ export default function StaticModelConfigurationView({ models, configuration }: 
             Alle statischen Modellrollen müssen vor dem Speichern konfiguriert werden.
           </p>
         )}
-        {roles.map(({ role, label, type }) => (
+        {roles.map(({ role, label, type, description }) => (
           <div className="space-y-2" key={role}>
             <label className="text-sm font-medium">{label}</label>
+            {description && <p className="text-sm text-muted-foreground">{description}</p>}
             <Select
               value={selected[role]}
               onValueChange={(value) => setSelected({ ...selected, [role]: value })}

@@ -1,6 +1,6 @@
 import { AiGenerationError, generateTextWithBilling } from '@ais-chat/ai-core';
 import { dbGetFederalState } from '@shared/db/functions/federal-state';
-import { getStrongAuxiliaryModel } from '@shared/llm-models/auxiliary-model-service';
+import { getSpeechAuxiliaryModel } from '@shared/llm-models/auxiliary-model-service';
 
 import { SpeechTextUsage } from '../types';
 import { SSML_REWRITE_SYSTEM_PROMPT } from './prompt';
@@ -18,7 +18,7 @@ function stripCodeFence(text: string): string {
 }
 
 /**
- * Rewrites markdown text into an SSML body (the content of the `<voice>` element) using the strong
+ * Rewrites markdown text into an SSML body (the content of the `<voice>` element) using the speech
  * auxiliary model, so the speech service can read tables, formulas and code aloud naturally.
  * The usage is billed to the federal state's API key.
  */
@@ -33,7 +33,7 @@ export async function rewriteTextToSsml({
 }): Promise<SsmlRewriteResult> {
   const [{ apiKeyId }, model] = await Promise.all([
     dbGetFederalState(federalStateId),
-    getStrongAuxiliaryModel(federalStateId),
+    getSpeechAuxiliaryModel(federalStateId),
   ]);
   if (!apiKeyId) {
     throw new AiGenerationError(`No API key configured for federal state ${federalStateId}`);
