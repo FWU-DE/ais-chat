@@ -6,12 +6,7 @@ import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import { type ChatStatus, type UIMessage } from '@/types/chat';
 import { TOOL_NAMES } from '@/types/tool-names';
-import {
-  extractDocumentBlocks,
-  removeDocumentBlocks,
-  replacePlotBlocks,
-} from '@/utils/code-blocks';
-import { createGeneratedDocumentFileName } from '@/utils/files/generated-document';
+import { replacePlotBlocks } from '@/utils/code-blocks';
 import { isImageFile } from '@/utils/files/generic';
 import { cn } from '@/utils/tailwind';
 
@@ -161,19 +156,13 @@ export function ChatBox({
   const margin =
     allFiles !== undefined || userWebSources.length > 0 || AiActivity !== null ? 'm-0 mt-4' : 'm-4';
 
-  const documentBlocks = message.role === 'assistant' ? extractDocumentBlocks(message.content) : [];
-  const hasGeneratedDocument =
-    documentBlocks.length > 0 ||
-    activitySteps.some((step) => step.kind === 'tool' && step.tool === TOOL_NAMES.generateDocument);
-  const visibleMessageContent = hasGeneratedDocument ? message.content : message.content;
-
   // Short description instead of the raw plot JSON for copy, read-aloud and audio.
   const plainText = useMemo(
     () =>
-      replacePlotBlocks(visibleMessageContent, (title) =>
+      replacePlotBlocks(message.content, (title) =>
         title ? tCommon('plot.description', { title }) : tCommon('plot.label'),
       ),
-    [visibleMessageContent, tCommon],
+    [message.content, tCommon],
   );
 
   const isAssistantSpeechOnly = message.role === 'assistant' && speechOnly && isSpeechModelEnabled;
@@ -245,11 +234,11 @@ export function ChatBox({
 
   const messageContent = (
     <PlotStreamingContext.Provider value={status === 'streaming' && isLastNonUser}>
-      <MarkdownDisplay>{visibleMessageContent}</MarkdownDisplay>
+      <MarkdownDisplay>{message.content}</MarkdownDisplay>
     </PlotStreamingContext.Provider>
   );
 
-  const activityDocuments = activitySteps.flatMap((step) =>
+  const generatedDocuments = activitySteps.flatMap((step) =>
     step.kind === 'tool' &&
     step.tool === TOOL_NAMES.generateDocument &&
     step.failed !== true &&
@@ -257,21 +246,6 @@ export function ChatBox({
       ? [{ id: step.id, document: step.document }]
       : [],
   );
-  const generatedDocuments =
-    activityDocuments.length > 0
-      ? activityDocuments
-      : documentBlocks.map((document, documentIndex) => ({
-          id: `document-${message.id}-${documentIndex}`,
-          document: {
-            fileName: createGeneratedDocumentFileName(
-              document.title,
-              document.format,
-              tCommon('document.label'),
-            ),
-            format: document.format,
-            content: document.content,
-          },
-        }));
   const maybeGeneratedDocuments =
     generatedDocuments.length > 0 ? (
       <div className="flex w-full min-w-0 flex-row flex-wrap gap-2">

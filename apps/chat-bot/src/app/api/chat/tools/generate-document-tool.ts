@@ -12,7 +12,7 @@ import {
 import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
 import type { ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
-export const MAX_DOCUMENT_CONTENT_LENGTH = 100_000;
+const MAX_DOCUMENT_CONTENT_LENGTH = 100_000;
 const MAX_DOCUMENT_TITLE_LENGTH = 120;
 const FALLBACK_FILE_NAME = 'Dokument';
 
@@ -22,10 +22,15 @@ export const generateDocumentArgsSchema = z.object({
   content: z.string().trim().min(1).max(MAX_DOCUMENT_CONTENT_LENGTH),
 });
 
+// The presence of a file name otherwise causes model display download link for the generated document in the UI
+const CREATED_INSTRUCTION =
+  'The file is shown below your answer with a download button. Reply with one short sentence only: no link, no URL, no file name, only a short hint for the content of the document';
+
 export type GenerateDocumentToolResult = {
   status: 'created';
   fileName: string;
   format: GeneratedDocumentFormat;
+  instruction: string;
 };
 
 export const generateDocumentActivity: ToolActivity<GenerateDocumentToolResult> = {
@@ -51,7 +56,7 @@ export const generateDocumentActivity: ToolActivity<GenerateDocumentToolResult> 
 export function buildGenerateDocumentTool(): ToolRegistration<GenerateDocumentToolResult> {
   const definition: ToolDefinition = {
     name: TOOL_NAMES.generateDocument,
-    description: `Creates one downloadable ${GENERATED_DOCUMENT_FORMATS.join(', ')} file from complete Markdown content. Use it only when the user explicitly requests a file. Supported Markdown includes headings, paragraphs, lists, tables, formatting, links, code blocks, LaTeX formulas, uploaded images, and jsxgraph-json plots. The result is {"status":"created","fileName":"..."} or {"error":"..."}.`,
+    description: `Creates a downloadable ${GENERATED_DOCUMENT_FORMATS.join(', ')} file from Markdown. Supports tables, LaTeX formulas, uploaded images and jsxgraph-json plots.`,
     parameters: {
       type: 'object',
       properties: {
@@ -94,6 +99,7 @@ export function buildGenerateDocumentTool(): ToolRegistration<GenerateDocumentTo
       status: 'created',
       fileName: createGeneratedDocumentFileName(title, format, FALLBACK_FILE_NAME),
       format,
+      instruction: CREATED_INSTRUCTION,
     };
   };
 

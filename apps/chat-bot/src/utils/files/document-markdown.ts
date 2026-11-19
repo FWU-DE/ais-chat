@@ -58,18 +58,3 @@ export function remarkRemoveUnapprovedImages(allowedImages: AllowedDocumentImage
     });
   };
 }
-
-const SYMBOL_REPLACEMENTS: Record<string, string> = {
-  '✅': '✔',
-  '❌': '✘',
-  '⬜': '☐',
-  '⭐': '★',
-};
-
-// No font has color emoji: map the common ones to plain symbols and drop the rest.
-export function simplifyEmoji(text: string) {
-  return text
-    .replace(/[✅❌⬜⭐]/gu, (emoji) => SYMBOL_REPLACEMENTS[emoji] ?? '')
-    .replace(/\uFE0F/g, '')
-    .replace(/\p{Emoji_Presentation}/gu, '');
-}

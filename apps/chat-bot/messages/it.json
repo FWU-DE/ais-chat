@@ -17,7 +17,6 @@
       "error": "Non è stato possibile visualizzare il grafico."
     },
     "document": {
-      "label": "Documento",
       "download": "Scarica {fileName}",
       "error": "Non è stato possibile creare il documento."
     },

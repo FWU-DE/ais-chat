@@ -129,6 +129,46 @@ const paddedCodeBlockPlugin: RemarkDocxPlugin = (() => {
   };
 })();
 
+// Barlow has no glyphs for arrows, check marks or ballot boxes, so those runs get a symbol font.
+const SYMBOL_FONT = 'Segoe UI Symbol';
+const SYMBOL_PATTERN = /([\u2190-\u21FF\u2600-\u27BF\u2B00-\u2BFF]+)/u;
+
+type SymbolRunContext = {
+  style: {
+    bold?: boolean;
+    italic?: boolean;
+    strike?: boolean;
+    inlineCode?: boolean;
+    link?: boolean;
+  };
+  rtl?: boolean;
+};
+
+function createSymbolRuns(value: string, { style, rtl }: SymbolRunContext, inlineCode = false) {
+  return value
+    .split(SYMBOL_PATTERN)
+    .filter((text) => text !== '')
+    .map(
+      (text) =>
+        new TextRun({
+          text,
+          bold: style.bold,
+          italics: style.italic,
+          strike: style.strike,
+          highlight: style.inlineCode || inlineCode ? 'lightGray' : undefined,
+          style: style.link ? 'Hyperlink' : undefined,
+          rightToLeft: rtl ? true : undefined,
+          font: SYMBOL_PATTERN.test(text) ? SYMBOL_FONT : undefined,
+        }),
+    );
+}
+
+// remark-docx renders inline code through its own text builder, so it needs the same override.
+export const symbolFontPlugin: RemarkDocxPlugin = async () => ({
+  text: ({ value }, context) => createSymbolRuns(value, context),
+  inlineCode: ({ value }, context) => createSymbolRuns(value, context, true),
+});
+
 const styledBlocksPlugin: RemarkDocxPlugin = async () => ({
   thematicBreak: () =>
     new Paragraph({
@@ -371,6 +411,7 @@ function createDocxOptions({ allowedImages = new Map() }: MarkdownToDocxOptions 
       plotPlugin,
       paddedCodeBlockPlugin,
       styledBlocksPlugin,
+      symbolFontPlugin,
     ],
     spacing: 80,
     thematicBreak: 'line',

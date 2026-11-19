@@ -17,7 +17,6 @@
       "error": "Le graphique n'a pas pu être affiché."
     },
     "document": {
-      "label": "Document",
       "download": "Télécharger {fileName}",
       "error": "Le document n'a pas pu être créé."
     },

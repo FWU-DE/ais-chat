@@ -17,7 +17,6 @@
       "error": "The figure could not be displayed."
     },
     "document": {
-      "label": "Document",
       "download": "Download {fileName}",
       "error": "The document could not be created."
     },

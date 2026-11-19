@@ -58,7 +58,6 @@
       "error": "Die Grafik konnte nicht dargestellt werden."
     },
     "document": {
-      "label": "Dokument",
       "download": "{fileName} herunterladen",
       "error": "Das Dokument konnte nicht erstellt werden."
     },
