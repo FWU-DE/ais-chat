@@ -17,6 +17,25 @@ export const modelRequestSwaggerSchema: FastifySchema = {
           displayName: { type: 'string' },
           description: { type: 'string' },
           supportedImageFormats: { type: 'array', items: { type: 'string' } },
+          priceMetadata: {
+            type: 'object',
+            description: 'Pricing metadata; type may be text, image, embedding, speech, or safety.',
+            properties: { type: { type: 'string' } },
+          },
+          modelConfig: {
+            type: ['object', 'null'],
+            description:
+              'Speech model configuration. Speech models expose their available voices here.',
+            properties: {
+              voices: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: { name: { type: 'string' }, displayName: { type: 'string' } },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -24,6 +43,6 @@ export const modelRequestSwaggerSchema: FastifySchema = {
   },
   summary: 'List models for the current api key and project',
   description:
-    'list the models as objects with the following properties: id, name, createdAt, provider, displayName, description, pricingData, supportedImageFormats (array of strings). If no image formats are listed, the model does not support images.',
+    'Lists text, image, embedding, safety, and speech models. Speech model voices are available in modelConfig.voices; supportedImageFormats lists image capabilities.',
   security: [{ bearerAuth: [] }],
 };

@@ -8,6 +8,7 @@ import {
 
 import type { AiModel as TextAiModel, TokenUsage } from '../chat/types';
 import { AiModel, Usage } from '../images/types';
+import type { AiModel as SpeechAiModel, SpeechUsage } from '../speech/types';
 
 const TOKEN_AMOUNT_PER_PRICE = 1_000_000;
 const CENT_MULTIPLIER = 10;
@@ -51,6 +52,19 @@ function calculatePriceInCentByImageModelAndUsage({
   return (
     (inputTextTokenPrice + inputImageTokenPrice + outputTextTokenPrice + outputImageTokenPrice) /
     TOKEN_AMOUNT_PER_PRICE
+  );
+}
+
+/** Calculates speech generation cost from the provider-reported character usage. */
+export function calculatePriceInCentBySpeechModelAndUsage({
+  priceMetadata,
+  usage,
+}: {
+  priceMetadata: { priceInCentPer1MillionCharacters: number };
+  usage: SpeechUsage;
+}): number {
+  return (
+    (usage.characters * priceMetadata.priceInCentPer1MillionCharacters) / TOKEN_AMOUNT_PER_PRICE
   );
 }
 
@@ -147,15 +161,39 @@ export async function billTextGenerationUsageToApiKey(
   return priceInCent;
 }
 
+/** Calculates the price from API model metadata and usage, used by the external API. */
+export async function billSpeechUsageToApiKey(
+  apiKeyId: string,
+  speechModel: SpeechAiModel,
+  usage: SpeechUsage,
+): Promise<number> {
+  if (speechModel.priceMetadata.type !== 'speech') {
+    throw new Error(`Model ${speechModel.id} is not a speech model`);
+  }
+  const priceInCent = calculatePriceInCentBySpeechModelAndUsage({
+    priceMetadata: speechModel.priceMetadata,
+    usage,
+  });
+  await dbCreateCompletionUsage({
+    apiKeyId,
+    modelId: speechModel.id,
+    completionTokens: 0,
+    promptTokens: 0,
+    totalTokens: 0,
+    costsInCent: priceInCent,
+  });
+  return priceInCent;
+}
+
 /**
- * Bills speech (TTS) generation usage to the specified API key.
+ * Records caller-calculated speech costs, used by chat-bot models from the app database.
  *
  * @param apiKeyId - The unique identifier of the API key to bill
  * @param modelId - The speech model used for generation
  * @param costsInCent - The cost of the generation in cents
  * @returns A promise that resolves to the price in cents charged for the operation
  */
-export async function billSpeechGenerationUsageToApiKey({
+export async function billPrecalculatedSpeechCostsToApiKey({
   apiKeyId,
   modelId,
   costsInCent,

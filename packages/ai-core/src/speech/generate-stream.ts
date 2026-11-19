@@ -3,7 +3,7 @@ import { getStreamingSpeechGenerationFn } from './providers';
 import { streamSpeechSegments } from './stream-segments';
 import { preprocessSpeechText } from './text/preprocess';
 import { splitSpeechText } from './text/split';
-import type { SpeechStreamResult } from './types';
+import type { AiModel, SpeechStreamResult } from './types';
 
 // Keeps each request well below the input limits of speech providers.
 const MAX_SPEECH_SEGMENT_CHARS = 10000;
@@ -25,6 +25,21 @@ export async function streamSpeechById({
   abortSignal?: AbortSignal;
 }): Promise<SpeechStreamResult> {
   const model = await getSpeechModelById(modelId);
+  return streamSpeechForModel(model, { text, voice, abortSignal });
+}
+
+export async function streamSpeechForModel(
+  model: AiModel,
+  {
+    text,
+    voice,
+    abortSignal,
+  }: {
+    text: string;
+    voice: string;
+    abortSignal?: AbortSignal;
+  },
+): Promise<SpeechStreamResult> {
   const generateSpeechStream = getStreamingSpeechGenerationFn(model);
 
   return streamSpeechSegments({

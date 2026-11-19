@@ -70,3 +70,27 @@ a `MediaSource` (`ManagedMediaSource` on iOS Safari) attached to an `<audio>` el
   in 30 s slices into peaks (`mp3-waveform.ts`), because decoding long audio at once needs hundreds
   of MB.
 - Playback errors are logged via `logError` in `use-audio-stream.ts` before the error toast is shown.
+
+## External API
+
+`POST /v1/audio/speech` is an OpenAI-compatible endpoint for the `openai` SDK's
+`audio.speech.create` method. The authenticated route validates the request and delegates to the
+API adapter. The adapter calls
+`generateSpeechStreamByNameWithBilling`, which validates the model and voice before invoking
+`streamSpeechForModel`.
+
+The voice must be a configured voice name listed by `GET /v1/models` (custom `{ id }` voice
+objects are not accepted). Input is trimmed, must be non-empty, and is limited to 4096 characters.
+Only MP3 output is supported. Responses can be an audio stream or speech-audio SSE events.
+
+Speech is billed per input character. Billing is finalized by the stream generator when generation
+completes, is cancelled, or fails, so every request is billed exactly once. Quota exhaustion
+returns an HTTP 429 response. Unlike text and image generation, speech input is not checked by a
+safety model.
+
+As with text and image generation, concurrent requests can exceed the budget slightly because quota
+is checked before generation and billed after. Billing uses the characters reported by the
+provider, which only arrive with the last event of a segment. A stream aborted by the client before
+that is billed with 0 characters for the unfinished segment, although the provider may still charge
+for it. This applies to the chat-bot as well and is a known, accepted gap. It is intentionally not
+mentioned in the public API docs.

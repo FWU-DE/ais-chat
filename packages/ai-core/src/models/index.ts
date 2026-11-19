@@ -119,6 +119,20 @@ export async function getImageModelByName(modelName: string, apiKeyId: string): 
   return resolveRoutingModel(model);
 }
 
+export async function getSpeechModelByName(
+  modelName: string,
+  apiKeyId: string,
+): Promise<SpeechAiModel> {
+  const model = await dbGetModelByNameAndApiKeyId({ name: modelName, apiKeyId });
+  if (!model) {
+    throw new InvalidModelError(`No speech model with name ${modelName} found for this API key`);
+  }
+  if (model.priceMetadata.type !== 'speech') {
+    throw new InvalidModelError(`Model ${modelName} is not a speech model`);
+  }
+  return resolveRoutingModel(model);
+}
+
 async function resolveRoutingModel<TModel extends { id: string; useBifrost: boolean }>(
   model: TModel,
 ): Promise<TModel> {

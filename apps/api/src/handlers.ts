@@ -1,6 +1,8 @@
 import { FastifyInstance, RouteHandlerMethod, RouteShorthandOptions } from 'fastify';
 
 import { handler as v1_admin_report_getHandler } from './routes/(app)/v1/admin/report/get';
+import { handler as v1_audio_speech_postHandler } from './routes/(app)/v1/audio/speech/post';
+import { speechRequestSwaggerSchema } from './routes/(app)/v1/audio/speech/swagger-schemas';
 import { handler as v1_chat_completions_postHandler } from './routes/(app)/v1/chat/completions/post';
 import { completionRequestSchemaSwagger } from './routes/(app)/v1/chat/completions/swagger-schemas';
 import { handler as v1_embeddings_postHandler } from './routes/(app)/v1/embeddings/post';
@@ -77,6 +79,12 @@ export const routeHandlerDefinitions: Array<RouteHandlerDefinition> = [
     method: 'POST',
     schema: imageGenerationRequestSwaggerSchema,
     handler: v1_images_generations_postHandler,
+  },
+  {
+    path: '/v1/audio/speech',
+    method: 'POST',
+    schema: speechRequestSwaggerSchema,
+    handler: v1_audio_speech_postHandler,
   },
   {
     path: '/v1/admin/report/:year',

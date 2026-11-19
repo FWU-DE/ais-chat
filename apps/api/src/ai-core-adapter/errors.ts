@@ -1,7 +1,9 @@
 import {
   AiGenerationError,
   ApiKeyQuotaExceededError,
+  ApiKeyUnusableError,
   InvalidModelError,
+  InvalidSpeechVoiceError,
   ProviderConfigurationError,
   ProviderRateLimitExceededError,
   ResponsibleAIError,
@@ -17,6 +19,16 @@ export function handleAiCoreError(reply: FastifyReply, error: unknown): boolean 
     reply.status(404).send({
       error: error.message,
     });
+    return true;
+  }
+
+  if (InvalidSpeechVoiceError.is(error)) {
+    reply.status(400).send({ error: error.message });
+    return true;
+  }
+
+  if (ApiKeyUnusableError.is(error)) {
+    reply.status(403).send({ error: error.message });
     return true;
   }
 

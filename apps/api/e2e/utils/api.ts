@@ -14,9 +14,17 @@ export const authorizationHeader = {
 
 type ApiModel = {
   name: string;
+  provider?: string;
   isDeleted?: boolean;
   priceMetadata?: {
     type?: string;
+    priceInCentPer1MillionCharacters?: number;
+  };
+  modelConfig?: {
+    voices?: Array<{
+      name: string;
+      displayName?: string;
+    }>;
   };
 };
 
@@ -81,5 +89,14 @@ export async function getImageModel(request: APIRequestContext) {
     request,
     (m) => !m.isDeleted && m.priceMetadata?.type === 'image',
     'No image generation model available',
+  );
+}
+
+/** Returns a speech model. Throws if none available. */
+export async function getSpeechModel(request: APIRequestContext) {
+  return findModel(
+    request,
+    (m) => !m.isDeleted && m.priceMetadata?.type === 'speech',
+    'No speech model available',
   );
 }

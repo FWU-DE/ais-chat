@@ -1,5 +1,5 @@
 import {
-  billSpeechGenerationUsageToApiKey,
+  billPrecalculatedSpeechCostsToApiKey,
   generateSpeechById,
   MP3_MIME_TYPE,
   type SpeechMimeType,
@@ -91,7 +91,7 @@ export async function generateChatSpeechStream({
 
         const { apiKeyId } = await dbGetFederalState(federalState.id);
         if (apiKeyId) {
-          await billSpeechGenerationUsageToApiKey({
+          await billPrecalculatedSpeechCostsToApiKey({
             apiKeyId,
             modelId: model.id,
             costsInCent,

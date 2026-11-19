@@ -129,6 +129,21 @@ export class InvalidModelError extends AiGenerationError {
   }
 }
 
+/** Error thrown when a speech voice is not configured for the requested model. */
+export class InvalidSpeechVoiceError extends AiGenerationError {
+  constructor(voice: string, allowedVoices: string[]) {
+    super(`Invalid speech voice "${voice}". Allowed voices: ${allowedVoices.join(', ')}`);
+    this.name = 'InvalidSpeechVoiceError';
+  }
+
+  static is(error: unknown): error is InvalidSpeechVoiceError {
+    if (error && typeof error === 'object') {
+      return 'name' in error && error.name === 'InvalidSpeechVoiceError';
+    }
+    return false;
+  }
+}
+
 /**
  * Error thrown when a provider is misconfigured (e.g., missing API key, invalid URL).
  */
@@ -291,6 +306,7 @@ export const aiGenerationErrorTypes = [
   ApiKeyUnusableError,
   ProviderRateLimitExceededError,
   InvalidModelError,
+  InvalidSpeechVoiceError,
   ProviderConfigurationError,
   TokenPointsExceededError,
   SharedChatExpiredError,
