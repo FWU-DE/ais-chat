@@ -4,17 +4,18 @@ import type {
   LearningScenarioSelectModel,
 } from '@shared/db/schema';
 
-export type ChatAssistantDto = {
-  id: string;
-  name: string;
-  description: string;
-  isSpeechEnabled: boolean;
-  speechOnly: boolean;
-  voice: string;
-};
+/**
+ * Only send fields consumed by the chat UI, not full configuration/database rows.
+ * Pick narrows the types; explicit projections also remove other properties at runtime.
+ */
+type ChatFields = 'id' | 'name' | 'description' | 'isSpeechEnabled' | 'speechOnly' | 'voice';
 
-export type ChatCharacterDto = ChatAssistantDto;
-export type ChatLearningScenarioDto = ChatAssistantDto & { studentExercise: string };
+export type ChatAssistantDto = Pick<AssistantSelectModel, ChatFields> & { description: string };
+export type ChatCharacterDto = Pick<CharacterSelectModel, ChatFields> & { description: string };
+export type ChatLearningScenarioDto = Pick<
+  LearningScenarioSelectModel,
+  ChatFields | 'studentExercise'
+> & { description: string };
 
 export function toChatAssistantDto(source: AssistantSelectModel): ChatAssistantDto {
   return {

@@ -70,7 +70,6 @@ export async function getAssistantsByFilterAction(
   filter: OverviewFilter,
 ): Promise<AssistantWithImage[]> {
   const { user, federalState } = await requireAuth();
-  requireTeacherRole(user.userRole);
   const effectiveFilter = resolveFilter(
     filter,
     federalState.featureToggles.isShareTemplateWithSchoolEnabled,

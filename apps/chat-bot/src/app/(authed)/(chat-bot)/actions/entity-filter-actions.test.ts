@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { requireAuth } from '@/auth/requireAuth';
 
+import { enrichAssistantsWithImage } from '../assistants/utils';
 import {
   getAssistantsByFilterAction,
   getCharactersByFilterAction,
@@ -36,7 +37,6 @@ describe('entity filter actions', () => {
       getLearningScenariosByFilterAction,
       getLearningScenariosByOverviewFilter,
     ],
-    ['assistants', getAssistantsByFilterAction, getAssistantsByOverviewFilter],
   ] as const)(
     'rejects student access to %s before service calls',
     async (_name, action, service) => {
@@ -44,4 +44,15 @@ describe('entity filter actions', () => {
       expect(service).not.toHaveBeenCalled();
     },
   );
+
+  it('preserves authenticated student access to assistants', async () => {
+    vi.mocked(getAssistantsByOverviewFilter).mockResolvedValue([]);
+    vi.mocked(enrichAssistantsWithImage).mockResolvedValue([]);
+
+    await expect(getAssistantsByFilterAction('official')).resolves.toEqual([]);
+    expect(getAssistantsByOverviewFilter).toHaveBeenCalledWith({
+      filter: 'official',
+      user: { id: 'student', schoolIds: [], federalStateId: 'test' },
+    });
+  });
 });

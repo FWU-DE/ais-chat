@@ -3,19 +3,28 @@ import type {
   LearningScenarioWithShareDataModel,
 } from '@shared/db/schema';
 
-type SharedChatEntityDto = {
-  id: string;
-  name: string;
-  description: string;
-  modelId: string;
-  speechOnly: boolean;
-  expiredAt: Date;
-  manuallyStoppedAt: Date | null;
-  inviteCode: string;
-};
+/**
+ * Invite-based chats need only display, model and session-state fields.
+ * Explicit projections prevent configuration and internal row fields reaching the browser.
+ */
+type SharedChatFields =
+  | 'id'
+  | 'name'
+  | 'description'
+  | 'modelId'
+  | 'speechOnly'
+  | 'expiredAt'
+  | 'manuallyStoppedAt'
+  | 'inviteCode';
 
-export type SharedCharacterDto = SharedChatEntityDto & { initialMessage: string | null };
-export type SharedLearningScenarioDto = SharedChatEntityDto & { studentExercise: string };
+export type SharedCharacterDto = Pick<
+  CharacterWithShareDataModel,
+  SharedChatFields | 'initialMessage'
+>;
+export type SharedLearningScenarioDto = Pick<
+  LearningScenarioWithShareDataModel,
+  SharedChatFields | 'studentExercise'
+>;
 
 export function toSharedCharacterDto(
   source: CharacterWithShareDataModel,
