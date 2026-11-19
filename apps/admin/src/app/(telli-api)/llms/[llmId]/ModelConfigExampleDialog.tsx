@@ -10,6 +10,7 @@ const azureSpeechConfigExample: SpeechConfig = {
     { name: 'de-DE-Conrad', displayName: 'Conrad (männlich)' },
   ],
   useAzureSpeechEndpoint: true,
+  enableSsmlRewrite: true,
 };
 
 export function ModelConfigExampleDialog() {

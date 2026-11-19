@@ -730,6 +730,9 @@ importers:
       '@sentry/server-utils':
         specifier: 11.12.0
         version: 11.12.0
+      '@xmldom/xmldom':
+        specifier: 0.9.12
+        version: 0.9.12
       google-auth-library:
         specifier: 11.3.4
         version: 11.3.4(supports-color@8.1.1)

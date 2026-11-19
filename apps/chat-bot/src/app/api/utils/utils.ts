@@ -5,11 +5,10 @@ import {
 } from '@shared/db/functions/llm-model';
 import { LlmModelSelectModel } from '@shared/db/schema';
 import {
-  findStaticModelByRoleAndFederalStateId,
-  getDefaultModel,
-  getSafetyModel,
-} from '@shared/llm-models/llm-model-service';
-import { getFirstTextModel } from '@shared/llm-models/llm-model-utils';
+  getAuxiliaryModel,
+  getStrongAuxiliaryModel,
+} from '@shared/llm-models/auxiliary-model-service';
+import { getDefaultModel, getSafetyModel } from '@shared/llm-models/llm-model-service';
 import { logError } from '@shared/logging';
 import { errorifyAsyncFn } from '@shared/utils/error';
 import { isValidPositiveNumber } from '@shared/utils/number';
@@ -142,60 +141,7 @@ export function getTokenUsage(usage: { promptTokens: number; completionTokens: n
   return { promptTokens: usage.promptTokens, completionTokens: usage.completionTokens };
 }
 
-/**
- * Get the auxiliary model for the federal state
- * @returns The auxiliary model for the federal state
- */
-export async function getAuxiliaryModel(federalStateId: string): Promise<LlmModelSelectModel> {
-  const [llmModels, configuredAuxiliaryModel, configuredFallbackModel] = await Promise.all([
-    dbGetLlmModelsByFederalStateId({ federalStateId }),
-    findStaticModelByRoleAndFederalStateId({ role: 'auxiliary', federalStateId }),
-    findStaticModelByRoleAndFederalStateId({ role: 'auxiliary-fallback', federalStateId }),
-  ]);
-  const auxiliaryModel =
-    configuredAuxiliaryModel ?? configuredFallbackModel ?? getFirstTextModel(llmModels);
-  if (auxiliaryModel === undefined) {
-    const error = new Error('No auxiliary model found for federal state id ' + federalStateId);
-    logError(error.message, error);
-
-    throw error;
-  }
-
-  return auxiliaryModel;
-}
-
-export { getSafetyModel };
-
-/**
- * Get a strong auxiliary model for the federal state for more complex tasks like language determination.
- * This model is more capable than the default auxiliary model but also more resource-intensive, so should be used wisely.
- * @returns The strong auxiliary model for the federal state
- */
-export async function getStrongAuxiliaryModel(
-  federalStateId: string,
-): Promise<LlmModelSelectModel> {
-  const [llmModels, auxiliaryModel, configuredAuxiliaryModel, configuredFallbackModel] =
-    await Promise.all([
-      dbGetLlmModelsByFederalStateId({ federalStateId }),
-      findStaticModelByRoleAndFederalStateId({ role: 'strong-auxiliary', federalStateId }),
-      findStaticModelByRoleAndFederalStateId({ role: 'auxiliary', federalStateId }),
-      findStaticModelByRoleAndFederalStateId({ role: 'auxiliary-fallback', federalStateId }),
-    ]);
-  if (auxiliaryModel !== undefined) {
-    return auxiliaryModel;
-  }
-
-  const fallbackAuxiliaryModel =
-    configuredAuxiliaryModel ?? configuredFallbackModel ?? getFirstTextModel(llmModels);
-  if (fallbackAuxiliaryModel === undefined) {
-    const error = new Error('No auxiliary model found for federal state id ' + federalStateId);
-    logError(error.message, error);
-
-    throw error;
-  }
-
-  return fallbackAuxiliaryModel;
-}
+export { getAuxiliaryModel, getSafetyModel, getStrongAuxiliaryModel };
 
 /**
  * Get the default model for the federal state

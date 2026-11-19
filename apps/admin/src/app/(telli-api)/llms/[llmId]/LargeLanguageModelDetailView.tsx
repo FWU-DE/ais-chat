@@ -329,6 +329,8 @@ export function LargeLanguageModelDetailView({
                 <FieldDescription>
                   JSON mit modellspezifischer Konfiguration.
                   <br /> Flag „useAzureSpeechEndpoint“ nur für Azure-AI-Speech-Modelle setzen.
+                  <br /> Flag „enableSsmlRewrite“ lässt den Text vor der Sprachausgabe vom starken
+                  Hilfsmodell in SSML umschreiben; nur für Modelle setzen, die SSML unterstützen.
                   <br />
                   <ModelConfigExampleDialog />
                 </FieldDescription>
