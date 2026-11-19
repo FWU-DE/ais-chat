@@ -28,16 +28,6 @@ function validateVoice(model: AiModel, voice: string): void {
   }
 }
 
-function rethrow(error: unknown): never {
-  if (error instanceof Error) {
-    throw error;
-  }
-  if (typeof error === 'object') {
-    throw new Error(JSON.stringify(error));
-  }
-  throw new Error(JSON.stringify(error));
-}
-
 async function generateSpeechStreamForModel(
   model: AiModel,
   text: string,
@@ -66,86 +56,23 @@ function withBilling(
   apiKeyId: string,
   onComplete?: SpeechBillingOptions['onComplete'],
 ) {
-  let finalized = false;
-  let resolvePrice!: (price: number) => void;
-  let rejectPrice!: (error: unknown) => void;
-  const priceInCents = new Promise<number>((resolve, reject) => {
-    resolvePrice = resolve;
-    rejectPrice = reject;
-  });
-  priceInCents.catch(() => undefined);
-
-  const finalize = async (): Promise<unknown> => {
-    if (finalized) {
-      return;
-    }
-    finalized = true;
-    try {
-      const usage = await stream.usage;
-      const price = await billSpeechUsageToApiKey(apiKeyId, model, usage);
-      resolvePrice(price);
-      await onComplete?.({ usage, priceInCents: price, modelId: model.id });
-    } catch (error) {
-      rejectPrice(error);
-      return error;
-    }
-  };
-
+  // Usage is only known once the stream ended or was cancelled, so billing happens in `finally`.
   async function* chunks(): AsyncGenerator<Buffer, void, unknown> {
-    let streamFailed = false;
     try {
       yield* stream.chunks;
     } catch (error) {
-      streamFailed = true;
       throw normalizeAiGenerationError(error, 'Speech generation failed');
     } finally {
-      const billingError = await finalize();
-      if (!streamFailed && billingError !== undefined) {
-        rethrow(billingError);
-      }
+      const usage = await stream.usage;
+      const priceInCents = await billSpeechUsageToApiKey(apiKeyId, model, usage);
+      await onComplete?.({ usage, priceInCents, modelId: model.id });
     }
   }
 
-  const billedChunks = chunks();
-  let started = false;
-
-  // A generator's `finally` only runs once iteration has started. Cancelling before the first
-  // `next()` must still close the provider stream (which settles `usage`) and bill.
-  const cancellableChunks: AsyncGenerator<Buffer, void, unknown> = {
-    next: (...args) => {
-      started = true;
-      return billedChunks.next(...args);
-    },
-    return: async (value) => {
-      if (started) {
-        return billedChunks.return(value);
-      }
-      started = true;
-      await billedChunks.return(value);
-      await stream.chunks.return(undefined);
-      const billingError = await finalize();
-      if (billingError !== undefined) {
-        rethrow(billingError);
-      }
-      return { done: true, value: undefined };
-    },
-    throw: (error) => {
-      started = true;
-      return billedChunks.throw(error);
-    },
-    [Symbol.asyncIterator]() {
-      return this;
-    },
-    [Symbol.asyncDispose]: async () => {
-      await cancellableChunks.return(undefined);
-    },
-  };
-
   return {
-    chunks: cancellableChunks,
+    chunks: chunks(),
     mimeType: stream.mimeType,
     usage: stream.usage,
-    priceInCents,
     model: { id: model.id, name: model.name, provider: model.provider },
   };
 }

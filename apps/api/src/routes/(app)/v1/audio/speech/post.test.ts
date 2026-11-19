@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 
 const mocks = vi.hoisted(() => {
   process.env.API_KEY = 'test-api-key';
@@ -26,6 +27,11 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('@ais-chat/api-database', () => ({
   dbValidateApiKey: mocks.dbValidateApiKey,
+  llmModelPriceMetadataSchema: z.unknown(),
+  imageGenerationConfigSchema: z.unknown(),
+  speechConfigSchema: z.object({
+    voices: z.array(z.object({ name: z.string(), displayName: z.string() })),
+  }),
   getCurrentUsageInCentByApiKeyIdWithResult: vi.fn(),
   dbGetProjectsWithApiKeys: vi.fn(),
   getUsageInCentByApiKeyId: vi.fn(),
@@ -72,7 +78,6 @@ function speechStream() {
     })(),
     mimeType: 'audio/mpeg',
     usage: Promise.resolve({ characters: 5 }),
-    priceInCents: Promise.resolve(0.01),
     model: { name: 'tts' },
   };
 }
@@ -119,7 +124,6 @@ describe('POST /v1/audio/speech', () => {
       'Hallo',
       'alloy',
       '7fde5f9b-a687-6e6c-bf1e-ad5dcdf6e7f9',
-      expect.objectContaining({ abortSignal: expect.any(AbortSignal) }),
     );
   });
 
@@ -235,76 +239,5 @@ describe('POST /v1/audio/speech', () => {
     await expect(fetchAndRead()).rejects.toThrow();
     expect(logError).toHaveBeenCalledWith(billingError, 'Error processing speech stream');
     logError.mockRestore();
-  });
-
-  it('closes the generator when the client aborts', async () => {
-    let release!: () => void;
-    let finalized = false;
-    const waiting = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    mocks.generateSpeechStreamByNameWithBilling.mockReturnValue({
-      ...speechStream(),
-      chunks: (async function* () {
-        try {
-          yield chunks[0];
-          await waiting;
-          yield chunks[1];
-        } finally {
-          finalized = true;
-        }
-      })(),
-    });
-
-    const controller = new AbortController();
-    const response = await fetch(`${baseUrl}/audio/speech`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'tts', voice: 'alloy', input: 'Hallo' }),
-      signal: controller.signal,
-    });
-    await response.body!.getReader().read();
-    controller.abort();
-    release();
-
-    await vi.waitFor(() => {
-      expect(finalized).toBe(true);
-    });
-  });
-
-  it('closes a stream resolved after the client disconnects', async () => {
-    let resolveStream!: (stream: ReturnType<typeof speechStream>) => void;
-    let finalized = false;
-    const streamPromise = new Promise<ReturnType<typeof speechStream>>((resolve) => {
-      resolveStream = resolve;
-    });
-    const delayedStream = speechStream();
-    delayedStream.chunks = (async function* () {
-      try {
-        await Promise.resolve();
-        yield chunks[0];
-      } finally {
-        finalized = true;
-      }
-    })();
-    mocks.generateSpeechStreamByNameWithBilling.mockReturnValueOnce(streamPromise);
-
-    const controller = new AbortController();
-    const request = fetch(`${baseUrl}/audio/speech`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'tts', voice: 'alloy', input: 'Hallo' }),
-      signal: controller.signal,
-    });
-    await vi.waitFor(() => {
-      expect(mocks.generateSpeechStreamByNameWithBilling).toHaveBeenCalled();
-    });
-    controller.abort();
-    resolveStream(delayedStream);
-
-    await expect(request).rejects.toBeInstanceOf(Error);
-    await vi.waitFor(() => {
-      expect(finalized).toBe(true);
-    });
   });
 });

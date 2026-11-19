@@ -7,17 +7,13 @@ export async function createSpeechStream({
   input,
   voice,
   apiKeyId,
-  abortSignal,
 }: {
   modelName: string;
   input: string;
   voice: string;
   apiKeyId: string;
-  abortSignal?: AbortSignal;
 }): Promise<SpeechStream> {
-  return generateSpeechStreamByNameWithBilling(modelName, input, voice, apiKeyId, {
-    abortSignal,
-  });
+  return generateSpeechStreamByNameWithBilling(modelName, input, voice, apiKeyId);
 }
 
 export type SpeechAudioDeltaEvent = { type: 'speech.audio.delta'; audio: string };

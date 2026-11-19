@@ -25,19 +25,6 @@ const speechRequestSchema = z.object({
     .optional(),
 });
 
-function waitForWritable(raw: FastifyReply['raw']): Promise<void> {
-  return new Promise((resolve) => {
-    const done = () => {
-      raw.off('drain', done);
-      raw.off('close', done);
-      resolve();
-    };
-
-    raw.once('drain', done);
-    raw.once('close', done);
-  });
-}
-
 export async function handler(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const [apiKeyError, apiKey] = await validateApiKeyWithResult(request, reply);
   if (apiKeyError !== null) {
@@ -55,37 +42,14 @@ export async function handler(request: FastifyRequest, reply: FastifyReply): Pro
   }
 
   const body = parsed.data;
-  const abortController = new AbortController();
-  let finished = false;
-  let stream: Awaited<ReturnType<typeof createSpeechStream>> | undefined;
-  const closeHandler = () => {
-    if (!finished) {
-      abortController.abort();
-      void stream?.chunks.return().catch((error) => {
-        reply.log.error(error, 'Error cancelling speech stream');
-      });
-    }
-  };
-  request.raw.once('close', closeHandler);
-  reply.raw.once('close', closeHandler);
 
   try {
-    stream = await createSpeechStream({
+    const stream = await createSpeechStream({
       modelName: body.model,
       input: body.input,
       voice: body.voice,
       apiKeyId: apiKey.id,
-      abortSignal: abortController.signal,
     });
-
-    if (abortController.signal.aborted) {
-      try {
-        await stream.chunks.return();
-      } catch (error) {
-        reply.log.error(error, 'Error cancelling speech stream');
-      }
-      return;
-    }
 
     if (body.stream_format === 'audio') {
       reply.raw.writeHead(200, {
@@ -94,9 +58,7 @@ export async function handler(request: FastifyRequest, reply: FastifyReply): Pro
         'Transfer-Encoding': 'chunked',
       });
       for await (const chunk of stream.chunks) {
-        if (!reply.raw.write(chunk)) {
-          await waitForWritable(reply.raw);
-        }
+        reply.raw.write(chunk);
       }
     } else {
       reply.raw.writeHead(200, {
@@ -106,14 +68,11 @@ export async function handler(request: FastifyRequest, reply: FastifyReply): Pro
         Connection: 'keep-alive',
       });
       for await (const chunk of stream.chunks) {
-        if (!reply.raw.write(`data: ${JSON.stringify(createSpeechAudioDeltaEvent(chunk))}\n\n`)) {
-          await waitForWritable(reply.raw);
-        }
+        reply.raw.write(`data: ${JSON.stringify(createSpeechAudioDeltaEvent(chunk))}\n\n`);
       }
       await stream.usage;
       reply.raw.write(`data: ${JSON.stringify(createSpeechAudioDoneEvent())}\n\n`);
     }
-    finished = true;
     reply.raw.end();
   } catch (error) {
     if (reply.raw.headersSent) {
@@ -128,9 +87,5 @@ export async function handler(request: FastifyRequest, reply: FastifyReply): Pro
         details: error instanceof Error ? error.message : 'An error occurred',
       });
     }
-  } finally {
-    finished = true;
-    request.raw.off('close', closeHandler);
-    reply.raw.off('close', closeHandler);
   }
 }

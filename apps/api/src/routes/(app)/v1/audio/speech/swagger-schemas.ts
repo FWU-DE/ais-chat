@@ -8,7 +8,7 @@ export const speechRequestSwaggerSchema = {
         type: 'string',
         description:
           'The model to use for speech generation. Supported models can be retrieved from the /v1/models endpoint.',
-        example: 'tts-model',
+        example: 'Azure Speech Text to speech',
       },
       input: {
         type: 'string',
@@ -42,7 +42,7 @@ export const speechRequestSwaggerSchema = {
         summary: 'Text to speech',
         description: 'Generate German speech as an MP3 stream',
         value: {
-          model: 'tts-model',
+          model: 'Azure Speech Text to speech',
           input: 'Hallo, wie geht es dir?',
           voice: 'de-DE-Seraphina:DragonHDLatestNeural',
         },

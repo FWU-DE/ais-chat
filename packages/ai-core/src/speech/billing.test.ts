@@ -85,7 +85,6 @@ describe('generateSpeechStreamWithBilling', () => {
       value: Buffer.from('audio'),
     });
     await result.chunks.return();
-    await expect(result.priceInCents).resolves.toBe(10);
     expect(mockBillSpeechUsageToApiKey).toHaveBeenCalledOnce();
     expect(mockBillSpeechUsageToApiKey).toHaveBeenCalledWith('api-key', model, usage);
     expect(onComplete).toHaveBeenCalledWith({ usage, priceInCents: 10, modelId: model.id });
@@ -132,38 +131,6 @@ describe('generateSpeechStreamWithBilling', () => {
 
     await result.chunks.next();
     await result.chunks.return();
-    await expect(result.priceInCents).resolves.toBe(10);
-    expect(mockBillSpeechUsageToApiKey).toHaveBeenCalledOnce();
-  });
-
-  it('closes the provider stream and bills when cancelled before iteration', async () => {
-    let providerClosed = false;
-    async function* providerChunks() {
-      try {
-        yield Buffer.from('first');
-      } finally {
-        providerClosed = true;
-      }
-    }
-    const providerStream = providerChunks();
-    await providerStream.next();
-    mockStreamSpeechForModel.mockResolvedValue(makeStream(providerStream));
-    const onComplete = vi.fn();
-    const result = await generateSpeechStreamWithBilling(
-      'speech-model',
-      'hello',
-      'alloy',
-      'api-key',
-      { onComplete },
-    );
-
-    await expect(result.chunks.return()).resolves.toEqual({ done: true, value: undefined });
-    await expect(result.priceInCents).resolves.toBe(10);
-    expect(providerClosed).toBe(true);
-    expect(mockBillSpeechUsageToApiKey).toHaveBeenCalledOnce();
-    expect(onComplete).toHaveBeenCalledOnce();
-
-    await result.chunks.return();
     expect(mockBillSpeechUsageToApiKey).toHaveBeenCalledOnce();
   });
 
@@ -182,11 +149,10 @@ describe('generateSpeechStreamWithBilling', () => {
 
     await result.chunks.next();
     await expect(result.chunks.next()).rejects.toThrow('Speech generation failed');
-    await expect(result.priceInCents).resolves.toBe(10);
     expect(mockBillSpeechUsageToApiKey).toHaveBeenCalledOnce();
   });
 
-  it('rejects iteration and priceInCents when billing fails', async () => {
+  it('rejects iteration when billing fails', async () => {
     const billingError = new Error('billing unavailable');
     mockBillSpeechUsageToApiKey.mockRejectedValue(billingError);
     const result = await generateSpeechStreamWithBilling(
@@ -198,28 +164,6 @@ describe('generateSpeechStreamWithBilling', () => {
 
     await expect(result.chunks.next()).resolves.toMatchObject({ done: false });
     await expect(result.chunks.return()).rejects.toBe(billingError);
-    await expect(result.priceInCents).rejects.toBe(billingError);
-  });
-
-  it('preserves a stream error when billing also fails', async () => {
-    const streamError = new Error('provider stream failed');
-    const billingError = new Error('billing unavailable');
-    async function* failingChunks() {
-      yield Buffer.from('first');
-      throw streamError;
-    }
-    mockStreamSpeechForModel.mockResolvedValue(makeStream(failingChunks()));
-    mockBillSpeechUsageToApiKey.mockRejectedValue(billingError);
-    const result = await generateSpeechStreamWithBilling(
-      'speech-model',
-      'hello',
-      'alloy',
-      'api-key',
-    );
-
-    await expect(result.chunks.next()).resolves.toMatchObject({ done: false });
-    await expect(result.chunks.next()).rejects.toThrow('Speech generation failed');
-    await expect(result.priceInCents).rejects.toBe(billingError);
   });
 
   it('wraps non-AI errors from the provider but preserves AI errors', async () => {

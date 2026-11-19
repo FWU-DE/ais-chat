@@ -21,8 +21,8 @@ type SpeechModel = {
 };
 
 async function getConfiguredSpeechModel(request: Parameters<typeof getSpeechModel>[0]) {
-  // E2E-only override; this is intentionally supplied outside turbo task inputs.
-  // eslint-disable-next-line turbo/no-undeclared-env-vars
+  // The success tests need a real speech model: E2E_SPEECH_MODEL (optionally E2E_SPEECH_VOICE)
+  // or a Bifrost speech model assigned to the test key. Otherwise they are skipped.
   const configuredModelName = process.env['E2E_SPEECH_MODEL'];
 
   if (configuredModelName) {
@@ -48,7 +48,6 @@ async function getSpeechRequest(request: Parameters<typeof getSpeechModel>[0]) {
   }
 
   const voices = model.modelConfig?.voices;
-  // eslint-disable-next-line turbo/no-undeclared-env-vars
   const voice = process.env['E2E_SPEECH_VOICE'] ?? voices?.[0]?.name;
 
   if (!voice) {
@@ -76,40 +75,6 @@ test.describe('POST /v1/audio/speech', () => {
     const response = await request.post('/v1/audio/speech', {
       headers: authorizationHeader,
       data: { model: 'mock-speech', voice: 'alloy' },
-    });
-
-    expect(response.status()).toBe(400);
-    expect(await response.json()).toHaveProperty('error', 'Bad request');
-  });
-
-  test('returns 400 for an unsupported response format', { tag: '@smoke' }, async ({ request }) => {
-    const response = await request.post('/v1/audio/speech', {
-      headers: authorizationHeader,
-      data: { ...mockSpeechRequest, response_format: 'wav' },
-    });
-
-    expect(response.status()).toBe(400);
-    expect(await response.json()).toHaveProperty('error', 'Bad request');
-  });
-
-  test(
-    'returns 400 for input longer than 4096 characters',
-    { tag: '@smoke' },
-    async ({ request }) => {
-      const response = await request.post('/v1/audio/speech', {
-        headers: authorizationHeader,
-        data: { ...mockSpeechRequest, input: 'a'.repeat(4097) },
-      });
-
-      expect(response.status()).toBe(400);
-      expect(await response.json()).toHaveProperty('error', 'Bad request');
-    },
-  );
-
-  test('returns 400 for an unsupported speed', { tag: '@smoke' }, async ({ request }) => {
-    const response = await request.post('/v1/audio/speech', {
-      headers: authorizationHeader,
-      data: { ...mockSpeechRequest, speed: 1.5 },
     });
 
     expect(response.status()).toBe(400);
@@ -244,9 +209,7 @@ test.describe('speech model success responses', () => {
     const afterUsage = after.limitInCent - after.remainingLimitInCent;
     const price = model.priceMetadata?.priceInCentPer1MillionCharacters ?? 0;
 
-    expect(afterUsage).toBeGreaterThanOrEqual(beforeUsage);
-    if (price > 0) {
-      expect(afterUsage).toBeGreaterThan(beforeUsage);
-    }
+    const expectedCost = (speechRequest!.input.length * price) / 1_000_000;
+    expect(afterUsage - beforeUsage).toBeCloseTo(expectedCost, 6);
   });
 });

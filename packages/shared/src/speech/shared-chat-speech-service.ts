@@ -1,4 +1,4 @@
-import { billSpeechGenerationUsageToApiKey } from '@ais-chat/ai-core';
+import { billPrecalculatedSpeechCostsToApiKey } from '@ais-chat/ai-core';
 import { requireTeacherRole } from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
 import { dbUpdateTokenUsageByCharacterChatId } from '@shared/db/functions/character';
@@ -172,7 +172,7 @@ function createSharedChatSpeechStrategy({
 
       const { apiKeyId } = await dbGetFederalState(context.federalState.id);
       if (apiKeyId) {
-        await billSpeechGenerationUsageToApiKey({
+        await billPrecalculatedSpeechCostsToApiKey({
           apiKeyId,
           modelId: model.id,
           costsInCent,

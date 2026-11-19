@@ -1,5 +1,5 @@
 export {
-  billSpeechGenerationUsageToApiKey,
+  billPrecalculatedSpeechCostsToApiKey,
   billSpeechUsageToApiKey,
   calculatePriceInCentBySpeechModelAndUsage,
 } from '../api-keys/billing';

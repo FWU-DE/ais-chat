@@ -14,7 +14,6 @@ describe('speech adapter', () => {
   it('passes generation arguments and options to ai-core', async () => {
     const result = { chunks: (async function* () {})(), mimeType: 'audio/mpeg' };
     generateSpeechStreamByNameWithBilling.mockResolvedValue(result);
-    const abortSignal = new AbortController().signal;
 
     await expect(
       createSpeechStream({
@@ -22,7 +21,6 @@ describe('speech adapter', () => {
         input: 'Hello',
         voice: 'alloy',
         apiKeyId: 'key-1',
-        abortSignal,
       }),
     ).resolves.toBe(result);
     expect(generateSpeechStreamByNameWithBilling).toHaveBeenCalledWith(
@@ -30,7 +28,6 @@ describe('speech adapter', () => {
       'Hello',
       'alloy',
       'key-1',
-      { abortSignal },
     );
   });
 

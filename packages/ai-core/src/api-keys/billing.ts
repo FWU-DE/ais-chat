@@ -161,7 +161,7 @@ export async function billTextGenerationUsageToApiKey(
   return priceInCent;
 }
 
-/** Bills speech generation character usage to the specified API key. */
+/** Calculates the price from API model metadata and usage, used by the external API. */
 export async function billSpeechUsageToApiKey(
   apiKeyId: string,
   speechModel: SpeechAiModel,
@@ -186,14 +186,14 @@ export async function billSpeechUsageToApiKey(
 }
 
 /**
- * Bills speech (TTS) generation usage to the specified API key.
+ * Records caller-calculated speech costs, used by chat-bot models from the app database.
  *
  * @param apiKeyId - The unique identifier of the API key to bill
  * @param modelId - The speech model used for generation
  * @param costsInCent - The cost of the generation in cents
  * @returns A promise that resolves to the price in cents charged for the operation
  */
-export async function billSpeechGenerationUsageToApiKey({
+export async function billPrecalculatedSpeechCostsToApiKey({
   apiKeyId,
   modelId,
   costsInCent,
