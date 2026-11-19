@@ -43,17 +43,27 @@ function excludeDeletedCharacters(options?: IncludeDeletedOption) {
   return options?.includeDeleted ? undefined : eq(characterTable.isDeleted, false);
 }
 
+type ShareScope = 'active' | 'manageable';
+
 /**
- * Returns a subquery that selects only the single latest non-expired share per character for a given user.
- *
- * A share is expired if either:
- * - `manually_stopped_at IS NOT NULL` (explicitly stopped), or
- * - `expired_at < now` (time limit elapsed; `manually_stopped_at` may still be NULL for these)
- *
- * When multiple non-expired rows exist, `DISTINCT ON (character_id) ORDER BY started_at DESC`
- * ensures only the most-recent row is returned, preventing duplicate entity rows in JOINs.
+ * - `active`: the share is still running (`expired_at >= now`).
+ * - `manageable`: the share is running or expired within the grace window
+ *   (`SHARE_EXTENSION_WINDOW_MS`), so it can still be extended or adjusted.
  */
-function latestActiveCharacterShare(user: Pick<UserModel, 'id'>) {
+function shareScopeCondition(scope: ShareScope) {
+  return scope === 'active'
+    ? sql`${sharedCharacter.expiredAt} >= now()`
+    : gte(sharedCharacter.expiredAt, new Date(Date.now() - SHARE_EXTENSION_WINDOW_MS));
+}
+
+/**
+ * Returns a subquery that selects the single latest share per character for a given user that is
+ * not manually stopped and matches the given scope.
+ *
+ * `DISTINCT ON (character_id) ORDER BY started_at DESC` ensures only the most-recent row is
+ * returned, preventing duplicate entity rows in JOINs.
+ */
+function latestCharacterShare(user: Pick<UserModel, 'id'>, scope: ShareScope) {
   return db
     .selectDistinctOn([sharedCharacter.characterId], {
       ...getTableColumns(sharedCharacter),
@@ -63,53 +73,9 @@ function latestActiveCharacterShare(user: Pick<UserModel, 'id'>) {
       and(
         eq(sharedCharacter.userId, user.id),
         isNull(sharedCharacter.manuallyStoppedAt),
-        sql`${sharedCharacter.expiredAt} >= now()`,
+        shareScopeCondition(scope),
       ),
     )
-    .orderBy(sharedCharacter.characterId, desc(sharedCharacter.startedAt))
-    .as('latest_share');
-}
-
-/**
- * Returns a subquery that selects the single most-recent manageable share per character for a
- * given user: not manually stopped and either running or expired within the grace window
- * (`SHARE_EXTENSION_WINDOW_MS`), so it can still be extended or adjusted.
- */
-function latestManageableCharacterShare(
-  user: Pick<UserModel, 'id'>,
-): ReturnType<typeof latestActiveCharacterShare> {
-  const graceWindowStart = new Date(Date.now() - SHARE_EXTENSION_WINDOW_MS);
-
-  return db
-    .selectDistinctOn([sharedCharacter.characterId], {
-      ...getTableColumns(sharedCharacter),
-    })
-    .from(sharedCharacter)
-    .where(
-      and(
-        eq(sharedCharacter.userId, user.id),
-        isNull(sharedCharacter.manuallyStoppedAt),
-        gte(sharedCharacter.expiredAt, graceWindowStart),
-      ),
-    )
-    .orderBy(sharedCharacter.characterId, desc(sharedCharacter.startedAt))
-    .as('latest_share');
-}
-
-/**
- * Returns a subquery that selects the single most-recent non-manually-stopped share per character
- * for a given user. This includes shares that have already expired, so the caller has
- * to decide if it is still available (grace window) or already expired.
- */
-function latestNonStoppedCharacterShare(
-  user: Pick<UserModel, 'id'>,
-): ReturnType<typeof latestActiveCharacterShare> {
-  return db
-    .selectDistinctOn([sharedCharacter.characterId], {
-      ...getTableColumns(sharedCharacter),
-    })
-    .from(sharedCharacter)
-    .where(and(eq(sharedCharacter.userId, user.id), isNull(sharedCharacter.manuallyStoppedAt)))
     .orderBy(sharedCharacter.characterId, desc(sharedCharacter.startedAt))
     .as('latest_share');
 }
@@ -124,17 +90,17 @@ function baseCharacterQuery() {
     .innerJoin(userTable, eq(characterTable.userId, userTable.id));
 }
 
-function baseCharacterWithShareQuery(activeShare: ReturnType<typeof latestActiveCharacterShare>) {
+function baseCharacterWithShareQuery(share: ReturnType<typeof latestCharacterShare>) {
   return db
     .select({
       ...getTableColumns(characterTable),
-      tokenPointsLimit: activeShare.tokenPointsLimit,
-      inviteCode: activeShare.inviteCode,
-      maxUsageTimeLimit: activeShare.maxUsageTimeLimit,
-      startedAt: activeShare.startedAt,
-      expiredAt: activeShare.expiredAt,
-      manuallyStoppedAt: activeShare.manuallyStoppedAt,
-      startedBy: activeShare.userId,
+      tokenPointsLimit: share.tokenPointsLimit,
+      inviteCode: share.inviteCode,
+      maxUsageTimeLimit: share.maxUsageTimeLimit,
+      startedAt: share.startedAt,
+      expiredAt: share.expiredAt,
+      manuallyStoppedAt: share.manuallyStoppedAt,
+      startedBy: share.userId,
       ownerSchoolIds: userTable.schoolIds,
     })
     .from(characterTable)
@@ -181,12 +147,12 @@ export async function dbGetCharacters({
  * Needs userId because the metadata for shared characters is both tied to the user and character,
  * this is especially important for shared characters (school wide or global).
  *
- * Returns the latest share data even if expired, as long as it hasn't been manually stopped.
- * The service layer (getSharedCharacter) is responsible for validating the grace window.
+ * Only considers manageable shares: not manually stopped and either running or expired within
+ * the grace window.
  *
- * Returns undefined if the character does not exist or has no non-manually-stopped shares
+ * Returns undefined if the character does not exist or has no manageable share.
  */
-export async function dbGetCharacterByIdWithShareData({
+export async function dbGetCharacterByIdWithManageableShare({
   characterId,
   user,
   includeDeleted,
@@ -194,9 +160,9 @@ export async function dbGetCharacterByIdWithShareData({
   characterId: string;
   user: Pick<UserModel, 'id'>;
 } & IncludeDeletedOption): Promise<CharacterWithShareDataModel | undefined> {
-  const latestShare = latestNonStoppedCharacterShare(user);
-  const [row] = await baseCharacterWithShareQuery(latestShare)
-    .innerJoin(latestShare, eq(latestShare.characterId, characterTable.id))
+  const manageableShare = latestCharacterShare(user, 'manageable');
+  const [row] = await baseCharacterWithShareQuery(manageableShare)
+    .innerJoin(manageableShare, eq(manageableShare.characterId, characterTable.id))
     .where(and(eq(characterTable.id, characterId), excludeDeletedCharacters({ includeDeleted })));
   return row;
 }
@@ -269,7 +235,7 @@ export async function dbGetCharactersByIdsOptionalShareData({
     return [];
   }
 
-  const manageableShare = latestManageableCharacterShare(user);
+  const manageableShare = latestCharacterShare(user, 'manageable');
   return baseCharacterWithShareQuery(manageableShare)
     .leftJoin(manageableShare, eq(manageableShare.characterId, characterTable.id))
     .where(
@@ -283,7 +249,7 @@ export async function dbGetCharactersByUserFavorite({
 }: {
   user: Pick<UserModel, 'id'>;
 }): Promise<CharacterOptionalShareDataModel[]> {
-  const activeShare = latestActiveCharacterShare(user);
+  const activeShare = latestCharacterShare(user, 'active');
   return baseCharacterWithShareQuery(activeShare)
     .leftJoin(activeShare, eq(activeShare.characterId, characterTable.id))
     .innerJoin(
@@ -295,29 +261,6 @@ export async function dbGetCharactersByUserFavorite({
     )
     .where(excludeDeletedCharacters())
     .orderBy(desc(characterTable.createdAt));
-}
-
-export async function dbGetCopyTemplateCharacter({
-  templateId,
-  characterId,
-  user,
-}: {
-  templateId: string;
-  characterId: string;
-  user: Pick<UserModel, 'id' | 'schoolIds'>;
-}): Promise<Omit<CharacterSelectModel, 'modelId'>> {
-  const character = await dbGetCharacterByIdWithShareData({ characterId: templateId, user });
-  if (character?.name === undefined) {
-    throw new Error('Invalid State Template Character must have a name');
-  }
-  return {
-    ...character,
-    id: characterId,
-    isSchoolShared: false,
-    isCommunityShared: false,
-    isGlobal: false,
-    userId: user.id,
-  };
 }
 
 export async function dbCreateCharacter(
@@ -347,7 +290,7 @@ export async function dbGetGlobalCharacters({
 } & IncludeDeletedOption): Promise<CharacterOptionalShareDataModel[]> {
   const federalStateId = user.federalStateId;
 
-  const activeShare = latestActiveCharacterShare(user);
+  const activeShare = latestCharacterShare(user, 'active');
   const characters = await baseCharacterWithShareQuery(activeShare)
     .leftJoin(activeShare, eq(activeShare.characterId, characterTable.id))
     .leftJoin(
@@ -374,7 +317,7 @@ export async function dbGetCommunityCharacters({
 }: {
   user: Pick<UserModel, 'id'>;
 } & IncludeDeletedOption): Promise<CharacterOptionalShareDataModel[]> {
-  const activeShare = latestActiveCharacterShare(user);
+  const activeShare = latestCharacterShare(user, 'active');
   const characters = await baseCharacterWithShareQuery(activeShare)
     .leftJoin(activeShare, eq(activeShare.characterId, characterTable.id))
     .where(
@@ -405,7 +348,7 @@ export async function dbGetCharactersByAssociatedSchools({
     return [];
   }
 
-  const activeShare = latestActiveCharacterShare(user);
+  const activeShare = latestCharacterShare(user, 'active');
   const characters = await baseCharacterWithShareQuery(activeShare)
     .leftJoin(activeShare, eq(activeShare.characterId, characterTable.id))
     .where(
@@ -426,7 +369,7 @@ export async function dbGetCharactersByUser({
 }: {
   user: Pick<UserModel, 'id'>;
 } & IncludeDeletedOption): Promise<CharacterOptionalShareDataModel[]> {
-  const activeShare = latestActiveCharacterShare(user);
+  const activeShare = latestCharacterShare(user, 'active');
   const characters = await baseCharacterWithShareQuery(activeShare)
     .leftJoin(activeShare, eq(activeShare.characterId, characterTable.id))
     .where(
@@ -449,7 +392,7 @@ export async function dbGetAllCharactersByUser({
 }: {
   user: Pick<UserModel, 'id'>;
 } & IncludeDeletedOption): Promise<CharacterOptionalShareDataModel[]> {
-  const activeShare = latestActiveCharacterShare(user);
+  const activeShare = latestCharacterShare(user, 'active');
   const characters = await baseCharacterWithShareQuery(activeShare)
     .leftJoin(activeShare, eq(activeShare.characterId, characterTable.id))
     .where(and(eq(characterTable.userId, user.id), excludeDeletedCharacters({ includeDeleted })))
@@ -465,7 +408,7 @@ export async function dbGetAllAccessibleCharacters({
   user: Pick<UserModel, 'id' | 'schoolIds' | 'federalStateId'>;
 } & IncludeDeletedOption): Promise<CharacterOptionalShareDataModel[]> {
   const federalStateId = user.federalStateId;
-  const activeShare = latestActiveCharacterShare(user);
+  const activeShare = latestCharacterShare(user, 'active');
   return baseCharacterWithShareQuery(activeShare)
     .leftJoin(activeShare, eq(activeShare.characterId, characterTable.id))
     .leftJoin(
@@ -497,21 +440,6 @@ export async function dbGetAllAccessibleCharacters({
       ),
     )
     .orderBy(desc(characterTable.createdAt));
-}
-
-export async function dbGetCharacterByIdAndUser({
-  characterId,
-  user,
-  includeDeleted,
-}: {
-  characterId: string;
-  user: Pick<UserModel, 'id'>;
-} & IncludeDeletedOption): Promise<CharacterWithShareDataModel | undefined> {
-  const activeShare = latestActiveCharacterShare(user);
-  const [row] = await baseCharacterWithShareQuery(activeShare)
-    .innerJoin(activeShare, eq(activeShare.characterId, characterTable.id))
-    .where(and(eq(characterTable.id, characterId), excludeDeletedCharacters({ includeDeleted })));
-  return row;
 }
 
 export async function dbDeleteCharacterByIdAndUser({
@@ -705,8 +633,6 @@ export async function dbGetLatestManageableCharacterShare({
   characterId: string;
   user: Pick<UserModel, 'id'>;
 }) {
-  const graceWindowStart = new Date(Date.now() - SHARE_EXTENSION_WINDOW_MS);
-
   const [share] = await db
     .select()
     .from(sharedCharacter)
@@ -715,7 +641,7 @@ export async function dbGetLatestManageableCharacterShare({
         eq(sharedCharacter.characterId, characterId),
         eq(sharedCharacter.userId, user.id),
         isNull(sharedCharacter.manuallyStoppedAt),
-        gte(sharedCharacter.expiredAt, graceWindowStart),
+        shareScopeCondition('manageable'),
       ),
     )
     .orderBy(desc(sharedCharacter.startedAt))

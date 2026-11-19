@@ -27,7 +27,7 @@ import {
   dbGetLatestManageableLearningScenarioShare,
   dbGetLearningScenarioById,
   dbGetLearningScenarioByIdForConversation,
-  dbGetLearningScenarioByIdWithShareData,
+  dbGetLearningScenarioByIdWithManageableShare,
   dbGetLearningScenariosByAssociatedSchools,
   dbGetLearningScenariosByIdsOptionalShareData,
   dbGetLearningScenariosByUser,
@@ -62,12 +62,8 @@ import { duplicateLearningScenario } from '@shared/learning-scenarios/learning-s
 import { OverviewFilter } from '@shared/overview-filter';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
-import {
-  MAX_SHARE_USAGE_TIME_LIMIT_IN_MINUTES,
-  SHARE_EXTENSION_WINDOW_MS,
-} from '@shared/sharing/const';
+import { MAX_SHARE_USAGE_TIME_LIMIT_IN_MINUTES } from '@shared/sharing/const';
 import { generateInviteCode } from '@shared/sharing/generate-invite-code';
-import { isShareWithinGraceWindow } from '@shared/sharing/is-share-within-grace-window';
 import { sharedLearningScenarioChatHasReachedTokenPointsLimit } from '@shared/users/usage';
 import {
   getMaxBudgetInCentByUser,
@@ -203,15 +199,11 @@ export async function getSharedLearningScenario({
   user: Pick<UserModel, 'id'>;
 }): Promise<LearningScenarioWithShareDataModel> {
   checkParameterUUID(learningScenarioId);
-  const learningScenario = await dbGetLearningScenarioByIdWithShareData({
+  const learningScenario = await dbGetLearningScenarioByIdWithManageableShare({
     learningScenarioId,
     user,
   });
-  if (!learningScenario || learningScenario.manuallyStoppedAt !== null) {
-    throw new NotFoundError('Learning scenario not found');
-  }
-
-  if (!isShareWithinGraceWindow(learningScenario.expiredAt, SHARE_EXTENSION_WINDOW_MS)) {
+  if (!learningScenario) {
     throw new NotFoundError('Learning scenario not found');
   }
 

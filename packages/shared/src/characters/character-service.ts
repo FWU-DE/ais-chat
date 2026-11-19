@@ -18,7 +18,7 @@ import {
   dbGetAllCharactersByUser,
   dbGetCharacterById,
   dbGetCharacterByIdForConversation,
-  dbGetCharacterByIdWithShareData,
+  dbGetCharacterByIdWithManageableShare,
   dbGetCharacters,
   dbGetCharactersByAssociatedSchools,
   dbGetCharactersByIdsOptionalShareData,
@@ -58,12 +58,8 @@ import {
 import { OverviewFilter } from '@shared/overview-filter';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
-import {
-  MAX_SHARE_USAGE_TIME_LIMIT_IN_MINUTES,
-  SHARE_EXTENSION_WINDOW_MS,
-} from '@shared/sharing/const';
+import { MAX_SHARE_USAGE_TIME_LIMIT_IN_MINUTES } from '@shared/sharing/const';
 import { generateInviteCode } from '@shared/sharing/generate-invite-code';
-import { isShareWithinGraceWindow } from '@shared/sharing/is-share-within-grace-window';
 import { copyCharacter, copyRelatedTemplateFiles } from '@shared/templates/template-service';
 import { sharedCharacterChatHasReachedTokenPointsLimit } from '@shared/users/usage';
 import {
@@ -835,13 +831,12 @@ export const getSharedCharacter = async ({
   userId: string;
 }): Promise<CharacterWithShareDataModel> => {
   checkParameterUUID(characterId);
-  const character = await dbGetCharacterByIdWithShareData({ characterId, user: { id: userId } });
+  const character = await dbGetCharacterByIdWithManageableShare({
+    characterId,
+    user: { id: userId },
+  });
 
-  if (!character || character.manuallyStoppedAt !== null) {
-    throw new NotFoundError('Character not found');
-  }
-
-  if (!isShareWithinGraceWindow(character.expiredAt, SHARE_EXTENSION_WINDOW_MS)) {
+  if (!character) {
     throw new NotFoundError('Character not found');
   }
 

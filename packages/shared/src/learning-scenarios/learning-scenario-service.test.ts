@@ -17,7 +17,7 @@ import {
   dbGetLatestManageableLearningScenarioShare,
   dbGetLearningScenarioById,
   dbGetLearningScenarioByIdForConversation,
-  dbGetLearningScenarioByIdWithShareData,
+  dbGetLearningScenarioByIdWithManageableShare,
   dbGetLearningScenariosByAssociatedSchools,
   dbGetLearningScenariosByIdsOptionalShareData,
   dbGetLearningScenariosByUser,
@@ -27,7 +27,6 @@ import {
 } from '../db/functions/learning-scenario';
 import { getAvatarPictureUrl } from '../files/fileService';
 import { getReadOnlySignedUrl, uploadFileToS3 } from '../s3';
-import { SHARE_EXTENSION_WINDOW_MS } from '../sharing/const';
 import { getMaxBudgetInCentByUser, getUsedBudgetInCentByUser } from '../users/user-budget-service';
 import { generateUUID } from '../utils/uuid';
 import { duplicateLearningScenario } from './learning-scenario-admin-service';
@@ -67,7 +66,7 @@ vi.mock('../db/functions/learning-scenario', () => ({
   dbGetLatestManageableLearningScenarioShare: vi.fn(),
   dbGetLearningScenarioById: vi.fn(),
   dbGetLearningScenarioByIdForConversation: vi.fn(),
-  dbGetLearningScenarioByIdWithShareData: vi.fn(),
+  dbGetLearningScenarioByIdWithManageableShare: vi.fn(),
   dbGetLearningScenariosByAssociatedSchools: vi.fn(),
   dbGetLearningScenariosByUser: vi.fn(),
   dbStopLearningScenarioShare: vi.fn(),
@@ -346,7 +345,7 @@ describe('learning-scenario-service', () => {
       vi.mocked(dbGetLearningScenariosByIdsOptionalShareData).mockResolvedValue([
         mockLearningScenario,
       ] as never);
-      vi.mocked(dbGetLearningScenarioByIdWithShareData).mockResolvedValue(
+      vi.mocked(dbGetLearningScenarioByIdWithManageableShare).mockResolvedValue(
         mockLearningScenario as never,
       );
       vi.mocked(dbGetLearningScenarioById).mockResolvedValue(mockLearningScenario as never);
@@ -948,7 +947,7 @@ describe('learning-scenario-service', () => {
       vi.mocked(dbGetLearningScenariosByIdsOptionalShareData).mockResolvedValue([
         mockLearningScenario,
       ] as never);
-      vi.mocked(dbGetLearningScenarioByIdWithShareData).mockResolvedValue(
+      vi.mocked(dbGetLearningScenarioByIdWithManageableShare).mockResolvedValue(
         mockLearningScenario as never,
       );
       vi.mocked(dbCreateLearningScenarioShare).mockResolvedValue(mockLearningScenario as never);
@@ -1657,7 +1656,7 @@ describe('learning-scenario-service', () => {
         didacticCommentary: 'Learning scenario teaching notes',
         expiredAt: new Date(NOW.getTime() + 60 * 60 * 1000),
       });
-      vi.mocked(dbGetLearningScenarioByIdWithShareData).mockResolvedValue(
+      vi.mocked(dbGetLearningScenarioByIdWithManageableShare).mockResolvedValue(
         learningScenario as never,
       );
 
@@ -1683,7 +1682,7 @@ describe('learning-scenario-service', () => {
         userId,
         expiredAt: new Date(NOW.getTime() - 60 * 60 * 1000), // expired 1 hour ago, within grace window
       });
-      vi.mocked(dbGetLearningScenarioByIdWithShareData).mockResolvedValue(
+      vi.mocked(dbGetLearningScenarioByIdWithManageableShare).mockResolvedValue(
         learningScenario as never,
       );
 
@@ -1695,35 +1694,10 @@ describe('learning-scenario-service', () => {
       expect(result).toBe(learningScenario);
     });
 
-    it('throws NotFoundError when the share has expired beyond the grace window', async () => {
+    it('throws NotFoundError when no manageable share exists', async () => {
       const learningScenarioId = generateUUID();
       const userId = generateUUID();
-      const learningScenario = mockLearningScenarioWithShareData({
-        id: learningScenarioId,
-        userId,
-        expiredAt: new Date(NOW.getTime() - SHARE_EXTENSION_WINDOW_MS - 1000), // expired 2 hours and 1 second ago
-      });
-      vi.mocked(dbGetLearningScenarioByIdWithShareData).mockResolvedValue(
-        learningScenario as never,
-      );
-
-      await expect(
-        getSharedLearningScenario({ learningScenarioId, user: { id: userId } }),
-      ).rejects.toThrow(NotFoundError);
-    });
-
-    it('throws NotFoundError when the share was manually stopped', async () => {
-      const learningScenarioId = generateUUID();
-      const userId = generateUUID();
-      const learningScenario = mockLearningScenarioWithShareData({
-        id: learningScenarioId,
-        userId,
-        expiredAt: new Date(NOW.getTime() + 60 * 60 * 1000), // still active time-wise
-        manuallyStoppedAt: new Date(NOW.getTime() - 30 * 60 * 1000), // but manually stopped 30 min ago
-      });
-      vi.mocked(dbGetLearningScenarioByIdWithShareData).mockResolvedValue(
-        learningScenario as never,
-      );
+      vi.mocked(dbGetLearningScenarioByIdWithManageableShare).mockResolvedValue(undefined);
 
       await expect(
         getSharedLearningScenario({ learningScenarioId, user: { id: userId } }),
