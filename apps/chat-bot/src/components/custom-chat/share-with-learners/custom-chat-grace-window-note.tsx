@@ -43,7 +43,7 @@ export function CustomChatGraceWindowNote({
   if (shareSessionState !== ShareSessionState.EXPIRED_RECENTLY) return null;
 
   return (
-    <p className="text-sm text-gray-600 text-center">
+    <p className="text-sm text-gray-600 text-center" data-testid="grace-window-note">
       {t('session-will-be-closed', {
         time: formatDurationAsClock(gracePeriodTimeLeftInSeconds),
       })}
