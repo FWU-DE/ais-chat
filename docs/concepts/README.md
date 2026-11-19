@@ -16,3 +16,4 @@ implementing related features; open the linked doc for full details.
 | [docker-publishing.md](docker-publishing.md) | Changing `.github/workflows/docker.yml` or the conditions under which images are pushed to GHCR |
 | [code-block-download.md](code-block-download.md) | Changing how code blocks are downloaded as files (file name resolution, extension lookup, name sanitizing) |
 | [container-images.md](container-images.md) | Changing a Dockerfile base image or runtime stage |
+| [mermaid-diagrams.md](mermaid-diagrams.md) | Adding or editing diagrams in `docs/` (Mermaid syntax, GitHub and VS Code preview) |
