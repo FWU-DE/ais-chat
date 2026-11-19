@@ -45,6 +45,7 @@
     "message-copy": "Nachricht kopieren",
     "message-download": "Nachricht als Word-Datei herunterladen",
     "message-download-error": "Der Download der Nachricht ist fehlgeschlagen.",
+    "code-download": "Datei herunterladen",
     "regenerate-message-button": "Antwort erneut generieren",
     "plot": {
       "label": "Grafik",
@@ -72,6 +73,7 @@
     "image-load-failed": "Bild konnte nicht geladen werden",
     "rate-limit-error": "Das bereitgestellte Tokenvolumen wurde aufgebraucht.",
     "api-key-quota-error": "Das bereitgestellte Kontingent des Bundeslandes wurde aufgebraucht.",
+    "api-key-unusable-error": "Der API-Schlüssel des Bundeslandes ist nicht nutzbar.",
     "provider-rate-limit-error": "Das Modell ist derzeit ausgelastet. Bitte versuche es später erneut.",
     "responsible-ai-error": "Diese Anfrage wurde nicht ausgeführt, da sie möglicherweise gegen die Nutzungsrichtlinien verstößt.",
     "invalid-model-error": "Das ausgewählte Modell ist nicht verfügbar.",

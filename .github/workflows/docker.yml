@@ -17,11 +17,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  artifact-metadata: write
-  contents: write
-  packages: write
-  id-token: write
-  attestations: write
+  contents: read
 
 jobs:
   # Each image is built natively per platform (no QEMU emulation) and pushed by digest only.
@@ -33,7 +29,12 @@ jobs:
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository &&
        github.event.workflow_run.head_branch == 'main')
+    permissions:
+      contents: read
+      packages: write
     env:
       is_dry_run: ${{ github.event_name == 'workflow_dispatch' }}
       TURBO_TELEMETRY_DISABLED: 1
@@ -80,15 +81,16 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.resolved_sha }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - name: Setup Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
@@ -96,10 +98,10 @@ jobs:
         run: pnpm install --filter . --frozen-lockfile
 
       - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -139,10 +141,22 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Install cosign
+        if: steps.turbo-ignore.outputs.skip == 'false'
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      - name: Verify distroless base image signature
+        if: steps.turbo-ignore.outputs.skip == 'false'
+        run: |
+          ref=$(grep -oP '(?<=^FROM )gcr\.io/distroless/\S+' '${{ matrix.image.dockerfile }}' || [ $? -eq 1 ])
+          [ -z "$ref" ] || cosign verify "$ref" \
+            --certificate-oidc-issuer https://accounts.google.com \
+            --certificate-identity keyless@distroless.iam.gserviceaccount.com >/dev/null
+
       - name: ${{ env.is_dry_run == 'true' && 'Build (no push)' || 'Build and push' }}
         if: steps.turbo-ignore.outputs.skip == 'false'
         id: docker-build
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
@@ -178,7 +192,7 @@ jobs:
 
       - name: Upload digest
         if: steps.turbo-ignore.outputs.skip == 'false' && env.is_dry_run != 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: digests-${{ matrix.image.image_name }}-${{ matrix.platform.slug }}
           path: ${{ runner.temp }}/digests/*
@@ -195,7 +209,15 @@ jobs:
       !cancelled() &&
       github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
       github.event.workflow_run.head_branch == 'main'
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     env:
       resolved_sha: ${{ github.event.workflow_run.head_sha }}
 
@@ -206,7 +228,7 @@ jobs:
 
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-${{ matrix.image.image_name }}-*
@@ -228,11 +250,11 @@ jobs:
 
       - name: Setup Docker Buildx
         if: steps.digests.outputs.skip == 'false'
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Log in to GitHub Container Registry
         if: steps.digests.outputs.skip == 'false'
-        uses: docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -255,7 +277,7 @@ jobs:
 
       - name: Generate artifact attestation
         if: steps.digests.outputs.skip == 'false'
-        uses: actions/attest@v4.2.2
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-name: ${{ matrix.image.image_ref }}
           subject-digest: ${{ steps.manifest.outputs.digest }}

@@ -25,3 +25,20 @@
 *:hover {
   scrollbar-color: #555 transparent;
 }
+
+/* Scrollbar for containers on a secondary-colored background (see constructRootLayoutStyle) */
+.scrollbar-on-secondary {
+  scrollbar-color: var(--scrollbar-on-secondary) transparent;
+}
+
+.scrollbar-on-secondary:hover {
+  scrollbar-color: var(--scrollbar-on-secondary-hover) transparent;
+}
+
+.scrollbar-on-secondary::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-on-secondary);
+}
+
+.scrollbar-on-secondary::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-on-secondary-hover);
+}

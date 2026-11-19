@@ -106,7 +106,7 @@ See [docs/concepts/local-env.md](docs/concepts/local-env.md) for env files and p
 ```sh
 pnpm db:migrate          # Migrate both databases
 pnpm db:generate         # Generate migration (run in specific package)
-pnpm db:seed             # Seed both databases (requires API keys + LLM credentials in .env.local)
+pnpm db:seed             # Seed both databases (requires LLM credentials in .env.local)
 ```
 
 **Database change workflow:**

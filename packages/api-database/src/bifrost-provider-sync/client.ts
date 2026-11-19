@@ -304,6 +304,7 @@ function getAddProviderPayload(providerConfig: BifrostProviderConfig) {
   return {
     provider: providerConfig.provider,
     ...(providerConfig.network_config ? { network_config: providerConfig.network_config } : {}),
+    ...(providerConfig.prompt_cache ? { prompt_cache: providerConfig.prompt_cache } : {}),
     ...(providerConfig.custom_provider_config
       ? { custom_provider_config: providerConfig.custom_provider_config }
       : {}),
@@ -322,6 +323,7 @@ function getUpdateProviderPayload(
       ? { concurrency_and_buffer_size: existingProvider.concurrency_and_buffer_size }
       : {}),
     ...(existingProvider.proxy_config ? { proxy_config: existingProvider.proxy_config } : {}),
+    ...(providerConfig.prompt_cache ? { prompt_cache: providerConfig.prompt_cache } : {}),
     ...(existingProvider.send_back_raw_request !== undefined
       ? { send_back_raw_request: existingProvider.send_back_raw_request }
       : {}),

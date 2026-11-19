@@ -11,7 +11,7 @@ maintenance. Keep the change small and verify it at the service boundary.
 ## Repository and dependency rules
 
 - Put standalone services under `services/`; inspect existing layout and patterns first.
-- Prefer Alpine when all required packages are natively compatible. Investigate native binaries, package availability, architecture support, and libc compatibility (musl versus glibc) before choosing or changing the base image.
+- Node runtime images use distroless (`gcr.io/distroless/nodejs24-debian13:nonroot`) pinned by digest, with `ENV PATH=/nodejs/bin:$PATH` and glibc (Debian) build stages. Use Alpine only when native OS packages are required (e.g. calculator). Dependabot bumps the digests, CI verifies the signature with cosign. See `docs/concepts/container-images.md`.
 - Preserve or improve Docker hardening: minimal runtime images, multi-stage builds where useful, non-root execution, least-privilege filesystem/runtime settings, and a pinned/reproducible dependency strategy.
 
 ## Integration checklist

@@ -13,3 +13,6 @@ implementing related features; open the linked doc for full details.
 | [local-env.md](local-env.md) | Adding or changing env vars, or touching dev scripts and env loading |
 | [external-data-validation.md](external-data-validation.md) | Handling data from outside the system (API requests, third-party/LLM provider responses, webhooks, `JSON.parse`) |
 | [text-to-speech.md](text-to-speech.md) | Changing speech generation, streaming, text splitting or preprocessing for read-aloud |
+| [docker-publishing.md](docker-publishing.md) | Changing `.github/workflows/docker.yml` or the conditions under which images are pushed to GHCR |
+| [code-block-download.md](code-block-download.md) | Changing how code blocks are downloaded as files (file name resolution, extension lookup, name sanitizing) |
+| [container-images.md](container-images.md) | Changing a Dockerfile base image or runtime stage |

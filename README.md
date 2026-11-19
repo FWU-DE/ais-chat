@@ -154,8 +154,6 @@ If you start with a fresh database, apply migrations and seed both databases; ot
 pnpm db:migrate
 ```
 
-Add api keys in your `.env.local` files for all federal states that you want to seed (e.g. the `DE_TEST_API_KEY` printed by the api seed). The chat-bot seed fails without at least one. These keys are used to fetch the available LLM models from the ais-chat-api (e.g. `DE_BY_API_KEY` for Bavaria). If you previously seeded the api database, use the resulting API key.
-
 The api database seed also requires LLM provider credentials for the models it creates locally. Add these to `apps/api/.env.local`:
 
 ```sh

@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AiGenerationError, InvalidModelError, ResponsibleAIError } from '../errors';
+import {
+  AiGenerationError,
+  ApiKeyUnusableError,
+  InvalidModelError,
+  ResponsibleAIError,
+} from '../errors';
 import { generateImageWithBilling } from './index';
 import type { AiModel } from './types';
 
@@ -11,11 +16,10 @@ vi.mock('./providers', () => ({
 
 vi.mock('../api-keys/billing', () => ({
   billImageGenerationUsageToApiKey: vi.fn(),
-  isApiKeyOverQuota: vi.fn(),
 }));
 
-vi.mock('../api-keys/model-access', () => ({
-  hasAccessToModel: vi.fn(),
+vi.mock('../api-keys/access', () => ({
+  assertApiKeyCanUseModel: vi.fn(),
 }));
 
 vi.mock('../models', () => ({
@@ -37,16 +41,15 @@ vi.mock('../safety', () => ({
   ]),
 }));
 
-import { billImageGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
-import { hasAccessToModel } from '../api-keys/model-access';
+import { assertApiKeyCanUseModel } from '../api-keys/access';
+import { billImageGenerationUsageToApiKey } from '../api-keys/billing';
 import { getImageModelById } from '../models';
 import { checkInputSafety } from '../safety';
 import { generateImage } from './providers';
 
 const mockGenerateImage = vi.mocked(generateImage);
 const mockBillImageGenerationUsageToApiKey = vi.mocked(billImageGenerationUsageToApiKey);
-const mockIsApiKeyOverQuota = vi.mocked(isApiKeyOverQuota);
-const mockHasAccessToModel = vi.mocked(hasAccessToModel);
+const mockAssertApiKeyCanUseModel = vi.mocked(assertApiKeyCanUseModel);
 const mockGetImageModelById = vi.mocked(getImageModelById);
 const mockCheckInputSafety = vi.mocked(checkInputSafety);
 
@@ -79,16 +82,13 @@ describe('generateImageWithBilling', () => {
 
   it('should successfully generate image with billing', async () => {
     mockGetImageModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
     mockGenerateImage.mockResolvedValue(mockImageResponse);
     mockBillImageGenerationUsageToApiKey.mockResolvedValue(50);
 
     const result = await generateImageWithBilling('model-123', 'test prompt', 'api-key-123');
 
     expect(mockGetImageModelById).toHaveBeenCalledWith('model-123');
-    expect(mockHasAccessToModel).toHaveBeenCalledWith('api-key-123', mockModel);
-    expect(mockIsApiKeyOverQuota).toHaveBeenCalledWith('api-key-123');
+    expect(mockAssertApiKeyCanUseModel).toHaveBeenCalledWith('api-key-123', mockModel, 'image');
     expect(mockGenerateImage).toHaveBeenCalledWith(mockModel, 'test prompt', undefined);
     expect(mockBillImageGenerationUsageToApiKey).toHaveBeenCalledWith(
       'api-key-123',
@@ -105,8 +105,6 @@ describe('generateImageWithBilling', () => {
 
   it('checks the prompt and input images before generation', async () => {
     mockGetImageModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
     mockGenerateImage.mockResolvedValue(mockImageResponse);
     mockBillImageGenerationUsageToApiKey.mockResolvedValue(50);
 
@@ -151,8 +149,6 @@ describe('generateImageWithBilling', () => {
 
   it('runs the safety pre-check by default when a safety model is supplied', async () => {
     mockGetImageModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
     mockGenerateImage.mockResolvedValue(mockImageResponse);
     mockBillImageGenerationUsageToApiKey.mockResolvedValue(50);
 
@@ -169,8 +165,6 @@ describe('generateImageWithBilling', () => {
 
   it('skips the safety pre-check for a model with safety filtering disabled', async () => {
     mockGetImageModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
     mockGenerateImage.mockResolvedValue(mockImageResponse);
     mockBillImageGenerationUsageToApiKey.mockResolvedValue(50);
     mockGetImageModelById.mockResolvedValue({ ...mockModel, safetyFilterEnabled: false });
@@ -189,8 +183,6 @@ describe('generateImageWithBilling', () => {
 
   it('blocks input images that exceed the safety model limit', async () => {
     mockGetImageModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
 
     await expect(
       generateImageWithBilling(
@@ -215,58 +207,22 @@ describe('generateImageWithBilling', () => {
     expect(mockGenerateImage).not.toHaveBeenCalled();
   });
 
-  it('should throw InvalidModelError when API key does not have access', async () => {
+  it('should not generate when the API key check fails', async () => {
     mockGetImageModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(false);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
+    mockAssertApiKeyCanUseModel.mockRejectedValueOnce(
+      new ApiKeyUnusableError({ apiKeyId: 'api-key-123', reason: 'Api key is expired' }),
+    );
 
     await expect(
       generateImageWithBilling('model-123', 'test prompt', 'api-key-123'),
-    ).rejects.toThrow(InvalidModelError);
-
-    await expect(
-      generateImageWithBilling('model-123', 'test prompt', 'api-key-123'),
-    ).rejects.toThrow('API key does not have access to the image model: test-model');
+    ).rejects.toThrow(ApiKeyUnusableError);
 
     expect(mockGenerateImage).not.toHaveBeenCalled();
     expect(mockBillImageGenerationUsageToApiKey).not.toHaveBeenCalled();
-  });
-
-  it('should throw AiGenerationError when API key is over quota', async () => {
-    mockGetImageModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(true);
-
-    await expect(
-      generateImageWithBilling('model-123', 'test prompt', 'api-key-123'),
-    ).rejects.toThrow(AiGenerationError);
-
-    await expect(
-      generateImageWithBilling('model-123', 'test prompt', 'api-key-123'),
-    ).rejects.toThrow('API key has exceeded its monthly quota');
-
-    expect(mockGenerateImage).not.toHaveBeenCalled();
-    expect(mockBillImageGenerationUsageToApiKey).not.toHaveBeenCalled();
-  });
-
-  it('should run access check and quota check in parallel', async () => {
-    mockGetImageModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
-    mockGenerateImage.mockResolvedValue(mockImageResponse);
-    mockBillImageGenerationUsageToApiKey.mockResolvedValue(50);
-
-    await generateImageWithBilling('model-123', 'test prompt', 'api-key-123');
-
-    // Both should be called
-    expect(mockHasAccessToModel).toHaveBeenCalledTimes(1);
-    expect(mockIsApiKeyOverQuota).toHaveBeenCalledTimes(1);
   });
 
   it('should wrap non-AiGenerationError errors', async () => {
     mockGetImageModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
     mockGenerateImage.mockRejectedValue(new Error('Network error'));
 
     await expect(
@@ -282,8 +238,6 @@ describe('generateImageWithBilling', () => {
 
   it('should map explicit safety system rejections to ResponsibleAIError', async () => {
     mockGetImageModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
     mockGenerateImage.mockRejectedValue(
       new Error('400 Your request was rejected by the safety system. Request ID: secret'),
     );
@@ -295,8 +249,6 @@ describe('generateImageWithBilling', () => {
 
   it('should not wrap AiGenerationError errors', async () => {
     mockGetImageModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
     const originalError = new InvalidModelError('Original error');
     mockGenerateImage.mockRejectedValue(originalError);
 
@@ -309,8 +261,6 @@ describe('generateImageWithBilling', () => {
 
   it('should handle string errors during generation', async () => {
     mockGetImageModelById.mockResolvedValue(mockModel);
-    mockHasAccessToModel.mockResolvedValue(true);
-    mockIsApiKeyOverQuota.mockResolvedValue(false);
     mockGenerateImage.mockRejectedValue('String error');
 
     await expect(

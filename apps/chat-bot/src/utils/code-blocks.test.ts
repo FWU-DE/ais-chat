@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { getCodeTitle, PLOT_LANGUAGE, replacePlotBlocks } from './code-blocks';
+import { getCodeFileName, getCodeTitle, PLOT_LANGUAGE, replacePlotBlocks } from './code-blocks';
 
 describe('getCodeTitle', () => {
   it('reads a title in double quotes', () => {
@@ -111,5 +111,55 @@ describe('replacePlotBlocks', () => {
   it('takes the title from the info string, not from the JSON', () => {
     const markdown = `\`\`\`${PLOT_LANGUAGE}\n{"title":"Aus JSON"}\n\`\`\``;
     expect(replacePlotBlocks(markdown, describePlot)).toBe('Grafik');
+  });
+});
+
+describe('getCodeFileName', () => {
+  it('uses a title that is a file name', async () => {
+    expect(await getCodeFileName({ language: 'python', title: 'hello.py' })).toBe('hello.py');
+    expect(await getCodeFileName({ language: 'text', title: 'Dockerfile' })).toBe('Dockerfile');
+  });
+
+  it('appends the language extension to a descriptive title', async () => {
+    expect(await getCodeFileName({ language: 'python', title: 'Sortierfunktion' })).toBe(
+      'Sortierfunktion.py',
+    );
+  });
+
+  it.each([
+    ['js', '.js'],
+    ['yml', '.yml'],
+    ['c++', '.cpp'],
+    ['c#', '.cs'],
+  ])('resolves the language %s to %s', async (language, extension) => {
+    expect(await getCodeFileName({ language })).toBe(`code${extension}`);
+  });
+
+  it('falls back to txt for a missing or unknown language', async () => {
+    expect(await getCodeFileName({})).toBe('code.txt');
+    expect(await getCodeFileName({ language: 'nonsense', title: 'Beispiel' })).toBe('Beispiel.txt');
+  });
+
+  it('limits the length in bytes and keeps the extension', async () => {
+    const fileName = await getCodeFileName({ language: 'python', title: `${'ä'.repeat(300)}.py` });
+    expect(new TextEncoder().encode(fileName).length).toBeLessThanOrEqual(200);
+    expect(fileName.endsWith('.py')).toBe(true);
+  });
+
+  it('retries loading the language data after a failure', async () => {
+    vi.resetModules();
+    let failing = true;
+    vi.doMock('linguist-languages', async (importOriginal) => {
+      if (failing) throw new Error('chunk load failed');
+      return importOriginal();
+    });
+    const { getCodeFileName: isolated } = await import('./code-blocks');
+    await expect(isolated({ language: 'python' })).rejects.toThrow();
+
+    failing = false;
+    vi.resetModules();
+    vi.doMock('linguist-languages', async (importOriginal) => importOriginal());
+    expect(await isolated({ language: 'python' })).toBe('code.py');
+    vi.doUnmock('linguist-languages');
   });
 });
