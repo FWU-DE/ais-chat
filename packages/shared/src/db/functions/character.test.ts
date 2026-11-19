@@ -22,9 +22,8 @@ import {
   dbGetAllCharactersByUser,
   dbGetCharacterById,
   dbGetCharacterByIdAndInviteCode,
-  dbGetCharacterByIdAndUser,
   dbGetCharacterByIdForConversation,
-  dbGetCharacterByIdWithShareData,
+  dbGetCharacterByIdWithManageableShare,
   dbGetCharacterByNameAndUser,
   dbGetCharacters,
   dbGetCharactersByAssociatedSchools,
@@ -194,23 +193,11 @@ describe('db character sharing helpers', () => {
       expect(result).toBe(row);
     });
 
-    it('dbGetCharacterByIdWithShareData returns the matching row', async () => {
+    it('dbGetCharacterByIdWithManageableShare returns the matching row', async () => {
       const row = { id: 'character-1' };
       mockSelectChain([row]);
 
-      const result = await dbGetCharacterByIdWithShareData({
-        characterId: 'character-1',
-        user: { id: 'user-1' },
-      });
-
-      expect(result).toBe(row);
-    });
-
-    it('dbGetCharacterByIdAndUser returns the matching row', async () => {
-      const row = { id: 'character-1' };
-      mockSelectChain([row]);
-
-      const result = await dbGetCharacterByIdAndUser({
+      const result = await dbGetCharacterByIdWithManageableShare({
         characterId: 'character-1',
         user: { id: 'user-1' },
       });

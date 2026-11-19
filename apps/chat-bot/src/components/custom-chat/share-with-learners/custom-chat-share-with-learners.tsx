@@ -99,8 +99,9 @@ export function CustomChatShareWithLearners({
     isActive: sharedChatActiveInitial,
   });
 
-  const currentExpiredAt = polledData?.expiredAt ?? expiredAt;
-  const currentManuallyStoppedAt = polledData?.manuallyStoppedAt ?? manuallyStoppedAt;
+  // Polled data is authoritative, a `null` expiredAt means that no manageable share exists anymore.
+  const currentExpiredAt = polledData ? polledData.expiredAt : expiredAt;
+  const currentManuallyStoppedAt = polledData ? polledData.manuallyStoppedAt : manuallyStoppedAt;
 
   const { shareSessionState, timeLeftInSeconds, isExtendable } = calculateShareSessionState({
     expiredAt: currentExpiredAt,
@@ -283,6 +284,7 @@ export function CustomChatShareWithLearners({
                       <CustomChatStopShareButton
                         onUnshare={onUnshare}
                         onStopShareSuccess={() => {
+                          void refetchShareData();
                           router.refresh();
                         }}
                         className="w-full"

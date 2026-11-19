@@ -25,7 +25,7 @@ import {
   dbGetLearningScenarioById,
   dbGetLearningScenarioByIdAndInviteCode,
   dbGetLearningScenarioByIdForConversation,
-  dbGetLearningScenarioByIdWithShareData,
+  dbGetLearningScenarioByIdWithManageableShare,
   dbGetLearningScenariosByAssociatedSchools,
   dbGetLearningScenariosByIds,
   dbGetLearningScenariosByIdsOptionalShareData,
@@ -238,11 +238,11 @@ describe('db learning scenario sharing helpers', () => {
       expect(result).toBe(learningScenarios);
     });
 
-    it('dbGetLearningScenarioByIdWithShareData returns the matching row', async () => {
+    it('dbGetLearningScenarioByIdWithManageableShare returns the matching row', async () => {
       const row = { id: 'scenario-1' };
       mockSelectChain([row]);
 
-      const result = await dbGetLearningScenarioByIdWithShareData({
+      const result = await dbGetLearningScenarioByIdWithManageableShare({
         learningScenarioId: 'scenario-1',
         user: { id: 'user-1' },
       });
