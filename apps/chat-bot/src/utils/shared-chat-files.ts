@@ -1,3 +1,9 @@
+// Exports stay allowed after a shared chat has ended, as long as it is not deleted or suspended.
+export function addExportFlag(imageUrl: string): string {
+  const separator = imageUrl.includes('?') ? '&' : '?';
+  return `${imageUrl}${separator}export=true`;
+}
+
 export function getSharedChatImageUrl({
   fileId,
   inviteCode,

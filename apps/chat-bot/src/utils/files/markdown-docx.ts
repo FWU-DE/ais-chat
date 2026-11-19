@@ -30,6 +30,7 @@ import { getPlotKey } from '@/components/chat/plot/rendered-plots';
 import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
 import {
   type AllowedDocumentImages,
+  createAllowedImages,
   findAllowedImageUrl,
   loadDocumentImage,
 } from '@/utils/files/document-images';
@@ -367,7 +368,6 @@ export function formatConversationExport({
     timeZone: 'Europe/Berlin',
   }).format(new Date(createdAt));
   const markdownBlocks: ConversationExport['markdownBlocks'] = [];
-  const allowedImages = new Map<string, string>();
 
   if (conversationTitle !== undefined) {
     markdownBlocks.push({ markdown: `# Konversation: ${conversationTitle}` });
@@ -379,10 +379,7 @@ export function formatConversationExport({
     const messageHeading = role === 'user' ? 'Nutzer/in' : 'AIS.chat';
     markdownBlocks.push({ markdown: `### ${messageHeading}:` }, { markdown: content });
     markdownBlocks.push(
-      ...images.map(({ alt, url }) => {
-        allowedImages.set(alt, url);
-        return { markdown: `![${alt}](${encodeURIComponent(alt)})` };
-      }),
+      ...images.map(({ alt }) => ({ markdown: `![${alt}](${encodeURIComponent(alt)})` })),
     );
   }
 
@@ -390,6 +387,10 @@ export function formatConversationExport({
     { markdown: PARAGRAPH_SPACER },
     { markdown: PARAGRAPH_SPACER },
     { markdown: `#### Generiert von AIS.chat unter Nutzung von ${modelName}` },
+  );
+
+  const allowedImages = createAllowedImages(
+    messages.flatMap(({ images }) => images.map(({ alt, url }) => ({ name: alt, url }))),
   );
 
   return { markdownBlocks, allowedImages };

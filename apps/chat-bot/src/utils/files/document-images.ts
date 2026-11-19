@@ -20,6 +20,17 @@ function normalizeImageReference(reference: string) {
   return decoded.replaceAll('\\', '/').split('/').at(-1)?.trim().toLowerCase() ?? '';
 }
 
+// Keys are normalized the same way as references, so lookups by file name always match.
+export function createAllowedImages(
+  images: Iterable<{ name: string; url: string }>,
+): AllowedDocumentImages {
+  const allowedImages = new Map<string, string>();
+  for (const { name, url } of images) {
+    allowedImages.set(normalizeImageReference(name), url);
+  }
+  return allowedImages;
+}
+
 // Only images the user uploaded in this chat qualify; the model can reference them by file name.
 // Without `fileMapping` (shared chats) only the local preview URLs are available.
 export function collectUploadedImageUrls({
@@ -29,7 +40,7 @@ export function collectUploadedImageUrls({
   fileMapping?: UploadedFiles;
   messageFileMapping?: UploadedFiles;
 }): AllowedDocumentImages {
-  const images = new Map<string, string>();
+  const images: Array<{ name: string; url: string }> = [];
 
   for (const files of [fileMapping?.values(), messageFileMapping?.values()]) {
     for (const fileList of files ?? []) {
@@ -43,13 +54,13 @@ export function collectUploadedImageUrls({
             ? undefined
             : `/api/files/${file.id}/scaled-image?width=${MAX_DOCUMENT_IMAGE_SIZE}&height=${MAX_DOCUMENT_IMAGE_SIZE}`);
         if (url !== undefined) {
-          images.set(normalizeImageReference(file.name), url);
+          images.push({ name: file.name, url });
         }
       }
     }
   }
 
-  return images;
+  return createAllowedImages(images);
 }
 
 // The reference must be the exact file name; URLs and paths never match.
