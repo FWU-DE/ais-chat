@@ -1,4 +1,4 @@
-export const GENERATED_DOCUMENT_FORMATS = ['docx'] as const;
+export const GENERATED_DOCUMENT_FORMATS = ['docx', 'html'] as const;
 
 export type GeneratedDocumentFormat = (typeof GENERATED_DOCUMENT_FORMATS)[number];
 

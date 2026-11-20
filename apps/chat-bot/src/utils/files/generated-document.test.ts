@@ -1,3 +1,4 @@
+import { JSDOM } from 'jsdom';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createGeneratedDocumentBlob } from './generated-document';
@@ -46,6 +47,18 @@ describe('createGeneratedDocumentFileName', () => {
 });
 
 describe('createGeneratedDocumentBlob', () => {
+  it('resolves attachment references in generated HTML', async () => {
+    vi.stubGlobal('DOMParser', new JSDOM().window.DOMParser);
+    const blob = await createGeneratedDocumentBlob(
+      '<!doctype html><html><body><img src="attachment://file-1"></body></html>',
+      'html',
+      new Map([['attachment://file-1', '/api/files/file-1/scaled-image']]),
+    );
+
+    await expect(blob.text()).resolves.toContain('/api/files/file-1/scaled-image');
+    vi.unstubAllGlobals();
+  });
+
   it('creates a DOCX (zip) and loads external images from Markdown', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const blob = await createGeneratedDocumentBlob(MARKDOWN, 'docx');

@@ -51,7 +51,7 @@ export const generateDocumentActivity: ToolActivity<GenerateDocumentToolResult> 
 export function buildGenerateDocumentTool(): ToolRegistration<GenerateDocumentToolResult> {
   const definition: ToolDefinition = {
     name: TOOL_NAMES.generateDocument,
-    description: `Creates a downloadable ${GENERATED_DOCUMENT_FORMATS.join(', ')} file from Markdown. Supports tables, LaTeX formulas, uploaded images and jsxgraph-json plots.`,
+    description: `Creates a downloadable ${GENERATED_DOCUMENT_FORMATS.join(', ')} file from Markdown or a complete HTML document. Supports tables, LaTeX formulas, uploaded images and jsxgraph-json plots.`,
     parameters: {
       type: 'object',
       properties: {
