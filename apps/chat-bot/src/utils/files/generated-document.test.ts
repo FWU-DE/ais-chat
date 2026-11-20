@@ -1,3 +1,4 @@
+import { JSDOM } from 'jsdom';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createGeneratedDocumentBlob } from './generated-document';
@@ -46,6 +47,39 @@ describe('createGeneratedDocumentFileName', () => {
 });
 
 describe('createGeneratedDocumentBlob', () => {
+  it('resolves attachment references in generated HTML', async () => {
+    vi.stubGlobal('DOMParser', new JSDOM().window.DOMParser);
+    const imageBlob = new Blob(['png'], { type: 'image/png' });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: () => imageBlob }));
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn().mockResolvedValue({
+        width: 1,
+        height: 1,
+        close: vi.fn(),
+      }),
+    );
+    const blob = await createGeneratedDocumentBlob(
+      '<!doctype html><html><body><img src="attachment://file-1"></body></html>',
+      'html',
+      new Map([['attachment://file-1', '/api/files/file-1/scaled-image']]),
+    );
+
+    await expect(blob.text()).resolves.toContain('data:image/png;base64,cG5n');
+    vi.unstubAllGlobals();
+  });
+
+  it('uses the document title for generated HTML metadata', async () => {
+    vi.stubGlobal('DOMParser', new JSDOM().window.DOMParser);
+    const blob = await createGeneratedDocumentBlob(
+      '<!doctype html><html><head><title>Arbeitsblatt</title></head><body><p>Inhalt</p></body></html>',
+      'html',
+    );
+
+    await expect(blob.text()).resolves.toContain('<title>Arbeitsblatt</title>');
+    vi.unstubAllGlobals();
+  });
+
   it('creates a DOCX (zip) and loads external images from Markdown', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const blob = await createGeneratedDocumentBlob(MARKDOWN, 'docx');

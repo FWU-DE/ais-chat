@@ -395,7 +395,7 @@ export function formatConversationExport({
 
 function createDocxOptions(imageReferences: DocumentImageReferences = new Map()): DocxOptions {
   const loadImage = async (reference: string) => {
-    return loadDocumentImage(imageReferences.get(reference) ?? reference);
+    return (await loadDocumentImage(imageReferences.get(reference) ?? reference)).data;
   };
 
   return {
@@ -472,6 +472,13 @@ export async function markdownToDocxBlob(
       type: 'root',
       children: processedRoots.flatMap((root) => root.children),
     };
+    // Word needs a paragraph after a trailing table, otherwise it reports unreadable content.
+    if (combinedRoot.children.at(-1)?.type === 'table') {
+      combinedRoot.children.push({
+        type: 'paragraph',
+        children: [{ type: 'text', value: PARAGRAPH_SPACER }],
+      });
+    }
     const arrayBuffer = await processor.stringify(combinedRoot);
 
     return new Blob([arrayBuffer], {

@@ -23,6 +23,8 @@ describe('constructToolGuidelines', () => {
 
     expect(guidelines).toContain(TOOL_NAMES.generateDocument);
     expect(guidelines).toContain('attachment://');
+    expect(guidelines).toContain('![Beschreibung](attachment://...)');
+    expect(guidelines).toContain('<img src="attachment://..." alt="Beschreibung">');
     expect(guidelines).toContain('$');
   });
 });
