@@ -7,11 +7,51 @@ import { useState } from 'react';
 import { useToast } from '@/components/common/toast';
 import type { AiActivityDocument } from '@/types/ai-activity';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
+import {
+  type DocumentImageReferences,
+  getDocumentAttachmentReference,
+} from '@/utils/files/document-images';
 import { createGeneratedDocumentBlob } from '@/utils/files/generated-document';
+import { isImageFile } from '@/utils/files/generic';
 
 import DisplayFileAttachment from '../display-file-attachment';
 
-export function GeneratedDocumentAttachment({ document }: { document: AiActivityDocument }) {
+type DocumentImageFile = {
+  id: string;
+  name: string;
+  localUrl?: string;
+};
+
+function createImageReferences(
+  fileMapping?: ReadonlyMap<string, readonly DocumentImageFile[]>,
+  messageFileMapping?: ReadonlyMap<string, readonly DocumentImageFile[]>,
+): DocumentImageReferences {
+  const imageReferences = new Map<string, string>();
+  for (const files of [fileMapping?.values(), messageFileMapping?.values()]) {
+    for (const fileList of files ?? []) {
+      for (const file of fileList) {
+        if (!isImageFile(file.name)) {
+          continue;
+        }
+        imageReferences.set(
+          getDocumentAttachmentReference(file.id),
+          file.localUrl ?? `/api/files/${file.id}/scaled-image?width=240&height=240`,
+        );
+      }
+    }
+  }
+  return imageReferences;
+}
+
+export function GeneratedDocumentAttachment({
+  document,
+  fileMapping,
+  messageFileMapping,
+}: {
+  document: AiActivityDocument;
+  fileMapping?: ReadonlyMap<string, readonly DocumentImageFile[]>;
+  messageFileMapping?: ReadonlyMap<string, readonly DocumentImageFile[]>;
+}) {
   const tCommon = useTranslations('common');
   const toast = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
@@ -20,7 +60,11 @@ export function GeneratedDocumentAttachment({ document }: { document: AiActivity
     setIsDownloading(true);
     try {
       downloadFileFromBlob(
-        await createGeneratedDocumentBlob(document.content, document.format),
+        await createGeneratedDocumentBlob(
+          document.content,
+          document.format,
+          createImageReferences(fileMapping, messageFileMapping),
+        ),
         document.fileName,
       );
     } catch (error) {

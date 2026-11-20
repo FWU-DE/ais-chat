@@ -1,5 +1,11 @@
 const MAX_DOCUMENT_IMAGE_SIZE = 240;
 
+export type DocumentImageReferences = ReadonlyMap<string, string>;
+
+export function getDocumentAttachmentReference(fileId: string) {
+  return `attachment://${encodeURIComponent(fileId)}`;
+}
+
 // Scales images down to the page width and converts formats the document libraries can't embed.
 export async function loadDocumentImage(url: string): Promise<ArrayBuffer> {
   const response = await fetch(url);

@@ -28,7 +28,7 @@ import type { ConversationDownloadFile } from '@/components/chat/conversation-do
 import { activateLivePlots } from '@/components/chat/plot/live-plots';
 import { getPlotKey } from '@/components/chat/plot/rendered-plots';
 import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
-import { loadDocumentImage } from '@/utils/files/document-images';
+import { type DocumentImageReferences, loadDocumentImage } from '@/utils/files/document-images';
 import { remarkNormalizeHtml } from '@/utils/files/document-markdown';
 import { isImageFile } from '@/utils/files/generic';
 import { parsePlotSpec } from '@/utils/plot/plot-spec';
@@ -393,9 +393,9 @@ export function formatConversationExport({
   return { markdownBlocks };
 }
 
-function createDocxOptions(): DocxOptions {
+function createDocxOptions(imageReferences: DocumentImageReferences = new Map()): DocxOptions {
   const loadImage = async (reference: string) => {
-    return loadDocumentImage(reference);
+    return loadDocumentImage(imageReferences.get(reference) ?? reference);
   };
 
   return {
@@ -442,6 +442,7 @@ function createDocxOptions(): DocxOptions {
 }
 
 type MarkdownToDocxOptions = {
+  imageReferences?: DocumentImageReferences;
   // Turns <br> into line breaks and drops other raw HTML instead of printing it as text.
   normalizeHtml?: boolean;
 };
@@ -454,7 +455,7 @@ export async function markdownToDocxBlob(
     .use(remarkParse)
     .use(RemarkMathPlugin)
     .use(remarkGfm)
-    .use(remarkDocx, createDocxOptions());
+    .use(remarkDocx, createDocxOptions(options?.imageReferences));
   const roots = exportDocument.markdownBlocks.map(({ markdown }) => {
     const root = processor.parse(markdown) as Root;
     if (options?.normalizeHtml === true) {

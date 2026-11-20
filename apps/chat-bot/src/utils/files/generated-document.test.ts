@@ -45,7 +45,7 @@ describe('createGeneratedDocumentFileName', () => {
 });
 
 describe('createGeneratedDocumentBlob', () => {
-  it('creates a DOCX (zip) from Markdown without loading images', async () => {
+  it('creates a DOCX (zip) and loads external images from Markdown', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const blob = await createGeneratedDocumentBlob(MARKDOWN, 'docx');
     const bytes = await readBytes(blob);
@@ -54,7 +54,7 @@ describe('createGeneratedDocumentBlob', () => {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     );
     expect(new TextDecoder().decode(bytes.slice(0, 2))).toBe('PK');
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(fetchSpy).toHaveBeenCalledWith('https://example.com/tracker.png');
     fetchSpy.mockRestore();
   }, 30_000);
 });

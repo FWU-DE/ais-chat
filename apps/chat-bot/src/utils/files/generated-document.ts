@@ -1,3 +1,5 @@
+import type { DocumentImageReferences } from './document-images';
+
 export const GENERATED_DOCUMENT_FORMATS = ['docx'] as const;
 
 export type GeneratedDocumentFormat = (typeof GENERATED_DOCUMENT_FORMATS)[number];
@@ -22,7 +24,11 @@ export function createGeneratedDocumentFileName(
 export async function createGeneratedDocumentBlob(
   markdown: string,
   format: GeneratedDocumentFormat,
+  imageReferences?: DocumentImageReferences,
 ): Promise<Blob> {
   const { markdownToDocxBlob } = await import('./markdown-docx');
-  return markdownToDocxBlob({ markdownBlocks: [{ markdown }] }, { normalizeHtml: true });
+  return markdownToDocxBlob(
+    { markdownBlocks: [{ markdown }] },
+    { imageReferences, normalizeHtml: true },
+  );
 }
