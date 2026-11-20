@@ -1,102 +1,17 @@
-import type { Root } from 'mdast';
-import remarkParse from 'remark-parse';
-import { unified } from 'unified';
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  collectUploadedImageUrls,
-  createAllowedImages,
-  findAllowedImageUrl,
-  loadDocumentImage,
-} from './document-images';
-import { remarkRemoveUnapprovedImages } from './document-markdown';
+import { loadDocumentImage } from './document-images';
 import { createConversationExportMessages, formatConversationExport } from './markdown-docx';
 
-describe('createAllowedImages', () => {
-  it('finds images by file name regardless of case, spaces and URL encoding', () => {
-    const images = createAllowedImages([{ name: 'Mein Foto.PNG', url: '/img/1' }]);
-
-    expect(findAllowedImageUrl('Mein%20Foto.PNG', images)).toBe('/img/1');
-    expect(findAllowedImageUrl('mein foto.png', images)).toBe('/img/1');
-    expect(findAllowedImageUrl('uploads/Mein Foto.PNG', images)).toBe('/img/1');
-  });
-
-  it('does not match other names or external URLs', () => {
-    const images = createAllowedImages([{ name: 'foto.png', url: '/img/1' }]);
-
-    expect(findAllowedImageUrl('anderes.png', images)).toBeUndefined();
-  });
-
-  it('keeps the first image when normalized names collide', () => {
-    const images = createAllowedImages([
-      { name: 'Photo.PNG', url: '/img/first' },
-      { name: 'photo.png', url: '/img/second' },
-    ]);
-
-    expect(findAllowedImageUrl('photo.png', images)).toBe('/img/first');
-  });
-});
-
-describe('collectUploadedImageUrls', () => {
-  it('prefers the local URL and ignores non-image files', () => {
-    const images = collectUploadedImageUrls({
-      messageFileMapping: new Map([
-        [
-          'm1',
-          [
-            { id: 'f1', name: 'Skizze.JPG', localUrl: 'blob:skizze' },
-            { id: 'f2', name: 'Text.pdf', localUrl: 'blob:text' },
-          ],
-        ],
-      ]),
-    });
-
-    expect(findAllowedImageUrl('skizze.jpg', images)).toBe('blob:skizze');
-    expect(findAllowedImageUrl('Text.pdf', images)).toBeUndefined();
-  });
-
-  it('falls back to the scaled-image route only when a file mapping exists', () => {
-    const withMapping = collectUploadedImageUrls({
-      fileMapping: new Map([['m1', [{ id: 'f1', name: 'Foto.png' }]]]),
-    });
-    const withoutMapping = collectUploadedImageUrls({
-      messageFileMapping: new Map([['m1', [{ id: 'f1', name: 'Foto.png' }]]]),
-    });
-
-    expect(findAllowedImageUrl('foto.png', withMapping)).toContain('/api/files/f1/scaled-image');
-    expect(findAllowedImageUrl('foto.png', withoutMapping)).toBeUndefined();
-  });
-});
-
 describe('formatConversationExport', () => {
-  it('registers uploaded images so they are found again by their Markdown reference', () => {
-    const { markdownBlocks, allowedImages } = formatConversationExport({
-      messages: [
-        {
-          id: '1',
-          role: 'user',
-          content: 'Hallo',
-          images: [{ alt: 'Mein Foto.PNG', url: '/img/1' }],
-        },
-      ],
-      createdAt: '2026-11-19T10:00:00.000Z',
-      modelName: 'Modell',
-    });
-
-    expect(markdownBlocks.map(({ markdown }) => markdown)).toContain(
-      '![Mein Foto.PNG](Mein%20Foto.PNG)',
-    );
-    expect(findAllowedImageUrl('Mein%20Foto.PNG', allowedImages ?? new Map())).toBe('/img/1');
-  });
-
-  it('encodes parentheses in uploaded image destinations', () => {
+  it('uses the image URL as the Markdown destination', () => {
     const { markdownBlocks } = formatConversationExport({
       messages: [
         {
           id: '1',
           role: 'user',
           content: 'Hallo',
-          images: [{ alt: 'images (1).jpg', url: '/img/1' }],
+          images: [{ alt: 'Mein Foto.PNG', url: 'https://example.com/image.png' }],
         },
       ],
       createdAt: '2026-11-19T10:00:00.000Z',
@@ -104,19 +19,27 @@ describe('formatConversationExport', () => {
     });
 
     expect(markdownBlocks.map(({ markdown }) => markdown)).toContain(
-      '![images (1).jpg](images%20%281%29.jpg)',
+      '![Mein Foto.PNG](https://example.com/image.png)',
     );
   });
 
-  it('keeps approved reference-style images', () => {
-    const tree = unified().use(remarkParse).parse('![Foto][foto]\n\n[foto]: Foto.png') as Root;
-    const allowedImages = createAllowedImages([{ name: 'Foto.png', url: '/img/1' }]);
-
-    remarkRemoveUnapprovedImages(allowedImages)(tree);
-
-    expect(tree.children[0]).toMatchObject({
-      children: [{ type: 'image', url: 'Foto.png' }],
+  it('encodes parentheses in image destinations', () => {
+    const { markdownBlocks } = formatConversationExport({
+      messages: [
+        {
+          id: '1',
+          role: 'user',
+          content: 'Hallo',
+          images: [{ alt: 'images (1).jpg', url: 'https://example.com/images (1).jpg' }],
+        },
+      ],
+      createdAt: '2026-11-19T10:00:00.000Z',
+      modelName: 'Modell',
     });
+
+    expect(markdownBlocks.map(({ markdown }) => markdown)).toContain(
+      '![images (1).jpg](https://example.com/images%20%281%29.jpg)',
+    );
   });
 
   it('formats the conversation title and assistant heading', () => {

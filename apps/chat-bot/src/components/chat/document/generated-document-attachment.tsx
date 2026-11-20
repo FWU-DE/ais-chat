@@ -7,21 +7,11 @@ import { useState } from 'react';
 import { useToast } from '@/components/common/toast';
 import type { AiActivityDocument } from '@/types/ai-activity';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
-import { collectUploadedImageUrls } from '@/utils/files/document-images';
 import { createGeneratedDocumentBlob } from '@/utils/files/generated-document';
 
 import DisplayFileAttachment from '../display-file-attachment';
-import type { MessageFileModel } from '../message-image-attachment';
 
-export function GeneratedDocumentAttachment({
-  document,
-  fileMapping,
-  messageFileMapping,
-}: {
-  document: AiActivityDocument;
-  fileMapping?: ReadonlyMap<string, readonly MessageFileModel[]>;
-  messageFileMapping?: ReadonlyMap<string, readonly MessageFileModel[]>;
-}) {
+export function GeneratedDocumentAttachment({ document }: { document: AiActivityDocument }) {
   const tCommon = useTranslations('common');
   const toast = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
@@ -30,11 +20,7 @@ export function GeneratedDocumentAttachment({
     setIsDownloading(true);
     try {
       downloadFileFromBlob(
-        await createGeneratedDocumentBlob(
-          document.content,
-          document.format,
-          collectUploadedImageUrls({ fileMapping, messageFileMapping }),
-        ),
+        await createGeneratedDocumentBlob(document.content, document.format),
         document.fileName,
       );
     } catch (error) {

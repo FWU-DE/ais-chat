@@ -250,12 +250,7 @@ export function ChatBox({
     generatedDocuments.length > 0 ? (
       <div className="flex w-full min-w-0 flex-row flex-wrap gap-2">
         {generatedDocuments.map(({ id, document }) => (
-          <GeneratedDocumentAttachment
-            key={id}
-            document={document}
-            fileMapping={fileMapping}
-            messageFileMapping={messageFileMapping}
-          />
+          <GeneratedDocumentAttachment key={id} document={document} />
         ))}
       </div>
     ) : null;

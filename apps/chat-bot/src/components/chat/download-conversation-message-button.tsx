@@ -49,16 +49,14 @@ export async function fetchConversationMessageDownload({
   });
   const gptName = characterName ?? 'AIS.chat';
   const conversationName = conversationTitle ?? 'Konversation';
-  const exportDocument = formatConversationExport({
-    messages: exportMessages,
-    createdAt,
-    modelName: modelName ?? 'AIS.chat',
-  });
-
   return {
-    blob: await markdownToDocxBlob(exportDocument, {
-      allowedImages: exportDocument.allowedImages,
-    }),
+    blob: await markdownToDocxBlob(
+      formatConversationExport({
+        messages: exportMessages,
+        createdAt,
+        modelName: modelName ?? 'AIS.chat',
+      }),
+    ),
     fileName: `${createdAt.slice(0, 10)} ${gptName} Antwort aus ${conversationName}.docx`,
   };
 }

@@ -97,7 +97,6 @@ export async function getCodeFileName({ language, title }: { language?: string; 
   return limitByteLength(isKnownFileName(index, title) ? title : `${title}${extension}`);
 }
 
-
 // Replaces ```jsxgraph-json blocks with a plain-text description, e.g. for copying or reading aloud.
 export function replacePlotBlocks(markdown: string, describe: (title?: string) => string) {
   const plotFences = md

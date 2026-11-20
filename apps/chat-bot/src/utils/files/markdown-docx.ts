@@ -28,13 +28,8 @@ import type { ConversationDownloadFile } from '@/components/chat/conversation-do
 import { activateLivePlots } from '@/components/chat/plot/live-plots';
 import { getPlotKey } from '@/components/chat/plot/rendered-plots';
 import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
-import {
-  type AllowedDocumentImages,
-  createAllowedImages,
-  findAllowedImageUrl,
-  loadDocumentImage,
-} from '@/utils/files/document-images';
-import { remarkNormalizeHtml, remarkRemoveUnapprovedImages } from '@/utils/files/document-markdown';
+import { loadDocumentImage } from '@/utils/files/document-images';
+import { remarkNormalizeHtml } from '@/utils/files/document-markdown';
 import { isImageFile } from '@/utils/files/generic';
 import { parsePlotSpec } from '@/utils/plot/plot-spec';
 
@@ -55,9 +50,9 @@ const TABLE_BORDER = {
 const plotCodeNodes = new WeakSet<object>();
 const plotExportMetadata = new WeakMap<object, { imageKey: string }>();
 
-// encodeURIComponent leaves parentheses untouched, but an unescaped ')' can end a Markdown image destination early.
+// encodeURI leaves parentheses untouched, but an unescaped ')' can end a Markdown image destination early.
 function encodeMarkdownImageDestination(value: string) {
-  return encodeURIComponent(value).replaceAll('(', '%28').replaceAll(')', '%29');
+  return encodeURI(value).replaceAll('(', '%28').replaceAll(')', '%29');
 }
 
 const paddedCodeBlockPlugin: RemarkDocxPlugin = (() => {
@@ -329,7 +324,6 @@ export type ConversationExportMessage = {
 
 export type ConversationExport = {
   markdownBlocks: Array<{ markdown: string }>;
-  allowedImages?: AllowedDocumentImages;
 };
 
 export function createConversationExportMessages({
@@ -384,8 +378,8 @@ export function formatConversationExport({
     const messageHeading = role === 'user' ? 'Nutzer/in' : 'AIS.chat';
     markdownBlocks.push({ markdown: `### ${messageHeading}:` }, { markdown: content });
     markdownBlocks.push(
-      ...images.map(({ alt }) => ({
-        markdown: `![${alt}](${encodeMarkdownImageDestination(alt)})`,
+      ...images.map(({ alt, url }) => ({
+        markdown: `![${alt}](${encodeMarkdownImageDestination(url)})`,
       })),
     );
   }
@@ -396,20 +390,12 @@ export function formatConversationExport({
     { markdown: `#### Generiert von AIS.chat unter Nutzung von ${modelName}` },
   );
 
-  const allowedImages = createAllowedImages(
-    messages.flatMap(({ images }) => images.map(({ alt, url }) => ({ name: alt, url }))),
-  );
-
-  return { markdownBlocks, allowedImages };
+  return { markdownBlocks };
 }
 
-function createDocxOptions({ allowedImages = new Map() }: MarkdownToDocxOptions = {}): DocxOptions {
+function createDocxOptions(): DocxOptions {
   const loadImage = async (reference: string) => {
-    const url = findAllowedImageUrl(reference, allowedImages);
-    if (url === undefined) {
-      throw new Error('Image is not an uploaded file');
-    }
-    return loadDocumentImage(url);
+    return loadDocumentImage(reference);
   };
 
   return {
@@ -456,8 +442,6 @@ function createDocxOptions({ allowedImages = new Map() }: MarkdownToDocxOptions 
 }
 
 type MarkdownToDocxOptions = {
-  // When set, only these uploaded images (by file name) are embedded; all other images are skipped.
-  allowedImages?: AllowedDocumentImages;
   // Turns <br> into line breaks and drops other raw HTML instead of printing it as text.
   normalizeHtml?: boolean;
 };
@@ -466,19 +450,16 @@ export async function markdownToDocxBlob(
   exportDocument: ConversationExport,
   options?: MarkdownToDocxOptions,
 ): Promise<Blob> {
-  const allowedImages = options?.allowedImages ?? exportDocument.allowedImages ?? new Map();
-  const docxOptions = { ...options, allowedImages };
   const processor = unified()
     .use(remarkParse)
     .use(RemarkMathPlugin)
     .use(remarkGfm)
-    .use(remarkDocx, createDocxOptions(docxOptions));
+    .use(remarkDocx, createDocxOptions());
   const roots = exportDocument.markdownBlocks.map(({ markdown }) => {
     const root = processor.parse(markdown) as Root;
     if (options?.normalizeHtml === true) {
       remarkNormalizeHtml()(root);
     }
-    remarkRemoveUnapprovedImages(allowedImages)(root);
     return root;
   });
   const plotKeys = new Set<string>();
