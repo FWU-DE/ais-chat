@@ -7,18 +7,18 @@ import {
   createGeneratedDocumentFileName,
   GENERATED_DOCUMENT_FORMATS,
   type GeneratedDocumentFormat,
+  MAX_FILE_NAME_LENGTH,
 } from '@/utils/files/generated-document';
 
 import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
 import type { ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 const MAX_DOCUMENT_CONTENT_LENGTH = 100_000;
-const MAX_DOCUMENT_TITLE_LENGTH = 120;
 const FALLBACK_FILE_NAME = 'Dokument';
 
 export const generateDocumentArgsSchema = z.object({
   format: z.enum(GENERATED_DOCUMENT_FORMATS),
-  title: z.string().trim().min(1).max(MAX_DOCUMENT_TITLE_LENGTH),
+  title: z.string().trim().min(1).max(MAX_FILE_NAME_LENGTH),
   content: z.string().trim().min(1).max(MAX_DOCUMENT_CONTENT_LENGTH),
 });
 
@@ -62,13 +62,14 @@ export function buildGenerateDocumentTool(): ToolRegistration<GenerateDocumentTo
         },
         title: {
           type: 'string',
-          description: `A meaningful title; it becomes the file name (max ${MAX_DOCUMENT_TITLE_LENGTH} characters).`,
+          description: 'A meaningful title; it becomes the file name.',
           minLength: 1,
-          maxLength: MAX_DOCUMENT_TITLE_LENGTH,
+          maxLength: MAX_FILE_NAME_LENGTH,
         },
         content: {
           type: 'string',
-          description: `The complete document as Markdown, written in the language of the conversation (max ${MAX_DOCUMENT_CONTENT_LENGTH} characters).`,
+          description:
+            'The complete document as Markdown, written in the language of the conversation.',
           minLength: 1,
           maxLength: MAX_DOCUMENT_CONTENT_LENGTH,
         },

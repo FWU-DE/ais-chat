@@ -16,7 +16,6 @@ import {
   formatConversationExport,
   markdownToDocxBlob,
 } from '@/utils/files/markdown-docx';
-import { addExportFlag } from '@/utils/shared-chat-files';
 
 type DownloadConversationButtonProps = {
   conversationMessages: Message[];
@@ -48,7 +47,7 @@ export async function fetchSharedConversationDownload({
   const messages = createConversationExportMessages({
     messages: conversationMessages,
     fileMapping,
-    imageUrl: (file) => addExportFlag(imageUrl(file)),
+    imageUrl,
   });
   const currentDate = formatDateToDayMonthYear(new Date());
   const fileName =

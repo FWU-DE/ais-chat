@@ -53,6 +53,7 @@ export function GeneratedDocumentAttachment({
   messageFileMapping?: ReadonlyMap<string, readonly DocumentImageFile[]>;
 }) {
   const tCommon = useTranslations('common');
+  const tFiles = useTranslations('file-interaction');
   const toast = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -69,7 +70,7 @@ export function GeneratedDocumentAttachment({
       );
     } catch (error) {
       logError('Generated document could not be created', error, { format: document.format });
-      toast.error(tCommon('document.error'));
+      toast.error(tFiles('toasts.download-error'));
     } finally {
       setIsDownloading(false);
     }

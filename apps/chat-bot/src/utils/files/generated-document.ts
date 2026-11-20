@@ -4,7 +4,7 @@ export const GENERATED_DOCUMENT_FORMATS = ['docx'] as const;
 
 export type GeneratedDocumentFormat = (typeof GENERATED_DOCUMENT_FORMATS)[number];
 
-const MAX_FILE_NAME_LENGTH = 80;
+export const MAX_FILE_NAME_LENGTH = 80;
 
 export function createGeneratedDocumentFileName(
   title: string | undefined,
@@ -27,8 +27,5 @@ export async function createGeneratedDocumentBlob(
   imageReferences?: DocumentImageReferences,
 ): Promise<Blob> {
   const { markdownToDocxBlob } = await import('./markdown-docx');
-  return markdownToDocxBlob(
-    { markdownBlocks: [{ markdown }] },
-    { imageReferences, normalizeHtml: true },
-  );
+  return markdownToDocxBlob({ markdownBlocks: [{ markdown }] }, { imageReferences });
 }

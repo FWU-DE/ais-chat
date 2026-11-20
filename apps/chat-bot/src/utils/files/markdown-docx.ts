@@ -15,6 +15,7 @@ import {
 import type { Root } from 'mdast';
 import type { DocxOptions, RemarkDocxPlugin } from 'remark-docx';
 import remarkDocx from 'remark-docx';
+import { htmlPlugin } from 'remark-docx/plugins/html';
 import { imagePlugin } from 'remark-docx/plugins/image';
 import { latexPlugin } from 'remark-docx/plugins/latex';
 import { shikiPlugin } from 'remark-docx/plugins/shiki';
@@ -29,7 +30,6 @@ import { activateLivePlots } from '@/components/chat/plot/live-plots';
 import { getPlotKey } from '@/components/chat/plot/rendered-plots';
 import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
 import { type DocumentImageReferences, loadDocumentImage } from '@/utils/files/document-images';
-import { remarkNormalizeHtml } from '@/utils/files/document-markdown';
 import { isImageFile } from '@/utils/files/generic';
 import { parsePlotSpec } from '@/utils/plot/plot-spec';
 
@@ -400,6 +400,7 @@ function createDocxOptions(imageReferences: DocumentImageReferences = new Map())
 
   return {
     plugins: [
+      htmlPlugin(),
       latexPlugin(),
       imagePlugin({ load: loadImage }),
       plotPlugin,
@@ -443,8 +444,6 @@ function createDocxOptions(imageReferences: DocumentImageReferences = new Map())
 
 type MarkdownToDocxOptions = {
   imageReferences?: DocumentImageReferences;
-  // Turns <br> into line breaks and drops other raw HTML instead of printing it as text.
-  normalizeHtml?: boolean;
 };
 
 export async function markdownToDocxBlob(
@@ -457,11 +456,7 @@ export async function markdownToDocxBlob(
     .use(remarkGfm)
     .use(remarkDocx, createDocxOptions(options?.imageReferences));
   const roots = exportDocument.markdownBlocks.map(({ markdown }) => {
-    const root = processor.parse(markdown) as Root;
-    if (options?.normalizeHtml === true) {
-      remarkNormalizeHtml()(root);
-    }
-    return root;
+    return processor.parse(markdown) as Root;
   });
   const plotKeys = new Set<string>();
   roots.forEach((root) => preparePlotCodeBlocks(root, plotKeys));
