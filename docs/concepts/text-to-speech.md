@@ -46,8 +46,7 @@ voice preview are not affected.
 - There is no fallback: a failing, timed-out or invalid rewrite fails the request with the regular
   speech error. Nothing is cached.
 
-Azure bills SSML markup (except `<speak>` and `<voice>`) as characters. Non-multilingual voices
-produce no audio for `<lang>`, so only enable the flag for models whose voices support it.
+Azure bills SSML markup (except `<speak>` and `<voice>`) as characters.
 
 ## Splitting
 
