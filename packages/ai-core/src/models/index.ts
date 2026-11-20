@@ -7,136 +7,120 @@ import {
 import type { AiModel as TextAiModel } from '../chat/types';
 import type { AiModel as EmbeddingAiModel } from '../embeddings/types';
 import { InvalidModelError } from '../errors';
-import { AiModel } from '../images/types';
+import type { AiModel as ImageAiModel } from '../images/types';
 import type { AiModel as SafetyAiModel } from '../safety/types';
 import type { AiModel as SpeechAiModel } from '../speech/types';
 
-export async function getImageModelById(modelId: string): Promise<AiModel> {
-  const model = await dbGetModelById(modelId);
-  if (!model) {
-    throw new InvalidModelError(`Model with id ${modelId} not found`);
-  }
-  if (model.priceMetadata.type !== 'image') {
-    throw new InvalidModelError(`Model with id ${modelId} is not an image model`);
-  }
-  return resolveRoutingModel(model);
+type ModelType = 'text' | 'image' | 'embedding' | 'safety' | 'speech';
+
+type ModelByType = {
+  text: TextAiModel;
+  image: ImageAiModel;
+  embedding: EmbeddingAiModel;
+  safety: SafetyAiModel;
+  speech: SpeechAiModel;
+};
+
+const MODEL_ARTICLES: Record<ModelType, string> = {
+  text: 'a',
+  image: 'an',
+  embedding: 'an',
+  safety: 'a',
+  speech: 'a',
+};
+
+export async function getImageModelById(modelId: string): Promise<ImageAiModel> {
+  return getModelById(modelId, 'image');
 }
 
 export async function getTextModelById(modelId: string): Promise<TextAiModel> {
-  const model = await dbGetModelById(modelId);
-  if (!model) {
-    throw new InvalidModelError(`Model with id ${modelId} not found`);
-  }
-  if (model.priceMetadata.type !== 'text') {
-    throw new InvalidModelError(`Model with id ${modelId} is not a text model`);
-  }
-  return resolveRoutingModel(model);
+  return getModelById(modelId, 'text');
 }
 
 export async function getEmbeddingModelById(modelId: string): Promise<EmbeddingAiModel> {
-  const model = await dbGetModelById(modelId);
-  if (!model) {
-    throw new InvalidModelError(`Model with id ${modelId} not found`);
-  }
-  if (model.priceMetadata.type !== 'embedding') {
-    throw new InvalidModelError(`Model with id ${modelId} is not an embedding model`);
-  }
-  return resolveRoutingModel(model);
+  return getModelById(modelId, 'embedding');
 }
 
 export async function getSafetyModelById(modelId: string): Promise<SafetyAiModel> {
-  const model = await dbGetModelById(modelId);
-  if (!model) {
-    throw new InvalidModelError(`Model with id ${modelId} not found`);
-  }
-  if (model.priceMetadata.type !== 'safety') {
-    throw new InvalidModelError(`Model with id ${modelId} is not a safety model`);
-  }
-  return resolveRoutingModel(model);
+  return getModelById(modelId, 'safety');
 }
 
 export async function getSpeechModelById(modelId: string): Promise<SpeechAiModel> {
-  const model = await dbGetModelById(modelId);
-  if (!model) {
-    throw new InvalidModelError(`Model with id ${modelId} not found`);
-  }
-  if (model.priceMetadata.type !== 'speech') {
-    throw new InvalidModelError(`Model with id ${modelId} is not a speech model`);
-  }
-  return resolveRoutingModel(model);
+  return getModelById(modelId, 'speech');
 }
 
 export async function getTextModelByName(
   modelName: string,
   apiKeyId: string,
 ): Promise<TextAiModel> {
-  const model = await dbGetModelByNameAndApiKeyId({ name: modelName, apiKeyId });
-  if (!model) {
-    throw new InvalidModelError(`No text model with name ${modelName} found for this API key`);
-  }
-  if (model.priceMetadata.type !== 'text') {
-    throw new InvalidModelError(`Model ${modelName} is not a text model`);
-  }
-  return resolveRoutingModel(model);
+  return getModelByName(modelName, apiKeyId, 'text');
 }
 
 export async function getEmbeddingModelByName(
   modelName: string,
   apiKeyId: string,
 ): Promise<EmbeddingAiModel> {
-  const model = await dbGetModelByNameAndApiKeyId({ name: modelName, apiKeyId });
-  if (!model) {
-    throw new InvalidModelError(`No embedding model with name ${modelName} found for this API key`);
-  }
-  if (model.priceMetadata.type !== 'embedding') {
-    throw new InvalidModelError(`Model ${modelName} is not an embedding model`);
-  }
-  return resolveRoutingModel(model);
+  return getModelByName(modelName, apiKeyId, 'embedding');
 }
 
 export async function getSafetyModelByName(
   modelName: string,
   apiKeyId: string,
 ): Promise<SafetyAiModel> {
-  const model = await dbGetModelByNameAndApiKeyId({ name: modelName, apiKeyId });
-  if (!model) {
-    throw new InvalidModelError(`No safety model with name ${modelName} found for this API key`);
-  }
-  if (model.priceMetadata.type !== 'safety') {
-    throw new InvalidModelError(`Model ${modelName} is not a safety model`);
-  }
-  return resolveRoutingModel(model);
+  return getModelByName(modelName, apiKeyId, 'safety');
 }
 
-export async function getImageModelByName(modelName: string, apiKeyId: string): Promise<AiModel> {
-  const model = await dbGetModelByNameAndApiKeyId({ name: modelName, apiKeyId });
-  if (!model) {
-    throw new InvalidModelError(`No image model with name ${modelName} found for this API key`);
-  }
-  if (model.priceMetadata.type !== 'image') {
-    throw new InvalidModelError(`Model ${modelName} is not an image model`);
-  }
-  return resolveRoutingModel(model);
+export async function getImageModelByName(
+  modelName: string,
+  apiKeyId: string,
+): Promise<ImageAiModel> {
+  return getModelByName(modelName, apiKeyId, 'image');
 }
 
 export async function getSpeechModelByName(
   modelName: string,
   apiKeyId: string,
 ): Promise<SpeechAiModel> {
+  return getModelByName(modelName, apiKeyId, 'speech');
+}
+
+async function getModelById<T extends ModelType>(
+  modelId: string,
+  type: T,
+): Promise<ModelByType[T]> {
+  const model = await dbGetModelById(modelId);
+  if (!model) {
+    throw new InvalidModelError(`Model with id ${modelId} not found`);
+  }
+  if (model.priceMetadata.type !== type) {
+    throw new InvalidModelError(
+      `Model with id ${modelId} is not ${MODEL_ARTICLES[type]} ${type} model`,
+    );
+  }
+  return resolveRoutingModel(model) as Promise<ModelByType[T]>;
+}
+
+async function getModelByName<T extends ModelType>(
+  modelName: string,
+  apiKeyId: string,
+  type: T,
+): Promise<ModelByType[T]> {
   const model = await dbGetModelByNameAndApiKeyId({ name: modelName, apiKeyId });
   if (!model) {
-    throw new InvalidModelError(`No speech model with name ${modelName} found for this API key`);
+    throw new InvalidModelError(`No ${type} model with name ${modelName} found for this API key`);
   }
-  if (model.priceMetadata.type !== 'speech') {
-    throw new InvalidModelError(`Model ${modelName} is not a speech model`);
+  if (model.priceMetadata.type !== type) {
+    throw new InvalidModelError(`Model ${modelName} is not ${MODEL_ARTICLES[type]} ${type} model`);
   }
-  return resolveRoutingModel(model);
+  return resolveRoutingModel(model) as Promise<ModelByType[T]>;
 }
 
 async function resolveRoutingModel<TModel extends { id: string; useBifrost: boolean }>(
   model: TModel,
 ): Promise<TModel> {
-  if (model.useBifrost !== false) return model;
+  if (model.useBifrost !== false) {
+    return model;
+  }
   const directModel = await dbGetDirectModelConfiguration(model.id);
   if (!directModel) {
     throw new InvalidModelError(
