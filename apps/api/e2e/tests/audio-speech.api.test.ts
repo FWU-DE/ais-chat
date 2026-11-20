@@ -21,8 +21,7 @@ type SpeechModel = {
 };
 
 async function getConfiguredSpeechModel(request: Parameters<typeof getSpeechModel>[0]) {
-  // The success tests need a real speech model: E2E_SPEECH_MODEL (optionally E2E_SPEECH_VOICE)
-  // or a Bifrost speech model assigned to the test key. Otherwise they are skipped.
+  // E2E_SPEECH_MODEL (optionally E2E_SPEECH_VOICE) overrides the seeded Bifrost mock speech model.
   const configuredModelName = process.env['E2E_SPEECH_MODEL'];
 
   if (configuredModelName) {
@@ -33,10 +32,7 @@ async function getConfiguredSpeechModel(request: Parameters<typeof getSpeechMode
   const models = (await response.json()) as SpeechModel[];
 
   return models.find(
-    (model) =>
-      model.priceMetadata?.type === 'speech' &&
-      model.name !== 'mock-speech' &&
-      model.provider === 'bifrost',
+    (model) => model.priceMetadata?.type === 'speech' && model.provider === 'bifrost',
   );
 }
 
