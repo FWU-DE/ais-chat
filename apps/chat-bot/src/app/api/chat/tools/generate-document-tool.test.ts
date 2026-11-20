@@ -18,7 +18,7 @@ describe('generateDocumentArgsSchema', () => {
   });
 
   it.each([
-    { format: 'pdf', title: 'a', content: 'b' },
+    { format: 'txt', title: 'a', content: 'b' },
     { format: 'docx', title: '   ', content: 'b' },
     { format: 'docx', title: 'a', content: '' },
     { format: 'docx', title: 'a'.repeat(81), content: 'b' },
@@ -49,7 +49,7 @@ describe('buildGenerateDocumentTool', () => {
       required: ['format', 'title', 'content'],
       additionalProperties: false,
       properties: {
-        format: { enum: ['docx', 'html'] },
+        format: { enum: ['docx', 'pdf', 'html'] },
         title: { minLength: 1, maxLength: 80 },
         content: { minLength: 1, maxLength: 100_000 },
       },
@@ -82,7 +82,7 @@ describe('buildGenerateDocumentTool', () => {
   });
 
   it('returns an error describing invalid arguments', async () => {
-    const result = await buildGenerateDocumentTool().handler({ format: 'pdf', title: '' });
+    const result = await buildGenerateDocumentTool().handler({ format: 'txt', title: '' });
 
     expect(result).toEqual({
       error: expect.stringMatching(/^Invalid arguments \(.*format.*title.*content.*\)\.$/),

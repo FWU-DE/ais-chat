@@ -5,7 +5,9 @@ import {
 import { ForbiddenError } from '@shared/error';
 import { verify } from '@shared/shared-chat';
 
-import { extractDocumentBlocks } from '@/utils/code-blocks';
+import { generateDocumentArgsSchema } from '@/app/api/chat/tools/generate-document-tool';
+import { TOOL_NAMES } from '@/types/tool-names';
+import { parseJsonRecord } from '@/utils/chat/tool-result-parsing';
 
 import { getSharedChatEntity } from './shared-chat-get-entity';
 
@@ -37,11 +39,12 @@ export async function verifySharedChatDocumentAccess({
     conversation === undefined ? [] : await dbGetSharedChatConversationMessages(conversation.id);
   const isConversationDocument = messages
     .filter((message) => message.role === 'assistant')
-    .some((message) =>
-      extractDocumentBlocks(message.content).some(
-        (block) => block.format === 'pdf' && block.content === markdown,
-      ),
-    );
+    .flatMap((message) => message.toolCalls ?? [])
+    .filter((toolCall) => toolCall.name === TOOL_NAMES.generateDocument)
+    .some((toolCall) => {
+      const parsed = generateDocumentArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
+      return parsed.success && parsed.data.content === markdown;
+    });
 
   if (!isConversationDocument) {
     throw new ForbiddenError('Document does not belong to this shared chat');

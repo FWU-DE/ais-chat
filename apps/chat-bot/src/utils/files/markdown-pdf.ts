@@ -8,20 +8,15 @@ import { getPlotKey } from '@/components/chat/plot/rendered-plots';
 import { PLOT_LANGUAGE } from '@/utils/code-blocks';
 import { parsePlotSpec } from '@/utils/plot/plot-spec';
 
-import { type DocumentImageReferences, loadDocumentImage } from './document-images';
+import {
+  arrayBufferToBase64,
+  type DocumentImageReferences,
+  loadDocumentImage,
+} from './document-images';
 import type { SharedChatDocumentContext } from './generated-document';
 import { renderPlotImage, waitForPlotActivation } from './plot-image';
 
 const MAX_PLOTS = 10;
-
-function toBase64(data: ArrayBuffer) {
-  const bytes = new Uint8Array(data);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  }
-  return btoa(binary);
-}
 
 async function renderPlots(markdown: string) {
   const root = unified().use(remarkParse).parse(markdown) as Root;
@@ -42,7 +37,7 @@ async function renderPlots(markdown: string) {
     const plots = await Promise.all(
       [...specs].map(async ([code, spec]) => {
         const image = await renderPlotImage(spec);
-        return image === undefined ? undefined : { code, data: toBase64(image.data) };
+        return image === undefined ? undefined : { code, data: arrayBufferToBase64(image.data) };
       }),
     );
     return plots.filter((plot) => plot !== undefined);
@@ -59,13 +54,17 @@ function getValidSpec(code: string) {
 export async function markdownToPdfBlob(
   markdown: string,
   imageReferences: DocumentImageReferences = new Map(),
-  title = 'Generated document',
+  title = 'Dokument',
   sharedChat?: SharedChatDocumentContext,
 ): Promise<Blob> {
   const images = await Promise.all(
     [...imageReferences.entries()].map(async ([source, url]) => {
       const loadedImage = await loadDocumentImage(url);
-      return { source, mimeType: loadedImage.mimeType, data: toBase64(loadedImage.data) };
+      return {
+        source,
+        mimeType: loadedImage.mimeType,
+        data: arrayBufferToBase64(loadedImage.data),
+      };
     }),
   );
   const plots = await renderPlots(markdown);

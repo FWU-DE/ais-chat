@@ -1,19 +1,11 @@
 import type { Language } from 'linguist-languages';
 import MarkdownIt from 'markdown-it';
 
-import {
-  GENERATED_DOCUMENT_FORMATS,
-  type GeneratedDocumentFormat,
-} from './files/generated-document-format';
-
 // Language of fenced code blocks that are rendered as JSXGraph plots.
 export const PLOT_LANGUAGE = 'jsxgraph-json';
 
 const md = new MarkdownIt();
 const TITLE_PATTERN = /(?:^|\s)title=(?:"([^"]*)"|'([^']*)')/;
-const DOCUMENT_LANGUAGE = 'document';
-const FORMAT_PATTERN = /(?:^|\s)format=(?:"([^"]*)"|'([^']*)')/;
-const MARKDOWN_TITLE_PATTERN = /^#\s+(.+)$/m;
 
 // The fence info string (`js title="Titel"`) is split by the markdown libraries,
 // only the `title="…"` attribute (the common docs convention) is read from it.
@@ -56,7 +48,6 @@ function getLanguageIndex() {
         });
       }
     }
-
     return index;
   });
   languageIndex.catch(() => {
@@ -104,29 +95,6 @@ export async function getCodeFileName({ language, title }: { language?: string; 
     return `${FALLBACK_FILE_NAME}${extension}`;
   }
   return limitByteLength(isKnownFileName(index, title) ? title : `${title}${extension}`);
-}
-
-export type GeneratedDocumentMarkdown = {
-  content: string;
-  title?: string;
-  format: GeneratedDocumentFormat;
-};
-
-export function extractDocumentBlocks(markdown: string): GeneratedDocumentMarkdown[] {
-  return md
-    .parse(markdown, {})
-    .filter(
-      (token) => token.type === 'fence' && token.info.trim().split(/\s+/)[0] === DOCUMENT_LANGUAGE,
-    )
-    .map((token) => {
-      const formatMatch = FORMAT_PATTERN.exec(token.info);
-      const requestedFormat = (formatMatch?.[1] ?? formatMatch?.[2])?.toLowerCase();
-      return {
-        content: token.content,
-        title: getCodeTitle(token.info) ?? MARKDOWN_TITLE_PATTERN.exec(token.content)?.[1]?.trim(),
-        format: GENERATED_DOCUMENT_FORMATS.find((format) => format === requestedFormat) ?? 'docx',
-      };
-    });
 }
 
 // Replaces ```jsxgraph-json blocks with a plain-text description, e.g. for copying or reading aloud.

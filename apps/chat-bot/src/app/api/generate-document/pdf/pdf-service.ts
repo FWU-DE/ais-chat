@@ -1,3 +1,4 @@
+import type { Nodes, Root } from 'mdast';
 import rehypeKatex from 'rehype-katex';
 import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
@@ -55,7 +56,7 @@ function resolveImageReferences(images: PdfRequest['images']) {
     images.map((image) => [image.source, `data:${image.mimeType};base64,${image.data}`]),
   );
 
-  return () => (tree: import('mdast').Root) => {
+  return () => (tree: Root) => {
     visit(tree, 'image', (node, index, parent) => {
       if (parent === undefined || index === undefined) return;
       const dataUrl = imageMap.get(node.url);
@@ -71,7 +72,7 @@ function resolveImageReferences(images: PdfRequest['images']) {
 function embedPlots(plots: PdfRequest['plots']) {
   const plotMap = new Map(plots.map((plot) => [plot.code, `data:image/png;base64,${plot.data}`]));
 
-  return () => (tree: import('mdast').Root) => {
+  return () => (tree: Root) => {
     visit(tree, 'code', (node, index, parent) => {
       const url = node.lang === PLOT_LANGUAGE ? plotMap.get(node.value) : undefined;
       if (parent === undefined || index === undefined || url === undefined) return;
@@ -85,9 +86,9 @@ function embedPlots(plots: PdfRequest['plots']) {
 
 // "---" separators and lines directly before a heading are dropped; other "___" lines stay as fill-in lines.
 function keepOnlyFillInLines() {
-  return (tree: import('mdast').Root, file: { value: unknown }) => {
+  return (tree: Root, file: { value: unknown }) => {
     const source = String(file.value);
-    const isFillInLine = (node: import('mdast').Nodes) =>
+    const isFillInLine = (node: Nodes) =>
       node.type === 'thematicBreak' && source.charAt(node.position?.start.offset ?? 0) === '_';
 
     visit(tree, 'thematicBreak', (node, index, parent) => {
@@ -129,7 +130,7 @@ async function markdownToPdfHtml({ markdown, title, images, plots }: PdfRequest)
       .use(rehypeStringify)
       .process(markdown),
   );
-  const safeTitle = title.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  const safeTitle = title.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
   return `<!doctype html>
 <html lang="de"><head><meta charset="utf-8"><title>${safeTitle}</title>

@@ -1,42 +1,18 @@
-import type { FileModel } from '@shared/db/schema';
-
-import { isImageFile } from '@/utils/files/generic';
-
 const MAX_DOCUMENT_IMAGE_SIZE = 240;
 
 export type DocumentImageReferences = ReadonlyMap<string, string>;
-
-type UploadedFile = Pick<FileModel, 'id' | 'name'> & { localUrl?: string };
-type UploadedFiles = ReadonlyMap<string, readonly UploadedFile[]>;
 
 export function getDocumentAttachmentReference(fileId: string) {
   return `attachment://${encodeURIComponent(fileId)}`;
 }
 
-export function collectDocumentImageReferences({
-  fileMapping,
-  messageFileMapping,
-}: {
-  fileMapping?: UploadedFiles;
-  messageFileMapping?: UploadedFiles;
-}): DocumentImageReferences {
-  const imageReferences = new Map<string, string>();
-  for (const files of [fileMapping?.values(), messageFileMapping?.values()]) {
-    for (const fileList of files ?? []) {
-      for (const file of fileList) {
-        if (!isImageFile(file.name)) continue;
-        const url =
-          file.localUrl ??
-          (fileMapping === undefined
-            ? undefined
-            : `/api/files/${file.id}/scaled-image?width=${MAX_DOCUMENT_IMAGE_SIZE}&height=${MAX_DOCUMENT_IMAGE_SIZE}`);
-        if (url !== undefined) {
-          imageReferences.set(getDocumentAttachmentReference(file.id), url);
-        }
-      }
-    }
+export function arrayBufferToBase64(data: ArrayBuffer) {
+  const bytes = new Uint8Array(data);
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
   }
-  return imageReferences;
+  return btoa(binary);
 }
 
 export type LoadedDocumentImage = {
