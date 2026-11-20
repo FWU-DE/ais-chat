@@ -27,7 +27,7 @@
   },
   "packageManager": "pnpm@12.16.1",
   "engines": {
-    "node": ">=24.22.2"
+    "node": ">=24.22.3"
   },
   "devDependencies": {
     "@ais-chat/typescript-config": "workspace:*",
