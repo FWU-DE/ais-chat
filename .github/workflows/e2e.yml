@@ -285,7 +285,7 @@ jobs:
 
       - name: Post smart-reporter pull request comment
         if: ${{ !cancelled() && github.event_name == 'pull_request' }}
-        uses: qa-gary-parker/playwright-smart-reporter@c0669bd3c97a731592b8c4470ecfc43eb70a65a8 # v4.0.0
+        uses: qa-gary-parker/playwright-smart-reporter@66c029723e29b02ae4275819e60a9296bef83f63 # v4.0.1
         with:
           data: apps/chat-bot/smart-report/smart-report-data.json
           report-url: ${{ steps.upload-smart-report.outputs.artifact-url }}
