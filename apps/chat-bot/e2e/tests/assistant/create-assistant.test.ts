@@ -1,68 +1,85 @@
-import { expect, test } from '@playwright/test';
-import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
-import { waitForAutosave, waitForToast } from '../../utils/utils';
-import { sendMessage, uploadFile } from '../../utils/chat';
-import { configureAssistant, deleteAssistant } from '../../utils/assistant';
 import { nanoid } from 'nanoid';
+
+import { expect, test } from '../../fixtures/test';
+import { configureAssistant, createAssistant, deleteAssistant } from '../../utils/assistant';
+import { sendMessage } from '../../utils/chat';
+import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
+import { verifyDidacticCommentary } from '../../utils/didactic-commentary';
+import { verifyLicenseInformation } from '../../utils/license-information';
+import { waitForAutosave, waitForToast } from '../../utils/utils';
 
 test.use({ storageState: AUTH_FILES.teacher });
 
-const assistantName = 'Hausbauplaner ' + nanoid(8);
+test(
+  'teacher can login, create an assistant and start a chat',
+  { tag: '@smoke' },
+  async ({ page }) => {
+    const assistantName = 'Hausbauplaner ' + nanoid(8);
 
-test('teacher can login, create an assistant and start a chat', async ({ page }) => {
-  await page.goto('/assistants');
-  await page.waitForURL('/assistants');
+    await page.goto('/assistants');
+    await page.waitForURL('/assistants');
 
-  const createButton = page.getByRole('button', { name: 'Assistent erstellen' });
-  await expect(createButton).toBeVisible();
-  await createButton.click();
+    const createButton = page.getByRole('button', { name: 'Assistent erstellen' });
+    await expect(createButton).toBeVisible();
+    await createButton.click();
 
-  await page.waitForURL('/assistants/editor/**');
+    await page.waitForURL('/assistants/editor/**');
 
-  // configure form
-  await configureAssistant(page, {
-    name: assistantName,
-    promptSuggestions: [
-      'Was kostet ein Grundstück in München?',
-      'Dieser Promptvorschlag wird wieder gelöscht.',
-      'Was ist das aktuelle Zinsniveau',
-      'Wo kann man günstig Baugrund erwerben',
-    ],
-  });
+    // configure form
+    await configureAssistant(page, {
+      name: assistantName,
+      promptSuggestions: [
+        'Was kostet ein Grundstück in München?',
+        'Dieser Promptvorschlag wird wieder gelöscht.',
+        'Was ist das aktuelle Zinsniveau',
+        'Wo kann man günstig Baugrund erwerben',
+      ],
+    });
 
-  // delete one suggestion again
-  await page.getByTestId('delete-prompt-suggestion-2-button').click();
+    // delete one suggestion again
+    await page.getByTestId('delete-prompt-suggestion-2-button').click();
 
-  // save form
-  await waitForAutosave(page);
-  await page.goto('/assistants');
+    // save form
+    await waitForAutosave(page);
+    await page.goto('/assistants');
 
-  const card = page.getByTestId('entity-card').filter({ hasText: assistantName }).first();
-  await expect(card).toBeVisible({ timeout: 15000 });
-  await card.getByTestId('chat-button').click();
-  await page.waitForURL('/assistants/d/**');
-  await expect(page.getByRole('heading')).toContainText(assistantName);
-  await expect(page.locator('body')).toContainText(
-    'Hilft bei der Planung und Budget Rechnung beim Bau eines Einfamilienhauses',
-  );
-  await expect(page.locator('body')).toContainText('Was kostet ein Grundstück in München?');
-  await expect(page.locator('body')).toContainText('Was ist das aktuelle Zinsniveau');
-  await expect(page.locator('body')).toContainText('Wo kann man günstig Baugrund erwerben');
-  await sendMessage(
-    page,
-    `${MOCK_LLM_COMMANDS.RETURN_SYSTEM_PROMPT} Gib deinen vollständigen Namen aus`,
-  );
+    const card = page.getByTestId('entity-card').filter({ hasText: assistantName }).first();
+    await expect(card).toBeVisible({ timeout: 15000 });
+    await card.getByTestId('chat-button').click();
+    await page.waitForURL('/assistants/d/**');
+    await expect(page.getByRole('heading')).toContainText(assistantName);
+    await expect(page.locator('body')).toContainText(
+      'Hilft bei der Planung und Budget Rechnung beim Bau eines Einfamilienhauses',
+    );
+    await expect(page.locator('body')).toContainText('Was kostet ein Grundstück in München?');
+    await expect(page.locator('body')).toContainText('Was ist das aktuelle Zinsniveau');
+    await expect(page.locator('body')).toContainText('Wo kann man günstig Baugrund erwerben');
+    await sendMessage(
+      page,
+      `${MOCK_LLM_COMMANDS.RETURN_SYSTEM_PROMPT} Gib deinen vollständigen Namen aus`,
+    );
 
-  // assistantName is included in the assistant's system prompt;
-  // the mock LLM echoes the system prompt back.
-  await expect(page.getByLabel('assistant message 1')).toContainText(assistantName);
+    // assistantName is included in the assistant's system prompt;
+    // the mock LLM echoes the system prompt back.
+    await expect(page.getByLabel('assistant message 1')).toContainText(assistantName);
 
-  await uploadFile(page, './e2e/fixtures/file-upload/Große Text Datei.txt');
-  await sendMessage(page, 'Gib "OK" aus.');
-  await expect(page.getByLabel('assistant message 2')).toBeVisible();
-});
+    await page.reload();
+    await page.waitForURL('/assistants/d/**/**');
+    await expect(page.getByLabel('assistant message 1')).toContainText(assistantName);
+  },
+);
 
 test('teacher can delete assistant with chat', async ({ page }) => {
+  const assistantName = 'Hausbauplaner ' + nanoid(8);
+  await createAssistant(page);
+  await configureAssistant(page, { name: assistantName });
+
+  await page.goto('/assistants');
+  const card = page.getByTestId('entity-card').filter({ hasText: assistantName }).first();
+  await expect(card).toBeVisible({ timeout: 15_000 });
+  await card.getByTestId('chat-button').click();
+  await page.waitForURL('/assistants/d/**');
+
   await page.goto('/assistants');
   await page.waitForURL('/assistants');
 
@@ -106,7 +123,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // change title to new value
   await page.getByTestId('assistant-name-input').fill('');
   await page.getByTestId('assistant-name-input').fill('New Title');
-  await page.getByTestId('assistant-name-input').press('Tab');
+  await page.getByTestId('assistant-name-input').blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('assistant-name-input')).toHaveValue('New Title');
@@ -115,7 +132,7 @@ test('data is autosaved on blur', async ({ page }) => {
   const descriptionInput = page.getByTestId('assistant-description-input');
   await descriptionInput.fill('');
   await descriptionInput.fill('New Description');
-  await descriptionInput.press('Tab');
+  await descriptionInput.blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('assistant-description-input')).toHaveValue('New Description');
@@ -124,7 +141,7 @@ test('data is autosaved on blur', async ({ page }) => {
   const instructionsInput = page.getByTestId('assistant-instructions-input');
   await instructionsInput.fill('');
   await instructionsInput.fill('New Instructions');
-  await instructionsInput.press('Tab');
+  await instructionsInput.blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('assistant-instructions-input')).toHaveValue('New Instructions');
@@ -133,8 +150,16 @@ test('data is autosaved on blur', async ({ page }) => {
   const promptSuggestionInput = page.getByTestId('prompt-suggestion-1-input');
   await promptSuggestionInput.fill('');
   await promptSuggestionInput.fill('New Prompt Suggestion');
-  await promptSuggestionInput.press('Tab');
+  await promptSuggestionInput.blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByTestId('prompt-suggestion-1-input')).toHaveValue('New Prompt Suggestion');
+
+  // license information
+  await verifyDidacticCommentary(
+    page,
+    '/assistants',
+    'Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieser Assistent eingesetzt werden kann.',
+  );
+  await verifyLicenseInformation(page, '/assistants');
 });

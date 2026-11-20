@@ -1,9 +1,12 @@
-import fastify, { FastifyHttpOptions } from 'fastify';
-import { constructHandlers } from './handlers';
-import fastifyMultipart from '@fastify/multipart';
-import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
-import { initSwagger } from '@/swagger';
 import * as http from 'node:http';
+
+import fastifyMultipart from '@fastify/multipart';
+import fastify, { FastifyHttpOptions } from 'fastify';
+import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
+
+import { initSwagger } from '@/swagger';
+
+import { constructHandlers } from './handlers';
 
 async function buildApp(opts?: FastifyHttpOptions<http.Server>) {
   const app = fastify({ trustProxy: true, ...opts });

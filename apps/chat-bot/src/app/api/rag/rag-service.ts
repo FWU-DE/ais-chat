@@ -1,18 +1,12 @@
 import { ChunkInsertModel, ChunkSourceType, FileModel } from '@shared/db/schema';
-import { type ChatMessage as Message } from '@/types/chat';
-import { chunkText } from './chunking';
-import { embedText, embedChunks } from './embedding';
-import { vectorSearch } from './retrieval';
-import { RetrievedChunk, UnembeddedChunk } from './types';
-import { VECTOR_SEARCH_LIMIT } from '@/configuration-text-inputs/const';
 import { logError } from '@shared/logging';
 
-export const SUPPORTED_TEXT_TYPES = ['txt', 'pdf', 'docx', 'md'] as const;
-type SupportedTextType = (typeof SUPPORTED_TEXT_TYPES)[number];
+import { VECTOR_SEARCH_LIMIT } from '@/configuration-text-inputs/const';
 
-function isSupportedTextType({ type }: { type: string }): boolean {
-  return SUPPORTED_TEXT_TYPES.includes(type as SupportedTextType);
-}
+import { chunkText } from './chunking';
+import { embedChunks, embedText } from './embedding';
+import { vectorSearch } from './retrieval';
+import { RetrievedChunk, UnembeddedChunk } from './types';
 
 /**
  * Chunks and embeds text.
@@ -58,43 +52,15 @@ export async function chunkAndEmbed({
 }
 
 /**
- * Retrieves relevant chunks for a set of messages using vector search.
+ * Retrieves relevant chunks for a given search query using vector search.
  *
- * @param messages - The conversation messages
+ * @param searchQuery - The search query
  * @param federalStateId - The federal state ID of the user
  * @param relatedFileEntities - File entities to search within
  * @param sourceUrls - Optional source URLs to search within
+ * @param limit - The maximum number of chunks to retrieve
  * @returns The most relevant chunks
  */
-export async function retrieveChunks({
-  messages,
-  federalStateId,
-  relatedFileEntities,
-  sourceUrls,
-}: {
-  messages: Message[];
-  federalStateId: string;
-  relatedFileEntities: FileModel[];
-  sourceUrls?: string[];
-}): Promise<RetrievedChunk[]> {
-  const relatedFiles = relatedFileEntities.filter(isSupportedTextType);
-
-  if (relatedFiles.length === 0 && (!sourceUrls || sourceUrls.length === 0)) {
-    return [];
-  }
-
-  const lastUserMessage = messages.findLast((m) => m.role === 'user');
-  const searchQuery = lastUserMessage?.content ?? '';
-
-  return retrieveChunksByQuery({
-    searchQuery,
-    federalStateId,
-    relatedFileEntities: relatedFiles,
-    sourceUrls,
-    limit: VECTOR_SEARCH_LIMIT,
-  });
-}
-
 export async function retrieveChunksByQuery({
   searchQuery,
   federalStateId,
@@ -124,7 +90,12 @@ export async function retrieveChunksByQuery({
     });
     queryEmbedding = embedding ?? [];
   } catch (error) {
-    logError('Failed to generate embedding, using empty array as fallback:', error);
+    logError('Failed to generate embedding, returning no chunks:', error);
+  }
+
+  // pgvector rejects zero-dimension vectors, so skip the query instead of failing at the DB level
+  if (queryEmbedding.length === 0) {
+    return [];
   }
 
   const fileIds = relatedFileEntities.map((file) => file.id);

@@ -1,7 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FileModel } from '@shared/db/schema';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { UserAndContext } from '@/auth/types';
 import { VECTOR_SEARCH_LIMIT } from '@/configuration-text-inputs/const';
+
+import type { SemanticFileSearchToolResponse } from './retrieve-text-chunks-tool';
 
 const mocks = vi.hoisted(() => ({
   ingestWebContentMock: vi.fn(),
@@ -34,7 +37,6 @@ const user = {
       isSharedChatEnabled: true,
       isCustomGptEnabled: true,
       isShareTemplateWithSchoolEnabled: true,
-      isAgenticChatEnabled: true,
       isImageGenerationEnabled: true,
       isWebSearchEnabled: false,
     },
@@ -132,7 +134,7 @@ describe('buildRetrieveTextChunksTool', () => {
         limit: VECTOR_SEARCH_LIMIT,
       }),
     );
-    expect(JSON.parse(result)).toEqual({
+    expect(result).toEqual({
       chunks: [
         {
           fileName: 'Arbeitsblatt.pdf',
@@ -140,7 +142,6 @@ describe('buildRetrieveTextChunksTool', () => {
           content: 'Erster relevanter Abschnitt.',
         },
       ],
-      error: null,
     });
   });
 
@@ -218,7 +219,7 @@ describe('buildRetrieveTextChunksTool', () => {
         sourceUrls: ['https://example.com/shared-page'],
       }),
     );
-    expect(JSON.parse(result)).toEqual({
+    expect(result).toEqual({
       chunks: [
         {
           fileName: null,
@@ -226,11 +227,10 @@ describe('buildRetrieveTextChunksTool', () => {
           content: 'Neu abgerufener Seitenabschnitt.',
         },
       ],
-      error: null,
     });
   });
 
-  it('returns error when no chunks found', async () => {
+  it('returns empty chunks with a notice when none found', async () => {
     mocks.retrieveChunksByQueryMock.mockResolvedValueOnce([]);
 
     const { buildRetrieveTextChunksTool } = await import('./retrieve-text-chunks-tool');
@@ -246,9 +246,51 @@ describe('buildRetrieveTextChunksTool', () => {
       search: 'not found',
     });
 
-    const parsed = JSON.parse(result);
+    const parsed = result as SemanticFileSearchToolResponse;
     expect(parsed.chunks).toEqual([]);
-    expect(parsed.error).toBe('No matching chunks found.');
+    expect(parsed.notice).toBe('No matching chunks found.');
+  });
+
+  describe('invalid search query', () => {
+    it.each([
+      ['missing', undefined],
+      ['non-string', 42],
+      ['empty', ''],
+      ['whitespace-only', '   '],
+    ])('returns an error and skips ingestion/retrieval when search is %s', async (_, search) => {
+      const { buildRetrieveTextChunksTool } = await import('./retrieve-text-chunks-tool');
+
+      const tool = buildRetrieveTextChunksTool({
+        user,
+        relatedFileEntities,
+        sourceUrls: ['https://example.com/page'],
+        attachedLinks: [],
+      });
+
+      const result = await tool!.handler({ search });
+
+      expect(result).toEqual({ error: 'Missing search query.' });
+      expect(mocks.ingestWebContentMock).not.toHaveBeenCalled();
+      expect(mocks.dbGetAllChunksMock).not.toHaveBeenCalled();
+      expect(mocks.retrieveChunksByQueryMock).not.toHaveBeenCalled();
+    });
+
+    it('trims a padded valid query before passing it to vector search', async () => {
+      const { buildRetrieveTextChunksTool } = await import('./retrieve-text-chunks-tool');
+
+      const tool = buildRetrieveTextChunksTool({
+        user,
+        relatedFileEntities,
+        sourceUrls: [],
+        attachedLinks: [],
+      });
+
+      await tool!.handler({ search: '  padded query  ' });
+
+      expect(mocks.retrieveChunksByQueryMock).toHaveBeenCalledWith(
+        expect.objectContaining({ searchQuery: 'padded query' }),
+      );
+    });
   });
 
   describe('short-circuit when total chunk count ≤ VECTOR_SEARCH_LIMIT', () => {
@@ -339,11 +381,10 @@ describe('buildRetrieveTextChunksTool', () => {
       });
 
       const result = await tool!.handler({ search: 'irgendwas' });
-      const parsed = JSON.parse(result);
+      const parsed = result as SemanticFileSearchToolResponse;
 
       expect(mocks.retrieveChunksByQueryMock).not.toHaveBeenCalled();
       expect(parsed.chunks).toHaveLength(7);
-      expect(parsed.error).toBeNull();
     });
 
     it('short-circuits for URL-only sources when total fits within the limit', async () => {
@@ -378,11 +419,10 @@ describe('buildRetrieveTextChunksTool', () => {
       });
 
       const result = await tool!.handler({ search: 'suche' });
-      const parsed = JSON.parse(result);
+      const parsed = result as SemanticFileSearchToolResponse;
 
       expect(mocks.retrieveChunksByQueryMock).not.toHaveBeenCalled();
       expect(parsed.chunks).toHaveLength(2);
-      expect(parsed.error).toBeNull();
     });
 
     it('still calls vector search when total chunk count exceeds the limit', async () => {
@@ -428,7 +468,7 @@ describe('buildRetrieveTextChunksTool', () => {
       expect(mocks.dbGetAllChunksMock).toHaveBeenCalled();
     });
 
-    it('returns error when all chunks retrieved directly but result is empty', async () => {
+    it('returns empty chunks with a notice when all chunks retrieved directly but result is empty', async () => {
       mocks.dbGetAllChunksMock.mockResolvedValue([]);
 
       const { buildRetrieveTextChunksTool } = await import('./retrieve-text-chunks-tool');
@@ -441,10 +481,41 @@ describe('buildRetrieveTextChunksTool', () => {
       });
 
       const result = await tool!.handler({ search: 'suche' });
-      const parsed = JSON.parse(result);
+      const parsed = result as SemanticFileSearchToolResponse;
 
       expect(parsed.chunks).toEqual([]);
-      expect(parsed.error).toBe('No matching chunks found.');
+      expect(parsed.notice).toBe('No matching chunks found.');
     });
+  });
+});
+
+describe('retrieveTextChunksActivity.parsePersistedResult', () => {
+  it('treats an empty `chunks` result with an explanatory `error` as success, not a failure', async () => {
+    const { retrieveTextChunksActivity } = await import('./retrieve-text-chunks-tool');
+
+    expect(
+      retrieveTextChunksActivity.parsePersistedResult({
+        chunks: [],
+        error: 'No matching chunks found.',
+      }),
+    ).toEqual({ chunks: [] });
+  });
+
+  it('keeps `error` when `chunks` is non-empty', async () => {
+    const { retrieveTextChunksActivity } = await import('./retrieve-text-chunks-tool');
+
+    const generic = {
+      chunks: [{ fileName: 'a.txt', orderIndex: 0, content: 'x' }],
+      error: 'unrelated',
+    };
+    expect(retrieveTextChunksActivity.parsePersistedResult(generic)).toEqual(generic);
+  });
+
+  it('passes a current error result through unchanged', async () => {
+    const { retrieveTextChunksActivity } = await import('./retrieve-text-chunks-tool');
+
+    expect(
+      retrieveTextChunksActivity.parsePersistedResult({ error: 'Missing search query.' }),
+    ).toEqual({ error: 'Missing search query.' });
   });
 });

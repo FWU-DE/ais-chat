@@ -1,11 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
   applyPersonalContextOperations,
   parsePersonalContext,
-  serializePersonalContext,
   PERSONAL_CONTEXT_MAX_ENTRIES,
   PERSONAL_CONTEXT_MAX_ENTRY_CHARS,
   personalContextOperationSchema,
+  serializePersonalContext,
 } from './personal-context-document';
 
 describe('parsePersonalContext', () => {

@@ -12,7 +12,8 @@ updates:
       - '/apps/admin'
       - '/apps/api'
       - '/apps/chat-bot'
-      - '/devops/docker/mock-llm'
+      - '/services/calculator'
+      - '/services/mock-llm'
     labels: ['dependencies']
     schedule:
       interval: 'weekly'
@@ -30,8 +31,6 @@ updates:
 
   - package-ecosystem: 'docker-compose'
     directories:
-      - '/apps/chat-bot/e2e'
-      - '/apps/chat-bot/e2e/mock'
       - '/devops/docker'
     labels: ['dependencies']
     schedule:
@@ -48,9 +47,18 @@ updates:
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
     groups:
-      # Group safe, non-breaking bumps to reduce PRs
-      minor-and-patch:
+      # Group safe, non-breaking bumps to reduce PRs; split by dependency-type
+      # so each group's updater job has a smaller dependency graph to resolve
+      # (the combined group was timing out on this large pnpm workspace).
+      minor-and-patch-prod:
         applies-to: version-updates
+        dependency-type: production
+        update-types:
+          - 'minor'
+          - 'patch'
+      minor-and-patch-dev:
+        applies-to: version-updates
+        dependency-type: development
         update-types:
           - 'minor'
           - 'patch'

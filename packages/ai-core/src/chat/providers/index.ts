@@ -1,7 +1,16 @@
+import { ProviderConfigurationError } from '../../errors';
+import type {
+  AgenticStreamFn,
+  AiModel,
+  GenerationOptions,
+  StreamEvent,
+  TextGenerationFn,
+  TextStreamFn,
+} from '../types';
 import {
+  constructAzureResponsesAgenticStreamFn,
   constructAzureResponsesGenerationFn,
   constructAzureResponsesStreamFn,
-  constructAzureResponsesAgenticStreamFn,
 } from './azure';
 import {
   constructBifrostAgenticStreamFn,
@@ -23,15 +32,6 @@ import {
   constructOpenAITextGenerationFn,
   constructOpenAITextStreamFn,
 } from './openai';
-import type {
-  AgenticStreamFn,
-  AiModel,
-  GenerationOptions,
-  StreamEvent,
-  TextGenerationFn,
-  TextStreamFn,
-} from '../types';
-import { ProviderConfigurationError } from '../../errors';
 
 function getTextGenerationFnByModel({ model }: { model: AiModel }): TextGenerationFn | undefined {
   if (model.provider === 'azure') {

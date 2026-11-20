@@ -1,15 +1,51 @@
-import { RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT } from '@/configuration-text-inputs/const';
+import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { dbGetExtractedFileContent } from '@shared/db/functions/files';
 import type { FileModel } from '@shared/db/schema';
-import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
+import { z } from 'zod';
 
-type RetrieveEntireFileToolResponse = {
-  fileName: string | null;
-  content: string | null;
-  truncated: boolean;
-  characterCount: number;
-  maxCharacters: number;
-  error: string | null;
+import { RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT } from '@/configuration-text-inputs/const';
+import { TOOL_NAMES } from '@/types/tool-names';
+import { parseJsonRecord } from '@/utils/chat/tool-result-parsing';
+
+import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
+import type { BuildToolsContext, ToolActivity, ToolDefinition, ToolRegistration } from './types';
+
+export const retrieveEntireFileArgsSchema = z.object({
+  fileName: z.string().trim().min(1),
+});
+
+const retrieveEntireFileToolResponseSchema = z.object({
+  fileName: z.string().nullable(),
+  content: z.string().nullable(),
+  characterCount: z.number(),
+  maxCharacters: z.number(),
+  notice: z.string().optional(),
+});
+
+export type RetrieveEntireFileToolResponse = z.infer<typeof retrieveEntireFileToolResponseSchema>;
+
+// A `truncated: true` result isn't a failure, even though it carried an explanatory `error`;
+// both `truncated` and `error` are removed in that case.
+const legacyTruncatedResultSchema = retrieveEntireFileToolResponseSchema
+  .extend({ truncated: z.literal(true), error: z.string() })
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  .transform(({ truncated, error, ...rest }) => rest);
+
+export const retrieveEntireFileActivity: ToolActivity<RetrieveEntireFileToolResponse> = {
+  createStep: (toolCall: ToolCall) => {
+    const parsed = retrieveEntireFileArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.retrieveEntireFile,
+      detail: parsed.success ? parsed.data.fileName : undefined,
+    };
+  },
+  parsePersistedResult: (raw) => {
+    const generic = parseGenericPersistedToolResult<RetrieveEntireFileToolResponse>(raw);
+    const legacy = legacyTruncatedResultSchema.safeParse(generic);
+    return legacy.success ? legacy.data : generic;
+  },
 };
 
 function truncateToCharacterLimit(text: string, maxCharacters: number) {
@@ -22,29 +58,28 @@ async function formatEntireFileForTool(file: FileModel) {
   const truncatedContent = truncateToCharacterLimit(content, RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT);
   const truncated = truncatedContent.length !== content.length;
 
+  const notice = !content
+    ? 'No usable content found.'
+    : truncated
+      ? 'File content was truncated to fit the character limit.'
+      : undefined;
+
   const response: RetrieveEntireFileToolResponse = {
     fileName: file.name ?? null,
     content: content.length > 0 ? truncatedContent : null,
-    truncated,
     characterCount,
     maxCharacters: RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT,
-    error: null,
+    ...(notice && { notice }),
   };
 
-  if (!content) {
-    response.error = 'No usable content found.';
-  } else if (truncated) {
-    response.error = 'File content was truncated to fit the character limit.';
-  }
-
-  return JSON.stringify(response);
+  return response;
 }
 
 type BuildRetrieveEntireFileToolParams = Pick<BuildToolsContext, 'relatedFileEntities'>;
 
 export function buildRetrieveEntireFileTool({
   relatedFileEntities,
-}: BuildRetrieveEntireFileToolParams): ToolRegistration | null {
+}: BuildRetrieveEntireFileToolParams): ToolRegistration<RetrieveEntireFileToolResponse> | null {
   if (relatedFileEntities.length === 0) {
     return null;
   }
@@ -54,7 +89,7 @@ export function buildRetrieveEntireFileTool({
   );
 
   const definition: ToolDefinition = {
-    name: 'retrieve_entire_file',
+    name: TOOL_NAMES.retrieveEntireFile,
     description: `Retrieve the full content of one attached file by name. Available files right now: ${attachedFileDescriptions.join(', ') || 'none'}. Use this tool when you need the full text of a specific attached file instead of only relevant excerpts. The returned content is capped at ${RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT} characters.`,
     parameters: {
       type: 'object',
@@ -69,39 +104,28 @@ export function buildRetrieveEntireFileTool({
     },
   };
 
-  const handler = async (args: Record<string, unknown>) => {
-    const fileName = typeof args.fileName === 'string' ? args.fileName.trim() : '';
+  const handler = async (
+    args: Record<string, unknown>,
+  ): ToolOutcome<RetrieveEntireFileToolResponse, { fileName?: string }> => {
+    const parsed = retrieveEntireFileArgsSchema.safeParse(args);
 
-    if (fileName.length === 0) {
-      const response: RetrieveEntireFileToolResponse = {
-        fileName: null,
-        content: null,
-        truncated: false,
-        characterCount: 0,
-        maxCharacters: RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT,
-        error: 'Missing file name.',
-      };
-
-      return JSON.stringify(response);
+    if (!parsed.success) {
+      return { error: 'Missing file name.' };
     }
 
+    const fileName = parsed.data.fileName;
     const matchedFile = relatedFileEntities.find((file) => file.name === fileName);
 
-    if (matchedFile === undefined) {
-      const response: RetrieveEntireFileToolResponse = {
-        fileName,
-        content: null,
-        truncated: false,
-        characterCount: 0,
-        maxCharacters: RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT,
-        error: 'File not found.',
-      };
-
-      return JSON.stringify(response);
+    if (!matchedFile) {
+      return { error: 'File not found.', fileName };
     }
 
     return formatEntireFileForTool(matchedFile);
   };
 
-  return { definition, handler };
+  return {
+    definition,
+    handler,
+    activity: retrieveEntireFileActivity,
+  };
 }

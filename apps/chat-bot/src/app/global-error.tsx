@@ -1,9 +1,9 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import React from 'react';
 import * as Sentry from '@sentry/nextjs';
 import Error from 'next/error';
+import { useRouter } from 'next/navigation';
+import React from 'react';
 
 export default function GlobalError({ reset, error }: { error: Error; reset: () => void }) {
   const router = useRouter();

@@ -8,30 +8,30 @@ export const imageGenerationRequestSwaggerSchema = {
         type: 'string',
         description:
           'The model to use for image generation. Supported models can be retrieved from the /v1/models endpoint.',
-        example: 'dall-e-3',
+        example: 'gpt-image-1.5',
       },
       prompt: {
         type: 'string',
         description: 'The text prompt to generate an image from',
         example: 'A beautiful sunset over a mountain range',
       },
+      size: {
+        type: 'string',
+        pattern: '^[1-9]\\d*x[1-9]\\d*$',
+        description:
+          'Optional image size in the format "<width>x<height>" with positive integers, e.g. "1024x1024". The aspect ratio must be supported by the selected model. Check the respective model documentation for supported sizes.',
+        example: '1024x1024',
+      },
     },
     required: ['model', 'prompt'],
     'x-examples': {
-      openai: {
-        summary: 'DALL-E',
-        description: 'Image generation using DALL-E',
+      gptImage: {
+        summary: 'GPT-Image-1.5',
+        description: 'Image generation using GPT-Image-1.5',
         value: {
-          model: 'dall-e-3',
+          model: 'gpt-image-1.5',
           prompt: 'A beautiful sunset over a mountain range',
-        },
-      },
-      google: {
-        summary: 'Google',
-        description: 'Image generation using Google',
-        value: {
-          model: 'imagen-4.0-generate-001',
-          prompt: 'A beautiful sunset over the ocean',
+          size: '1024x1024',
         },
       },
     },

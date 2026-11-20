@@ -2,7 +2,31 @@
   "common": {
     "delete": "حذف",
     "cancel": "إلغاء",
-    "information-disclaimer": "قد يخطئ AIS.chat. فكّر بشكل نقدي وتحقّق من جميع المعلومات."
+    "information-disclaimer": "قد يخطئ AIS.chat. فكّر بشكل نقدي وتحقّق من جميع المعلومات.",
+    "message-copy": "نسخ الرسالة",
+    "regenerate-message-button": "إعادة توليد الرد",
+    "code-download": "تنزيل الملف",
+    "plot": {
+      "label": "رسم بياني",
+      "download-png": "تنزيل الرسم البياني",
+      "reset": "إعادة تعيين التغييرات",
+      "zoom-in": "تكبير",
+      "zoom-out": "تصغير",
+      "fullscreen": "عرض بملء الشاشة",
+      "description": "رسم بياني: {title}",
+      "error": "تعذّر عرض الرسم البياني."
+    },
+    "document": {
+      "download": "تنزيل {fileName}",
+      "error": "تعذّر إنشاء المستند."
+    },
+    "read-aloud": "قراءة الرسالة بصوت عالٍ",
+    "pause-message": "إيقاف القراءة مؤقتًا",
+    "read-aloud-error": "فشلت عملية تحويل النص إلى كلام.",
+    "listen-to-answer": "الاستماع إلى الإجابة",
+    "pause-audio": "إيقاف مؤقت",
+    "show-message-text": "إظهار النص",
+    "hide-message-text": "إخفاء النص"
   },
   "characters": {
     "shared": {
@@ -33,7 +57,7 @@
       "go-to": "انتقل إلى",
       "enter-code": "أدخل الرمز.",
       "open-chat": "فتح محادثة",
-      "use-qr": "امسح رمز QR.",
+      "use-qr": "أو استخدم رمز QR",
       "copy-link": "نسخ رابط البدء",
       "learning-scenario": {
         "sub-header": "سيناريو التعلّم",
@@ -70,6 +94,26 @@
       "enable": "استخدام السياق الشخصي في هذه المحادثة",
       "disable": "عدم استخدام السياق الشخصي في هذه المحادثة",
       "error": "تعذّر تغيير الإعداد"
+    }
+  },
+  "ai-activity": {
+    "title": "نشاط الذكاء الاصطناعي",
+    "toggle": "إظهار/إخفاء نشاط الذكاء الاصطناعي",
+    "open-source": "فتح المصدر: {source}",
+    "failed": "فشل",
+    "steps": {
+      "analysis": "تحليل",
+      "analysis-summary": "ملخص التحليل",
+      "done": "تم",
+      "web_search": "بحث على الويب",
+      "web_scraper": "تمت قراءة صفحة ويب",
+      "retrieve_text_chunks": "تمت قراءة مقاطع ذات صلة من الملف",
+      "retrieve_text_chunks_prefix": "مصطلحات البحث:",
+      "retrieve_entire_file": "تمت قراءة الملف بالكامل",
+      "mundo_search": "البحث في Mundo",
+      "math_calculate": "تم إجراء الحساب",
+      "create_plot": "تم إنشاء الرسم البياني",
+      "generate_document": "تم إنشاء الملف"
     }
   }
 }

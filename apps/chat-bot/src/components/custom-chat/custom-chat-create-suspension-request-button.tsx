@@ -4,6 +4,7 @@ import { ShieldWarningIcon } from '@phosphor-icons/react';
 import { EntityRef } from '@shared/entities/entity-types';
 import { Button } from '@ui/components/button';
 import { useMessages } from 'next-intl';
+
 import { CustomChatCreateSuspensionDialog } from './custom-chat-create-suspension-dialog';
 
 type CustomChatCreateSuspensionRequestProps = {

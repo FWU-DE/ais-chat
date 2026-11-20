@@ -1,5 +1,8 @@
-import { instrumentOpenAiClient } from '@sentry/core';
+import { isLlmProvider } from '@ais-chat/api-database/llm-model';
+import { instrumentOpenAiClient } from '@sentry/server-utils';
 import OpenAI from 'openai';
+
+import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import type {
   AgenticStreamFn,
   AiModel,
@@ -7,7 +10,6 @@ import type {
   TextStreamFn,
   TokenUsage,
 } from '../types';
-import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { toOpenAIResponsesInput } from '../utils';
 import { streamOpenAICompatibleAgenticResponse } from './openai-compatible';
 
@@ -15,7 +17,7 @@ function createAzureClient(model: AiModel): {
   client: OpenAI;
   deployment: string;
 } {
-  if (model.setting.provider !== 'azure') {
+  if (!isLlmProvider(model.setting, 'azure')) {
     throw new ProviderConfigurationError('Invalid model configuration for Azure');
   }
 
@@ -27,7 +29,10 @@ function createAzureClient(model: AiModel): {
     new OpenAI({
       apiKey: model.setting.apiKey,
       baseURL: basePath,
-      defaultQuery: Object.fromEntries(searchParams.entries()),
+      defaultQuery: {
+        ...Object.fromEntries(searchParams.entries()),
+        'api-version': '2025-04-01-preview',
+      },
     }),
   );
 
@@ -41,7 +46,7 @@ function createAzureClient(model: AiModel): {
 export function constructAzureResponsesStreamFn(model: AiModel): TextStreamFn {
   const { client, deployment } = createAzureClient(model);
 
-  return async function* getAzureTextStream({ messages, maxTokens }, onComplete) {
+  return async function* getAzureTextStream({ messages, maxTokens, abortSignal }, onComplete) {
     const response = await client.responses.create(
       {
         model: deployment,
@@ -52,6 +57,7 @@ export function constructAzureResponsesStreamFn(model: AiModel): TextStreamFn {
       },
       {
         path: `/openai/responses`,
+        ...(abortSignal ? { signal: abortSignal } : {}),
       },
     );
 
@@ -62,7 +68,12 @@ export function constructAzureResponsesStreamFn(model: AiModel): TextStreamFn {
         yield event.delta;
       }
 
-      if (event.type === 'response.completed' && event.response.usage) {
+      if (
+        (event.type === 'response.completed' ||
+          event.type === 'response.incomplete' ||
+          event.type === 'response.failed') &&
+        event.response.usage
+      ) {
         usage = {
           completionTokens: event.response.usage.output_tokens,
           promptTokens: event.response.usage.input_tokens,
@@ -84,7 +95,13 @@ export function constructAzureResponsesStreamFn(model: AiModel): TextStreamFn {
 export function constructAzureResponsesAgenticStreamFn(model: AiModel): AgenticStreamFn {
   const { client, deployment } = createAzureClient(model);
 
-  return async function* getAzureTextStream({ messages, maxTokens, tools, toolChoice }) {
+  return async function* getAzureTextStream({
+    messages,
+    maxTokens,
+    tools,
+    toolChoice,
+    abortSignal,
+  }) {
     yield* streamOpenAICompatibleAgenticResponse({
       client,
       messages,
@@ -92,6 +109,7 @@ export function constructAzureResponsesAgenticStreamFn(model: AiModel): AgenticS
       maxTokens,
       tools,
       toolChoice,
+      abortSignal,
       providerName: 'Azure OpenAI',
       createOptions: {
         path: `/openai/responses`,
@@ -107,7 +125,7 @@ export function constructAzureResponsesAgenticStreamFn(model: AiModel): AgenticS
 export function constructAzureResponsesGenerationFn(model: AiModel): TextGenerationFn {
   const { client, deployment } = createAzureClient(model);
 
-  return async function getAzureTextGeneration({ messages, maxTokens }) {
+  return async function getAzureTextGeneration({ messages, maxTokens, abortSignal }) {
     const response = await client.responses.create(
       {
         model: deployment,
@@ -118,6 +136,7 @@ export function constructAzureResponsesGenerationFn(model: AiModel): TextGenerat
       },
       {
         path: `/openai/responses`,
+        ...(abortSignal ? { signal: abortSignal } : {}),
       },
     );
 

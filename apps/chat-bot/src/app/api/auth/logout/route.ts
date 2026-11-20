@@ -1,7 +1,8 @@
-import { auth } from '@/auth';
 import { logError, logInfo, logWarning } from '@shared/logging';
 import { withTrustedOrigin } from '@shared/utils/with-trusted-origin';
 import { NextRequest, NextResponse } from 'next/server';
+
+import { auth } from '@/auth';
 import { VIDIS_LOGOUT_URL } from '@/auth/providers/vidis-provider';
 
 function handleEmptyToken(request: NextRequest) {

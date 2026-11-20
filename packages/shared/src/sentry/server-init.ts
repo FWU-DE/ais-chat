@@ -1,19 +1,12 @@
-import Sentry, { SentryContextManager } from '@sentry/nextjs';
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { resourceFromAttributes } from '@opentelemetry/resources';
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
-import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
-import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-node';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
-import { SentrySampler, SentrySpanProcessor } from '@sentry/opentelemetry';
+import { initMetrics } from '@ais-chat/shared-core/metrics/init';
 import { scrubSentryEvent } from '@ais-chat/shared-core/sentry/scrub';
+import Sentry from '@sentry/nextjs';
+
 import { registerCleanupHandler } from '../shutdown/cleanup';
 import { env } from './env';
 
 /**
- * Initializes Sentry and OpenTelemetry for server-side application.
+ * Initializes Sentry tracing and OpenTelemetry metrics for a server-side application.
  */
 export function initSentry({
   scrubSensitiveData = true,
@@ -34,13 +27,15 @@ export function initSentry({
 }) {
   const aiServerActionNameSet = new Set(aiServerActionNames.map((name) => `serverAction/${name}`));
 
-  const sentryClient = Sentry.init({
-    debug: false,
+  Sentry.init({
     dsn: env.sentryDsn,
     environment: env.sentryEnvironment,
-    // Disable streaming so gen_ai spans are ingested in Sentry
-    // (streaming is broken, possibly due to OTel setup, or it's not available in self-hosted Sentry)
-    streamGenAiSpans: false,
+    initialScope: {
+      tags: {
+        'service.name': serviceName,
+        'service.version': env.appVersion,
+      },
+    },
     integrations: [
       Sentry.captureConsoleIntegration({ levels: ['fatal', 'error', 'warn', 'info'] }),
     ],
@@ -70,55 +65,28 @@ export function initSentry({
     ...(scrubSensitiveData && {
       beforeBreadcrumb: (breadcrumb) => scrubSentryEvent(breadcrumb),
       beforeSend: (event) => scrubSentryEvent(event),
-      beforeSendTransaction: (event) => scrubSentryEvent(event),
     }),
-    // Use custom OpenTelemetry configuration, see https://docs.sentry.io/platforms/javascript/guides/node/opentelemetry/custom-setup/
-    skipOpenTelemetrySetup: true,
-    registerEsmLoaderHooks: false,
+    // Prompts and completions are user data; model and token metadata stay.
+    dataCollection: { genAI: { inputs: false, outputs: false } },
+    // Kept explicit: the RabbitMQ publisher traces via the OpenTelemetry API and needs this provider.
+    enableOpenTelemetrySetup: true,
   });
 
-  // For debugging purposes, you can uncomment the following two lines to enable console logging
-  // import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
-  // diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
-
-  const exporter = new OTLPMetricExporter();
-  const periodicExportingMetricReader = new PeriodicExportingMetricReader({
-    exporter,
+  const shutdownMetrics = initMetrics({
+    exportEndpoint: env.otelMetricExportEndpoint,
     exportIntervalMillis: env.otelMetricExportInterval,
     exportTimeoutMillis: env.otelMetricExportTimeout,
+    serviceName,
+    serviceVersion: env.appVersion,
   });
-
-  // Documentation for the OpenTelemetry SDK for Node.js can be found here:
-  // https://www.npmjs.com/package/@opentelemetry/sdk-node
-  const sdk = new NodeSDK({
-    instrumentations: [
-      getNodeAutoInstrumentations({
-        '@opentelemetry/instrumentation-http': {
-          requestHook: (span, msg) => {
-            const path = 'path' in msg ? msg.path : msg.url;
-            span.updateName(`${msg.method} ${path}`);
-          },
-        },
-      }),
-    ],
-    resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: serviceName,
-      [ATTR_SERVICE_VERSION]: env.appVersion,
-    }),
-    metricReaders: [periodicExportingMetricReader],
-    sampler: sentryClient ? new SentrySampler(sentryClient) : undefined,
-    serviceName: serviceName,
-    spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter()), new SentrySpanProcessor()],
-    contextManager: new SentryContextManager(),
-  });
-
-  sdk.start();
-
-  Sentry.validateOpenTelemetrySetup();
 
   registerCleanupHandler(async () => {
-    console.log('[shutdown] Shutting down OpenTelemetry SDK...');
-    await sdk.shutdown();
-    console.log('[shutdown] OpenTelemetry SDK shutdown completed');
+    console.log('[shutdown] Shutting down OpenTelemetry metrics...');
+    try {
+      await shutdownMetrics();
+      console.log('[shutdown] OpenTelemetry metrics shutdown completed');
+    } finally {
+      await Sentry.flush(10_000);
+    }
   });
 }

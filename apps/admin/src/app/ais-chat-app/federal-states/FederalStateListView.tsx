@@ -1,17 +1,7 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
-import Link from 'next/link';
-import { getFederalStatesAction } from './actions';
-import { CreateFederalStateModal } from './CreateFederalStateModal';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@ui/components/table';
+import { FederalStateModel } from '@shared/federal-states/types';
+import { Button } from '@ui/components/button';
 import {
   Card,
   CardAction,
@@ -20,11 +10,22 @@ import {
   CardHeader,
   CardTitle,
 } from '@ui/components/card';
-import { Button } from '@ui/components/button';
-import { Search } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@ui/components/table';
+import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
+
+import { ClickableTableRow } from '@/components/common/ClickableTableRow';
 import { ROUTES } from '@/consts/routes';
-import { FederalStateModel } from '@shared/federal-states/types';
+
+import { getFederalStatesAction } from './actions';
+import { CreateFederalStateModal } from './CreateFederalStateModal';
 
 export default function FederalStateListView() {
   const [federalStates, setFederalStates] = useState<FederalStateModel[]>([]);
@@ -82,21 +83,18 @@ export default function FederalStateListView() {
                 <TableHead className="w-[300px]">Id</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Erstellt am</TableHead>
-                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {federalStates.map((federalState) => (
-                <TableRow key={federalState.id}>
+                <ClickableTableRow
+                  key={federalState.id}
+                  href={ROUTES.app.federalStateDetails(federalState.id)}
+                >
                   <TableCell>{federalState.id}</TableCell>
                   <TableCell>{federalState.appName}</TableCell>
                   <TableCell>{federalState.createdAt.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Link href={ROUTES.app.federalStateDetails(federalState.id)}>
-                      <Search className="text-primary" />
-                    </Link>
-                  </TableCell>
-                </TableRow>
+                </ClickableTableRow>
               ))}
             </TableBody>
           </Table>

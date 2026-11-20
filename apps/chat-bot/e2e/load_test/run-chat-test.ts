@@ -1,5 +1,5 @@
-import { HEADLESS_BROWSER_OPTIONS } from './config';
 import { performLogin, runTest, selectModel, sendMessage } from './common';
+import { HEADLESS_BROWSER_OPTIONS } from './config';
 
 export const options = HEADLESS_BROWSER_OPTIONS;
 

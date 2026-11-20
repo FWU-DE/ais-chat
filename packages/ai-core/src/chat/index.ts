@@ -1,27 +1,32 @@
-import { billTextGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
-import { generateText, generateTextStream } from './providers';
+import { assertApiKeyCanUseModel } from '../api-keys/access';
+import { billTextGenerationUsageToApiKey } from '../api-keys/billing';
 import { hasAccessToModel } from '../api-keys/model-access';
-import { AiGenerationError, InvalidModelError } from '../errors';
+import { normalizeAiGenerationError } from '../errors';
 import { getTextModelById, getTextModelByName } from '../models';
-import type { Message, TokenUsage, GenerationOptions } from './types';
-export { runAgentLoop, MAX_AGENTIC_ITERATIONS, MAX_TOOL_CALLS_PER_ITERATION } from './agent-loop';
+import { getUsedModelId, normalizeModelSelection } from './model-selection';
+import { generateText, generateTextStream } from './providers';
+import type { GenerationOptions, Message, ModelSelection, TokenUsage } from './types';
+export { MAX_AGENTIC_ITERATIONS, MAX_TOOL_CALLS_PER_ITERATION, runAgentLoop } from './agent-loop';
 export { generateAgenticStreamWithBilling } from './agentic-stream';
 export { countTokens } from './utils';
 
 // Re-export types for external consumers
 export type {
-  Message,
-  TokenUsage,
+  AgenticStreamFn,
   ChatAttachment,
   ChatImageAttachment,
   GenerationOptions,
+  Message,
+  ModelSelection,
+  ModelUsage,
+  StreamEvent,
+  TokenUsage,
   ToolCall,
   ToolDefinition,
   ToolHandler,
   ToolRegistry,
   ToolRegistryEntry,
-  StreamEvent,
-  AgenticStreamFn,
+  ToolResult,
 } from './types';
 
 // Re-export utility functions and guards
@@ -33,50 +38,48 @@ export { isChatImageAttachment } from './types';
  * This function first verifies that the provided API key has access to the requested text model.
  * If access is granted, it generates the text and bills the usage to the API key.
  *
- * @param modelId - The ID of the text model to use for generation
+ * @param modelSelection - The ID of the text model to use, or a `ModelSelection` with fallback model IDs
  * @param messages - The conversation messages (system, user, assistant)
  * @param apiKeyId - The ID of the API key to verify access and bill usage
+ * @param options - Optional generation options (e.g. tools, temperature, abort signal)
  *
  * @returns A promise that resolves to an object containing the generated text response, usage, and the price in cents
  */
 export async function generateTextWithBilling(
-  modelId: string,
+  modelSelection: string | ModelSelection,
   messages: Message[],
   apiKeyId: string,
   options?: GenerationOptions,
 ) {
+  const selection = normalizeModelSelection(modelSelection);
+  const [modelId, ...fallbackModelIds] = selection.modelIds;
   const model = await getTextModelById(modelId);
 
-  // Run access check and quota check in parallel for better performance
-  const [hasAccess, isOverQuota] = await Promise.all([
-    hasAccessToModel(apiKeyId, model),
-    isApiKeyOverQuota(apiKeyId),
-  ]);
-
-  if (!hasAccess) {
-    throw new InvalidModelError(`API key does not have access to the text model: ${model.name}`);
-  }
-
-  if (isOverQuota) {
-    throw new AiGenerationError(`API key has exceeded its monthly quota`);
-  }
+  await assertApiKeyCanUseModel(apiKeyId, model, 'text');
 
   try {
-    const textResponse = await generateText(model, messages, options);
-    const priceInCents = await billTextGenerationUsageToApiKey(apiKeyId, model, textResponse.usage);
+    const fallbackModels = await resolveFallbackModels(fallbackModelIds, apiKeyId);
+    const generationOptions = fallbackModels.length ? { ...options, fallbackModels } : options;
+    const textResponse = await generateText(model, messages, generationOptions);
+    const usedModelId = getUsedModelId(selection, textResponse.modelId);
+    const billingModel = getModelById([model, ...fallbackModels], usedModelId) ?? model;
+    const priceInCents = await billTextGenerationUsageToApiKey(
+      apiKeyId,
+      billingModel,
+      textResponse.usage,
+    );
+    await selection.onModelUsed?.(usedModelId);
 
     return {
       ...textResponse,
+      modelId: usedModelId,
       priceInCents,
+      // Falls back to the billing model's own provider/name when the provider stream didn't report them.
+      provider: textResponse.provider ?? billingModel.provider,
+      modelName: textResponse.modelName ?? billingModel.name,
     };
   } catch (error) {
-    // Wrap non-AiGenerationError errors
-    if (!(error instanceof AiGenerationError)) {
-      throw new AiGenerationError(
-        `Text generation failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-    throw error;
+    throw normalizeAiGenerationError(error, 'Text generation failed');
   }
 }
 
@@ -86,58 +89,67 @@ export async function generateTextWithBilling(
  * This function first verifies that the provided API key has access to the requested text model.
  * Note: Billing happens after the stream completes when usage data is available.
  *
- * @param modelId - The ID of the text model to use for generation
+ * @param modelSelection - The ID of the text model to use, or a `ModelSelection` with fallback model IDs
  * @param messages - The conversation messages (system, user, assistant)
  * @param apiKeyId - The ID of the API key to verify access and bill usage
  * @param onComplete - Optional callback to be invoked after stream completion with usage and price data
+ * @param options - Optional generation options (e.g. tools, temperature, abort signal)
  *
  * @returns An async generator that yields text chunks and returns usage data with price
  */
 export async function* generateTextStreamWithBilling(
-  modelId: string,
+  modelSelection: string | ModelSelection,
   messages: Message[],
   apiKeyId: string,
-  onComplete?: (result: { usage: TokenUsage; priceInCents: number }) => void | Promise<void>,
+  onComplete?: (result: {
+    usage: TokenUsage;
+    priceInCents: number;
+    modelId: string;
+  }) => void | Promise<void>,
   options?: GenerationOptions,
 ) {
+  const selection = normalizeModelSelection(modelSelection);
+  const [modelId, ...fallbackModelIds] = selection.modelIds;
   const model = await getTextModelById(modelId);
 
-  // Run access check and quota check in parallel for better performance
-  const [hasAccess, isOverQuota] = await Promise.all([
-    hasAccessToModel(apiKeyId, model),
-    isApiKeyOverQuota(apiKeyId),
-  ]);
-
-  if (!hasAccess) {
-    throw new InvalidModelError(`API key does not have access to the text model: ${model.name}`);
-  }
-
-  if (isOverQuota) {
-    throw new AiGenerationError(`API key has exceeded its monthly quota`);
-  }
+  await assertApiKeyCanUseModel(apiKeyId, model, 'text');
 
   try {
-    const billingCallback = async (usage: TokenUsage) => {
-      const priceInCents = await billTextGenerationUsageToApiKey(apiKeyId, model, usage);
+    const fallbackModels = await resolveFallbackModels(fallbackModelIds, apiKeyId);
+    const billingCallback = async (usage: TokenUsage, modelId?: string) => {
+      const usedModelId = getUsedModelId(selection, modelId);
+      const billingModel = getModelById([model, ...fallbackModels], usedModelId) ?? model;
+      const priceInCents = await billTextGenerationUsageToApiKey(apiKeyId, billingModel, usage);
+      await selection.onModelUsed?.(usedModelId);
       if (onComplete) {
-        await onComplete({ usage, priceInCents });
+        await onComplete({ usage, priceInCents, modelId: usedModelId });
       }
     };
 
-    const stream = generateTextStream(model, messages, billingCallback, options);
+    const generationOptions = fallbackModels.length ? { ...options, fallbackModels } : options;
+    const stream = generateTextStream(model, messages, billingCallback, generationOptions);
 
     for await (const chunk of stream) {
       yield chunk;
     }
   } catch (error) {
-    // Wrap non-AiGenerationError errors
-    if (!(error instanceof AiGenerationError)) {
-      throw new AiGenerationError(
-        `Text generation failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-    throw error;
+    throw normalizeAiGenerationError(error, 'Text generation failed');
   }
+}
+
+async function resolveFallbackModels(modelIds: string[] | undefined, apiKeyId: string) {
+  if (!modelIds?.length) return [];
+  const models = await Promise.all(
+    modelIds.map(async (modelId) => {
+      const model = await getTextModelById(modelId);
+      return (await hasAccessToModel(apiKeyId, model)) ? model : undefined;
+    }),
+  );
+  return models.filter((model): model is NonNullable<typeof model> => model !== undefined);
+}
+
+function getModelById<T extends { id: string }>(models: T[], modelId: string | undefined) {
+  return modelId ? models.find((candidate) => candidate.id === modelId) : undefined;
 }
 
 // ── Name-based variants (for API app) ──
@@ -148,6 +160,7 @@ export async function* generateTextStreamWithBilling(
  * @param modelName - The name of the text model to use for generation
  * @param messages - The conversation messages (system, user, assistant)
  * @param apiKeyId - The ID of the API key to verify access and bill usage
+ * @param options - Optional generation options (e.g. tools, temperature, abort signal)
  *
  * @returns A promise that resolves to an object containing the generated text response, usage, price, and model metadata
  */
@@ -169,6 +182,7 @@ export async function generateTextByNameWithBilling(
  * @param messages - The conversation messages (system, user, assistant)
  * @param apiKeyId - The ID of the API key to verify access and bill usage
  * @param onComplete - Optional callback to be invoked after stream completion with usage and price data
+ * @param options - Optional generation options (e.g. tools, temperature, abort signal)
  *
  * @returns An object with the model and an async generator that yields text chunks
  */

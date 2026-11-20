@@ -1,10 +1,13 @@
 import '@ui/styles/globals.css';
+
+import { buildPublicConfig } from '@shared/sentry/public-config';
+import { Toaster } from '@ui/components/toaster';
+import { TooltipProvider } from '@ui/components/tooltip';
 import { Barlow } from 'next/font/google';
 import Script from 'next/script';
 import type { ReactNode } from 'react';
+
 import { Header } from '../components/header/Header';
-import { Toaster } from '@ui/components/toaster';
-import { buildPublicConfig } from '@shared/sentry/public-config';
 
 const barlow = Barlow({
   weight: ['400', '500', '600', '700'],
@@ -26,7 +29,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <Toaster />
         <div className="flex flex-col gap-6 p-6 min-h-screen">
           <Header />
-          {children}
+          <TooltipProvider>{children}</TooltipProvider>
         </div>
       </body>
     </html>

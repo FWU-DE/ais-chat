@@ -1,14 +1,62 @@
-import { logError } from '@shared/logging';
-import { type ChatMessage } from '@/types/chat';
 import {
   generateTextWithBilling,
-  type Message as AiCoreMessage,
   isChatImageAttachment,
+  type Message as AiCoreMessage,
 } from '@ais-chat/ai-core';
-import { TOTAL_CHAT_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
-import { LlmModelSelectModel } from '@shared/db/schema';
+import { type FileModel, LlmModelSelectModel } from '@shared/db/schema';
 import { UnexpectedError } from '@shared/error/unexpected-error';
+import { logError } from '@shared/logging';
+import { escape } from 'he';
+
+import { TOTAL_CHAT_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
+import { type ChatMessage } from '@/types/chat';
+import { getDocumentAttachmentReference } from '@/utils/files/document-images';
+
 import { ChatAttachmentWithMessageId } from '../file-operations/preprocess-image';
+import { env as imageAttachmentEnv } from './image-attachment-env';
+
+export type FileWithConversationMessageId = FileModel & { conversationMessageId?: string };
+
+/**
+ * Adds attachment metadata to copies of user messages before they are sent to the model.
+ * The original messages remain unchanged, and files without a matching message are ignored.
+ */
+export function annotateMessageAttachmentNames(
+  messages: ChatMessage[],
+  files: FileWithConversationMessageId[],
+): ChatMessage[] {
+  // Group files by the message they were attached to.
+  const filesByMessageId = new Map<string, Array<{ id: string; name: string }>>();
+  for (const file of files) {
+    if (file.conversationMessageId === undefined) {
+      continue;
+    }
+    const attachedFiles = filesByMessageId.get(file.conversationMessageId) ?? [];
+    attachedFiles.push({ id: file.id, name: file.name });
+    filesByMessageId.set(file.conversationMessageId, attachedFiles);
+  }
+
+  // Add each group of filenames to a copy of its matching user message.
+  return messages.map((message) => {
+    if (message.role !== 'user') {
+      return message;
+    }
+    const attachedFiles = filesByMessageId.get(message.id);
+    if (attachedFiles === undefined || attachedFiles.length === 0) {
+      return message;
+    }
+    const attachmentData = attachedFiles
+      .map(
+        ({ id, name }) =>
+          `  <attachment ref="${escape(getDocumentAttachmentReference(id))}">${escape(name)}</attachment>`,
+      )
+      .join('\n');
+    return {
+      ...message,
+      content: `${message.content}\n\n<attachments>\n${attachmentData}\n</attachments>`,
+    };
+  });
+}
 
 /**
  * Enrich messages with image data from attachments.
@@ -207,14 +255,22 @@ export async function getChatTitle({
   }
 }
 
+// Vertex-hosted models (Anthropic Claude, Google Gemini) cannot fetch attachment urls themselves.
+const BASE64_ONLY_MODEL_NAME_PATTERNS = [/^anthropic\//i, /gemini/i];
+
 /**
- * Some models (like Anthropic models) require the image data to be included in the message as a base64 encoded string,
- * while others can work with just the image url. This function conditionally includes the base64 encoded data if required by the model.
+ * Some models (like Anthropic and Gemini models on Vertex) require the image data to be included in the message as a
+ * base64 encoded string, while others can work with just the image url. This function conditionally includes the
+ * base64 encoded data if required by the model.
+ * Setting IMAGE_ATTACHMENT_MODE=base64 forces base64 for all models (e.g. when the S3 storage isn't publicly reachable by the LLM provider).
  */
 export function determineImageAttachmentTypeForModel(model: LlmModelSelectModel): 'url' | 'base64' {
+  if (imageAttachmentEnv.imageAttachmentMode === 'base64') {
+    return 'base64';
+  }
   // we do not have settings on the LlmModelSelectModel to determine if the model needs image data,
   // so we will use the model name as a heuristic for now
-  if (model.name.startsWith('anthropic/')) {
+  if (BASE64_ONLY_MODEL_NAME_PATTERNS.some((pattern) => pattern.test(model.name))) {
     return 'base64';
   }
   return 'url';

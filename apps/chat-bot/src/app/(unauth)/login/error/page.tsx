@@ -1,8 +1,9 @@
-import LogoutButton from '@/app/(authed)/logout-button';
 import { WarningIcon } from '@phosphor-icons/react/dist/ssr';
 import { getAuthErrorFromUrl, getFieldErrorsFromUrl } from '@shared/auth/authentication-service';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+
+import LogoutButton from '@/app/(authed)/logout-button';
 
 export const dynamic = 'force-dynamic';
 

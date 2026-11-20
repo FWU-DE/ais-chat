@@ -1,6 +1,7 @@
-import { browser, BrowserContext, Page } from 'k6/browser';
-import { BASE_URL, LLM_MODELS, SCREENSHOT_FOLDERS, SELECTORS, WAIT_TIMES_IN_MS } from './config';
 import { check } from 'k6';
+import { browser, BrowserContext, Page } from 'k6/browser';
+
+import { BASE_URL, LLM_MODELS, SCREENSHOT_FOLDERS, SELECTORS, WAIT_TIMES_IN_MS } from './config';
 
 export async function saveScreenshot(page: Page, userIndex: string, isSuccess: boolean) {
   try {

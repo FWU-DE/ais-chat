@@ -1,7 +1,6 @@
 'use client';
 
-import React from 'react';
-import { useMessages } from 'next-intl';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { EntityRef } from '@shared/entities/entity-types';
 import {
   AlertDialog,
@@ -14,11 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@ui/components/alert-dialog';
-import { useToast } from '../common/toast';
-import { Textarea } from '@ui/components/textarea';
 import { Field, FieldGroup, FieldLabel } from '@ui/components/field';
-import z from 'zod';
-import { Controller, useForm } from 'react-hook-form';
 import {
   Select,
   SelectContent,
@@ -27,8 +22,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/select';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { Textarea } from '@ui/components/textarea';
+import { useMessages } from 'next-intl';
+import React from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import z from 'zod';
+
 import { createSuspensionRequestAction } from '@/app/(authed)/(chat-bot)/actions/suspension-actions';
+
+import { useToast } from '../common/toast';
 
 const FORM_ID = 'create-suspension-form';
 

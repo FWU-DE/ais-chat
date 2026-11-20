@@ -1,24 +1,25 @@
-import Chat from '@/components/chat/chat';
-import Logo from '@/components/common/logo';
-import { convertMessageModelToMessage } from '@/utils/chat/messages';
-import { requireAuth } from '@/auth/requireAuth';
+import { getCharacterForExistingConversation } from '@shared/characters/character-service';
 import {
   getConversation,
   getConversationMessages,
 } from '@shared/conversation/conversation-service';
-import { getCharacterForChatSession } from '@shared/characters/character-service';
-import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
-import { getAvatarPictureUrl } from '@shared/files/fileService';
-import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
 import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
-import { parseSearchParams } from '@/utils/parse-search-params';
-import { z } from 'zod';
-import { DEFAULT_CHAT_MODEL } from '@shared/llm-models/default-llm-models';
-import type { ChatMessage as Message } from '@/types/chat';
-import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { NotFoundError } from '@shared/error';
+import { getAvatarPictureUrl } from '@shared/files/fileService';
+import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { NotFoundError } from '@shared/error';
+import { z } from 'zod';
+
+import { requireAuth } from '@/auth/requireAuth';
+import Chat from '@/components/chat/chat';
+import Logo from '@/components/common/logo';
+import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
+import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
+import type { ChatMessage as Message } from '@/types/chat';
+import { convertMessageModelToMessage } from '@/utils/chat/messages';
+import { parseSearchParams } from '@/utils/parse-search-params';
 
 export const dynamic = 'force-dynamic';
 const searchParamsSchema = z.object({ model: z.string().optional() });
@@ -50,8 +51,9 @@ export default async function Page(
       conversationId: params.conversationId,
       userId: user.id,
     }),
-    getCharacterForChatSession({
+    getCharacterForExistingConversation({
       characterId: params.characterId,
+      conversationId: params.conversationId,
       user,
     }),
   ]).catch(handleErrorInServerComponent);
@@ -75,16 +77,18 @@ export default async function Page(
   });
 
   const lastUsedModelInChat = rawChatMessages.at(-1)?.modelName;
+  const defaultModelName = await getDefaultModelNameByFederalStateId(federalState.id, models);
 
   const currentModel =
-    searchParams.model ?? lastUsedModelInChat ?? user.lastUsedModel ?? DEFAULT_CHAT_MODEL;
+    searchParams.model ?? lastUsedModelInChat ?? user.lastUsedModel ?? defaultModelName;
 
   const avatarPictureUrl = await getAvatarPictureUrl(character.pictureId);
   const logoElement = <Logo logoPath={userAndContext.federalState.pictureUrls?.logo} />;
   return (
     <LlmModelsProvider
       models={models}
-      defaultLlmModelByCookie={currentModel}
+      initialModelName={currentModel}
+      defaultModelName={defaultModelName}
       initialDownloadConversationEnabled={rawChatMessages.length > 0}
     >
       <DefaultPageLayout
@@ -102,7 +106,7 @@ export default async function Page(
           id={chat.id}
           initialMessages={chatMessages}
           character={character}
-          enableFileUpload={false}
+          enableFileUpload={true}
           imageSource={avatarPictureUrl}
           logoElement={logoElement}
         />

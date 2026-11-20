@@ -1,8 +1,9 @@
 'use client';
 
-import CollapseSidebar from '@/components/common/collapse-sidebar';
 import { WarningIcon } from '@phosphor-icons/react';
 import { useTranslations } from 'next-intl';
+
+import CollapseSidebar from '@/components/common/collapse-sidebar';
 
 export default function SharedChatNotFound() {
   const t = useTranslations('common');

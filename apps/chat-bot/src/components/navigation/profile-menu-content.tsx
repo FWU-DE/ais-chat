@@ -1,19 +1,29 @@
 'use client';
 
-import React from 'react';
-import { type UserAndContext } from '@/auth/types';
-import { useTranslations } from 'next-intl';
-import Link from 'next/link';
-import { IMPRESSUM_URL, PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from './const';
-import { DropdownMenuItem } from '@ui/components/dropdown-menu';
 import { BrainIcon, SignOutIcon } from '@phosphor-icons/react';
 import { isPersonalContextAvailable } from '@shared/personal-context/personal-context-availability';
+import { DropdownMenuItem } from '@ui/components/dropdown-menu';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+
+import { type UserAndContext } from '@/auth/types';
+import { SettingsMenuItem } from '@/components/settings/settings-dialog';
+
+import { IMPRESSUM_URL, PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from './const';
 
 async function logout() {
+  // Full page navigation is required so the browser follows the route handler's redirect after clearing the session cookie.
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
   window.location.assign('/api/auth/logout');
 }
 
-export function ProfileMenuContent({ userAndContext }: { userAndContext?: UserAndContext }) {
+export function ProfileMenuContent({
+  userAndContext,
+  onOpenSettings,
+}: {
+  userAndContext?: UserAndContext;
+  onOpenSettings?: () => void;
+}) {
   const tCommon = useTranslations('common');
   const tLegal = useTranslations('legal');
   const tPersonalContext = useTranslations('personal-context');
@@ -56,6 +66,7 @@ export function ProfileMenuContent({ userAndContext }: { userAndContext?: UserAn
       {userAndContext !== undefined && (
         <>
           <hr className="border-gray-200 mx-2" />
+          {onOpenSettings !== undefined && <SettingsMenuItem onSelect={onOpenSettings} />}
           <DropdownMenuItem key="profile-menu-logout" onSelect={logout} className="text-primary">
             <SignOutIcon />
             {tCommon('logout')}

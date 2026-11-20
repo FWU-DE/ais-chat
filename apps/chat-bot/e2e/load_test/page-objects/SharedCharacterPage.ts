@@ -1,5 +1,6 @@
 import { Page } from 'k6/browser';
 import { Trend } from 'k6/metrics';
+
 import { BASE_URL } from '../config';
 
 const streamingResponseTime = new Trend('streaming_response_time', true);

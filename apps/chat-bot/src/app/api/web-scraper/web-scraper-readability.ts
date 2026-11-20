@@ -1,17 +1,22 @@
 import { Readability } from '@mozilla/readability';
-import { JSDOM, VirtualConsole } from 'jsdom';
-import { WEB_SCRAPE_RESULT_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
-import { defaultErrorSource } from '@/components/chat/sources/const';
-import { getTranslations } from 'next-intl/server';
-import he from 'he';
-import { logDebug, logError, logInfo, logWarning } from '@shared/logging';
-import { isBinaryFile } from 'isbinaryfile';
 import { WebSource } from '@shared/db/types';
+import { logDebug, logError, logInfo, logWarning } from '@shared/logging';
+import { decode } from 'he';
+import { isBinaryFile } from 'isbinaryfile';
+import { JSDOM, VirtualConsole } from 'jsdom';
+
+import { defaultErrorSource } from '@/components/chat/sources/const';
+import { WEB_SCRAPE_RESULT_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
 
 const headers = {
   'User-Agent':
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
 };
+
+// An unread response body keeps its stream and internal buffers alive for the lifetime of the process.
+function discardBody(response: Response): void {
+  response.body?.cancel().catch(() => undefined);
+}
 
 /**
  * Checks if the URL is valid and then fetches the main content of the website.
@@ -20,7 +25,6 @@ const headers = {
  * @returns A summary of the most important information from the page.
  */
 export async function webScraperReadability(url: string): Promise<WebSource> {
-  const t = await getTranslations('websearch');
   let response: Response;
 
   try {
@@ -45,27 +49,34 @@ export async function webScraperReadability(url: string): Promise<WebSource> {
   }
 
   if (!response.ok) {
+    discardBody(response);
     return defaultErrorSource(url);
   }
 
-  const buffer = Buffer.from(await response.clone().arrayBuffer());
+  let buffer: Buffer;
+  try {
+    buffer = Buffer.from(await response.arrayBuffer());
+  } catch (error) {
+    logError(`Failed to read response body for URL: ${url}`, error);
+    return defaultErrorSource(url);
+  }
+
   const isBinary = await isBinaryFile(buffer);
   if (isBinary) {
     logInfo(`Detected binary content for URL: ${url}`);
     return defaultErrorSource(url);
   }
 
-  // Extract title
-  const html = await response.clone().text();
+  // Matches Response.text(), which always decodes as UTF-8 regardless of the charset header
+  const html = new TextDecoder().decode(buffer);
   // Extract title from meta tags or Open Graph tags first, as they're more reliable
   const ogTitleMatch = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]*)"/i);
   const metaTitleMatch = html.match(/<meta[^>]*name="title"[^>]*content="([^"]*)"/i);
 
   // Use the first available title source
-  const rawTitle =
-    ogTitleMatch?.[1]?.trim() || metaTitleMatch?.[1]?.trim() || t('placeholders.unknown-title');
+  const rawTitle = ogTitleMatch?.[1]?.trim() || metaTitleMatch?.[1]?.trim() || '';
   // decode html special characters like &amp; etc.
-  const title = he.decode(rawTitle);
+  const title = decode(rawTitle);
 
   let info = '';
   try {
@@ -114,6 +125,8 @@ function extractArticleContent(html: string, url: string): string {
   } catch (error) {
     logError(`Error extracting content with Readability for URL: ${url}`, error);
     return '';
+  } finally {
+    doc?.window.close();
   }
 }
 
@@ -129,6 +142,7 @@ export async function isWebPage(url: string, timeout: number) {
     method: 'HEAD',
     signal: AbortSignal.timeout(timeout),
   });
+  discardBody(response);
 
   const contentType = response.headers.get('content-type');
 

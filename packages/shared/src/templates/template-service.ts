@@ -2,10 +2,19 @@
  * @description Service functions for handling global templates of characters, assistants, and learning scenarios.
  * Only for admin use, does not check for user authorization.
  */
-import { and, eq, inArray } from 'drizzle-orm';
+import path from 'node:path';
+
+import { UserModel } from '@shared/auth/user-model';
 import { db } from '@shared/db';
+import { dbGetAssistantById, dbUpsertAssistant } from '@shared/db/functions/assistants';
+import { dbCreateCharacter, dbGetCharacterById } from '@shared/db/functions/character';
 import {
-  AccessLevel,
+  dbGetFilesForLearningScenario,
+  dbGetRelatedAssistantFiles,
+  dbGetRelatedCharacterFiles,
+} from '@shared/db/functions/files';
+import { dbGetLearningScenarioById } from '@shared/db/functions/learning-scenario';
+import {
   assistantTable,
   assistantTemplateMappingTable,
   characterTable,
@@ -16,33 +25,28 @@ import {
   learningScenarioTable,
   learningScenarioTemplateMappingTable,
 } from '@shared/db/schema';
-import {
-  TemplateModel,
-  TemplateToFederalStateMapping,
-  TemplateTypes,
-} from '@shared/templates/template';
-import { dbCreateCharacter, dbGetCharacterById } from '@shared/db/functions/character';
-import { dbGetAssistantById, dbUpsertAssistant } from '@shared/db/functions/assistants';
-import {
-  dbGetFilesForLearningScenario,
-  dbGetRelatedAssistantFiles,
-  dbGetRelatedCharacterFiles,
-} from '@shared/db/functions/files';
-import { DUMMY_USER_ID } from '@shared/db/seed/user-entity';
-import { logError } from '@shared/logging';
+import { PLACEHOLDER_USER_ID } from '@shared/db/seed/user-entity';
+import { NotFoundError } from '@shared/error';
 import {
   duplicateFileWithEmbeddings,
   linkFileToAssistant,
   linkFileToCharacter,
   linkFileToLearningScenario,
 } from '@shared/files/fileService';
-import { buildLearningScenarioPictureKey } from '@shared/utils/picture-key';
-import { dbGetLearningScenarioById } from '@shared/db/functions/learning-scenario';
-import { NotFoundError } from '@shared/error';
+import { logError } from '@shared/logging';
 import { copyFileInS3 } from '@shared/s3';
+import {
+  TemplateModel,
+  TemplateToFederalStateMapping,
+  TemplateTypes,
+} from '@shared/templates/template';
+import {
+  buildAssistantPictureKey,
+  buildCharacterPictureKey,
+  buildLearningScenarioPictureKey,
+} from '@shared/utils/picture-key';
 import { generateUUID } from '@shared/utils/uuid';
-import path from 'node:path';
-import { UserModel } from '@shared/auth/user-model';
+import { and, eq, inArray } from 'drizzle-orm';
 
 const templateTypeMap: Record<string, TemplateTypes> = {
   assistants: 'assistant',
@@ -101,7 +105,7 @@ async function getCharacterTemplates(): Promise<TemplateModel[]> {
       isDeleted: characterTable.isDeleted,
     })
     .from(characterTable)
-    .where(eq(characterTable.accessLevel, 'global'));
+    .where(eq(characterTable.isGlobal, true));
 
   return templates.map((template) => ({
     ...template,
@@ -121,7 +125,7 @@ async function getAssistantTemplates(): Promise<TemplateModel[]> {
       isDeleted: assistantTable.isDeleted,
     })
     .from(assistantTable)
-    .where(eq(assistantTable.accessLevel, 'global'));
+    .where(eq(assistantTable.isGlobal, true));
 
   return templates.map((template) => ({
     ...template,
@@ -141,7 +145,7 @@ async function getLearningScenarioTemplates(): Promise<TemplateModel[]> {
       isDeleted: learningScenarioTable.isDeleted,
     })
     .from(learningScenarioTable)
-    .where(eq(learningScenarioTable.accessLevel, 'global'));
+    .where(eq(learningScenarioTable.isGlobal, true));
 
   return templates.map((template) => ({
     ...template,
@@ -242,6 +246,26 @@ export async function updateAuthorOfTemplate(
     await db
       .update(learningScenarioTable)
       .set({ author: newAuthor })
+      .where(eq(learningScenarioTable.id, templateId));
+  } else {
+    throw new Error('Invalid template type');
+  }
+}
+
+/** Admin is allowed to update the deleted state of a template. */
+export async function updateTemplateDeletedState(
+  templateType: TemplateTypes,
+  templateId: string,
+  isDeleted: boolean,
+) {
+  if (templateType === 'character') {
+    await db.update(characterTable).set({ isDeleted }).where(eq(characterTable.id, templateId));
+  } else if (templateType === 'assistant') {
+    await db.update(assistantTable).set({ isDeleted }).where(eq(assistantTable.id, templateId));
+  } else if (templateType === 'learning-scenario') {
+    await db
+      .update(learningScenarioTable)
+      .set({ isDeleted })
       .where(eq(learningScenarioTable.id, templateId));
   } else {
     throw new Error('Invalid template type');
@@ -452,7 +476,7 @@ export async function createTemplateFromUrl(url: string): Promise<string> {
     }
 
     // Copy associated files
-    await copyRelatedTemplateFiles(templateType, originalId, newTemplate.id);
+    await copyRelatedTemplateFiles(templateType, originalId, newTemplate.id, PLACEHOLDER_USER_ID);
 
     return newTemplate.id;
   } catch (error) {
@@ -474,6 +498,7 @@ export async function copyRelatedTemplateFiles(
   templateType: TemplateTypes,
   templateId: string,
   resultId: string,
+  targetUserId: string,
 ) {
   try {
     let relatedFiles: FileModel[];
@@ -491,7 +516,7 @@ export async function copyRelatedTemplateFiles(
     await Promise.all(
       relatedFiles.map(async (file) => {
         try {
-          const newFileId = await duplicateFileWithEmbeddings(file.id);
+          const newFileId = await duplicateFileWithEmbeddings(file.id, targetUserId);
           if (templateType === 'character') {
             await linkFileToCharacter(newFileId, resultId);
           } else if (templateType === 'assistant') {
@@ -516,10 +541,10 @@ export async function copyRelatedTemplateFiles(
 /**
  * Copies an assistant and creates a new one based on an existing assistant.
  * The new assistant inherits all properties from the source but can have customized
- * access level, user, and school assignments.
+ * global/user assignment.
  *
  * @param originalId - The ID of the source assistant to copy
- * @param accessLevel - The access level for the new assistant
+ * @param isGlobal - Whether the new assistant becomes a global template (true) or a private user copy (false)
  * @param userId - The user ID to assign to the new assistant
  * @param duplicateAssistantName - Optional name for the new assistant, defaults to source name if not provided
  * @returns Promise resolving to the newly created assistant object
@@ -527,7 +552,7 @@ export async function copyRelatedTemplateFiles(
  */
 export async function copyAssistant(
   originalId: string,
-  accessLevel: AccessLevel,
+  isGlobal: boolean,
   user: Pick<UserModel, 'id'>,
   duplicateAssistantName?: string,
 ) {
@@ -536,15 +561,25 @@ export async function copyAssistant(
     throw new Error('Assistent nicht gefunden');
   }
 
+  const newAssistantId = generateUUID();
+
   const newAssistant = {
     ...sourceAssistant,
+    popularity: 0, // a copy does not inherit the usage of its source
     name: (duplicateAssistantName ?? sourceAssistant.name).substring(0, MAX_ENTITY_NAME_LENGTH),
-    id: undefined,
+    id: newAssistantId,
     originalAssistantId: originalId,
-    accessLevel,
+    isSchoolShared: false,
+    isCommunityShared: false,
+    isGlobal,
     userId: user.id,
     isDeleted: false,
     hasLinkAccess: false, // Reset sharing settings for new template
+    pictureId: await copyEntityPictureIfExists({
+      sourcePictureId: sourceAssistant.pictureId,
+      newEntityId: newAssistantId,
+      buildPictureKey: buildAssistantPictureKey,
+    }),
   };
 
   const result = await dbUpsertAssistant({ assistant: newAssistant });
@@ -565,16 +600,16 @@ export async function copyAssistant(
  * @throws Error if source assistant is not found or template creation fails
  */
 async function createAssistantTemplate(originalId: string) {
-  return copyAssistant(originalId, 'global', { id: DUMMY_USER_ID });
+  return copyAssistant(originalId, true, { id: PLACEHOLDER_USER_ID });
 }
 
 /**
  * Copies a character and creates a new one based on an existing character.
  * The new character inherits all properties from the source but can have customized
- * access level, user, and school assignments.
+ * global/user assignment.
  *
  * @param originalId - The ID of the source character to copy
- * @param accessLevel - The access level for the new character
+ * @param isGlobal - Whether the new character becomes a global template (true) or a private user copy (false)
  * @param user - The user ID to assign to the new character
  * @param duplicateCharacterName - Optional custom name for the new character. If not provided, uses the source character's name.
  * @returns Promise resolving to the newly created character object
@@ -582,7 +617,7 @@ async function createAssistantTemplate(originalId: string) {
  */
 export async function copyCharacter(
   originalId: string,
-  accessLevel: AccessLevel,
+  isGlobal: boolean,
   user: Pick<UserModel, 'id'>,
   duplicateCharacterName?: string,
 ) {
@@ -591,15 +626,25 @@ export async function copyCharacter(
     throw new Error('Dialogpartner nicht gefunden');
   }
 
+  const newCharacterId = generateUUID();
+
   const newCharacter = {
     ...sourceCharacter,
+    popularity: 0, // a copy does not inherit the usage of its source
     name: (duplicateCharacterName ?? sourceCharacter.name).substring(0, MAX_ENTITY_NAME_LENGTH),
-    id: undefined,
+    id: newCharacterId,
     originalCharacterId: originalId,
-    accessLevel,
+    isSchoolShared: false,
+    isCommunityShared: false,
+    isGlobal,
     userId: user.id,
     isDeleted: false,
     hasLinkAccess: false, // Reset sharing settings for new template
+    pictureId: await copyEntityPictureIfExists({
+      sourcePictureId: sourceCharacter.pictureId,
+      newEntityId: newCharacterId,
+      buildPictureKey: buildCharacterPictureKey,
+    }),
   };
 
   const result = await dbCreateCharacter(newCharacter);
@@ -620,7 +665,7 @@ export async function copyCharacter(
  * @throws Error if source character is not found or template creation fails
  */
 async function createCharacterTemplate(originalId: string) {
-  return copyCharacter(originalId, 'global', { id: DUMMY_USER_ID });
+  return copyCharacter(originalId, true, { id: PLACEHOLDER_USER_ID });
 }
 
 /**
@@ -628,43 +673,54 @@ async function createCharacterTemplate(originalId: string) {
  * @param originalId - The id of the source learning scenario to create a template from.
  */
 async function createLearningScenarioTemplate(originalId: string) {
-  return copyLearningScenario(originalId, { id: DUMMY_USER_ID });
+  return copyLearningScenario(originalId, true, { id: PLACEHOLDER_USER_ID });
 }
 
 /**
- * Creates a new global learning scenario template based on an existing learning scenario.
+ * Copies a learning scenario and creates a new one based on an existing learning scenario.
+ * The new learning scenario inherits all properties from the source but can have customized
+ * global/user assignment.
  *
- * @param learningScenarioId - The id of the source learning scenario to copy
+ * @param originalId - The id of the source learning scenario to copy
+ * @param isGlobal - Whether the new learning scenario becomes a global template (true) or a private user copy (false)
  * @param user - The user that is the owner of the new learning scenario
- * @returns
+ * @param duplicateLearningScenarioName - Optional custom name for the new learning scenario. If not provided, uses the source learning scenario's name.
+ * @returns Promise resolving to the newly created learning scenario object
+ * @throws Error if source learning scenario is not found or creation fails
  */
 async function copyLearningScenario(
-  learningScenarioId: string,
+  originalId: string,
+  isGlobal: boolean,
   user: Pick<UserModel, 'id'>,
   duplicateLearningScenarioName?: string,
 ) {
-  const learningScenario = await dbGetLearningScenarioById({ learningScenarioId });
+  const learningScenario = await dbGetLearningScenarioById({ learningScenarioId: originalId });
   if (!learningScenario) {
     throw new NotFoundError('Original learning scenario not found');
   }
 
-  const copy = learningScenarioInsertSchema.parse(learningScenario);
-  copy.id = generateUUID();
-  copy.accessLevel = 'global';
-  copy.isDeleted = false;
-  copy.userId = user.id;
-  copy.originalLearningScenarioId = learningScenarioId;
-  copy.hasLinkAccess = false; // Reset sharing settings for new template
-  copy.name = (duplicateLearningScenarioName ?? learningScenario.name).substring(
-    0,
-    MAX_ENTITY_NAME_LENGTH,
-  );
+  const newLearningScenarioId = generateUUID();
 
-  copy.pictureId = await copyEntityPictureIfExists({
-    sourcePictureId: learningScenario.pictureId,
-    newEntityId: copy.id,
-    buildPictureKey: buildLearningScenarioPictureKey,
-  });
+  const copy = {
+    ...learningScenarioInsertSchema.parse(learningScenario),
+    name: (duplicateLearningScenarioName ?? learningScenario.name).substring(
+      0,
+      MAX_ENTITY_NAME_LENGTH,
+    ),
+    id: newLearningScenarioId,
+    originalLearningScenarioId: originalId,
+    isSchoolShared: false,
+    isCommunityShared: false,
+    isGlobal,
+    userId: user.id,
+    isDeleted: false,
+    hasLinkAccess: false, // Reset sharing settings for new template
+    pictureId: await copyEntityPictureIfExists({
+      sourcePictureId: learningScenario.pictureId,
+      newEntityId: newLearningScenarioId,
+      buildPictureKey: buildLearningScenarioPictureKey,
+    }),
+  };
   // attachments are copied in a separate step atm after the template is created
 
   const [newLearningScenario] = await db.insert(learningScenarioTable).values(copy).returning();

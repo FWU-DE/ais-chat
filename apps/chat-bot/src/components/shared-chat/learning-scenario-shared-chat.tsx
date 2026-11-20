@@ -1,25 +1,27 @@
 'use client';
 
-import { useLearningScenarioChat } from '@/hooks/use-chat-hooks';
-import { useTranslations } from 'next-intl';
 import { LearningScenarioWithShareDataModel } from '@shared/db/schema';
-import GenericSharedChat from './generic-shared-chat';
-import { loadSharedChat } from '@/utils/shared-chat-storage';
+import { useTranslations } from 'next-intl';
 import { z } from 'zod';
+
+import { type ChatMessage, useLearningScenarioChat } from '@/hooks/use-chat-hooks';
+import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
+
+import GenericSharedChat from './generic-shared-chat';
 
 export default function LearningScenarioSharedChat({
   avatarPictureUrl,
+  isSpeechModelEnabled,
   ...sharedSchoolChat
-}: LearningScenarioWithShareDataModel & { inviteCode: string; avatarPictureUrl?: string }) {
+}: LearningScenarioWithShareDataModel & {
+  inviteCode: string;
+  avatarPictureUrl?: string;
+  isSpeechModelEnabled: boolean;
+}) {
   const t = useTranslations('learning-scenarios.shared');
   const { id, inviteCode, modelId } = sharedSchoolChat;
 
-  const initialMessages =
-    loadSharedChat(inviteCode)?.messages.map((message) => ({
-      id: message.id,
-      role: message.role,
-      content: message.content,
-    })) ?? [];
+  const initialMessages: ChatMessage[] = [];
 
   const chat = useLearningScenarioChat({
     learningScenarioId: id,
@@ -56,32 +58,16 @@ export default function LearningScenarioSharedChat({
     };
   }
 
-  async function getSignedUrlForSharedLearningScenarioFile(
-    fileId: string,
-    sharedSessionId: string,
-  ): Promise<string> {
-    const response = await fetch('/api/v1/shared-chat/files/signed-url', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        inviteCode,
-        entityType: 'learningScenario',
-        entityId: id,
-        fileId,
-        sharedSessionId,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Could not read file');
-    }
-
-    const json = await response.json();
-    const parsed = z.object({ signedUrl: z.string() }).parse(json);
-
-    return parsed.signedUrl;
+  async function generateSharedLearningScenarioSpeechStream(
+    text: string,
+    _isInitialMessage: boolean,
+    { signal }: { signal: AbortSignal },
+  ): Promise<ReadableStream<Uint8Array>> {
+    return fetchSpeechStream(
+      '/api/v1/shared-chat/speech/stream',
+      { text, inviteCode, entityType: 'learningScenario', entityId: id },
+      signal,
+    );
   }
 
   return (
@@ -89,6 +75,7 @@ export default function LearningScenarioSharedChat({
       headerT={t}
       entity={sharedSchoolChat}
       inviteCode={inviteCode}
+      sharedEntityType="learningScenario"
       avatarPictureUrl={avatarPictureUrl}
       chat={chat}
       dialogStartMode="explicit"
@@ -96,7 +83,9 @@ export default function LearningScenarioSharedChat({
       exerciseDescription={sharedSchoolChat.studentExercise}
       exerciseTitle={t('exercise-title')}
       uploadFileFn={uploadSharedLearningScenarioFile}
-      getSignedUrlFn={getSignedUrlForSharedLearningScenarioFile}
+      isSpeechModelEnabled={isSpeechModelEnabled}
+      speechOnly={sharedSchoolChat.speechOnly}
+      generateSpeechStreamFn={generateSharedLearningScenarioSpeechStream}
     />
   );
 }

@@ -5,20 +5,27 @@
     "APP_VERSION",
     "AUTH_SECRET",
     "NODE_ENV",
+    "LOG_TO_STDOUT",
+    "APP_LOG_FILE",
+    "CONTAINER_LOG_FILE",
     "DATABASE_URL",
     "OTC_BUCKET_NAME",
     "OTC_SECRET_ACCESS_KEY",
     "OTC_ACCESS_KEY_ID",
     "OTC_S3_HOSTNAME",
+    "OTC_S3_REGION",
+    "IMAGE_ATTACHMENT_MODE",
     "VIDIS_CLIENT_ID",
     "VIDIS_CLIENT_SECRET",
     "VIDIS_ISSUER_URI",
+    "VIDIS_ALLOW_INSECURE_DISCOVERY",
     "KEYCLOAK_CLIENT_ID",
     "KEYCLOAK_CLIENT_SECRET",
     "KEYCLOAK_ISSUER",
     "DE_TEST_API_KEY",
     "API_KEY",
     "API_URL",
+    "CHAT_BOT_BASE_URL",
     "ENCRYPTION_KEY",
     "RABBITMQ_URI",
     "NEXT_RUNTIME",
@@ -35,13 +42,17 @@
     "NEXT_PUBLIC_SENTRY_LOG_LEVEL",
     "API_DATABASE_URL",
     "BIFROST_ADMIN_URL",
+    "BIFROST_ADMIN_USERNAME",
+    "BIFROST_ADMIN_PASSWORD",
     "BIFROST_API_KEY",
     "BIFROST_BASE_URL",
-    "BIFROST_MANAGEMENT_API_KEY",
+    "MAX_AGENTIC_ITERATIONS",
+    "MAX_TOOL_CALLS_PER_ITERATION",
     "DB_CACHE_TTL_SECONDS",
     "CRAWL4AI_URL",
     "CRAWL4AI_API_TOKEN",
     "XBERG_URL",
+    "CALCULATOR_URL",
     "LINKUP_API_KEY",
     "LLM_IONOS_API_KEY",
     "LLM_IONOS_BASE_URL",
@@ -49,16 +60,26 @@
     "LLM_GPT4OMINI_BASE_URL",
     "LLM_GPT5NANO_API_KEY",
     "LLM_GPT5NANO_BASE_URL",
+    "LLM_GPT_IMAGE_API_KEY",
+    "LLM_GPT_IMAGE_BASE_URL",
     "LLM_GPT5MINI_API_KEY",
     "LLM_GPT5MINI_BASE_URL",
     "LLM_MOCK_API_KEY",
     "LLM_MOCK_BASE_URL",
+    "LLM_GOOGLE_PROJECT_ID",
+    "LLM_GOOGLE_LOCATION",
+    "LLM_GOOGLE_AUTH_CREDENTIALS",
+    "LLM_LLAMA_GUARD_ENDPOINT_ID",
+    "LLM_LLAMA_GUARD_ENDPOINT_HOST",
+    "E2E_GUARD_TEXT_MODEL",
+    "E2E_SUITE",
     "E2E_TEXT_MODEL_1",
     "E2E_TEXT_MODEL_2",
-    "API_NAME",
-    "GOOGLE_APPLICATION_CREDENTIALS",
+    "E2E_IMAGE_CAPABLE_MODEL",
+    "E2E_IMAGE_MODEL",
+    "E2E_SPEECH_MODEL",
+    "E2E_SPEECH_VOICE",
     "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
-    "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
     "PORT",
     "SENTRY_PROFILE_SESSION_SAMPLE_RATE",
     "STAGE_DATABASE_URL",
@@ -89,13 +110,12 @@
         "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"
       ]
     },
-    "check-types": {
-      "dependsOn": ["^check-types"]
-    },
+    "check-types": {},
     "dev": {
       "persistent": true,
       "cache": false
     },
+    "db:check": {},
     "db:migrate": {
       "dependsOn": ["^db:migrate"],
       "env": ["API_DATABASE_URL"]
@@ -112,14 +132,9 @@
       "cache": false,
       "dependsOn": []
     },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
-    "test": {
-      "dependsOn": ["^test"]
-    },
+    "lint": {},
+    "test": {},
     "test:coverage": {
-      "dependsOn": ["^test:coverage"],
       "outputs": ["coverage/**"]
     }
   }

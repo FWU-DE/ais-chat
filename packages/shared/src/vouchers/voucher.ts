@@ -1,5 +1,6 @@
 import { createSelectSchema } from 'drizzle-zod';
 import z from 'zod';
+
 import { VoucherTable } from '../db/schema';
 
 // Generate zod schemas from the database table
@@ -26,7 +27,7 @@ export type CreateVoucherParams = z.infer<typeof createVoucherSchema>;
 export const revokeVoucherSchema = z.object({
   code: z.string().length(16),
   revoked: z.boolean().refine((val) => val === true, {
-    message: "Only voucher revocation is supported. 'revoked' must be true.",
+    error: "Only voucher revocation is supported. 'revoked' must be true.",
   }),
   updateReason: z.string().min(1).max(500),
 });

@@ -1,13 +1,15 @@
 'use client';
 
 import { DownloadSimpleIcon } from '@phosphor-icons/react';
-import React from 'react';
+import { ServerActionResult } from '@shared/actions/server-action-result';
+import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
+import React from 'react';
+
+import { openInNewTab } from '@/utils/navigation/router';
+
 import Spinner from '../icons/spinner';
 import { useToast } from './toast';
-import { ServerActionResult } from '@shared/actions/server-action-result';
-import { openInNewTab } from '@/utils/navigation/router';
-import { Button } from '@ui/components/button';
 
 type DownloadFileButtonProps = {
   fileId: string;

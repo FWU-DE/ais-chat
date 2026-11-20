@@ -1,29 +1,66 @@
 import { defineConfig, devices } from '@playwright/test';
+import type SmartReporter from 'playwright-smart-reporter';
+
+import { adminAppDir, chatBotAppDir, getAppBaseUrl, loadAppEnv } from './e2e/utils/app-env';
+
+type AccessibilityConfig = NonNullable<
+  NonNullable<ConstructorParameters<typeof SmartReporter>[0]>['accessibility']
+>;
+
+const chatBotBaseUrl = getAppBaseUrl(chatBotAppDir);
+
+function withAppEnv(appDir: string): Record<string, string> {
+  const baseEnv = Object.fromEntries(
+    Object.entries(process.env).filter(
+      (entry): entry is [string, string] => entry[1] !== undefined,
+    ),
+  );
+  return { ...baseEnv, ...loadAppEnv(appDir) };
+}
 
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
-export default defineConfig({
+export default defineConfig<{ smartReporterA11y: AccessibilityConfig }>({
   globalSetup: './e2e/global-setup',
-  testDir: './e2e/tests/',
+  // The monorepo root, shared with the admin/api configs, so merged smart-reporter
+  // test locations resolve correctly across apps (see smart-report/merge.config.ts).
+  // Each project below restores its own e2e/tests dir for test discovery.
+  testDir: '../..',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 3 : 1,
   // Limit the number of failures on CI to save resources
   maxFailures: process.env.CI ? 10 : undefined,
-  reporter: [['html', { outputFolder: './playwright-report' }], ['json'], ['github'], ['list']],
+  reporter: [
+    ['html', { outputFolder: './playwright-report' }],
+    ['json'],
+    ['github'],
+    ['list'],
+    ['./e2e/reporters/app-log-reporter.ts'],
+    // For smart-reporter (see smart-report/merge.config.ts)
+    ['blob', { outputDir: 'blob-report', fileName: 'chat-bot-report.zip' }],
+  ],
   timeout: 90_000,
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: chatBotBaseUrl,
     trace: 'on-first-retry',
     screenshot: 'on',
     video: 'retain-on-failure',
+    smartReporterA11y: {
+      enabled: true,
+      standard: 'WCAG2AA',
+      // Entity cards intentionally violate WCAG 2.5.3 (see e2e/tests/accessibility.test.ts);
+      // exclude can't be scoped to a selector, so it's disabled globally here.
+      exclude: ['label-content-name-mismatch'],
+    },
   },
   /* Configure projects for major browsers */
   projects: [
     {
       name: 'chromium',
+      testDir: './e2e/tests/',
       testIgnore: ['**/isolated/**', '**/external-services/**', /.*api.test.ts/],
       use: {
         ...devices['Desktop Chrome'],
@@ -32,6 +69,7 @@ export default defineConfig({
     },
     {
       name: 'firefox',
+      testDir: './e2e/tests/',
       testIgnore: ['**/isolated/**', '**/external-services/**', /.*api.test.ts/],
       use: {
         ...devices['Desktop Firefox'],
@@ -43,11 +81,13 @@ export default defineConfig({
     },
     {
       name: 'api test',
+      testDir: './e2e/tests/',
       testMatch: /.*api.test.ts/,
       fullyParallel: true,
     },
     {
       name: 'external-services',
+      testDir: './e2e/tests/',
       testMatch: '**/external-services/**/*.test.ts',
       use: {
         ...devices['Desktop Chrome'],
@@ -56,6 +96,7 @@ export default defineConfig({
     },
     {
       name: 'isolated',
+      testDir: './e2e/tests/',
       testMatch: '**/isolated/**/*.test.ts',
       dependencies: ['chromium', 'firefox', 'api test'],
       use: {
@@ -83,11 +124,28 @@ export default defineConfig({
     //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     // },
   ],
-  webServer: {
-    command: 'pnpm dev',
-    timeout: 60000, // wait 60 seconds for web server at url to be available
-    url: 'http://localhost:3000', // the server to be used for tests
-    reuseExistingServer: true,
-    stdout: 'pipe',
-  },
+  webServer: [
+    {
+      command: 'pnpm dev',
+      timeout: 60000, // wait 60 seconds for web server at url to be available
+      url: chatBotBaseUrl, // the server to be used for tests
+      reuseExistingServer: true,
+      stdout: 'pipe',
+      name: 'chat-bot',
+      env: withAppEnv(chatBotAppDir),
+    },
+    {
+      // Admin app is required for cross-app tests (e.g. community templates).
+      // Run from the admin directory with its own env so it doesn't inherit
+      // chat-bot's env when this config is started via chat-bot's dotenvx scripts.
+      command: 'pnpm dev',
+      cwd: adminAppDir,
+      timeout: 60000,
+      url: getAppBaseUrl(adminAppDir),
+      reuseExistingServer: true,
+      stdout: 'pipe',
+      name: 'admin',
+      env: withAppEnv(adminAppDir),
+    },
+  ],
 });

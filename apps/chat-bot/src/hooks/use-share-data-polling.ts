@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { ServerActionResult } from '@shared/actions/server-action-result';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface SharePollingData {
   expiredAt: Date | null;

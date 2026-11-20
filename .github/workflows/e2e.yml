@@ -8,134 +8,99 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Test suite to run'
+        type: choice
+        options:
+          - smoke
+          - regression
+        default: smoke
+
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   e2e:
-    runs-on: ubuntu-latest
-    services:
-      postgres-dialog:
-        image: pgvector/pgvector:pg16
-        ports:
-          - 5432:5432
-        env:
-          POSTGRES_USER: admin
-          POSTGRES_PASSWORD: test1234
-          POSTGRES_DB: app_db
-        options: >-
-          --health-cmd "pg_isready -U admin -d app_db"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      postgres-api:
-        image: pgvector/pgvector:pg16
-        ports:
-          - 6543:5432
-        env:
-          POSTGRES_USER: admin
-          POSTGRES_PASSWORD: test1234
-          POSTGRES_DB: api_db
-        options: >-
-          --health-cmd "pg_isready -U admin -d api_db"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      valkey:
-        image: ghcr.io/valkey-io/valkey:9.1.0-alpine
-        ports:
-          - 6379:6379
-      rabbitmq:
-        image: rabbitmq:4
-        ports:
-          - 5672:5672
-        env:
-          RABBITMQ_DEFAULT_PASS: password
-          RABBITMQ_DEFAULT_USER: user
+    runs-on: ubuntu-26.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      pull-requests: write # for the smart-reporter pull request comment
 
     env:
+      # smoke: pipeline subset (@smoke tests, chromium) on PR open/update; regression: all tests incl. firefox and real LLMs, run on merge to main
+      E2E_SUITE: ${{ (github.event_name == 'push' || inputs.suite == 'regression') && 'regression' || 'smoke' }}
       DATABASE_URL: postgresql://admin:test1234@127.0.0.1:5432/app_db
       RABBITMQ_URI: amqp://user:password@127.0.0.1:5672
       VALKEY_URL: redis://127.0.0.1:6379/0
       VIDIS_CLIENT_ID: ais-chat-e2e-client
       VIDIS_CLIENT_SECRET: ClientSecret-e2e
       VIDIS_ISSUER_URI: http://localhost:8080/realms/ais-chat-local
-      API_DATABASE_URL: postgresql://admin:test1234@127.0.0.1:6543/api_db
+      VIDIS_ALLOW_INSECURE_DISCOVERY: true
+      KEYCLOAK_CLIENT_ID: ais-chat-e2e-client
+      KEYCLOAK_CLIENT_SECRET: ClientSecret-e2e
+      KEYCLOAK_ISSUER: http://localhost:8080/realms/ais-chat-local
+      API_DATABASE_URL: postgresql://admin:test1234@127.0.0.1:5432/api_db
       API_URL: http://localhost:3002
       API_KEY: ApiKeyForAISChatApiAdminApi
+      CHAT_BOT_BASE_URL: http://localhost:3000
       ENCRYPTION_KEY: EncryptionKeyForEncryptedApiKeysToAISChatApi
       # Auth.js secret
       AUTH_SECRET: 'yN1a0lQ77RgeEQam5DvGaddbdUDQoxswK+21FmEqBPs='
-      # S3 Storage
-      OTC_SECRET_ACCESS_KEY: ${{ secrets.OTC_SECRET_ACCESS_KEY }}
-      OTC_ACCESS_KEY_ID: ${{ secrets.OTC_ACCESS_KEY_ID }}
-      OTC_S3_HOSTNAME: ${{ secrets.OTC_S3_HOSTNAME }}
-      OTC_BUCKET_NAME: ${{ secrets.OTC_BUCKET_NAME }}
+      # S3 Storage (local RustFS, started via docker-compose.local.yml)
+      OTC_SECRET_ACCESS_KEY: RustFS-Admin-123456
+      OTC_ACCESS_KEY_ID: rustfsadmin
+      OTC_S3_HOSTNAME: http://127.0.0.1:9000
+      OTC_S3_REGION: eu-de
+      OTC_BUCKET_NAME: ais-chat
+      # Send image attachments to the LLM as base64 since RustFS is not publicly reachable
+      IMAGE_ATTACHMENT_MODE: base64
       # Disable telemetry
       NEXT_TELEMETRY_DISABLED: 1
       TURBO_TELEMETRY_DISABLED: 1
+      # Crawl4AI
       CRAWL4AI_API_TOKEN: ais-chat-crawl4ai-token
+      # Xberg
       XBERG_URL: http://localhost:8000
-      XBERG_MAX_UPLOAD_SIZE_MB: '50'
+      # Bifrost
+      BIFROST_BASE_URL: http://localhost:8089/openai/v1
+      BIFROST_API_KEY: sk-bf-example-key
+      # Log files shared between the app/container log steps and the Playwright log reporter
+      APP_LOG_FILE: /tmp/ais-chat-app.log
+      CONTAINER_LOG_FILE: /tmp/container-logs.log
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Keycloak container cannot be started under services, because it needs to mount files from the repo
-      - name: Start keycloak container (in background)
-        run: |
-          docker run \
-            --name keycloak \
-            -v "$PWD/devops/docker/keycloak:/opt/keycloak/data/import" \
-            -p 8080:8080 \
-            -e CLIENT_NAME=$VIDIS_CLIENT_ID -e CLIENT_SECRET=$VIDIS_CLIENT_SECRET \
-            --entrypoint /opt/keycloak/data/import/entrypoint.sh \
-            quay.io/keycloak/keycloak:26.7.0 > /tmp/keycloak.log 2>&1 &
+      - name: Restore smart-reporter test history
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/chat-bot/smart-report/test-history.json
+          # On a PR, restore the target branch's history (read-only baseline, see baseline.branch
+          # in smart-report/merge.config.ts); on a push, restore this branch's own history.
+          key: test-history-${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            test-history-${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}-
 
-      # crawl4ai is not started under services because its large image (~40s pull) would delay the whole pipeline
-      - name: Start crawl4ai container (in background)
-        run: |
-          docker run \
-            --name crawl4ai \
-            --shm-size=2gb \
-            -p 11235:11235 \
-            -e CRAWL4AI_API_TOKEN=$CRAWL4AI_API_TOKEN \
-            unclecode/crawl4ai:0.9.2 > /tmp/crawl4ai.log 2>&1 &
-
-      # xberg is not started under services because its startup time would delay the whole pipeline
-      - name: Start xberg container (in background)
-        run: |
-          docker run \
-            --name xberg \
-            -p 8000:8000 \
-            -e XBERG_MAX_UPLOAD_SIZE_MB=$XBERG_MAX_UPLOAD_SIZE_MB \
-            ghcr.io/xberg-io/xberg:1.0.0-rc.29-core > /tmp/xberg.log 2>&1 &
-
-      - name: Start bifrost container (in background)
-        run: |
-          docker run \
-            --name bifrost \
-            --network host \
-            -e APP_HOST=0.0.0.0 \
-            -e APP_PORT=8089 \
-            maximhq/bifrost:v1.6.5 > /tmp/bifrost.log 2>&1 &
+      - name: Start e2e container dependencies
+        run: docker compose -f devops/docker/docker-compose.local.yml up -d --build &
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
 
-      - name: Start mock-llm server
-        run: |
-          node devops/docker/mock-llm/server.mjs > /tmp/mock-llm.log 2>&1 &
-
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
@@ -144,7 +109,15 @@ jobs:
             playwright-${{ runner.os }}-
 
       - name: Install Playwright browsers
-        run: pnpm --filter ais-chat-app exec playwright install chromium firefox
+        run: |
+          if [ "$E2E_SUITE" = "regression" ]; then
+            pnpm --filter ais-chat-app exec playwright install chromium firefox
+          else
+            pnpm --filter ais-chat-app exec playwright install chromium
+          fi
+
+      - name: Wait for postgres
+        run: docker compose -f devops/docker/docker-compose.local.yml up -d --wait postgres
 
       - name: Start ais-chat-api
         run: |
@@ -162,43 +135,46 @@ jobs:
           done
         env:
           PORT: 3002
-          BIFROST_BASE_URL: http://localhost:8089/openai/v1
+
+      - name: Wait for bifrost, mock-llm and rustfs
+        run: docker compose -f devops/docker/docker-compose.local.yml up -d --wait bifrost mock-llm rustfs-init
 
       - name: Seed ais-chat-api database
         # db:seed will print the generated API KEY on the console
-        # The output is captured in GITHUB_ENV for seeding ais-chat-app
+        # The output is captured in GITHUB_ENV for the API e2e tests (DE_TEST_API_KEY)
+        # On fork PRs, the LLM_* secrets below are unavailable and resolve to empty strings;
+        # db:seed skips any real-provider model whose credentials aren't set and seeds the
+        # mock LLM only, which is all the smoke suite (the suite fork PRs run) needs.
         run: |
-          timeout=60
-          elapsed=0
-          until wget -qO- http://localhost:8089/api/providers > /dev/null 2>&1; do
-            if [ $elapsed -ge $timeout ]; then
-              echo "Bifrost did not become ready within ${timeout}s"
-              exit 1
-            fi
-            echo "$(date) - waiting for Bifrost to be ready"
-            sleep 1
-            elapsed=$((elapsed + 1))
-          done
           pnpm --filter @ais-chat/api-database db:seed | tee /tmp/out.txt
           grep -E '^DE_[A-Z0-9_]*_API_KEY=' /tmp/out.txt >> "$GITHUB_ENV"
         env:
           BIFROST_ADMIN_URL: http://localhost:8089
+          BIFROST_ADMIN_USERNAME: admin
+          BIFROST_ADMIN_PASSWORD: admin
           LLM_IONOS_API_KEY: ${{ secrets.LLM_IONOS_API_KEY }}
           LLM_IONOS_BASE_URL: ${{ secrets.LLM_IONOS_BASE_URL }}
           LLM_GPT4OMINI_API_KEY: ${{ secrets.LLM_GPT4OMINI_API_KEY }}
           LLM_GPT4OMINI_BASE_URL: ${{ secrets.LLM_GPT4OMINI_BASE_URL }}
           LLM_GPT5NANO_API_KEY: ${{ secrets.LLM_GPT5NANO_API_KEY }}
           LLM_GPT5NANO_BASE_URL: ${{ secrets.LLM_GPT5NANO_BASE_URL }}
+          LLM_GPT_IMAGE_API_KEY: ${{ secrets.LLM_GPT_IMAGE_API_KEY }}
+          LLM_GPT_IMAGE_BASE_URL: ${{ secrets.LLM_GPT_IMAGE_BASE_URL }}
           LLM_GPT5MINI_API_KEY: ${{ secrets.LLM_GPT5MINI_API_KEY }}
           LLM_GPT5MINI_BASE_URL: ${{ secrets.LLM_GPT5MINI_BASE_URL }}
           LLM_MOCK_API_KEY: mock-api-key
-          LLM_MOCK_BASE_URL: http://localhost:6556
+          LLM_MOCK_BASE_URL: http://mock-llm:6556
+          LLM_GOOGLE_PROJECT_ID: ${{ secrets.LLM_GOOGLE_PROJECT_ID }}
+          LLM_GOOGLE_LOCATION: ${{ secrets.LLM_GOOGLE_LOCATION }}
+          LLM_GOOGLE_AUTH_CREDENTIALS: ${{ secrets.LLM_GOOGLE_AUTH_CREDENTIALS }}
+          LLM_LLAMA_GUARD_ENDPOINT_ID: ${{ secrets.LLM_LLAMA_GUARD_ENDPOINT_ID }}
+          LLM_LLAMA_GUARD_ENDPOINT_HOST: ${{ secrets.LLM_LLAMA_GUARD_ENDPOINT_HOST }}
 
       - name: Run migrations and seed database (if applicable)
         run: pnpm --filter @ais-chat/shared db:migrate && pnpm --filter @ais-chat/shared db:seed
 
       - name: Cache turbo build cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .turbo
           key: turbo-e2e-${{ runner.os }}-${{ github.sha }}
@@ -214,40 +190,105 @@ jobs:
           cp -a .next/static .next/standalone/apps/chat-bot/.next/
           cp -a public .next/standalone/apps/chat-bot/
           cd .next/standalone
-          node ./apps/chat-bot/server.js > /tmp/ais-chat-app.log 2>&1 &
+          # Prepend each log line with a UTC timestamp so the Playwright reporter can correlate them with tests.
+          node ./apps/chat-bot/server.js 2>&1 \
+            | gawk '{ print strftime("%Y-%m-%dT%H:%M:%SZ", systime(), 1), $0; fflush() }' \
+            > "$APP_LOG_FILE" &
         env:
-          NODE_ENV: test
+          # Surface all app log levels on stdout (captured in $APP_LOG_FILE).
+          LOG_TO_STDOUT: 'true'
           LINKUP_API_KEY: ${{ secrets.LINKUP_API_KEY }}
-          BIFROST_BASE_URL: http://localhost:8089/openai/v1
+
+      - name: Start admin application
+        run: |
+          pnpm --filter ais-chat-admin dev > /tmp/ais-chat-admin.log 2>&1 &
+          timeout=60
+          elapsed=0
+          until wget -qO- http://localhost:3001/api/healthz > /dev/null 2>&1; do
+            if [ $elapsed -ge $timeout ]; then
+              echo "ais-chat-admin did not become ready within ${timeout}s"
+              exit 1
+            fi
+            echo "$(date) - waiting for ais-chat-admin to be ready"
+            sleep 1
+            elapsed=$((elapsed + 1))
+          done
+
+      - name: Wait for valkey, keycloak and remaining services
+        run: |
+          docker compose -f devops/docker/docker-compose.local.yml up -d --wait valkey keycloak rabbitmq crawl4ai xberg calculator
+          timeout=120
+          elapsed=0
+          until wget -qO- "${VIDIS_ISSUER_URI}/.well-known/openid-configuration" > /dev/null 2>&1; do
+            if [ $elapsed -ge $timeout ]; then
+              echo "Keycloak did not become ready within ${timeout}s"
+              exit 1
+            fi
+            echo "$(date) - waiting for keycloak to be ready"
+            sleep 1
+            elapsed=$((elapsed + 1))
+          done
+
+      # Stream container logs (with timestamps) to a file so the Playwright reporter can correlate them with tests.
+      - name: Stream container logs to file
+        if: ${{ !cancelled() }}
+        run: docker compose -f devops/docker/docker-compose.local.yml logs --no-color --timestamps --follow > "$CONTAINER_LOG_FILE" 2>&1 &
 
       - name: Run E2E tests (app)
-        run: pnpm --filter ais-chat-app e2e
+        id: app-e2e
+        run: pnpm --filter ais-chat-app ${{ env.E2E_SUITE == 'regression' && 'e2e' || 'e2e:smoke' }}
         env:
           CI: true
+          E2E_GUARD_TEXT_MODEL: GPT-5 nano
           E2E_TEXT_MODEL_1: Mock LLM
           E2E_TEXT_MODEL_2: Mock LLM (2)
+          E2E_IMAGE_MODEL: Mock LLM (Image)
+
+      - name: Run E2E tests (admin)
+        # Run even if the app suite failed, but not if it was skipped (e.g. setup failed) or cancelled.
+        if: ${{ !cancelled() && steps.app-e2e.conclusion != 'skipped' }}
+        run: pnpm --filter ais-chat-admin ${{ env.E2E_SUITE == 'regression' && 'e2e' || 'e2e:smoke' }}
+        env:
+          CI: true
 
       - name: Run E2E tests (api)
-        run: pnpm --filter ais-chat-api e2e
+        if: ${{ !cancelled() && steps.app-e2e.conclusion != 'skipped' }}
+        run: pnpm --filter ais-chat-api ${{ env.E2E_SUITE == 'regression' && 'e2e' || 'e2e:smoke' }}
         env:
           CI: true
           DE_TEST_API_KEY: ${{ env.DE_TEST_API_KEY }}
 
-      - name: Upload Playwright reports (app)
-        uses: actions/upload-artifact@v7
-        if: always()
+      - name: Merge app/admin/api blob reports into one aggregated smart report
+        if: ${{ !cancelled() }}
+        run: pnpm --filter ais-chat-app smart-report:merge
+
+      - name: Upload aggregated smart report
+        id: upload-smart-report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
         with:
-          name: playwright-report
-          path: apps/chat-bot/playwright-report
+          name: smart-report-${{ env.E2E_SUITE }}
+          path: |
+            apps/chat-bot/smart-report/smart-report.html
+            apps/chat-bot/smart-report/smart-report-data.json
+            apps/chat-bot/smart-report/smart-report-data.js
+            apps/chat-bot/smart-report/traces/
+            apps/chat-bot/smart-report/blobs/resources/
           retention-days: 30
 
-      - name: Upload Playwright reports (api)
-        uses: actions/upload-artifact@v7
-        if: always()
+      - name: Save smart-reporter test history
+        if: ${{ !cancelled() && github.event_name != 'pull_request' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          name: api-playwright-report
-          path: apps/api/playwright-report
-          retention-days: 30
+          path: apps/chat-bot/smart-report/test-history.json
+          key: test-history-${{ github.ref_name }}-${{ github.run_id }}
+
+      - name: Post smart-reporter pull request comment
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        uses: qa-gary-parker/playwright-smart-reporter@66c029723e29b02ae4275819e60a9296bef83f63 # v4.0.1
+        with:
+          data: apps/chat-bot/smart-report/smart-report-data.json
+          report-url: ${{ steps.upload-smart-report.outputs.artifact-url }}
 
       - name: Print ais-chat-api logs
         if: always()
@@ -259,34 +300,14 @@ jobs:
         if: always()
         run: |
           echo "=== ais-chat-app logs ==="
-          cat /tmp/ais-chat-app.log || true
+          cat "$APP_LOG_FILE" || true
 
-      - name: Print crawl4ai logs
+      - name: Print ais-chat-admin logs
         if: always()
         run: |
-          echo "=== crawl4ai logs ==="
-          cat /tmp/crawl4ai.log || true
+          echo "=== ais-chat-admin logs ==="
+          cat /tmp/ais-chat-admin.log || true
 
-      - name: Print xberg logs
+      - name: Print container logs
         if: always()
-        run: |
-          echo "=== xberg logs ==="
-          cat /tmp/xberg.log || true
-
-      - name: Print bifrost logs
-        if: always()
-        run: |
-          echo "=== bifrost logs ==="
-          cat /tmp/bifrost.log || true
-
-      - name: Print mock-llm logs
-        if: always()
-        run: |
-          echo "=== mock-llm logs ==="
-          cat /tmp/mock-llm.log || true
-
-      - name: Print keycloak logs
-        if: always()
-        run: |
-          echo "=== keycloak logs ==="
-          cat /tmp/keycloak.log || true
+        run: cat "$CONTAINER_LOG_FILE" || true

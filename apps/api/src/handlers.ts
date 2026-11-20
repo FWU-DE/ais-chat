@@ -1,15 +1,18 @@
 import { FastifyInstance, RouteHandlerMethod, RouteShorthandOptions } from 'fastify';
+
+import { handler as v1_admin_report_getHandler } from './routes/(app)/v1/admin/report/get';
+import { handler as v1_audio_speech_postHandler } from './routes/(app)/v1/audio/speech/post';
+import { speechRequestSwaggerSchema } from './routes/(app)/v1/audio/speech/swagger-schemas';
 import { handler as v1_chat_completions_postHandler } from './routes/(app)/v1/chat/completions/post';
-import { handler as v1_models_getHandler } from './routes/(app)/v1/models/get';
-import { handler as v1_usage_getHandler } from './routes/(app)/v1/usage/get';
-import { handler as v1_embeddings_postHandler } from './routes/(app)/v1/embeddings/post';
-import { handler as v1_images_generations_postHandler } from './routes/(app)/v1/images/generations/post';
-import { handler as v1_admin_report_getHandler } from './routes/(app)/v1/admin/organizations/$organizationId/report/get';
 import { completionRequestSchemaSwagger } from './routes/(app)/v1/chat/completions/swagger-schemas';
-import { modelRequestSwaggerSchema } from './routes/(app)/v1/models/swagger-schemas';
-import { usageRequestSwaggerSchema } from './routes/(app)/v1/usage/swagger-schemas';
+import { handler as v1_embeddings_postHandler } from './routes/(app)/v1/embeddings/post';
 import { embeddingRequestSwaggerSchema } from './routes/(app)/v1/embeddings/swagger-schemas';
+import { handler as v1_images_generations_postHandler } from './routes/(app)/v1/images/generations/post';
 import { imageGenerationRequestSwaggerSchema } from './routes/(app)/v1/images/generations/swagger-schemas';
+import { handler as v1_models_getHandler } from './routes/(app)/v1/models/get';
+import { modelRequestSwaggerSchema } from './routes/(app)/v1/models/swagger-schemas';
+import { handler as v1_usage_getHandler } from './routes/(app)/v1/usage/get';
+import { usageRequestSwaggerSchema } from './routes/(app)/v1/usage/swagger-schemas';
 
 export type RouteHandlerDefinition = Pick<RouteShorthandOptions, 'schema' | 'bodyLimit'> & {
   path: string;
@@ -78,7 +81,13 @@ export const routeHandlerDefinitions: Array<RouteHandlerDefinition> = [
     handler: v1_images_generations_postHandler,
   },
   {
-    path: '/v1/admin/organizations/:organizationId/report/:year',
+    path: '/v1/audio/speech',
+    method: 'POST',
+    schema: speechRequestSwaggerSchema,
+    handler: v1_audio_speech_postHandler,
+  },
+  {
+    path: '/v1/admin/report/:year',
     method: 'GET',
     schema: { hide: true },
     handler: v1_admin_report_getHandler,

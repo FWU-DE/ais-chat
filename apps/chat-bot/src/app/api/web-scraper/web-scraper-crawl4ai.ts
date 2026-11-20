@@ -1,9 +1,9 @@
-import { WEB_SCRAPE_RESULT_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
-import { defaultErrorSource } from '@/components/chat/sources/const';
-import { getTranslations } from 'next-intl/server';
-import { logWarning } from '@shared/logging';
-import { env } from '@/env';
 import { WebSource } from '@shared/db/types';
+import { logWarning } from '@shared/logging';
+
+import { defaultErrorSource } from '@/components/chat/sources/const';
+import { WEB_SCRAPE_RESULT_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
+import { env } from '@/env';
 
 interface Crawl4AIResult {
   url: string;
@@ -36,8 +36,6 @@ interface Crawl4AIResponse {
  * @returns The most important information from the page in markdown format.
  */
 export async function webScraperCrawl4AI(url: string): Promise<WebSource> {
-  const t = await getTranslations('websearch');
-
   try {
     const timeout = 30_000; // 30 seconds timeout for crawl4ai
     const response = await fetch(new URL('/crawl', env.crawl4AIUrl), {
@@ -118,8 +116,7 @@ export async function webScraperCrawl4AI(url: string): Promise<WebSource> {
     }
 
     // Extract title from metadata or fallback
-    const title =
-      result.metadata?.['og:title'] || result.metadata?.title || t('placeholders.unknown-title');
+    const title = result.metadata?.['og:title'] || result.metadata?.title;
 
     // Trim content
     const trimmedContent = markdownContent.substring(0, WEB_SCRAPE_RESULT_LENGTH_LIMIT);

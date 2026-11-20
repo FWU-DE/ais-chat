@@ -1,16 +1,17 @@
+import { AiGenerationError } from '@ais-chat/ai-core/errors';
 import * as Sentry from '@sentry/nextjs';
-import { logError } from '@shared/logging';
-import { ServerActionResult } from './server-action-result';
 import { BusinessError } from '@shared/error/business-error';
 import { UnexpectedError } from '@shared/error/unexpected-error';
-import { AiGenerationError } from '@ais-chat/ai-core/errors';
+import { logError } from '@shared/logging';
+
+import { ServerActionResult } from './server-action-result';
 
 // Helper function to serialize error objects for client transmission
-function serializeError(error: BusinessError) {
+function serializeError(error: BusinessError | AiGenerationError, statusCode: number) {
   return {
     name: error.name,
     message: error.message,
-    statusCode: error.statusCode,
+    statusCode,
   };
 }
 
@@ -36,13 +37,13 @@ export function runServerAction<TReturn, TArgs extends readonly unknown[]>(
           logError(error.message, error);
           return {
             success: false as const,
-            error: serializeError(error),
+            error: serializeError(error, error.statusCode),
           };
         } else if (error instanceof AiGenerationError) {
           logError('AI generation error occurred during server action.', error);
           return {
             success: false as const,
-            error: serializeError({ ...error, statusCode: 500 }),
+            error: serializeError(error, 500),
           };
         } else {
           // For other errors, log the error

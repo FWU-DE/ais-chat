@@ -1,8 +1,5 @@
 'use client';
 
-import React from 'react';
-import { useTranslations } from 'next-intl';
-import { useToast } from '@/components/common/toast';
 import { Button } from '@ui/components/button';
 import {
   Dialog,
@@ -14,11 +11,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@ui/components/dialog';
-import { TokenPointsLimitSelect } from './custom-chat-token-points-limit-select';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
+import { useToast } from '@/components/common/toast';
+
 import {
   MaxTokenPointsPercentageLimit,
   tokenPointsPercentageValues,
 } from './custom-chat-share-with-learners-limit-params';
+import { TokenPointsLimitSelect } from './custom-chat-token-points-limit-select';
 
 type CustomChatAdjustTokenLimitDialogProps = {
   trigger: React.ReactElement<{ disabled?: boolean }>;

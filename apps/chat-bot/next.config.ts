@@ -1,4 +1,4 @@
-import { withSentryConfig } from '@sentry/nextjs';
+import { withSentryConfig } from '@sentry/nextjs/config';
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
 
@@ -37,6 +37,8 @@ const baseNextConfig: NextConfig = {
     useCache: true,
     // Speed up dev builds by pre-bundling heavy packages instead of re-resolving on every HMR
     optimizePackageImports: ['@ais-chat/ui', '@ais-chat/shared', '@ais-chat/ai-core'],
+    // Run the React Compiler natively inside Turbopack instead of via Babel
+    turbopackRustReactCompiler: true,
   },
   turbopack: {
     rules: {

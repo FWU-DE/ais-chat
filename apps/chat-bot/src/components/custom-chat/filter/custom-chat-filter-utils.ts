@@ -1,11 +1,11 @@
 import {
-  type FilterGroup,
-  type SchoolType,
-  type GradeRange,
-  type Subject,
   type Category,
   type FederalState,
+  type FilterGroup,
+  type GradeRange,
   type Language,
+  type SchoolType,
+  type Subject,
 } from '@shared/db/schema';
 import { useTranslations } from 'next-intl';
 
@@ -27,7 +27,7 @@ export const EMPTY_FILTER_VALUES: FilterValues = {
   languages: [],
 };
 
-type EntityWithFilterValues = {
+export type EntityWithFilterValues = {
   filterGroup?: {
     school_types?: SchoolType[];
     grade_ranges?: GradeRange[];

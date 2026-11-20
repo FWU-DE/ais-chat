@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
-import { decodeChatStreamEvent, readTextStream } from '@/utils/streaming';
-import type { WebSearchResult } from '@shared/db/schema';
+import { logError } from '@shared/logging';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import type { AiActivityStep } from '@/types/ai-activity';
 import {
-  deserializeError,
-  toUIMessages,
-  UIMessage,
   type ChatMessage,
   type ChatStatus,
+  deserializeError,
   type SendMessageResult,
+  toUIMessages,
+  UIMessage,
 } from '@/types/chat';
-import { logError } from '@shared/logging';
+import { decodeChatStreamEvent, readTextStream } from '@/utils/streaming';
 
 // Re-export for consumers
 export type { ChatMessage, ChatStatus };
@@ -27,9 +28,12 @@ export type SendMessageFn = (params: {
   sharedSessionId?: string;
 }) => Promise<SendMessageResult>;
 
+type ChatRequestContext = Pick<Parameters<SendMessageFn>[0], 'fileIds' | 'sharedSessionId'>;
+
 export type UseChatOptions = {
   initialMessages?: ChatMessage[];
   modelId?: string;
+  modelName?: string;
   sendMessage: SendMessageFn;
   onError?: (error: Error) => void;
   onFinish?: (message: ChatMessage) => void;
@@ -49,8 +53,9 @@ export type UseChatReturn = {
   ) => Promise<void>;
   isLoading: boolean;
   status: ChatStatus;
+  activitySteps: AiActivityStep[];
   error: Error | null;
-  reload: () => Promise<void>;
+  reload: (context?: ChatRequestContext) => Promise<void>;
   stop: () => void;
 };
 
@@ -70,6 +75,7 @@ function lastUserMessage(messages: ChatMessage[]): ChatMessage | null {
 export function useAisChat({
   initialMessages = [],
   modelId,
+  modelName,
   sendMessage,
   onError,
   onFinish,
@@ -78,11 +84,16 @@ export function useAisChat({
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState('');
   const [status, setStatus] = useState<ChatStatus>('ready');
+  const [activitySteps, setActivitySteps] = useState<AiActivityStep[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   // Seed from the actual initial state (which may have been restored from
   // storage by the caller), so reload() works after a page refresh.
   const lastUserMessageRef = useRef<ChatMessage | null>(lastUserMessage(messages));
+
+  useEffect(() => {
+    lastUserMessageRef.current = lastUserMessage(messages);
+  }, [messages]);
 
   const isLoading = status === 'submitted' || status === 'streaming';
 
@@ -110,6 +121,7 @@ export function useAisChat({
 
       setStatus('submitted');
       setError(null);
+      setActivitySteps([]);
       abortControllerRef.current = new AbortController();
 
       // Add user message immediately
@@ -132,7 +144,7 @@ export function useAisChat({
 
         // We need to handle the first chunk separately to avoid missing content
         let firstChunk = true;
-        let assistantWebSearchResults: WebSearchResult[] = result.webSearchResults ?? [];
+        let assistantActivitySteps: AiActivityStep[] = [];
 
         const ensureAssistantMessage = () => {
           if (!firstChunk) {
@@ -143,7 +155,9 @@ export function useAisChat({
             id: result.messageId,
             role: 'assistant',
             content: '',
-            webSearchResults: assistantWebSearchResults,
+            createdAt: new Date(),
+            modelName,
+            activitySteps: assistantActivitySteps.length > 0 ? assistantActivitySteps : undefined,
           };
 
           setMessages((prev) => [...prev, assistantMessage]);
@@ -160,12 +174,10 @@ export function useAisChat({
           if (content !== undefined && content !== null) {
             const streamEvent = decodeChatStreamEvent(content);
 
-            if (streamEvent?.type === 'web_search_results') {
-              assistantWebSearchResults = streamEvent.webSearchResults;
-
-              if (firstChunk) {
-                continue;
-              }
+            if (streamEvent?.type === 'ai_activity') {
+              assistantActivitySteps = streamEvent.steps;
+              setActivitySteps(assistantActivitySteps);
+              ensureAssistantMessage();
 
               setMessages((prev) => {
                 const updated = [...prev];
@@ -174,7 +186,7 @@ export function useAisChat({
                 if (updated[lastIdx]?.role === 'assistant') {
                   updated[lastIdx] = {
                     ...updated[lastIdx]!,
-                    webSearchResults: assistantWebSearchResults,
+                    activitySteps: assistantActivitySteps,
                   };
                 }
 
@@ -208,11 +220,13 @@ export function useAisChat({
           return prev;
         });
 
+        setActivitySteps([]);
         setStatus('ready');
       } catch (err) {
         const error = err instanceof Error ? err : new Error('Unknown error');
         setError(error);
         setStatus('error');
+        setActivitySteps([]);
         onError?.(error);
         logError('Error in submitMessage', error);
 
@@ -228,7 +242,7 @@ export function useAisChat({
         abortControllerRef.current = null;
       }
     },
-    [messages, modelId, sendMessage, onError, onFinish],
+    [messages, modelId, modelName, sendMessage, onError, onFinish],
   );
 
   const handleSubmit = useCallback(
@@ -244,6 +258,7 @@ export function useAisChat({
         id: options?.userMessageId ?? crypto.randomUUID(),
         role: 'user',
         content: input.trim(),
+        createdAt: new Date(),
       };
 
       // Call onMessageCreated immediately so files can be associated with this message ID
@@ -255,21 +270,25 @@ export function useAisChat({
     [input, isLoading, submitMessage, onMessageCreated],
   );
 
-  const reload = useCallback(async () => {
-    if (!lastUserMessageRef.current) return;
-    const messageContent = lastUserMessageRef.current;
+  const reload = useCallback(
+    async (context?: ChatRequestContext) => {
+      // Derived from the current messages, as the ref is only updated after a render commit.
+      const messageContent = lastUserMessage(messages) ?? lastUserMessageRef.current;
+      if (!messageContent) return;
 
-    const lastUserIndex = messages.findIndex((msg) => msg.id === lastUserMessageRef.current!.id);
+      const lastUserIndex = messages.findIndex((msg) => msg.id === messageContent.id);
 
-    // Sadly this is needed, so we don't need to wait for a re-render between updating the messages and submitting
-    // Otherwise, i'd use setMessages with a function update. (Also note: function updates to not allow you to update surrounding variables / it happens unreliably)
-    const curMessages = messages.slice(0, lastUserIndex);
+      // Sadly this is needed, so we don't need to wait for a re-render between updating the messages and submitting
+      // Otherwise, i'd use setMessages with a function update. (Also note: function updates to not allow you to update surrounding variables / it happens unreliably)
+      const curMessages = messages.slice(0, lastUserIndex);
 
-    // Remove all assistant messages after the last user message, and the user message itself
-    setMessages(curMessages);
+      // Remove all assistant messages after the last user message, and the user message itself
+      setMessages(curMessages);
 
-    await submitMessage(messageContent, undefined, curMessages);
-  }, [submitMessage, messages]);
+      await submitMessage(messageContent, context?.fileIds, curMessages, context?.sharedSessionId);
+    },
+    [submitMessage, messages],
+  );
 
   const stop = useCallback(() => {
     abortControllerRef.current?.abort();
@@ -285,6 +304,7 @@ export function useAisChat({
     handleSubmit,
     isLoading,
     status,
+    activitySteps,
     error,
     reload,
     stop,

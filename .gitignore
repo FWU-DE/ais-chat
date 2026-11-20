@@ -27,6 +27,7 @@
 .DS_Store
 *.pem
 export
+.idea/
 
 # debug
 npm-debug.log*
@@ -37,8 +38,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
-!.env
-!.env.e2e
+!.env.development
 
 # vercel
 .vercel
@@ -54,6 +54,10 @@ playwright-report/
 .playwright-auth/
 .playwright-mcp/
 test-results/
+blob-report/
+# smart-reporter output for the three e2e apps, except the committed merge config.
+apps/*/smart-report/*
+!apps/*/smart-report/merge.config.ts
 
 # Sentry Config File
 .env.sentry-build-plugin

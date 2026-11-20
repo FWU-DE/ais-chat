@@ -1,29 +1,17 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../fixtures/test';
+import { selectDifferentImageModel } from '../../utils/chat';
 import { AUTH_FILES } from '../../utils/const';
+import { LLM_MODELS } from '../../utils/llm-models';
 import { waitForToast } from '../../utils/utils';
 
 test.use({ storageState: AUTH_FILES.teacher });
 
-test('can generate an image and use image actions', async ({ page }) => {
+test('can generate an image and use image actions', { tag: '@smoke' }, async ({ page }) => {
   // navigate to image generation
   await page.goto('/image-generation');
   await page.waitForURL('/image-generation**');
 
-  // select flux as model
-  const dropdownLocator = page.getByTestId('image-model-dropdown');
-  await dropdownLocator.waitFor();
-
-  // Assert that a model is available and selected
-  const currentSelectedText = await dropdownLocator.textContent();
-  expect(currentSelectedText).toBeTruthy();
-
-  if (!currentSelectedText?.includes('FLUX')) {
-    await dropdownLocator.click();
-    await page.locator('div[data-radix-popper-content-wrapper]').waitFor();
-    const modelLocator = page.getByTestId(/flux/i);
-    await modelLocator.waitFor();
-    await modelLocator.click();
-  }
+  await selectDifferentImageModel(page, LLM_MODELS.IMAGE_MODEL);
 
   // send message
   const prompt = 'A duck with a hat';
@@ -36,7 +24,7 @@ test('can generate an image and use image actions', async ({ page }) => {
 
   // Wait for loading to finish
   try {
-    await loadingAnimation.waitFor({ state: 'detached', timeout: 35000 });
+    await loadingAnimation.waitFor({ state: 'detached', timeout: 20000 });
   } catch {
     // If loading doesn't detach, check if an error appeared
     const errorMessage = page.getByText('Ein Fehler ist aufgetreten');

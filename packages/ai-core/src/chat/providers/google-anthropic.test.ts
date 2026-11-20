@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/only-throw-error */
 /* eslint-disable require-yield */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  constructGoogleAnthropicTextGenerationFn,
-  constructGoogleAnthropicTextStreamFn,
-  constructGoogleAnthropicAgenticStreamFn,
-} from './google-anthropic';
+
 import { AiGenerationError, RateLimitExceededError } from '../../errors';
 import type { AiModel, Message } from '../types';
+import {
+  constructGoogleAnthropicAgenticStreamFn,
+  constructGoogleAnthropicTextGenerationFn,
+  constructGoogleAnthropicTextStreamFn,
+} from './google-anthropic';
 
 const { createMock, streamMock, finalMessageMock, MockAnthropicVertex, constructorMock } =
   vi.hoisted(() => {
@@ -46,7 +47,7 @@ vi.mock('@anthropic-ai/vertex-sdk', () => ({
   AnthropicVertex: MockAnthropicVertex,
 }));
 
-vi.mock('@sentry/core', () => ({
+vi.mock('@sentry/server-utils', () => ({
   instrumentAnthropicAiClient: vi.fn((client) => client),
 }));
 
@@ -57,12 +58,15 @@ function createGoogleAnthropicModel(projectId = 'test-project', location = 'us-c
     displayName: 'Claude 3.5 Sonnet v2',
     provider: 'google',
     description: 'Test model',
-    organizationId: 'org-test',
     createdAt: new Date(),
     supportedImageFormats: ['image/png', 'image/jpeg'],
+    imageGenerationConfig: null,
+    modelConfig: null,
+    safetyFilterEnabled: true,
     additionalParameters: {},
     isNew: false,
     isDeleted: false,
+    useBifrost: true,
     setting: {
       provider: 'google',
       projectId,
@@ -131,13 +135,16 @@ describe('constructGoogleAnthropicTextGenerationFn', () => {
       model: 'anthropic/claude-3-5-sonnet-v2@20241022',
     });
 
-    expect(createMock).toHaveBeenCalledWith({
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: [{ type: 'text', text: 'Hello' }] }],
-      model: 'claude-3-5-sonnet-v2@20241022',
-      stream: false,
-      system: 'You are helpful',
-    });
+    expect(createMock).toHaveBeenCalledWith(
+      {
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: [{ type: 'text', text: 'Hello' }] }],
+        model: 'claude-3-5-sonnet-v2@20241022',
+        stream: false,
+        system: 'You are helpful',
+      },
+      expect.anything(),
+    );
   });
 
   it('should use default maxTokens of 4096 when not specified', async () => {
@@ -157,6 +164,7 @@ describe('constructGoogleAnthropicTextGenerationFn', () => {
       expect.objectContaining({
         max_tokens: 4096,
       }),
+      expect.anything(),
     );
   });
 
@@ -177,6 +185,7 @@ describe('constructGoogleAnthropicTextGenerationFn', () => {
       expect.objectContaining({
         model: 'claude-sonnet',
       }),
+      expect.anything(),
     );
   });
 
@@ -205,6 +214,7 @@ describe('constructGoogleAnthropicTextGenerationFn', () => {
         ],
         system: 'System prompt',
       }),
+      expect.anything(),
     );
   });
 
@@ -290,6 +300,7 @@ describe('constructGoogleAnthropicTextGenerationFn', () => {
           },
         ],
       }),
+      expect.anything(),
     );
   });
 
@@ -326,6 +337,7 @@ describe('constructGoogleAnthropicTextGenerationFn', () => {
           },
         ],
       }),
+      expect.anything(),
     );
   });
 
@@ -372,6 +384,7 @@ describe('constructGoogleAnthropicTextGenerationFn', () => {
           },
         ],
       }),
+      expect.anything(),
     );
   });
 
@@ -650,6 +663,7 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
           }),
         ],
       }),
+      expect.anything(),
     );
 
     expect(events).toEqual([
@@ -733,6 +747,7 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
           },
         ],
       }),
+      expect.anything(),
     );
 
     expect(events).toEqual([{ type: 'text', delta: 'It is sunny' }]);
@@ -805,6 +820,7 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
           },
         ]),
       }),
+      expect.anything(),
     );
   });
 
@@ -865,6 +881,7 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
           },
         ]),
       }),
+      expect.anything(),
     );
   });
 
@@ -1026,5 +1043,74 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
         },
       },
     ]);
+  });
+
+  it('should report the usage seen so far when the stream is aborted', async () => {
+    const model = createGoogleAnthropicModel();
+    const abortController = new AbortController();
+
+    streamMock.mockReturnValue({
+      [Symbol.asyncIterator]: async function* () {
+        yield { type: 'message_start', message: { usage: { input_tokens: 42, output_tokens: 0 } } };
+        yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Partial' } };
+        yield { type: 'message_delta', usage: { output_tokens: 7 } };
+        abortController.abort();
+        throw Object.assign(new Error('Request was aborted.'), { name: 'AbortError' });
+      },
+      finalMessage: finalMessageMock,
+    });
+
+    const generateAgenticStream = constructGoogleAnthropicAgenticStreamFn(model);
+    const events = [];
+
+    for await (const event of generateAgenticStream({
+      messages: [{ role: 'user', content: 'test' }],
+      model: 'anthropic/claude',
+      abortSignal: abortController.signal,
+    })) {
+      events.push(event);
+    }
+
+    expect(events).toEqual([
+      { type: 'text', delta: 'Partial' },
+      {
+        type: 'finish',
+        usage: {
+          promptTokens: 42,
+          completionTokens: 7,
+          totalTokens: 49,
+        },
+      },
+    ]);
+  });
+
+  it('should estimate usage when the stream is aborted before any usage was reported', async () => {
+    const model = createGoogleAnthropicModel();
+    const abortController = new AbortController();
+
+    streamMock.mockReturnValue({
+      [Symbol.asyncIterator]: async function* () {
+        yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Partial' } };
+        abortController.abort();
+        throw Object.assign(new Error('Request was aborted.'), { name: 'AbortError' });
+      },
+      finalMessage: finalMessageMock,
+    });
+
+    const generateAgenticStream = constructGoogleAnthropicAgenticStreamFn(model);
+    const events = [];
+
+    for await (const event of generateAgenticStream({
+      messages: [{ role: 'user', content: 'test' }],
+      model: 'anthropic/claude',
+      abortSignal: abortController.signal,
+    })) {
+      events.push(event);
+    }
+
+    const finish = events[1];
+    expect(finish?.type).toBe('finish');
+    expect(finish?.type === 'finish' && finish.usage.estimated).toBe(true);
+    expect(finish?.type === 'finish' && finish.usage.promptTokens).toBeGreaterThan(0);
   });
 });

@@ -5,12 +5,13 @@ For e2e tests we use [playwright](https://playwright.dev/).
 
 ## Mock LLM
 
-Most e2e tests use a local mock Azure/OpenAI Responses-compatible server (`devops/docker/mock-llm/`)
+Most e2e tests use a local mock Azure/OpenAI Responses-compatible server (`services/mock-llm/`)
 as the default text model instead of calling real LLMs. The mock server streams deterministic SSE
 responses and can be controlled with `MOCK_LLM_COMMANDS` to trigger tool calls.
 
 Seeded e2e models are routed through Bifrost, including the mock models. Make sure Bifrost is
-running and `BIFROST_ADMIN_URL` is configured when seeding so the mock provider key is synced.
+running and `BIFROST_ADMIN_URL`, `BIFROST_ADMIN_USERNAME`, and `BIFROST_ADMIN_PASSWORD` are
+configured when seeding so the mock provider key is synced.
 For local Docker Compose runs, leave `LLM_MOCK_BASE_URL` unset or set it to `http://mock-llm:6556`;
 the URL must be reachable from the Bifrost container, not from the host.
 
@@ -40,12 +41,44 @@ Then you can run the e2e tests from the apps/chat-bot directory.
 3. `pnpm e2e:ui` - This starts the playwright ui for the e2e tests.
 4. `pnpm e2e:api` - This runs the api tests.
 5. `pnpm e2e:api:ui` - This starts the playwright ui for the api tests.
+6. `pnpm e2e:smoke` - This runs only the tests tagged `@smoke` (chromium and api project).
+
+### Smoke vs. regression suite
+
+The GitHub workflow `e2e.yml` runs only the `@smoke` tests when a pull request is created or updated.
+The full suite (all tests, Firefox, external-services, isolated) runs as regression when a pull request is merged (push to `main`), or manually via `workflow_dispatch` with `suite=regression`.
+
+Tag a test with `{ tag: '@smoke' }` only if it is a core user journey or a cheap check, uses the mock LLM, and runs in chromium:
+
+```ts
+test('can login and send a message', { tag: '@smoke' }, async ({ page }) => {});
+```
 
 ### Run tests in vscode
 
 In order to run tests directly in vscode, the extension `Playwright Test for VSCode` is recommended.
 The extension provides a `Test Explorer` available through the `Testing` icon on the left menu bar.
 Run or debug a test directly from here.
+
+### Viewing a smart-reporter report locally
+
+Every e2e run (chat-bot, admin, api) writes a `blob-report/` in its own app folder. To turn those into
+one aggregated [playwright-smart-reporter](https://github.com/qa-gary-parker/playwright-smart-reporter)
+report — with accessibility results, coverage, flakiness history, etc. — merge them:
+
+```sh
+pnpm --filter ais-chat-app smart-report:merge
+```
+
+It's fine if you only ran tests for some of the apps; the command fails only if none of them produced a
+`blob-report/`. This writes `apps/chat-bot/smart-report/smart-report.html` with the combined results.
+
+**Known limitation — code coverage:** Turbopack (used for this app's production build) emits source maps
+as [index/sectioned maps](https://tc39.es/source-map/#index-map) (a top-level `sections` array instead of
+a flat `mappings` string). `playwright-smart-reporter`'s coverage loader (as of v4.0.0) only accepts flat
+maps and rejects these with `not a version 3 source map`, so coverage in the report is measured against
+the generated/minified chunks, not the original source — the Coverage view's numbers and file list are not
+meaningful until upstream adds index-map support.
 
 # Load Testing
 

@@ -1,6 +1,6 @@
 import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
 import { LlmModelSelectModel } from '@shared/db/schema';
-import { DEFAULT_IMAGE_MODEL } from '@shared/llm-models/default-llm-models';
+import { findStaticModelByRoleAndFederalStateId } from '@shared/llm-models/llm-model-service';
 
 /**
  * Fetches available image generation models from database
@@ -24,8 +24,15 @@ export async function getAvailableImageModelsForFederalState({
  * Returns the default image generation model if it is included in the provided list,
  * otherwise returns the first model in the list or undefined if the list is empty.
  */
-export function getDefaultImageModel(
-  imageModels: LlmModelSelectModel[],
-): LlmModelSelectModel | undefined {
-  return imageModels.find((m) => m.name === DEFAULT_IMAGE_MODEL) ?? imageModels[0];
+export async function getDefaultImageModel({
+  imageModels,
+  federalStateId,
+}: {
+  imageModels: LlmModelSelectModel[];
+  federalStateId: string;
+}): Promise<LlmModelSelectModel | undefined> {
+  return (
+    (await findStaticModelByRoleAndFederalStateId({ role: 'default-image', federalStateId })) ??
+    imageModels[0]
+  );
 }

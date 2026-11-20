@@ -1,8 +1,6 @@
 'use server';
 
-import { AccessLevel } from '@shared/db/schema';
-import { ShareWithLearnersLimitParams } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners-limit-params';
-import { requireAuth } from '@/auth/requireAuth';
+import { runServerAction } from '@shared/actions/run-server-action';
 import {
   deleteCharacter,
   deleteFileMappingAndEntity,
@@ -12,29 +10,100 @@ import {
   linkFileToCharacter,
   shareCharacter,
   unshareCharacter,
-  updateCharacterShareTokenPointsLimit,
   updateCharacter,
-  updateCharacterAccessLevel,
   UpdateCharacterActionModel,
+  updateCharacterSchoolSharing,
+  updateCharacterShareTokenPointsLimit,
   uploadAvatarPictureForCharacter,
 } from '@shared/characters/character-service';
-import { runServerAction } from '@shared/actions/run-server-action';
+import {
+  cancelCommunityTemplateRequest,
+  createCommunityTemplateRequest,
+  getEntitySharingState,
+  sendMessageToEditor,
+} from '@shared/community-templates/community-template-service';
 
-export async function updateCharacterAccessLevelAction({
+import { requireAuth } from '@/auth/requireAuth';
+import { ShareWithLearnersLimitParams } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners-limit-params';
+
+export async function createCommunityTemplateRequestAction({
   characterId,
-  accessLevel,
 }: {
   characterId: string;
-  accessLevel: AccessLevel;
 }) {
   const { user } = await requireAuth();
 
   return runServerAction(
-    'updateCharacterAccessLevelAction',
-    updateCharacterAccessLevel,
+    'createCommunityTemplateRequestAction',
+    createCommunityTemplateRequest,
+  )({
+    entityRef: { entityType: 'character', entityId: characterId },
+    user,
+  });
+}
+
+export async function sendMessageToEditorAction({
+  characterId,
+  message,
+}: {
+  characterId: string;
+  message: string;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'sendMessageToEditorAction',
+    sendMessageToEditor,
+  )({
+    entityRef: { entityType: 'character', entityId: characterId },
+    user,
+    message,
+  });
+}
+
+export async function cancelCommunityTemplateRequestAction({
+  characterId,
+}: {
+  characterId: string;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'cancelCommunityTemplateRequestAction',
+    cancelCommunityTemplateRequest,
+  )({
+    entityRef: { entityType: 'character', entityId: characterId },
+    user,
+  });
+}
+
+export async function getCharacterSharingStateAction({ characterId }: { characterId: string }) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'getCharacterSharingStateAction',
+    getEntitySharingState,
+  )({
+    entityRef: { entityType: 'character', entityId: characterId },
+    user,
+  });
+}
+
+export async function updateCharacterSchoolSharingAction({
+  characterId,
+  isSchoolShared,
+}: {
+  characterId: string;
+  isSchoolShared: boolean;
+}) {
+  const { user } = await requireAuth();
+
+  return runServerAction(
+    'updateCharacterSchoolSharingAction',
+    updateCharacterSchoolSharing,
   )({
     characterId,
-    accessLevel,
+    isSchoolShared,
     user,
   });
 }

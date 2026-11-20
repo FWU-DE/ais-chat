@@ -1,3 +1,6 @@
+import { eq } from 'drizzle-orm';
+
+import { errorifyAsyncFn } from '../../utils/error';
 import { db } from '..';
 import {
   FederalStateInsertModel,
@@ -5,15 +8,11 @@ import {
   federalStateTable,
   FederalStateUpdateModel,
 } from '../schema';
-import { eq } from 'drizzle-orm';
-import { decrypt } from '../crypto';
-import { env } from '../../env';
-import { errorifyAsyncFn } from '../../utils/error';
 
-export const dbGetFederalStateWithDecryptedApiKeyWithResult = errorifyAsyncFn(
-  dbGetFederalStateWithDecryptedApiKey,
+export const dbGetFederalStateWithApiKeyIdWithResult = errorifyAsyncFn(
+  dbGetFederalStateWithApiKeyId,
 );
-export async function dbGetFederalStateWithDecryptedApiKey({
+export async function dbGetFederalStateWithApiKeyId({
   federalStateId,
 }: {
   federalStateId: string | undefined;
@@ -32,16 +31,11 @@ export async function dbGetFederalStateWithDecryptedApiKey({
     throw new Error(`Could not find federal state with id ${federalStateId}`);
   }
 
-  if (federalState.encryptedApiKey === null) {
+  if (federalState.apiKeyId === null) {
     throw new Error(`Federal state ${federalState.id} has no api key attached`);
   }
 
-  const decryptedApiKey = decrypt({
-    data: federalState.encryptedApiKey,
-    plainEncryptionKey: env.encryptionKey,
-  });
-
-  return { ...federalState, decryptedApiKey };
+  return { ...federalState, apiKeyId: federalState.apiKeyId };
 }
 
 export async function dbGetFederalStates(): Promise<FederalStateSelectModel[]> {

@@ -1,6 +1,5 @@
 'use server';
 
-import { requireAuth } from '@/auth/requireAuth';
 import { runServerAction } from '@shared/actions/run-server-action';
 import {
   createNewLearningScenario,
@@ -9,6 +8,8 @@ import {
   downloadFileFromLearningScenario,
   linkFileToLearningScenario,
 } from '@shared/learning-scenarios/learning-scenario-service';
+
+import { requireAuth } from '@/auth/requireAuth';
 
 export async function deleteLearningScenarioAction({ id }: { id: string }) {
   const { user } = await requireAuth();

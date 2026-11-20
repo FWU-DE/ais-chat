@@ -1,12 +1,16 @@
-import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
-import { isPersonalContextAvailable } from '@shared/personal-context/personal-context-service';
-import { requireAuth } from '@/auth/requireAuth';
-import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 import { getAssistantByUser } from '@shared/assistants/assistant-service';
-import { AssistantEdit } from './assistant-edit';
-import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { getCommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
+import { getSpeechModelVoices } from '@shared/llm-models/llm-model-service';
+import { isPersonalContextAvailable } from '@shared/personal-context/personal-context-service';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+
+import { isWebSearchAvailableForFederalState } from '@/app/api/chat/websearch';
+import { requireAuth } from '@/auth/requireAuth';
+import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
+
+import { AssistantEdit } from './assistant-edit';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,14 +25,24 @@ export default async function Page(props: PageProps<'/assistants/editor/[assista
   const { assistantId } = await props.params;
   const { user, federalState } = await requireAuth();
 
-  const { assistant, fileMappings, pictureUrl } = await getAssistantByUser({
-    assistantId: assistantId,
+  const {
+    assistant,
+    fileMappings,
+    pictureUrl,
+    isFavorite: initialIsFavorite,
+  } = await getAssistantByUser({ assistantId, user }).catch(handleErrorInServerComponent);
+
+  const communityTemplateRequest = await getCommunityTemplateRequestWithEvents({
+    entityRef: { entityType: 'assistant', entityId: assistantId },
     user,
   }).catch(handleErrorInServerComponent);
 
   const initialLinks = assistant.attachedLinks
     .filter((l) => l !== '')
     .map((url) => ({ link: url }));
+
+  const isSpeechAvailable = federalState.featureToggles.isSpeechModelEnabled === true;
+  const speechVoices = isSpeechAvailable ? await getSpeechModelVoices() : [];
 
   return (
     <DefaultPageLayout layoutConfig={{ layout: 'form' }}>
@@ -37,11 +51,15 @@ export default async function Page(props: PageProps<'/assistants/editor/[assista
         relatedFiles={fileMappings}
         initialLinks={initialLinks}
         avatarPictureUrl={pictureUrl}
+        initialIsFavorite={initialIsFavorite}
+        initialCommunityTemplateRequest={communityTemplateRequest}
         isWebSearchAvailable={isWebSearchAvailableForFederalState(federalState.featureToggles)}
         isPersonalContextAvailable={isPersonalContextAvailable({
           featureToggles: federalState.featureToggles,
           userRole: user.userRole,
         })}
+        isSpeechAvailable={isSpeechAvailable}
+        speechVoices={speechVoices}
       />
     </DefaultPageLayout>
   );

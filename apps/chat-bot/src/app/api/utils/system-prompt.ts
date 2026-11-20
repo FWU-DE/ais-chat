@@ -1,11 +1,11 @@
-import { SUPPORTED_DOCUMENTS_EXTENSIONS, SUPPORTED_IMAGE_EXTENSIONS } from '@/const';
 import {
   MAX_AGENTIC_ITERATIONS,
   MAX_TOOL_CALLS_PER_ITERATION,
   type ToolDefinition,
 } from '@ais-chat/ai-core';
-import { RetrievedChunk } from '../rag/types';
-import type { WebSearchResult } from '@shared/db/schema';
+
+import { SUPPORTED_DOCUMENTS_EXTENSIONS, SUPPORTED_IMAGE_EXTENSIONS } from '@/const';
+import { TOOL_NAMES, type ToolName } from '@/types/tool-names';
 
 export const LANGUAGE_GUIDELINES = `
 ## Sprachliche Richtlinien
@@ -14,46 +14,77 @@ export const LANGUAGE_GUIDELINES = `
 - Duze dein Gegenüber, achte auf gendersensible Sprache. Verwende hierbei die Paarform (Beidnennung) z.B. Bürgerinnen und Bürger.
 - Antworte so kurz wie möglich und so ausführlich wie nötig: einfache Fragen knapp, komplexe Themen ausführlicher.`;
 
-function hasTool(activeTools: ToolDefinition[], toolName: string) {
+function hasTool(activeTools: ToolDefinition[], toolName: ToolName) {
   return activeTools.some((tool) => tool.name === toolName);
 }
 
 export function constructToolGuidelines(activeTools: ToolDefinition[]) {
   const sections = ['\n## Fähigkeiten und Einschränkungen'];
 
-  if (hasTool(activeTools, 'retrieve_text_chunks')) {
-    const supportedExtensions = [...SUPPORTED_DOCUMENTS_EXTENSIONS, ...SUPPORTED_IMAGE_EXTENSIONS]
-      .map((ext) => ext.toUpperCase())
-      .join(', ');
+  if (hasTool(activeTools, TOOL_NAMES.retrieveTextChunks)) {
+    const supportedExtensions = SUPPORTED_DOCUMENTS_EXTENSIONS.map((ext) => ext.toUpperCase()).join(
+      ', ',
+    );
 
     sections.push(
-      '- **Bei der ersten Nachricht:** Wenn Dateien oder Links vorhanden sind, rufe möglichst zuerst `retrieve_text_chunks` auf, bevor du antwortest.',
-      `- Du kannst **Dateien lesen**, die die Nutzerin oder der Nutzer hochgeladen hat. Unterstützt sind nur: ${supportedExtensions}. Biete niemals an, andere Formate zu verarbeiten.`,
+      `- **Bei der ersten Nachricht:** Wenn Textdateien oder Links vorhanden sind, rufe möglichst zuerst \`${TOOL_NAMES.retrieveTextChunks}\` auf, bevor du antwortest.`,
+      `- Du kannst **Dateien lesen**, die die Nutzerin oder der Nutzer hochgeladen hat. Unterstützt sind nur: ${supportedExtensions}. Biete niemals an, andere Formate zu verarbeiten. Der Inhalt dieser Dateien liegt dir nicht automatisch im Kontext vor. Fordere die benötigten Passagen über \`${TOOL_NAMES.retrieveTextChunks}\` an.`,
     );
   }
 
-  if (hasTool(activeTools, 'retrieve_entire_file')) {
+  if (hasTool(activeTools, TOOL_NAMES.retrieveEntireFile)) {
     sections.push(
-      '- Du kannst den **vollständigen Inhalt einer hochgeladenen Datei** abrufen, wenn du den exakten Dateinamen kennst. Beachte, dass dies eine große Menge Tokens verbraucht. Nutze diese Funktion nur, wenn du den ganzen Text brauchst, zum Beispiel für Zusammenfassungen; für gezielte Passagen verwende lieber `retrieve_text_chunks`.',
-    );
-  }
-
-  if (hasTool(activeTools, 'web_scraper')) {
-    sections.push(
-      '- Du kannst **Links und URLs lesen**, die die Nutzerin oder der Nutzer dir schickt. Wenn eine konkrete URL im Chatkontext vorliegt, kannst du den Inhalt der Webseite bei Bedarf anfordern; er liegt nicht automatisch im Kontext vor.',
-      '- Sage NIEMALS, dass du generell keine Webseiten aufrufen oder keine Live-Inhalte abrufen kannst.',
-    );
-  }
-
-  if (hasTool(activeTools, 'web_search')) {
-    sections.push(
-      '- Du kannst eine **Websuche** durchführen. Bei Fragen, die aktuelle Informationen erfordern, nutze `web_search`.',
+      `- Du kannst den **vollständigen Inhalt einer hochgeladenen Datei** über \`${TOOL_NAMES.retrieveEntireFile}\` abrufen, wenn du den exakten Dateinamen kennst. Beachte, dass dies eine große Menge Tokens verbraucht. Nutze dieses Tool nur, wenn du den ganzen Text brauchst, zum Beispiel für Zusammenfassungen; für gezielte Passagen verwende lieber \`${TOOL_NAMES.retrieveTextChunks}\`.`,
     );
   }
 
   sections.push(
-    '- Du gibst ausschließlich formatierte Textantworten aus und erstellst keine Dateien (Word, PDF, Excel, Bilder etc.). Biete das Erstellen von Dateien niemals an.',
+    `- Du kannst **hochgeladene Bilder** (${SUPPORTED_IMAGE_EXTENSIONS.map((ext) => ext.toUpperCase()).join(', ')}) direkt ansehen, sie liegen dir bereits als Anhang vor.`,
   );
+
+  if (hasTool(activeTools, TOOL_NAMES.webScraper)) {
+    sections.push(
+      `- Du kannst **Links und URLs lesen**, die die Nutzerin oder der Nutzer dir schickt. Der Inhalt der Webseite liegt dir nicht automatisch im Kontext vor. Fordere ihn über \`${TOOL_NAMES.webScraper}\` an, wenn eine konkrete URL im Chatkontext vorliegt.`,
+      '- Sage NIEMALS, dass du generell keine Webseiten aufrufen oder keine Live-Inhalte abrufen kannst.',
+    );
+  }
+
+  if (hasTool(activeTools, TOOL_NAMES.webSearch)) {
+    sections.push(
+      `- Du kannst eine **Websuche** durchführen. Bei Fragen, die aktuelle Informationen erfordern, nutze \`${TOOL_NAMES.webSearch}\`.`,
+    );
+  }
+
+  if (hasTool(activeTools, TOOL_NAMES.mundoSearch)) {
+    sections.push(
+      `- Du kannst die **MUNDO-Mediathek** (mundo.schule) nach passenden Bildungsmedien, z.B. Videos oder Arbeitsblättern durchsuchen. Wenn nach Unterrichtsmaterialien oder Medienvorschlägen zu einem Thema gefragt wird, nutze \`${TOOL_NAMES.mundoSearch}\`. Wähle höchstens 5 passende Quellen aus und liste deren Titel, Kurzbeschreibung, Medientyp, Anbieter (Feld \`source\`) und Link (Feld \`url\`) auf, damit die Lehrkraft die Medien direkt öffnen kann. Die Kurzbeschreibung kannst du sprachlich anpassen, sodass der Kerninhalt der Quelle verständlich wird.`,
+    );
+  }
+
+  if (hasTool(activeTools, TOOL_NAMES.mathCalculate)) {
+    sections.push(
+      `- Verwende \`${TOOL_NAMES.mathCalculate}\` für jede numerische, algebraische, statistische, geometrische, Differential-, Integral-, Matrix-, Vektor- oder zahlentheoretische Berechnung. Berechne numerische Ergebnisse niemals mental oder direkt selbst, besonders nicht bei mehrteiligen Anfragen. Führe bei Bedarf einen oder mehrere Tool-Aufrufe aus. Wenn ein Aufruf fehlschlägt, berichte den Fehler kurz und bitte um eine Umformulierung oder die fehlenden Werte; erkläre keine qalc-Interna und erfinde keine Ergebnisse.`,
+    );
+  }
+
+  if (hasTool(activeTools, TOOL_NAMES.createPlot)) {
+    sections.push(
+      `- Für Zeichnungen (Funktionsgraph, Diagramm, Geometrie, 3D-Fläche) rufe \`${TOOL_NAMES.createPlot}\` mit einer präzisen Beschreibung auf statt das JSON selbst zu erzeugen. Ein Aufruf erzeugt genau ein Koordinatensystem; bei mehreren eigenständigen Zeichnungen rufe das Tool einzeln pro Zeichnung auf, nie mit einem Mehrpanel-Layout. Ergebnis ist entweder das fertige JSON oder \`{error}\` bzw. bei reparierbaren Fehlern \`{error, invalidJson}\`; ist \`invalidJson\` vorhanden, erneut aufrufen mit derselben Beschreibung plus \`previousAttempt\`/\`previousError\` aus dem Fehler, um die Zeichnung zu reparieren. Erfolgreiche Ergebnisse unverändert in einen Codeblock \`\`\`jsxgraph-json title="Kurzer Titel" ... \`\`\` einfügen und kurz erklären, was zu sehen ist. Erwähne die Technik dahinter niemals. Gelingt die Zeichnung auch nach mehreren Versuchen nicht, kurz sagen, dass es nicht geht, und eine Alternative anbieten.`,
+    );
+  }
+
+  if (hasTool(activeTools, TOOL_NAMES.generateDocument)) {
+    const plotHint =
+      ' Du kannst Zeichnungen einbetten: Rufe zuerst `' +
+      TOOL_NAMES.createPlot +
+      '` auf und füge das Ergebnis unverändert als Codeblock ```jsxgraph-json title="Kurzer Titel" ... ``` in den Inhalt ein, statt Werte nur als Tabelle zu beschreiben.';
+    sections.push(
+      `- Du kannst **Dokumente als Word-Datei (DOCX) oder HTML-Datei** bereitstellen, zum Beispiel Arbeitsblätter, Zusammenfassungen oder Unterrichtsmaterial. Wenn die Nutzerin oder der Nutzer eine Datei möchte, kläre bei unklarem Inhalt oder Format zuerst nach und rufe dann \`${TOOL_NAMES.generateDocument}\` mit Format, aussagekräftigem Titel und dem passenden vollständigen Inhalt auf.
+- Für **DOCX**: Verwende vollständiges Markdown als Inhalt. Verwende LaTeX für mathematische Formeln in Markdown: Inline-Formeln zwischen \`$...$\` und abgesetzte Formeln zwischen \`$$...$$\`.${plotHint}
+- Für **HTML**: Verwende ein vollständiges HTML-Dokument, das mit \`<!doctype html>\` beginnt und ein \`<html>\`-Element enthält. Verwende Inline-JavaScript, wenn Interaktivität benötigt wird.
+- Verwende für hochgeladene Bilder exakt die Referenz aus dem jeweiligen \`<attachment ref="...">\`-Attribut: für DOCX als Markdown-Bildziel, z. B. \`![Beschreibung](attachment://...)\`, und für HTML als \`src\` eines \`<img>\`-Elements, z. B. \`<img src="attachment://..." alt="Beschreibung">\`; verwende nicht den Dateinamen als Bildziel. Das Ergebnis des Tools enthält den Dateinamen der erstellten Datei. Der Download-Button wird in der Oberfläche automatisch direkt unter deiner Antwort angezeigt. Erzeuge daher KEINEN Download-Link und keinen Platzhalter-Link in deiner Antwort; verweise höchstens kurz auf die bereitgestellte Datei unter Nennung des Dateinamens. Schlägt der Aufruf fehl, korrigiere die Eingabe oder erkläre kurz, was nicht geklappt hat. Erwähne die Technik dahinter niemals. Andere Dateiformate (PDF, Excel, PowerPoint, Bilder etc.) kannst du nicht erstellen und bietest sie nicht an.`,
+    );
+  }
 
   if (activeTools.length > 0) {
     sections.push('', constructAgenticBudgetGuidelines());
@@ -74,6 +105,7 @@ export const FORMAT_GUIDELINES = `
 ## Formatierung
 - Antworten werden als Markdown gerendert (GitHub-Flavored Markdown, Codeblöcke, Mathematik in LaTeX/KaTeX). Nutze die Möglichkeiten von Markdown, um deine Antwort übersichtlich und gut strukturiert zu gestalten.
 - Nutze immer die passende Formatierung für technische Elemente, z.B. Markdown-Codeblöcke für Programmcode oder LaTeX für mathematische Formeln. Verwende in LaTeX-Formeln für natürlichsprachigen Text immer \\text{}. Benutze außerhalb von \\text{} nur Standard-LaTeX-Befehle.
+- Codeblöcke: Sprache immer angeben. Setze direkt dahinter einen Titel: bei Dateien den Dateinamen, sonst eine kurze Beschreibung, z.B. \`\`\`python title="hello.py" oder \`\`\`python title="Sortierfunktion". Nur bei Snippets (kurze Auszüge zur Veranschaulichung, z.B. ein einzelner Befehl oder ein Ausdruck, die nicht eigenständig gespeichert oder ausgeführt werden) entfällt der Titel.
 - Verwende, falls sinnvoll, formatierte Überschriften und Zwischenüberschriften.
 - Hebe wichtige Begriffe oder Kernaussagen **fett** hervor.
 - Nutze Aufzählungen und kurze Absätze, keine langen Fließtexte.
@@ -107,86 +139,4 @@ Nutze sie, um deine Antworten passgenauer zu machen, zum Beispiel bei Fachbezug,
 <personal_context>
 ${personalContext.trim()}
 </personal_context>`;
-}
-
-export function constructRagContext(
-  chunks: RetrievedChunk[],
-  errorUrls: string[] = [],
-  webSearchResults: WebSearchResult[] = [],
-) {
-  if (chunks.length === 0 && errorUrls.length === 0 && webSearchResults.length === 0) return '';
-
-  const fileChunks = chunks
-    .filter((chunk) => chunk.sourceType === 'file')
-    .sort(
-      (a, b) => (a.fileName ?? '').localeCompare(b.fileName ?? '') || a.orderIndex - b.orderIndex,
-    );
-  const webpageChunks = chunks
-    .filter((chunk) => chunk.sourceType === 'webpage')
-    .sort(
-      (a, b) => (a.sourceUrl ?? '').localeCompare(b.sourceUrl ?? '') || a.orderIndex - b.orderIndex,
-    );
-
-  const sections: string[] = [];
-
-  if (fileChunks.length > 0) {
-    const fileTexts = fileChunks
-      .map(
-        (chunk) =>
-          `${chunk.fileName ? `Dateiname: ${chunk.fileName} - Abschnitt: ${chunk.orderIndex + 1}\n` : ''}${chunk.content}`,
-      )
-      .join('\n\n');
-    sections.push(
-      `### Hochgeladene Dateien\nDie folgenden Inhalte stammen aus Dateien, die für den Chat bereitgestellt wurden:\n\n${fileTexts}`,
-    );
-  }
-
-  if (webpageChunks.length > 0) {
-    const linkTexts = webpageChunks
-      .map(
-        (chunk) => `Url: ${chunk.sourceUrl} - Abschnitt: ${chunk.orderIndex + 1}\n${chunk.content}`,
-      )
-      .join('\n\n');
-    sections.push(
-      `### Verlinkte Webseiten\nDie folgenden Inhalte stammen aus Links, die zum Chat gehören:\n\n${linkTexts}`,
-    );
-  }
-
-  if (errorUrls.length > 0) {
-    sections.push(
-      `### Fehler beim Zugriff\nEs gab Probleme beim Zugriff auf die folgenden URLs:\n${errorUrls.map((url) => `- ${url}`).join('\n')}`,
-    );
-  }
-
-  if (webSearchResults.length > 0) {
-    const webSearchText = webSearchResults
-      .map((result) => `Url: ${result.url}\n${result.content}`)
-      .join('\n\n');
-    sections.push(
-      `### Websuche\nDie folgenden Inhalte stammen aus einer live Websuche:\n\n${webSearchText}`,
-    );
-  }
-
-  if (sections.length === 0) return '';
-
-  return `\n## Kontextinformationen\nNutze die folgenden Informationen, falls sinnvoll, für deine Antwort:\n\n${sections.join('\n\n')}`;
-}
-
-// Helper to format optional fields in a list
-// Takes a title and an array of objects with label and value, filters out undefined or null values, and formats them as a list
-export function formatList(
-  title: string,
-  fields: Array<{ label: string; value: string | undefined | null }>,
-) {
-  const filteredFields = fields.filter(
-    (f) => f.value !== undefined && f.value !== null && f.value.length !== 0,
-  );
-
-  if (filteredFields.length === 0) {
-    return '';
-  }
-
-  const formattedList = filteredFields.map((f) => `- **${f.label}**: ${f.value}`).join('\n');
-
-  return `${title}\n${formattedList}`;
 }

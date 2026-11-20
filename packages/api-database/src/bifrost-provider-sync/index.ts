@@ -1,9 +1,9 @@
-import { dbGetAllModelsByOrganizationId } from '../functions';
-import { LlmModel } from '../schema';
+import { dbGetAllProviderKeysWithModels, type LlmProviderKeyWithModels } from '../functions';
+import { deleteBifrostProvider, listBifrostProviders, syncBifrostProvider } from './client';
 import { BifrostProviderSyncError } from './error';
-import { syncBifrostProvider } from './client';
 import { buildBifrostProviderConfigs } from './provider-config-builder';
-import { BifrostProviderSyncOptions } from './types';
+import { type BifrostProviderConfig, type BifrostProviderSyncOptions } from './types';
+import { ensureBifrostVirtualKeyProviderAccess } from './virtual-key-sync';
 
 /**
  * Mirrors API DB model/provider configuration into Bifrost.
@@ -12,19 +12,16 @@ import { BifrostProviderSyncOptions } from './types';
  * visibility but should not be synced to Bifrost.
  */
 export async function syncBifrostProviders(
-  models: LlmModel[],
+  providerKeys: LlmProviderKeyWithModels[],
   options: BifrostProviderSyncOptions,
 ): Promise<void> {
-  const { bifrostAdminUrl, bifrostManagementApiKey, logger } = options;
+  const { bifrostAdminUrl, bifrostAdminUsername, bifrostAdminPassword, logger } = options;
   if (!bifrostAdminUrl) {
     logger?.info?.('Bifrost provider sync skipped because BIFROST_ADMIN_URL is not configured');
     return;
   }
 
-  const providerConfigs = buildBifrostProviderConfigs(
-    models.filter((model) => !model.isDeleted),
-    logger,
-  );
+  const providerConfigs = buildBifrostProviderConfigs(providerKeys, logger);
 
   const failedProviders: string[] = [];
 
@@ -32,7 +29,8 @@ export async function syncBifrostProviders(
     try {
       await syncBifrostProvider({
         bifrostAdminUrl,
-        bifrostManagementApiKey,
+        bifrostAdminUsername,
+        bifrostAdminPassword,
         providerConfig,
         logger,
       });
@@ -50,29 +48,55 @@ export async function syncBifrostProviders(
     });
     throw new BifrostProviderSyncError();
   }
-}
 
-export async function syncBifrostProvidersForOrganization(
-  organizationId: string,
-  options: BifrostProviderSyncOptions,
-): Promise<void> {
-  const models = await dbGetAllModelsByOrganizationId(organizationId);
-  await syncBifrostProviders(models, {
-    ...options,
-    logger: options.logger
-      ? {
-          ...options.logger,
-          info: (message, context) =>
-            options.logger?.info?.(message, { organizationId, ...context }),
-          warning: (message, context) =>
-            options.logger?.warning?.(message, { organizationId, ...context }),
-          error: (message, error, context) =>
-            options.logger?.error?.(message, error, { organizationId, ...context }),
-        }
-      : undefined,
+  await deleteStaleManagedProviders(providerConfigs, options);
+
+  await ensureBifrostVirtualKeyProviderAccess({
+    bifrostAdminUrl,
+    bifrostAdminUsername,
+    bifrostAdminPassword,
+    logger,
   });
 }
 
+/**
+ * Deletes providers from Bifrost once they have no more provider keys in the DB.
+ *
+ * Fetches the actual providers configured in Bifrost rather than relying on a static list, so
+ * any provider not currently configured by ais-chat-admin gets removed.
+ */
+async function deleteStaleManagedProviders(
+  providerConfigs: BifrostProviderConfig[],
+  options: BifrostProviderSyncOptions,
+): Promise<void> {
+  const configuredProviders = new Set<string>(providerConfigs.map(({ provider }) => provider));
+  const existingProviders = await listBifrostProviders({
+    bifrostAdminUrl: options.bifrostAdminUrl!,
+    bifrostAdminUsername: options.bifrostAdminUsername,
+    bifrostAdminPassword: options.bifrostAdminPassword,
+    logger: options.logger,
+  });
+
+  const staleProviders = existingProviders
+    .map(({ name }) => name)
+    .filter((provider): provider is string => !!provider && !configuredProviders.has(provider));
+
+  for (const provider of staleProviders) {
+    await deleteBifrostProvider({
+      bifrostAdminUrl: options.bifrostAdminUrl!,
+      bifrostAdminUsername: options.bifrostAdminUsername,
+      bifrostAdminPassword: options.bifrostAdminPassword,
+      provider,
+      logger: options.logger,
+    });
+  }
+}
+
+export async function syncAllBifrostProviders(options: BifrostProviderSyncOptions): Promise<void> {
+  await syncBifrostProviders(await dbGetAllProviderKeysWithModels(), options);
+}
+
 export * from './error';
-export * from './types';
 export { buildBifrostProviderConfigs } from './provider-config-builder';
+export * from './types';
+export { ensureBifrostVirtualKeyProviderAccess } from './virtual-key-sync';

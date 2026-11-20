@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { CONVERSATION_ROLES } from '@ais-chat/ai-core/chat/types';
+import { z } from 'zod';
 
 export const conversationRoleSchema = z.enum(CONVERSATION_ROLES);
 
@@ -35,3 +35,6 @@ export type ImageStyle = {
 
 export const imageStyleTypeSchema = z.enum(['none', 'photorealistic', 'cartoon']);
 export type ImageStyleType = z.infer<typeof imageStyleTypeSchema>;
+
+export const imageAspectRatioPresetSchema = z.enum(['quadratic', 'landscape', 'portrait']);
+export type ImageAspectRatioPreset = z.infer<typeof imageAspectRatioPresetSchema>;

@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
   buildExtractionWindow,
-  shouldRunPersonalContextExtraction,
   PERSONAL_CONTEXT_EXCHANGE_INTERVAL,
+  shouldRunPersonalContextExtraction,
 } from './personal-context-extraction';
 
 describe('shouldRunPersonalContextExtraction', () => {

@@ -1,6 +1,8 @@
 import React from 'react';
-import SearchIcon from './icons/search';
+
 import { cn } from '@/utils/tailwind';
+
+import SearchIcon from './icons/search';
 
 type SearchInputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
