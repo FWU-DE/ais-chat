@@ -11,6 +11,7 @@ import { ObscuredFederalState } from '@/auth/utils';
 
 import { constructCharacterSystemPrompt } from '../character/system-prompt';
 import { constructLearningScenarioSystemPrompt } from '../learning-scenario/system-prompt';
+import { constructFederalStateContext } from '../utils/federal-state-context';
 import {
   constructToolGuidelines,
   FORMAT_GUIDELINES,
@@ -18,12 +19,16 @@ import {
   SUGGESTION_GUIDELINES,
 } from '../utils/system-prompt';
 
-function constructAisChatSystemPrompt(activeToolDefinitions: ToolDefinition[]) {
+function constructAisChatSystemPrompt(
+  activeToolDefinitions: ToolDefinition[],
+  federalStateId: string,
+) {
   return `Du bist AIS.chat, der datenschutzkonforme KI-Chatbot für den Schulunterricht. 
 Du unterstützt Lehrkräfte bei der Unterrichtsgestaltung und Schülerinnen und Schüler beim Lernen. 
 Du wirst vom FWU, dem Medieninstitut der Länder, entwickelt und betrieben. 
 Heute ist der ${formatDateToDayMonthYear(new Date())}.
 ${LANGUAGE_GUIDELINES}
+${constructFederalStateContext(federalStateId)}
 ${constructToolGuidelines(activeToolDefinitions)}
 ${FORMAT_GUIDELINES}
 ${SUGGESTION_GUIDELINES}`;
@@ -32,10 +37,12 @@ ${SUGGESTION_GUIDELINES}`;
 function constructAssistantSystemPrompt(
   assistant: AssistantSelectModel,
   activeToolDefinitions: ToolDefinition[] = [],
+  federalStateId: string = '',
 ) {
   return `Du bist ein hilfreicher Assistent, der in einer Schule eingesetzt wird, um eine Lehrkraft zu unterstützen. Dein Name ist ${assistant.name}.
 
 ${LANGUAGE_GUIDELINES}
+${constructFederalStateContext(federalStateId)}
 ${constructToolGuidelines(activeToolDefinitions)}
 ${FORMAT_GUIDELINES}
 ${SUGGESTION_GUIDELINES}
@@ -146,8 +153,8 @@ export function constructChatSystemPrompt({
       });
     }
 
-    return constructAssistantSystemPrompt(assistant, activeToolDefinitions);
+    return constructAssistantSystemPrompt(assistant, activeToolDefinitions, federalState.id);
   }
 
-  return constructAisChatSystemPrompt(activeToolDefinitions);
+  return constructAisChatSystemPrompt(activeToolDefinitions, federalState.id);
 }
