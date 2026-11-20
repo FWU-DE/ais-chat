@@ -307,13 +307,17 @@ export function CharacterEdit({
   const showShareInfo =
     (isSchoolShared || isCommunityShared || hasLinkAccess) && !character.suspended;
 
-  const saveBeforeLeave = useCallback(async (): Promise<void> => {
+  const saveBeforeLeave = useCallback(async (): Promise<boolean> => {
     if (!isDirty) {
-      return;
+      return true;
     }
 
-    await flushAutoSave();
-  }, [flushAutoSave, isDirty]);
+    const isSaved = await flushAutoSave();
+    if (!isSaved) {
+      toast.error(t('toasts.edit-toast-error'));
+    }
+    return isSaved;
+  }, [flushAutoSave, isDirty, toast, t]);
 
   const { guardNavigation } = usePendingChangesGuard({
     hasPendingChanges: isDirty,

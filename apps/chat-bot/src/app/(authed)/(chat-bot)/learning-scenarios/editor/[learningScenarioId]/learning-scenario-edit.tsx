@@ -316,13 +316,17 @@ export function LearningScenarioEdit({
   const showShareInfo =
     (isSchoolShared || isCommunityShared || hasLinkAccess) && !learningScenario.suspended;
 
-  const saveBeforeLeave = useCallback(async (): Promise<void> => {
+  const saveBeforeLeave = useCallback(async (): Promise<boolean> => {
     if (!isDirty) {
-      return;
+      return true;
     }
 
-    await flushAutoSave();
-  }, [flushAutoSave, isDirty]);
+    const isSaved = await flushAutoSave();
+    if (!isSaved) {
+      toast.error(tToast('edit-toast-error'));
+    }
+    return isSaved;
+  }, [flushAutoSave, isDirty, toast, tToast]);
 
   const { guardNavigation } = usePendingChangesGuard({
     hasPendingChanges: isDirty,
