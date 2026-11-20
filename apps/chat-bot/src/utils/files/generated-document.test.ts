@@ -49,13 +49,23 @@ describe('createGeneratedDocumentFileName', () => {
 describe('createGeneratedDocumentBlob', () => {
   it('resolves attachment references in generated HTML', async () => {
     vi.stubGlobal('DOMParser', new JSDOM().window.DOMParser);
+    const imageBlob = new Blob(['png'], { type: 'image/png' });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: () => imageBlob }));
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn().mockResolvedValue({
+        width: 1,
+        height: 1,
+        close: vi.fn(),
+      }),
+    );
     const blob = await createGeneratedDocumentBlob(
       '<!doctype html><html><body><img src="attachment://file-1"></body></html>',
       'html',
       new Map([['attachment://file-1', '/api/files/file-1/scaled-image']]),
     );
 
-    await expect(blob.text()).resolves.toContain('/api/files/file-1/scaled-image');
+    await expect(blob.text()).resolves.toContain('data:image/png;base64,cG5n');
     vi.unstubAllGlobals();
   });
 
