@@ -36,6 +36,7 @@ export default function CommunityTemplateRequestDetailView(
 
   const [data, setData] = useState<CommunityTemplateRequestWithEventsAdmin>(initialData);
   const [reloadTrigger, setReloadTrigger] = useState(0);
+  const [isSavingNote, setIsSavingNote] = useState(false);
 
   useEffect(() => {
     // reloadTrigger starts at 0 so the initial fetch is skipped; initialData is already fresh
@@ -96,13 +97,18 @@ export default function CommunityTemplateRequestDetailView(
   };
 
   const handleUpdateNote = async (note: string) => {
-    const result = await updateInternalNoteAction(requestId, note);
-    if (result.success) {
-      setReloadTrigger((currentTrigger) => currentTrigger + 1);
-    } else {
-      toast.error(result.error.message);
+    setIsSavingNote(true);
+    try {
+      const result = await updateInternalNoteAction(requestId, note);
+      if (result.success) {
+        toast.success('Notiz erfolgreich gespeichert');
+      } else {
+        toast.error(result.error.message);
+      }
+      return result.success;
+    } finally {
+      setIsSavingNote(false);
     }
-    return result.success;
   };
 
   return (
@@ -150,7 +156,7 @@ export default function CommunityTemplateRequestDetailView(
         <CardHeader>
           <CardTitle>Interne Notizen</CardTitle>
           <CardAction>
-            <Button onClick={async () => await handleUpdateNote(data.note)}>
+            <Button disabled={isSavingNote} onClick={async () => await handleUpdateNote(data.note)}>
               <FloppyDiskIcon />
               Speichern
             </Button>
