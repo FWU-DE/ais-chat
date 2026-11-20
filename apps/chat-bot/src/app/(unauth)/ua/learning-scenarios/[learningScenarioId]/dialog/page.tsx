@@ -11,6 +11,7 @@ import z from 'zod';
 import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import LearningScenarioSharedChat from '@/components/shared-chat/learning-scenario-shared-chat';
+import { toSharedLearningScenarioDto } from '@/components/shared-chat/shared-chat-client-dto';
 import { DEFAULT_DESIGN_CONFIGURATION } from '@/db/const';
 import { loadTranslations } from '@/i18n/load-translations';
 import { resolveSharingLocale } from '@/i18n/sharing-locale';
@@ -66,8 +67,10 @@ export default async function Page(
       >
         <ThemeProvider designConfiguration={designConfiguration}>
           <LearningScenarioSharedChat
-            {...learningScenario}
-            inviteCode={searchParams.inviteCode}
+            learningScenario={toSharedLearningScenarioDto(
+              learningScenario,
+              searchParams.inviteCode,
+            )}
             avatarPictureUrl={avatarPictureUrl}
             isSpeechModelEnabled={
               federalState?.featureToggles?.isSpeechModelEnabled === true &&

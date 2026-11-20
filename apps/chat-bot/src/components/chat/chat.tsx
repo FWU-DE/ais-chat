@@ -1,12 +1,7 @@
 'use client';
 
 import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
-import {
-  type AssistantSelectModel,
-  type CharacterSelectModel,
-  FileModel,
-  type LearningScenarioSelectModel,
-} from '@shared/db/schema';
+import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 import { logDebug, logError, logWarning } from '@shared/logging';
 import { isToolRelatedMessage } from '@shared/utils/tool-related-message';
@@ -32,6 +27,11 @@ import { useFederalState } from '../providers/federal-state-provider';
 import { useLlmModels } from '../providers/llm-model-provider';
 import { useUserSettings } from '../providers/user-settings-provider';
 import { AssistantIcon } from './assistant-icon';
+import type {
+  ChatAssistantDto,
+  ChatCharacterDto,
+  ChatLearningScenarioDto,
+} from './chat-client-dto';
 import { ChatInputBox } from './chat-input-box';
 import { useConversationDownload } from './conversation-download-context';
 import { ErrorChatPlaceholder } from './error-chat-placeholder';
@@ -44,9 +44,9 @@ import PromptSuggestions from './prompt-suggestions';
 type ChatProps = {
   id: string;
   initialMessages: ChatMessage[];
-  assistant?: AssistantSelectModel;
-  character?: CharacterSelectModel;
-  learningScenario?: LearningScenarioSelectModel;
+  assistant?: ChatAssistantDto;
+  character?: ChatCharacterDto;
+  learningScenario?: ChatLearningScenarioDto;
   imageSource?: string;
   promptSuggestions?: string[];
   initialFileMapping?: Map<string, FileModel[]>;

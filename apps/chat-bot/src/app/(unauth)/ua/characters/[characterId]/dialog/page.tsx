@@ -11,6 +11,7 @@ import z from 'zod';
 import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import CharacterSharedChat from '@/components/shared-chat/character-shared-chat';
+import { toSharedCharacterDto } from '@/components/shared-chat/shared-chat-client-dto';
 import { DEFAULT_DESIGN_CONFIGURATION } from '@/db/const';
 import { loadTranslations } from '@/i18n/load-translations';
 import { resolveSharingLocale } from '@/i18n/sharing-locale';
@@ -61,9 +62,7 @@ export default async function Page(props: PageProps<'/ua/characters/[characterId
       >
         <ThemeProvider designConfiguration={designConfiguration}>
           <CharacterSharedChat
-            {...character}
-            initialMessage={character.initialMessage ?? ''}
-            inviteCode={searchParams.inviteCode}
+            character={toSharedCharacterDto(character, searchParams.inviteCode)}
             avatarPictureUrl={avatarPictureUrl}
             isSpeechModelEnabled={
               federalState?.featureToggles?.isSpeechModelEnabled === true &&

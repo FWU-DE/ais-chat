@@ -8,6 +8,7 @@ import z from 'zod';
 
 import { requireAuth } from '@/auth/requireAuth';
 import Chat from '@/components/chat/chat';
+import { toChatAssistantDto } from '@/components/chat/chat-client-dto';
 import Logo from '@/components/common/logo';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
@@ -80,7 +81,7 @@ export default async function Page(
         <Chat
           id={conversation.id}
           initialMessages={chatMessages}
-          assistant={assistant}
+          assistant={toChatAssistantDto(assistant)}
           enableFileUpload={true}
           imageSource={avatarPictureUrl}
           logoElement={logoElement}
