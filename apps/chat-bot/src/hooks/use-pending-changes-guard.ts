@@ -1,5 +1,6 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
 
 type NavigationIntent = () => void;
@@ -9,25 +10,29 @@ type UsePendingChangesGuardProps = {
   onBeforePageLeave: () => Promise<void>;
 };
 
-const HISTORY_GUARD_STATE_KEY = '__pendingChangesGuard';
-
 /**
  * A hook that guards against navigating away from a page with pending changes.
- * It listens for navigation events (including browser back button)
- * and calls the provided `onBeforePageLeave` callback before allowing navigation to proceed.
+ * In-app navigation goes through `guardNavigation`, which awaits `onBeforePageLeave` first.
+ * Browser back/forward is not blocked: `onBeforePageLeave` is triggered on unmount without
+ * waiting for it, so the history stack stays untouched.
  */
 export function usePendingChangesGuard({
   hasPendingChanges,
   onBeforePageLeave,
 }: UsePendingChangesGuardProps) {
+  const queryClient = useQueryClient();
   const hasPendingChangesRef = useRef(hasPendingChanges);
   const pendingIntentRef = useRef<NavigationIntent | null>(null);
-  const bypassNextPopstateRef = useRef(false);
+  const onBeforePageLeaveRef = useRef(onBeforePageLeave);
   const isNavigatingRef = useRef(false);
 
   useEffect(() => {
     hasPendingChangesRef.current = hasPendingChanges;
   }, [hasPendingChanges]);
+
+  useEffect(() => {
+    onBeforePageLeaveRef.current = onBeforePageLeave;
+  }, [onBeforePageLeave]);
 
   const continueNavigation = useCallback(() => {
     const navigationIntent = pendingIntentRef.current;
@@ -67,36 +72,15 @@ export function usePendingChangesGuard({
   );
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    if (!window.history.state?.[HISTORY_GUARD_STATE_KEY]) {
-      window.history.pushState({ [HISTORY_GUARD_STATE_KEY]: true }, '', window.location.href);
-    }
-
-    const onPopState = () => {
-      if (bypassNextPopstateRef.current) {
-        bypassNextPopstateRef.current = false;
-        return;
-      }
-
-      if (!hasPendingChangesRef.current) {
-        return;
-      }
-
-      window.history.pushState({ [HISTORY_GUARD_STATE_KEY]: true }, '', window.location.href);
-      void navigateWithPendingChanges(() => {
-        bypassNextPopstateRef.current = true;
-        window.history.back();
-      });
-    };
-
-    window.addEventListener('popstate', onPopState);
     return () => {
-      window.removeEventListener('popstate', onPopState);
+      if (hasPendingChangesRef.current) {
+        // the overview may have loaded before the save finished
+        void onBeforePageLeaveRef
+          .current()
+          .finally(() => queryClient.invalidateQueries({ queryKey: ['entity-overview'] }));
+      }
     };
-  }, [navigateWithPendingChanges]);
+  }, [queryClient]);
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
