@@ -6,9 +6,9 @@ const SSML_NAMESPACE = 'http://www.w3.org/2001/10/synthesis';
 const MSTTS_NAMESPACE = 'https://www.w3.org/2001/mstts';
 const DEFAULT_SSML_LOCALE = 'de-DE';
 
-// The document wrapper and voice are owned by the server; `audio` and background audio would let
-// generated markup make the speech service fetch arbitrary URLs.
-const FORBIDDEN_ELEMENTS = new Set(['speak', 'voice', 'audio', 'backgroundaudio']);
+// The document wrapper and voice are owned by the server; `audio`, background audio and `lexicon`
+// would let generated markup make the speech service fetch arbitrary URLs.
+const FORBIDDEN_ELEMENTS = new Set(['speak', 'voice', 'audio', 'backgroundaudio', 'lexicon']);
 
 const ELEMENT_NODE = 1;
 const TEXT_NODE = 3;

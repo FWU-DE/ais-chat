@@ -26,12 +26,17 @@ import { toast } from 'sonner';
 
 import { updateStaticModelConfigurationAction } from './actions';
 
+// Radix Select does not allow an empty string as item value.
+const NO_MODEL_VALUE = '__none__';
+
 const roles: {
   role: StaticModelRole;
   label: string;
   type: 'text' | 'image' | 'safety';
   optional?: boolean;
   description?: string;
+  /** Label of an option that removes the selection, so the role falls back to another model. */
+  clearLabel?: string;
 }[] = [
   { role: 'default-chat', label: 'Standard-Chatmodell', type: 'text' },
   { role: 'fallback', label: 'Fallback-Modell', type: 'text' },
@@ -44,6 +49,7 @@ const roles: {
     optional: true,
     description:
       'Bereitet Texte für die Sprachausgabe als SSML auf. Ohne Auswahl wird das starke Hilfsmodell verwendet.',
+    clearLabel: 'Starkes Hilfsmodell verwenden',
   },
   { role: 'auxiliary-fallback', label: 'Fallback-Hilfsmodell', type: 'text' },
   { role: 'default-image', label: 'Standard-Bildmodell', type: 'image' },
@@ -95,18 +101,24 @@ export default function StaticModelConfigurationView({ models, configuration }: 
             Alle statischen Modellrollen müssen vor dem Speichern konfiguriert werden.
           </p>
         )}
-        {roles.map(({ role, label, type, description }) => (
+        {roles.map(({ role, label, type, description, clearLabel }) => (
           <div className="space-y-2" key={role}>
             <label className="text-sm font-medium">{label}</label>
             {description && <p className="text-sm text-muted-foreground">{description}</p>}
             <Select
-              value={selected[role]}
-              onValueChange={(value) => setSelected({ ...selected, [role]: value })}
+              value={selected[role] ?? (clearLabel ? NO_MODEL_VALUE : undefined)}
+              onValueChange={(value) => {
+                const next = { ...selected };
+                if (value === NO_MODEL_VALUE) delete next[role];
+                else next[role] = value;
+                setSelected(next);
+              }}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Modell auswählen" />
               </SelectTrigger>
               <SelectContent>
+                {clearLabel && <SelectItem value={NO_MODEL_VALUE}>{clearLabel}</SelectItem>}
                 {models
                   .filter((model) => model.priceMetadata.type === type && !model.isDeleted)
                   .map((model) => (

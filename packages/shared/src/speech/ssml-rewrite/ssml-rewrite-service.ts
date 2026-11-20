@@ -53,13 +53,9 @@ export async function rewriteTextToSsml({
       { abortSignal: signal },
     );
 
-    const ssmlBody = stripCodeFence(result.text);
-    if (!ssmlBody) {
-      throw new AiGenerationError('SSML rewrite returned an empty response');
-    }
-
+    // An empty body is rejected when the segments are built, after its usage was stored.
     return {
-      ssmlBody,
+      ssmlBody: stripCodeFence(result.text),
       usage: {
         modelId: result.modelId,
         provider: result.provider,
