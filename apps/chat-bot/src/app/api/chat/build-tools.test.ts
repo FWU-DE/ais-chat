@@ -165,6 +165,7 @@ describe('buildTools', () => {
       'web_scraper',
       'retrieve_entire_file',
       'retrieve_text_chunks',
+      'generate_document',
     ]);
   });
 
@@ -196,7 +197,11 @@ describe('buildTools', () => {
       apiKeyId: 'api-key-1',
     });
 
-    expect(Object.keys(toolRegistry)).toEqual(['retrieve_entire_file', 'retrieve_text_chunks']);
+    expect(Object.keys(toolRegistry)).toEqual([
+      'retrieve_entire_file',
+      'retrieve_text_chunks',
+      'generate_document',
+    ]);
   });
 
   it('does not build web tools when allowWebTools is false', async () => {
@@ -211,7 +216,11 @@ describe('buildTools', () => {
       apiKeyId: 'api-key-1',
     });
 
-    expect(Object.keys(toolRegistry)).toEqual(['retrieve_entire_file', 'retrieve_text_chunks']);
+    expect(Object.keys(toolRegistry)).toEqual([
+      'retrieve_entire_file',
+      'retrieve_text_chunks',
+      'generate_document',
+    ]);
     expect(mocks.buildWebSearchToolMock).not.toHaveBeenCalled();
     expect(mocks.buildWebScraperToolMock).not.toHaveBeenCalled();
   });

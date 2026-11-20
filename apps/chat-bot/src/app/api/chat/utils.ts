@@ -10,6 +10,7 @@ import { escape } from 'he';
 
 import { TOTAL_CHAT_LENGTH_LIMIT } from '@/configuration-text-inputs/const';
 import { type ChatMessage } from '@/types/chat';
+import { getDocumentAttachmentReference } from '@/utils/files/document-images';
 
 import { ChatAttachmentWithMessageId } from '../file-operations/preprocess-image';
 import { env as imageAttachmentEnv } from './image-attachment-env';
@@ -17,22 +18,22 @@ import { env as imageAttachmentEnv } from './image-attachment-env';
 export type FileWithConversationMessageId = FileModel & { conversationMessageId?: string };
 
 /**
- * Adds attached filenames to copies of user messages before they are sent to the model.
+ * Adds attachment metadata to copies of user messages before they are sent to the model.
  * The original messages remain unchanged, and files without a matching message are ignored.
  */
 export function annotateMessageAttachmentNames(
   messages: ChatMessage[],
   files: FileWithConversationMessageId[],
 ): ChatMessage[] {
-  // Group filenames by the message they were attached to.
-  const namesByMessageId = new Map<string, string[]>();
+  // Group files by the message they were attached to.
+  const filesByMessageId = new Map<string, Array<{ id: string; name: string }>>();
   for (const file of files) {
     if (file.conversationMessageId === undefined) {
       continue;
     }
-    const names = namesByMessageId.get(file.conversationMessageId) ?? [];
-    names.push(file.name);
-    namesByMessageId.set(file.conversationMessageId, names);
+    const attachedFiles = filesByMessageId.get(file.conversationMessageId) ?? [];
+    attachedFiles.push({ id: file.id, name: file.name });
+    filesByMessageId.set(file.conversationMessageId, attachedFiles);
   }
 
   // Add each group of filenames to a copy of its matching user message.
@@ -40,13 +41,15 @@ export function annotateMessageAttachmentNames(
     if (message.role !== 'user') {
       return message;
     }
-    const names = namesByMessageId.get(message.id);
-    if (names === undefined || names.length === 0) {
+    const attachedFiles = filesByMessageId.get(message.id);
+    if (attachedFiles === undefined || attachedFiles.length === 0) {
       return message;
     }
-    const attachmentData = names
-      .sort()
-      .map((name) => `  <attachment>${escape(name)}</attachment>`)
+    const attachmentData = attachedFiles
+      .map(
+        ({ id, name }) =>
+          `  <attachment ref="${escape(getDocumentAttachmentReference(id))}">${escape(name)}</attachment>`,
+      )
       .join('\n');
     return {
       ...message,

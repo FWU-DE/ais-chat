@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import { type ChatStatus, type UIMessage } from '@/types/chat';
+import { TOOL_NAMES } from '@/types/tool-names';
 import { replacePlotBlocks } from '@/utils/code-blocks';
 import { isImageFile } from '@/utils/files/generic';
 import { cn } from '@/utils/tailwind';
@@ -12,6 +13,7 @@ import { cn } from '@/utils/tailwind';
 import useBreakpoints from '../hooks/use-breakpoints';
 import { AiActivityPanel } from './activity/ai-activity';
 import DisplayFileAttachment from './display-file-attachment';
+import { GeneratedDocumentAttachment } from './document/generated-document-attachment';
 import MarkdownDisplay from './markdown-display';
 import { MessageActions } from './message-actions';
 import MessageImageAttachment, { type MessageFileModel } from './message-image-attachment';
@@ -236,6 +238,28 @@ export function ChatBox({
     </PlotStreamingContext.Provider>
   );
 
+  const generatedDocuments = activitySteps.flatMap((step) =>
+    step.kind === 'tool' &&
+    step.tool === TOOL_NAMES.generateDocument &&
+    step.failed !== true &&
+    step.document !== undefined
+      ? [{ id: step.id, document: step.document }]
+      : [],
+  );
+  const maybeGeneratedDocuments =
+    generatedDocuments.length > 0 ? (
+      <div className="flex w-full min-w-0 flex-row flex-wrap gap-2">
+        {generatedDocuments.map(({ id, document }) => (
+          <GeneratedDocumentAttachment
+            key={id}
+            document={document}
+            fileMapping={fileMapping}
+            messageFileMapping={messageFileMapping}
+          />
+        ))}
+      </div>
+    ) : null;
+
   return (
     <>
       {AiActivity}
@@ -251,6 +275,7 @@ export function ChatBox({
               )}
             >
               {showMessageText && messageContent}
+              {maybeGeneratedDocuments}
               {maybeAudioPlayer}
               {maybeShowMessageIcons}
             </div>
