@@ -16,3 +16,4 @@ implementing related features; open the linked doc for full details.
 | [docker-publishing.md](docker-publishing.md) | Changing `.github/workflows/docker.yml` or the conditions under which images are pushed to GHCR |
 | [code-block-download.md](code-block-download.md) | Changing how code blocks are downloaded as files (file name resolution, extension lookup, name sanitizing) |
 | [container-images.md](container-images.md) | Changing a Dockerfile base image or runtime stage |
+| [adr-file-generation.md](adr-file-generation.md) | DOCX, PDF and HTML document generation, renderer variants and security decisions |
