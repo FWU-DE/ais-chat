@@ -1,76 +1,118 @@
 import {
-  dbGetAllModelsByOrganizationId,
   dbCreateLlmModel,
+  dbDeleteLlmModel,
+  dbGetAllModels,
+  dbReplaceModelProviderKeyMappings,
   dbUpdateLlmModel,
-  dbGetOrganizationById,
 } from '@ais-chat/api-database';
-import { CreateLargeLanguageModel, UpdateLargeLanguageModel } from '../types/large-language-model';
+import { imageGenerationConfigSchema, speechConfigSchema } from '@ais-chat/api-database/types';
+import { llmModelPriceMetadataSchema } from '@ais-chat/shared/db/schema';
 import { logInfo } from '@shared/logging';
-import { dbUpdateLlmModelsForAllFederalStates } from '@shared/db/functions/llm-model';
-import { syncBifrostProvidersForOrganization } from './bifrost-provider-sync-service';
+import { z } from 'zod';
 
-export async function getLargeLanguageModels(organizationId: string) {
-  return dbGetAllModelsByOrganizationId(organizationId);
+import { runDeleteOrThrowError } from '@/utils/run-delete-or-throw-error';
+
+import { CreateLargeLanguageModel, UpdateLargeLanguageModel } from '../types/large-language-model';
+import { syncBifrostProvidersOrThrow } from './bifrost-provider-sync-service';
+
+const supportedImageFormatsSchema = z.array(z.string());
+
+export async function getLargeLanguageModels() {
+  return dbGetAllModels();
 }
 
-export async function createLargeLanguageModel(
-  organizationId: string,
-  data: CreateLargeLanguageModel,
-) {
-  const organization = await dbGetOrganizationById(organizationId);
-  if (!organization) throw new Error('Organization not found');
+export async function createLargeLanguageModel(data: CreateLargeLanguageModel) {
+  const existingModels = await dbGetAllModels();
+  if (existingModels.some(({ name }) => name === data.name)) {
+    throw new Error('A model with this name already exists');
+  }
 
   const model = await dbCreateLlmModel({
     name: data.name,
     displayName: data.displayName,
-    provider: data.provider,
+    provider: 'bifrost',
     description: data.description ?? '',
-    setting: data.setting ? JSON.parse(data.setting) : {},
-    priceMetadata: data.priceMetadata
-      ? JSON.parse(data.priceMetadata)
-      : { type: 'text' as const, completionTokenPrice: 0, promptTokenPrice: 0 },
-    supportedImageFormats: data.supportedImageFormats ? JSON.parse(data.supportedImageFormats) : [],
+    setting: { provider: 'bifrost' },
+    priceMetadata: llmModelPriceMetadataSchema.parse(JSON.parse(data.priceMetadata)),
+    supportedImageFormats: data.supportedImageFormats
+      ? supportedImageFormatsSchema.parse(JSON.parse(data.supportedImageFormats))
+      : [],
+    imageGenerationConfig: data.imageGenerationConfig
+      ? imageGenerationConfigSchema.parse(JSON.parse(data.imageGenerationConfig))
+      : undefined,
+    modelConfig: data.modelConfig
+      ? speechConfigSchema.parse(JSON.parse(data.modelConfig))
+      : undefined,
     additionalParameters: data.additionalParameters ? JSON.parse(data.additionalParameters) : {},
-    organizationId,
     isNew: data.isNew,
     isDeleted: data.isDeleted,
+    useBifrost: data.useBifrost,
+    safetyFilterEnabled: data.safetyFilterEnabled,
   });
 
-  await syncBifrostProvidersForOrganization(organizationId);
-
-  logInfo('LLM was created successfully', { organizationId, data });
+  logInfo('LLM was created successfully', { data });
 
   if (!model) throw new Error('Failed to create model');
+  await dbReplaceModelProviderKeyMappings({
+    modelId: model.id,
+    providerKeys: data.providerKeys,
+  });
+  await syncBifrostProvidersOrThrow();
   return model;
 }
 
-export async function updateLargeLanguageModel(
-  organizationId: string,
-  modelId: string,
-  data: UpdateLargeLanguageModel,
-) {
-  const model = await dbUpdateLlmModel(modelId, organizationId, {
+export async function updateLargeLanguageModel(modelId: string, data: UpdateLargeLanguageModel) {
+  const existingModels = await dbGetAllModels();
+  if (existingModels.some(({ id, name }) => id !== modelId && name === data.name)) {
+    throw new Error('A model with this name already exists');
+  }
+
+  const model = await dbUpdateLlmModel(modelId, {
     name: data.name,
     displayName: data.displayName,
-    provider: data.provider,
+    provider: 'bifrost',
     description: data.description,
-    setting: data.setting ? JSON.parse(data.setting) : undefined,
-    priceMetadata: data.priceMetadata ? JSON.parse(data.priceMetadata) : undefined,
+    setting: { provider: 'bifrost' },
+    priceMetadata: llmModelPriceMetadataSchema.parse(JSON.parse(data.priceMetadata)),
     supportedImageFormats: data.supportedImageFormats
-      ? JSON.parse(data.supportedImageFormats)
+      ? supportedImageFormatsSchema.parse(JSON.parse(data.supportedImageFormats))
+      : undefined,
+    imageGenerationConfig: data.imageGenerationConfig
+      ? imageGenerationConfigSchema.parse(JSON.parse(data.imageGenerationConfig))
+      : undefined,
+    modelConfig: data.modelConfig
+      ? speechConfigSchema.parse(JSON.parse(data.modelConfig))
       : undefined,
     additionalParameters: data.additionalParameters
       ? JSON.parse(data.additionalParameters)
       : undefined,
     isNew: data.isNew,
     isDeleted: data.isDeleted,
+    useBifrost: data.useBifrost,
+    safetyFilterEnabled: data.safetyFilterEnabled,
   });
 
-  await syncBifrostProvidersForOrganization(organizationId);
-  await dbUpdateLlmModelsForAllFederalStates();
+  await dbReplaceModelProviderKeyMappings({
+    modelId,
+    providerKeys: data.providerKeys,
+  });
 
-  logInfo('LLM was updated successfully', { organizationId, modelId, data });
-
+  await syncBifrostProvidersOrThrow();
   if (!model) throw new Error('Failed to update model');
+
+  logInfo('LLM was updated successfully', { modelId, data });
+
   return model;
+}
+
+export async function deleteLargeLanguageModel(modelId: string) {
+  const deleted = await runDeleteOrThrowError(
+    () => dbDeleteLlmModel(modelId),
+    'Sprachmodell kann nicht gelöscht werden, da noch Daten damit verknüpft sind.',
+  );
+  if (!deleted) throw new Error('Model not found');
+
+  await syncBifrostProvidersOrThrow();
+
+  logInfo('LLM was deleted successfully', { modelId });
 }

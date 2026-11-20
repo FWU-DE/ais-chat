@@ -1,4 +1,5 @@
 import { expect, Page } from '@playwright/test';
+
 import { waitForAutosave } from './utils';
 
 export async function createLearningScenario(page: Page) {

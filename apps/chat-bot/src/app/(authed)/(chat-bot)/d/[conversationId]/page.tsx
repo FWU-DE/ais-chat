@@ -1,24 +1,25 @@
-import Chat from '@/components/chat/chat';
 import { dbGetConversationAndMessages } from '@shared/db/functions/chat';
-import { convertMessageModelToMessage } from '@/utils/chat/messages';
-import { redirect } from 'next/navigation';
-import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
-import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
-import { DEFAULT_CHAT_MODEL } from '@shared/llm-models/default-llm-models';
 import { dbGetRelatedFiles } from '@shared/db/functions/files';
-import { parseHyperlinks } from '@/utils/web-search/parsing';
-import Logo from '@/components/common/logo';
-import z from 'zod';
-import { parseSearchParams } from '@/utils/parse-search-params';
-import { requireAuth } from '@/auth/requireAuth';
+import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
+import { WebSource } from '@shared/db/types';
+import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
 import {
   isPersonalContextAvailable,
   resolvePersonalContextEnabled,
 } from '@shared/personal-context/personal-context-service';
-import { WebSource } from '@shared/db/types';
-import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { utils } from '@shared/utils';
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import z from 'zod';
+
+import { requireAuth } from '@/auth/requireAuth';
+import Chat from '@/components/chat/chat';
+import Logo from '@/components/common/logo';
+import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
+import { convertMessageModelToMessage } from '@/utils/chat/messages';
+import { parseSearchParams } from '@/utils/parse-search-params';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,9 +58,13 @@ export default async function Page(props: PageProps<'/d/[conversationId]'>) {
   });
 
   const lastUsedModelInChat = messages.at(-1)?.modelName;
+  const defaultModelName = await getDefaultModelNameByFederalStateId(
+    userAndContext.federalState.id,
+    models,
+  );
 
   const currentModel =
-    searchParams.model ?? lastUsedModelInChat ?? user.lastUsedModel ?? DEFAULT_CHAT_MODEL;
+    searchParams.model ?? lastUsedModelInChat ?? user.lastUsedModel ?? defaultModelName;
 
   const convertedMessages = convertMessageModelToMessage(messages);
   const personalContextAvailable = isPersonalContextAvailable({
@@ -76,7 +81,7 @@ export default async function Page(props: PageProps<'/d/[conversationId]'>) {
 
   // prepare urls for citations
   for (const message of messages.filter((msg) => msg.role === 'user')) {
-    const urls = parseHyperlinks(message.content);
+    const urls = utils.url.parseHyperlinks(message.content);
     if (urls && urls.length > 0) {
       const webSources: WebSource[] = urls.map((url) => ({
         link: url,
@@ -88,7 +93,8 @@ export default async function Page(props: PageProps<'/d/[conversationId]'>) {
   return (
     <LlmModelsProvider
       models={models}
-      defaultLlmModelByCookie={currentModel}
+      initialModelName={currentModel}
+      defaultModelName={defaultModelName}
       initialDownloadConversationEnabled={convertedMessages.length > 0}
     >
       <DefaultPageLayout

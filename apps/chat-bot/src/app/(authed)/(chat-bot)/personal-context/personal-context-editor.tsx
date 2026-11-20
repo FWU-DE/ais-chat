@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { useTranslations } from 'next-intl';
+import { PERSONAL_CONTEXT_MAX_CHARS } from '@shared/personal-context/personal-context-document';
 import { Button } from '@ui/components/button';
 import { Card, CardContent } from '@ui/components/card';
 import { Switch } from '@ui/components/switch';
 import { Textarea } from '@ui/components/textarea';
+import { useTranslations } from 'next-intl';
+import { useState, useTransition } from 'react';
+
 import { useToast } from '@/components/common/toast';
-import { PERSONAL_CONTEXT_MAX_CHARS } from '@shared/personal-context/personal-context-document';
+
 import {
   setPersonalContextAutoUpdateEnabledAction,
   setPersonalContextEnabledAction,

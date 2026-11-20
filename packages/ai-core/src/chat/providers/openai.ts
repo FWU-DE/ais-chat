@@ -1,5 +1,7 @@
-import { instrumentOpenAiClient } from '@sentry/core';
+import { instrumentOpenAiClient } from '@sentry/server-utils';
 import OpenAI from 'openai';
+
+import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import type {
   AgenticStreamFn,
   AiModel,
@@ -7,7 +9,6 @@ import type {
   TextStreamFn,
   TokenUsage,
 } from '../types';
-import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { toOpenAIMessages } from '../utils';
 import { streamOpenAICompatibleAgenticResponse } from './openai-compatible';
 
@@ -28,25 +29,28 @@ export function constructOpenAITextStreamFn(model: AiModel): TextStreamFn {
   const client = createOpenAIClient(model);
 
   return async function* getOpenAITextStream(
-    { messages, model: modelName, maxTokens, temperature },
+    { messages, model: modelName, maxTokens, temperature, abortSignal },
     onComplete,
   ) {
-    const stream = await client.chat.completions.create({
-      model: modelName,
-      messages: toOpenAIMessages(messages),
-      stream: true,
-      stream_options: { include_usage: true },
-      max_tokens: maxTokens,
-      temperature,
-    });
+    const stream = await client.chat.completions.create(
+      {
+        model: modelName,
+        messages: toOpenAIMessages(messages),
+        stream: true,
+        stream_options: { include_usage: true },
+        max_tokens: maxTokens,
+        temperature,
+      },
+      { signal: abortSignal },
+    );
 
     let usage: TokenUsage | undefined;
 
     for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content;
+      const chunkContent = chunk.choices[0]?.delta?.content;
 
-      if (content) {
-        yield content;
+      if (chunkContent) {
+        yield chunkContent;
       }
 
       if (chunk.usage) {
@@ -76,14 +80,18 @@ export function constructOpenAITextGenerationFn(model: AiModel): TextGenerationF
     model: modelName,
     maxTokens,
     temperature,
+    abortSignal,
   }) {
-    const response = await client.chat.completions.create({
-      model: modelName,
-      messages: toOpenAIMessages(messages),
-      stream: false,
-      max_tokens: maxTokens,
-      temperature,
-    });
+    const response = await client.chat.completions.create(
+      {
+        model: modelName,
+        messages: toOpenAIMessages(messages),
+        stream: false,
+        max_tokens: maxTokens,
+        temperature,
+      },
+      { signal: abortSignal },
+    );
 
     const text = response.choices[0]?.message?.content ?? '';
     const usage = response.usage;
@@ -113,6 +121,7 @@ export function constructOpenAIAgenticStreamFn(model: AiModel): AgenticStreamFn 
     temperature,
     tools,
     toolChoice,
+    abortSignal,
   }) {
     yield* streamOpenAICompatibleAgenticResponse({
       client,
@@ -122,6 +131,7 @@ export function constructOpenAIAgenticStreamFn(model: AiModel): AgenticStreamFn 
       temperature,
       tools,
       toolChoice,
+      abortSignal,
       providerName: 'OpenAI',
     });
   };

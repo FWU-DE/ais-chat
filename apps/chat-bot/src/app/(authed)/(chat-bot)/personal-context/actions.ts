@@ -1,14 +1,15 @@
 'use server';
 
-import { requireAuth } from '@/auth/requireAuth';
 import { runServerAction } from '@shared/actions/run-server-action';
 import {
+  type PersonalContextActor,
   setConversationPersonalContextForUser,
   setPersonalContextAutoUpdateEnabledForUser,
   setPersonalContextEnabledForUser,
   updatePersonalContextForUser,
-  type PersonalContextActor,
 } from '@shared/personal-context/personal-context-service';
+
+import { requireAuth } from '@/auth/requireAuth';
 import type { UserAndContext } from '@/auth/types';
 
 function toPersonalContextActor({

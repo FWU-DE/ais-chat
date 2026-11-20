@@ -1,13 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { generateTextWithBilling } from '@ais-chat/ai-core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { dbGetPersonalContextByUserId } from '../db/functions/personal-context';
-import { savePersonalContextContent } from './personal-context-service';
 import {
   buildExtractionWindow,
+  PERSONAL_CONTEXT_EXCHANGE_INTERVAL,
   shouldRunPersonalContextExtraction,
   updatePersonalContextFromConversation,
-  PERSONAL_CONTEXT_EXCHANGE_INTERVAL,
 } from './personal-context-extraction';
+import { savePersonalContextContent } from './personal-context-service';
 
 vi.mock('@ais-chat/ai-core', () => ({
   generateTextWithBilling: vi.fn(),

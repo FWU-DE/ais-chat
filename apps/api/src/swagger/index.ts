@@ -1,21 +1,22 @@
-import { env } from '@/env';
 import swagger from '@fastify/swagger';
 import swaggerUI from '@fastify/swagger-ui';
 import { FastifyInstance } from 'fastify/types/instance';
+
+const API_NAME = 'AIS.chat';
 
 export async function initSwagger(fastify: FastifyInstance) {
   await fastify.register(swagger, {
     openapi: {
       openapi: '3.0.0',
       info: {
-        title: `${env.apiName} API Documentation`,
-        description: `${env.apiName} API Swagger Documentation.`,
+        title: `${API_NAME} API Documentation`,
+        description: `${API_NAME} API Swagger Documentation.`,
         version: '0.1.0',
       },
       servers: [
         {
           url: '/',
-          description: env.apiName,
+          description: API_NAME,
         },
       ],
       components: {

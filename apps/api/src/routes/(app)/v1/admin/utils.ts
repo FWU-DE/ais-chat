@@ -1,6 +1,7 @@
+import { FastifyReply, FastifyRequest } from 'fastify';
+
 import { env } from '@/env';
 import { getMaybeBearerToken } from '@/routes/utils';
-import { FastifyReply, FastifyRequest } from 'fastify';
 
 export function validateAdminApiKey(request: FastifyRequest, reply: FastifyReply) {
   const authorizationHeader = getMaybeBearerToken(request.headers.authorization);

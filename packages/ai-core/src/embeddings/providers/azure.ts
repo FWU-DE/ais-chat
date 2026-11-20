@@ -1,13 +1,16 @@
-import { instrumentOpenAiClient } from '@sentry/core';
+import { isLlmProvider } from '@ais-chat/api-database/llm-model';
+import { instrumentOpenAiClient } from '@sentry/server-utils';
 import OpenAI from 'openai';
-import type { AiModel, EmbeddingGenerationFn } from '../types';
+
 import { ProviderConfigurationError } from '../../errors';
+import type { AiModel, EmbeddingGenerationFn } from '../types';
+import { EMBEDDING_CLIENT_MAX_RETRIES, EMBEDDING_CLIENT_TIMEOUT_MS } from './const';
 
 function createAzureClient(model: AiModel): {
   client: OpenAI;
   deployment: string;
 } {
-  if (model.setting.provider !== 'azure') {
+  if (!isLlmProvider(model.setting, 'azure')) {
     throw new ProviderConfigurationError('Invalid model configuration for Azure');
   }
 
@@ -20,6 +23,8 @@ function createAzureClient(model: AiModel): {
       apiKey: model.setting.apiKey,
       baseURL: basePath,
       defaultQuery: Object.fromEntries(searchParams.entries()),
+      timeout: EMBEDDING_CLIENT_TIMEOUT_MS,
+      maxRetries: EMBEDDING_CLIENT_MAX_RETRIES,
     }),
   );
 

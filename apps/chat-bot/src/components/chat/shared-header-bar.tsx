@@ -1,28 +1,32 @@
 'use client';
 
-import useBreakpoints from '../hooks/use-breakpoints';
+import { BoxArrowDownIcon, TrashSimpleIcon } from '@phosphor-icons/react';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
+import { Button } from '@ui/components/button';
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
-import { cn } from '@/utils/tailwind';
+import React from 'react';
+
 import DownloadSharedConversationButton, {
   fetchSharedConversationDownload,
 } from '@/app/(unauth)/ua/download-shared-conversation-button';
+import { useToast } from '@/components/common/toast';
+import { type ChatMessage as Message } from '@/types/chat';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
-import Image from 'next/image';
+import { cn } from '@/utils/tailwind';
+import { reductionBreakpoint } from '@/utils/tailwind/layout';
+
+import useBreakpoints from '../hooks/use-breakpoints';
 import ProfileMenu from '../navigation/profile-menu';
 import {
   ThreeDotsProfileMenu,
   type ThreeDotsProfileMenuItem,
 } from '../navigation/three-dots-profile-menu';
-import { type ChatMessage as Message } from '@/types/chat';
-import { reductionBreakpoint } from '@/utils/tailwind/layout';
-import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
-import { Button } from '@ui/components/button';
-import { BoxArrowDownIcon, TrashSimpleIcon } from '@phosphor-icons/react';
-import { useToast } from '@/components/common/toast';
-import React from 'react';
+import type { ConversationDownloadFile } from './conversation-download-context';
 
 export function SharedChatHeader({
   chatActive,
+  disableNewChat,
   hasMessages,
   t,
   handleOpenNewChat,
@@ -30,9 +34,11 @@ export function SharedChatHeader({
   messages,
   imageSource,
   dialogStarted,
-  inviteCode,
+  fileMapping,
+  imageUrl,
 }: {
   chatActive: boolean;
+  disableNewChat: boolean;
   hasMessages: boolean;
   t: ReturnType<typeof useTranslations>;
   handleOpenNewChat: () => void;
@@ -40,7 +46,8 @@ export function SharedChatHeader({
   messages: Message[];
   imageSource?: string;
   dialogStarted: boolean;
-  inviteCode: string;
+  fileMapping: ReadonlyMap<string, ConversationDownloadFile[]>;
+  imageUrl: (file: ConversationDownloadFile) => string;
 }) {
   const { isBelow } = useBreakpoints();
   const tCommon = useTranslations('common');
@@ -58,6 +65,7 @@ export function SharedChatHeader({
       id: 'delete-chat',
       label: tCommon('delete'),
       icon: <TrashSimpleIcon className="size-5 text-primary" />,
+      disabled: disableNewChat,
       onSelect: openDeleteConfirm,
     },
     {
@@ -74,7 +82,8 @@ export function SharedChatHeader({
           const { blob, fileName } = await fetchSharedConversationDownload({
             conversationMessages: messages,
             sharedConversationName: title,
-            inviteCode,
+            fileMapping,
+            imageUrl,
           });
 
           downloadFileFromBlob(blob, fileName);
@@ -97,6 +106,7 @@ export function SharedChatHeader({
           variant="ghost"
           size="icon-round"
           className="text-primary"
+          disabled={disableNewChat}
           onClick={openDeleteConfirm}
           data-testid="custom-chat-delete-button"
         >
@@ -108,7 +118,7 @@ export function SharedChatHeader({
         {dialogStarted && imageSource && (
           <Image
             src={imageSource ?? ''}
-            alt={title}
+            alt={tCommon('profile-picture')}
             width={30}
             height={30}
             className="rounded-enterprise-sm"
@@ -126,7 +136,8 @@ export function SharedChatHeader({
             disabled={!chatActive || !hasMessages}
             sharedConversationName={title}
             showText={false}
-            inviteCode={inviteCode}
+            fileMapping={fileMapping}
+            imageUrl={imageUrl}
           />
           <ProfileMenu userAndContext={undefined} />
         </>

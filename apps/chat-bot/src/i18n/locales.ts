@@ -1,6 +1,6 @@
 export const DEFAULT_LOCALE = 'de';
 
-export const SUPPORTED_LOCALES = new Set(['de', 'en', 'fr', 'it', 'ar']);
+export const SUPPORTED_LOCALES = new Set(['de', 'en', 'fr', 'it', 'ar', 'ru']);
 
 /**
  * Single source of truth for filter languages that have a corresponding locale.
@@ -14,6 +14,7 @@ const LOCALE_BY_FILTER_LANGUAGE = {
   arabic: 'ar',
   french: 'fr',
   italian: 'it',
+  russian: 'ru',
 } as const;
 
 export type SupportedFilterLanguage = keyof typeof LOCALE_BY_FILTER_LANGUAGE;
@@ -24,6 +25,7 @@ const FILTER_LANGUAGE_BY_GERMAN_NAME = new Map<string, SupportedFilterLanguage>(
   ['französisch', 'french'],
   ['italienisch', 'italian'],
   ['arabisch', 'arabic'],
+  ['russisch', 'russian'],
 ]);
 
 export const FILTER_LANGUAGE_TO_LOCALE: Record<SupportedFilterLanguage, string> =

@@ -1,4 +1,3 @@
-import type { FederalStateFeatureToggles, UserRole } from '../db/schema';
 import {
   dbGetPersonalContextByUserId,
   dbSetConversationPersonalContextEnabled,
@@ -6,9 +5,10 @@ import {
   dbSetPersonalContextEnabled,
   dbUpsertPersonalContent,
 } from '../db/functions/personal-context';
-import { PERSONAL_CONTEXT_MAX_CHARS } from './personal-context-document';
+import type { FederalStateFeatureToggles, UserRole } from '../db/schema';
 import { ForbiddenError, NotFoundError } from '../error';
 import { isPersonalContextAvailable } from './personal-context-availability';
+import { PERSONAL_CONTEXT_MAX_CHARS } from './personal-context-document';
 
 export {
   isPersonalContextAvailable,

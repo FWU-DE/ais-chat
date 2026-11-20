@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm';
+
 import { db } from '..';
 import { conversationTable, personalContextTable } from '../schema';
 

@@ -1,17 +1,17 @@
 import bcrypt from 'bcryptjs';
-import { cnanoid } from '../utils';
+import { and, eq, getTableColumns, inArray } from 'drizzle-orm';
+
+import { db } from '../db';
 import {
   ApiKeyInsertModel,
-  ApiKeyModel,
   apiKeyTable,
   llmModelApiKeyMappingTable,
   llmModelTable,
   projectTable,
 } from '../schema';
-import { db } from '../db';
+import { cnanoid } from '../utils';
+import { type ApiKeyValidationResult, checkApiKeyUsable } from './api-key-validation';
 import { dbGetProjectById } from './projects';
-import { isDateBefore } from '../date';
-import { and, eq, getTableColumns, inArray } from 'drizzle-orm';
 
 export async function dbLookupApiKeyByFullKey(fullApiKey: string) {
   const [sk, keyId, _secretKey] = fullApiKey.split('_');
@@ -45,11 +45,9 @@ export async function dbCreateApiKey({
   projectId,
   name,
   modelIds,
-  organizationId,
   budget,
 }: {
   projectId: string;
-  organizationId: string;
   name: string;
   modelIds: string[];
   budget: number;
@@ -58,7 +56,7 @@ export async function dbCreateApiKey({
     throw new Error('Cannot create api key without assigned models.');
   }
 
-  const project = await dbGetProjectById(organizationId, projectId);
+  const project = await dbGetProjectById(projectId);
 
   if (project === undefined) {
     throw new Error('Could not find project');
@@ -83,18 +81,15 @@ export async function dbCreateApiKey({
       throw new Error('Could not create api key');
     }
 
-    // only use the models available in the organization
-    const availableModelsPerOrganization = await tx
+    const availableModels = await tx
       .select()
       .from(llmModelTable)
-      .where(
-        and(eq(llmModelTable.organizationId, organizationId), inArray(llmModelTable.id, modelIds)),
-      );
+      .where(inArray(llmModelTable.id, modelIds));
 
     const insertedMappings = await tx
       .insert(llmModelApiKeyMappingTable)
       .values(
-        availableModelsPerOrganization.map((model) => ({
+        availableModels.map((model) => ({
           llmModelId: model.id,
           apiKeyId: insertedApiKey.id,
         })),
@@ -109,14 +104,28 @@ export async function dbCreateApiKey({
   });
 }
 
-export async function dbGetAllApiKeysByProjectId(organizationId: string, projectId: string) {
+export async function dbGetAllApiKeysByProjectId(projectId: string) {
+  return await db.select().from(apiKeyTable).where(eq(apiKeyTable.projectId, projectId));
+}
+
+export async function dbGetApiKeysByProjectId(projectId: string) {
   return await db
-    .select({ ...getTableColumns(apiKeyTable) })
+    .select({ id: apiKeyTable.id, name: apiKeyTable.name })
+    .from(apiKeyTable)
+    .where(eq(apiKeyTable.projectId, projectId))
+    .orderBy(apiKeyTable.name);
+}
+
+export async function dbGetAllApiKeys() {
+  return await db
+    .select({
+      id: apiKeyTable.id,
+      name: apiKeyTable.name,
+      projectName: projectTable.name,
+    })
     .from(apiKeyTable)
     .innerJoin(projectTable, eq(apiKeyTable.projectId, projectTable.id))
-    .where(
-      and(eq(apiKeyTable.projectId, projectId), eq(projectTable.organizationId, organizationId)),
-    );
+    .orderBy(projectTable.name, apiKeyTable.name);
 }
 
 export async function dbGetApiKeysAndUsageByProjectId({ projectId }: { projectId: string }) {
@@ -145,9 +154,7 @@ export async function hashSecretKey(secretKey: string): Promise<string> {
   return bcrypt.hash(secretKey, saltRounds);
 }
 
-export async function dbValidateApiKey(
-  fullApiKey: string,
-): Promise<{ valid: true; apiKey: ApiKeyModel } | { valid: false; reason: string }> {
+export async function dbValidateApiKey(fullApiKey: string): Promise<ApiKeyValidationResult> {
   const [sk, keyId, secretKey] = fullApiKey.split('_');
 
   if (sk !== 'sk' || keyId === undefined || secretKey === undefined) {
@@ -156,29 +163,20 @@ export async function dbValidateApiKey(
 
   const apiKey = (await db.select().from(apiKeyTable).where(eq(apiKeyTable.keyId, keyId)))[0];
 
-  if (apiKey === undefined) {
-    return { valid: false, reason: 'Could not find the api key' };
-  }
+  const usable = checkApiKeyUsable(apiKey);
+  if (!usable.valid) return usable;
 
-  if (apiKey.expiresAt !== null && !isDateBefore(new Date(), apiKey.expiresAt)) {
-    return { valid: false, reason: 'Api key is expired' };
-  }
-
-  if (apiKey.state === 'inactive') {
-    return { valid: false, reason: 'Api key is inactive' };
-  }
-
-  if (apiKey.state === 'deleted') {
-    return { valid: false, reason: 'Api key was deleted' };
-  }
-
-  const isSameHash = await bcrypt.compare(secretKey, apiKey.secretHash);
+  const isSameHash = await bcrypt.compare(secretKey, usable.apiKey.secretHash);
 
   if (!isSameHash) {
     return { valid: false, reason: 'Api key is invalid' };
   }
 
-  return { valid: true, apiKey };
+  return usable;
+}
+
+export async function dbValidateApiKeyById(apiKeyId: string): Promise<ApiKeyValidationResult> {
+  return checkApiKeyUsable(await dbGetApiKeyById({ apiKeyId }));
 }
 
 export async function createApiKeyRecord(): Promise<{
@@ -200,20 +198,13 @@ export async function dbGetApiKeyById({ apiKeyId }: { apiKeyId: string }) {
   return (await db.select().from(apiKeyTable).where(eq(apiKeyTable.id, apiKeyId)))[0];
 }
 
-export async function dbGetApiKey(organizationId: string, projectId: string, apiKeyId: string) {
+export async function dbGetApiKey(projectId: string, apiKeyId: string) {
   return (
     await db
       .select()
       .from(apiKeyTable)
-      .innerJoin(projectTable, eq(apiKeyTable.projectId, projectTable.id))
-      .where(
-        and(
-          eq(apiKeyTable.id, apiKeyId),
-          eq(apiKeyTable.projectId, projectId),
-          eq(projectTable.organizationId, organizationId),
-        ),
-      )
-  )[0]?.api_key;
+      .where(and(eq(apiKeyTable.id, apiKeyId), eq(apiKeyTable.projectId, projectId)))
+  )[0];
 }
 
 export async function dbDeleteApiKey(apiKeyId: string) {
@@ -232,60 +223,39 @@ export async function dbDeleteApiKey(apiKeyId: string) {
   });
 }
 
-export async function dbGetAllModelMappingsForApiKey(
-  organizationId: string,
-  projectId: string,
-  apiKeyId: string,
-) {
+export async function dbGetAllModelMappingsForApiKey(projectId: string, apiKeyId: string) {
   return await db
     .select({ ...getTableColumns(llmModelApiKeyMappingTable) })
     .from(llmModelApiKeyMappingTable)
     .innerJoin(apiKeyTable, eq(llmModelApiKeyMappingTable.apiKeyId, apiKeyTable.id))
-    .innerJoin(projectTable, eq(apiKeyTable.projectId, projectTable.id))
-    .where(
-      and(
-        eq(apiKeyTable.id, apiKeyId),
-        eq(apiKeyTable.projectId, projectId),
-        eq(projectTable.organizationId, organizationId),
-      ),
-    );
+    .where(and(eq(apiKeyTable.id, apiKeyId), eq(apiKeyTable.projectId, projectId)));
 }
 
 export async function dbUpdateModelMappingsForApiKey(
-  organizationId: string,
   projectId: string,
   apiKeyId: string,
   modelIds: string[],
 ) {
   return await db.transaction(async (tx) => {
-    // First verify the API key exists and belongs to the organization/project
+    // First verify the API key exists and belongs to the project
     const apiKey = await tx
       .select({ id: apiKeyTable.id })
       .from(apiKeyTable)
-      .innerJoin(projectTable, eq(apiKeyTable.projectId, projectTable.id))
-      .where(
-        and(
-          eq(apiKeyTable.id, apiKeyId),
-          eq(apiKeyTable.projectId, projectId),
-          eq(projectTable.organizationId, organizationId),
-        ),
-      )
+      .where(and(eq(apiKeyTable.id, apiKeyId), eq(apiKeyTable.projectId, projectId)))
       .limit(1);
 
     if (apiKey.length === 0) {
       throw new Error('API key not found');
     }
 
-    // Verify all model IDs exist and belong to the organization
+    // Verify all model IDs exist
     const availableModels = await tx
       .select()
       .from(llmModelTable)
-      .where(
-        and(eq(llmModelTable.organizationId, organizationId), inArray(llmModelTable.id, modelIds)),
-      );
+      .where(inArray(llmModelTable.id, modelIds));
 
     if (availableModels.length !== modelIds.length) {
-      throw new Error('Some model IDs are invalid or do not belong to the organization');
+      throw new Error('Some model IDs are invalid');
     }
 
     // Delete existing mappings for this API key
@@ -312,8 +282,52 @@ export async function dbUpdateModelMappingsForApiKey(
   });
 }
 
+export async function dbGetApiKeyIdsForModel(modelId: string) {
+  const rows = await db
+    .select({ apiKeyId: llmModelApiKeyMappingTable.apiKeyId })
+    .from(llmModelApiKeyMappingTable)
+    .where(eq(llmModelApiKeyMappingTable.llmModelId, modelId));
+
+  return rows.map((row) => row.apiKeyId);
+}
+
+export async function dbSetApiKeysForModel(modelId: string, apiKeyIds: string[]) {
+  return await db.transaction(async (tx) => {
+    const [model] = await tx
+      .select({ id: llmModelTable.id })
+      .from(llmModelTable)
+      .where(eq(llmModelTable.id, modelId))
+      .limit(1);
+
+    if (!model) {
+      throw new Error('Model not found');
+    }
+
+    const availableApiKeys = await tx
+      .select({ id: apiKeyTable.id })
+      .from(apiKeyTable)
+      .where(inArray(apiKeyTable.id, apiKeyIds));
+
+    if (availableApiKeys.length !== apiKeyIds.length) {
+      throw new Error('Some API key IDs are invalid');
+    }
+
+    await tx
+      .delete(llmModelApiKeyMappingTable)
+      .where(eq(llmModelApiKeyMappingTable.llmModelId, modelId));
+
+    if (apiKeyIds.length > 0) {
+      await tx.insert(llmModelApiKeyMappingTable).values(
+        apiKeyIds.map((apiKeyId) => ({
+          llmModelId: modelId,
+          apiKeyId,
+        })),
+      );
+    }
+  });
+}
+
 export async function dbUpdateApiKey(
-  organizationId: string,
   projectId: string,
   apiKeyId: string,
   updates: {
@@ -324,18 +338,11 @@ export async function dbUpdateApiKey(
   },
 ) {
   return await db.transaction(async (tx) => {
-    // First verify the API key exists and belongs to the organization/project
+    // First verify the API key exists and belongs to the project
     const existingApiKey = await tx
       .select({ id: apiKeyTable.id })
       .from(apiKeyTable)
-      .innerJoin(projectTable, eq(apiKeyTable.projectId, projectTable.id))
-      .where(
-        and(
-          eq(apiKeyTable.id, apiKeyId),
-          eq(apiKeyTable.projectId, projectId),
-          eq(projectTable.organizationId, organizationId),
-        ),
-      )
+      .where(and(eq(apiKeyTable.id, apiKeyId), eq(apiKeyTable.projectId, projectId)))
       .limit(1);
 
     if (existingApiKey.length === 0) {

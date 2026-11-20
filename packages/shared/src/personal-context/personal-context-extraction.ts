@@ -1,14 +1,15 @@
 import { generateTextWithBilling } from '@ais-chat/ai-core';
 import { z } from 'zod';
+
+import { dbGetPersonalContextByUserId } from '../db/functions/personal-context';
 import { logError } from '../logging';
 import {
   applyPersonalContextOperations,
-  personalContextOperationSchema,
   PERSONAL_CONTEXT_SECTIONS,
   type PersonalContextOperation,
+  personalContextOperationSchema,
 } from './personal-context-document';
 import { savePersonalContextContent } from './personal-context-service';
-import { dbGetPersonalContextByUserId } from '../db/functions/personal-context';
 
 const MAX_MESSAGE_CHARS = 1200;
 const MIN_WINDOW_CHARS = 25;

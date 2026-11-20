@@ -1,10 +1,11 @@
 'use client';
 
+import { Card, CardContent } from '@ui/components/card';
 import { Switch } from '@ui/components/switch';
 import { useTranslations } from 'next-intl';
-import { CustomChatHeading2 } from './custom-chat-heading2';
-import { Card, CardContent } from '@ui/components/card';
 import { Control, Controller, FieldPath, FieldValues } from 'react-hook-form';
+
+import { CustomChatHeading2 } from './custom-chat-heading2';
 
 type CustomChatPersonalContextProps<
   TFieldValues extends FieldValues = FieldValues,

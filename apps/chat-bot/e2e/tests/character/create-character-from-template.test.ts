@@ -1,6 +1,7 @@
-import { expect, test } from '@playwright/test';
-import { AUTH_FILES } from '../../utils/const';
 import { nanoid } from 'nanoid';
+
+import { expect, test } from '../../fixtures/test';
+import { AUTH_FILES } from '../../utils/const';
 import { confirmDuplicate } from '../../utils/utils';
 
 test.use({ storageState: AUTH_FILES.teacher });

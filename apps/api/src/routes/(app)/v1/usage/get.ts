@@ -1,7 +1,8 @@
-import { validateApiKey } from '@/routes/utils';
 import { getCurrentUsageInCentByApiKeyIdWithResult } from '@ais-chat/api-database';
 import { getEndOfCurrentMonth, getStartOfCurrentMonth } from '@ais-chat/api-database/utils';
 import { FastifyReply, FastifyRequest } from 'fastify';
+
+import { validateApiKey } from '@/routes/utils';
 
 export async function handler(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const apiKey = await validateApiKey(request, reply);

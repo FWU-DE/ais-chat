@@ -1,7 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+
 import { authorizationHeader } from '../utils/api.js';
 
-test.describe('GET /v1/usage', () => {
+test.describe('GET /v1/usage', { tag: '@smoke' }, () => {
   test('returns 401 without authentication', async ({ request }) => {
     const response = await request.get('/v1/usage');
 

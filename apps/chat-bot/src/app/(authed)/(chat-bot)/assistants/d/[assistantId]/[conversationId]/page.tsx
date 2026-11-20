@@ -1,22 +1,23 @@
-import { DEFAULT_CHAT_MODEL } from '@shared/llm-models/default-llm-models';
-import Chat from '@/components/chat/chat';
-import Logo from '@/components/common/logo';
-import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
+import { getConversationWithMessagesAndAssistant } from '@shared/assistants/assistant-service';
 import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
-import { convertMessageModelToMessage } from '@/utils/chat/messages';
-import z from 'zod';
-import { parseSearchParams } from '@/utils/parse-search-params';
-import { requireAuth } from '@/auth/requireAuth';
+import { getAvatarPictureUrl } from '@shared/files/fileService';
+import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
 import {
   isPersonalContextAvailable,
   resolvePersonalContextEnabled,
 } from '@shared/personal-context/personal-context-service';
-import { getConversationWithMessagesAndAssistant } from '@shared/assistants/assistant-service';
-import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
-import { getAvatarPictureUrl } from '@shared/files/fileService';
-import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import z from 'zod';
+
+import { requireAuth } from '@/auth/requireAuth';
+import Chat from '@/components/chat/chat';
+import Logo from '@/components/common/logo';
+import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
+import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
+import { convertMessageModelToMessage } from '@/utils/chat/messages';
+import { parseSearchParams } from '@/utils/parse-search-params';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,9 +56,10 @@ export default async function Page(
   const logoElement = <Logo logoPath={federalState.pictureUrls?.logo} />;
 
   const lastUsedModelInChat = messages.at(-1)?.modelName;
+  const defaultModelName = await getDefaultModelNameByFederalStateId(federalState.id, models);
 
   const currentModel =
-    searchParams.model ?? lastUsedModelInChat ?? user.lastUsedModel ?? DEFAULT_CHAT_MODEL;
+    searchParams.model ?? lastUsedModelInChat ?? user.lastUsedModel ?? defaultModelName;
 
   const avatarPictureUrl = await getAvatarPictureUrl(assistant.pictureId);
   const personalContextAvailable = isPersonalContextAvailable({
@@ -74,7 +76,8 @@ export default async function Page(
   return (
     <LlmModelsProvider
       models={models}
-      defaultLlmModelByCookie={currentModel}
+      initialModelName={currentModel}
+      defaultModelName={defaultModelName}
       initialDownloadConversationEnabled={chatMessages.length > 0}
     >
       <DefaultPageLayout

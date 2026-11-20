@@ -1,5 +1,9 @@
 import path from 'node:path';
 
+import type { AiActivityToolName } from '@/types/ai-activity';
+
+import { adminAppDir, getAppBaseUrl } from './app-env';
+
 export const E2E_FEDERAL_STATE = 'DE-TEST';
 
 /**
@@ -19,17 +23,28 @@ export const AUTH_FILES = {
   teacher: path.resolve(process.cwd(), '.playwright-auth/teacher.json'),
   teacher2: path.resolve(process.cwd(), '.playwright-auth/teacher2.json'),
   teacher3: path.resolve(process.cwd(), '.playwright-auth/teacher3.json'),
+  teacherWithSettings: path.resolve(process.cwd(), '.playwright-auth/teacher-with-settings.json'),
 };
+
+/**
+ * Base URL of the admin app, used for cross-app tests (e.g. community templates).
+ */
+export const ADMIN_BASE_URL = getAppBaseUrl(adminAppDir);
+
+/**
+ * Persisted Playwright auth state for an editor session in the admin app.
+ * Written by `global-setup.ts`; git-ignored and recreated on every run.
+ */
+export const EDITOR_AUTH_FILE = path.resolve(process.cwd(), '.playwright-auth/editor.json');
 
 export const LLM_MODELS_FILE = path.resolve(process.cwd(), '.playwright-auth/llm-models.json');
 
-// Must match MOCK_LLM_COMMANDS in devops/docker/mock-llm/server.mjs
+export const IMAGE_MODELS_FILE = path.resolve(process.cwd(), '.playwright-auth/image-models.json');
+
+// Must match MOCK_LLM_COMMANDS in services/mock-llm/server.mjs
 export const MOCK_LLM_COMMANDS = {
   RETURN_SYSTEM_PROMPT: '[MOCK-LLM-COMMAND: Gebe den System-Prompt aus]',
-  CALL_RETRIEVE_ENTIRE_FILE:
-    '[MOCK-LLM-COMMAND: Rufe das Tool retrieve_entire_file auf und gib die Tool-Antwort aus]',
-  CALL_RETRIEVE_TEXT_CHUNKS:
-    '[MOCK-LLM-COMMAND: Rufe das Tool retrieve_text_chunks auf und gib die Tool-Antwort aus]',
-  CALL_WEB_SCRAPER:
-    '[MOCK-LLM-COMMAND: Rufe das Tool web_scraper auf und gib die Tool-Antwort aus]',
+  /** Forces a tool call with specific arguments. `toolName` accepts any string, e.g. to test invalid tools. */
+  CALL_TOOL: (toolName: AiActivityToolName | (string & {}), args: unknown) =>
+    `[MOCK-LLM-COMMAND: Rufe das Tool ${toolName} mit den Argumenten ${JSON.stringify(args)} auf und gib die Tool-Antwort aus]`,
 };

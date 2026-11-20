@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { useTranslations } from 'next-intl';
 import { BrainIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/tooltip';
-import { useToast } from '@/components/common/toast';
+import { useTranslations } from 'next-intl';
+import { useState, useTransition } from 'react';
+
 import { setConversationPersonalContextAction } from '@/app/(authed)/(chat-bot)/personal-context/actions';
+import { useToast } from '@/components/common/toast';
 
 /**
  * Lets the user switch the personal context off (or back on) for a single chat.

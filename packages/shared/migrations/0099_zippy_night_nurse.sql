@@ -1,0 +1,1 @@
+ALTER TABLE "llm_model" ADD COLUMN "model_config" jsonb;

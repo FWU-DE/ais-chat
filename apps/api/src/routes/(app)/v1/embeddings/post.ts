@@ -1,8 +1,9 @@
-import { handleAiCoreError } from '@/ai-core-adapter/errors';
-import { createEmbeddings } from '@/ai-core-adapter/embeddings';
-import { validateApiKeyWithResult } from '@/routes/utils';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+
+import { createEmbeddings } from '@/ai-core-adapter/embeddings';
+import { handleAiCoreError } from '@/ai-core-adapter/errors';
+import { validateApiKeyWithResult } from '@/routes/utils';
 
 const embeddingRequestSchema = z.object({
   model: z.string(),

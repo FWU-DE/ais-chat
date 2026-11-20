@@ -16,8 +16,11 @@ export const env = createEnv({
       .default('info'),
   },
   emptyStringAsUndefined: true,
-  server: {},
+  server: {
+    LOG_TO_STDOUT: z.stringbool().default(false),
+  },
   runtimeEnv: {
     NEXT_PUBLIC_SENTRY_LOG_LEVEL: process.env.NEXT_PUBLIC_SENTRY_LOG_LEVEL,
+    LOG_TO_STDOUT: process.env.LOG_TO_STDOUT,
   },
 });

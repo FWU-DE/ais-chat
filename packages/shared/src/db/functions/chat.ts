@@ -1,9 +1,10 @@
 import { and, desc, eq, gt, isNull } from 'drizzle-orm';
+
+import { logError } from '../../logging/logging';
+import { isNotNull } from '../../utils/guard';
 import { db } from '..';
 import { conversationMessageTable, conversationTable } from '../schema';
 import type { ConversationMessageModel, InsertConversationMessageModel } from '../types';
-import { isNotNull } from '../../utils/guard';
-import { logError } from '../../logging/logging';
 
 function logInsertConflicts({
   chatContents,

@@ -1,13 +1,21 @@
 'use client';
 
-import React from 'react';
-import Spinner from '@/components/icons/spinner';
-import { useToast } from '@/components/common/toast';
-import { useTranslations } from 'next-intl';
-import { type ChatMessage as Message } from '@/types/chat';
-import { Button } from '@ui/components/button';
 import { BoxArrowDownIcon } from '@phosphor-icons/react';
-import { downloadFileFromBlob, extractFilenameFromResponse } from '@/utils/files/blob-download';
+import { formatDateToDayMonthYear } from '@shared/utils/date';
+import { Button } from '@ui/components/button';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
+import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
+import { useToast } from '@/components/common/toast';
+import Spinner from '@/components/icons/spinner';
+import { type ChatMessage as Message } from '@/types/chat';
+import { downloadFileFromBlob } from '@/utils/files/blob-download';
+import {
+  createConversationExportMessages,
+  formatConversationExport,
+  markdownToDocxBlob,
+} from '@/utils/files/markdown-docx';
 
 type DownloadConversationButtonProps = {
   conversationMessages: Message[];
@@ -17,43 +25,46 @@ type DownloadConversationButtonProps = {
   sharedConversationName?: string;
   characterName?: string;
   showText?: boolean;
-  inviteCode: string;
+  fileMapping: ReadonlyMap<string, ConversationDownloadFile[]>;
+  imageUrl: (file: ConversationDownloadFile) => string;
 };
 
 type DownloadSharedConversationParams = {
   conversationMessages: Message[];
   sharedConversationName?: string;
   characterName?: string;
-  inviteCode: string;
+  fileMapping: ReadonlyMap<string, ConversationDownloadFile[]>;
+  imageUrl: (file: ConversationDownloadFile) => string;
 };
 
 export async function fetchSharedConversationDownload({
   conversationMessages,
   sharedConversationName,
   characterName,
-  inviteCode,
+  fileMapping,
+  imageUrl,
 }: DownloadSharedConversationParams) {
-  const response = await fetch(`/api/download-conversation/shared`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      messages: conversationMessages,
-      characterName,
-      sharedConversationName,
-      inviteCode,
-    }),
+  const messages = createConversationExportMessages({
+    messages: conversationMessages,
+    fileMapping,
+    imageUrl,
   });
-
-  const fileName = extractFilenameFromResponse(response, 'Konversation_AIS.chat.docx');
-
-  if (!response.ok) {
-    throw new Error('Failed to download the document');
-  }
-
+  const currentDate = formatDateToDayMonthYear(new Date());
+  const fileName =
+    characterName !== undefined
+      ? `${currentDate}-Gespräch mit ${characterName}.docx`
+      : sharedConversationName !== undefined
+        ? `${currentDate}-Dialog über ${sharedConversationName}.docx`
+        : 'AIS-chat-Konversation.docx';
   return {
-    blob: await response.blob(),
+    blob: await markdownToDocxBlob(
+      formatConversationExport({
+        messages,
+        createdAt: new Date().toISOString(),
+        modelName: 'AIS.chat',
+        conversationTitle: sharedConversationName ?? characterName,
+      }),
+    ),
     fileName,
   };
 }
@@ -65,7 +76,8 @@ export default function DownloadSharedConversationButton({
   sharedConversationName,
   characterName,
   showText = true,
-  inviteCode,
+  fileMapping,
+  imageUrl,
 }: DownloadConversationButtonProps) {
   const [isLoading, setIsLoading] = React.useState(false);
   const isMountedRef = React.useRef(true);
@@ -95,7 +107,8 @@ export default function DownloadSharedConversationButton({
         conversationMessages,
         sharedConversationName,
         characterName,
-        inviteCode,
+        fileMapping,
+        imageUrl,
       });
 
       downloadFileFromBlob(blob, fileName);

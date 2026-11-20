@@ -1,33 +1,34 @@
 'use server';
 
-import { requireAdminAuth } from '@/auth/requireAdminAuth';
 import { runServerAction } from '@shared/actions/run-server-action';
+import { EntityRef } from '@shared/entities/entity-types';
 import {
+  getSuspensionRequestItemWithDetails,
   getSuspensionRequestOverviews,
-  suspendEntity,
   liftSuspensionOnEntity,
   markSuspensionRequestAsChecked,
-  getSuspensionRequestItemWithDetails,
+  suspendEntity,
 } from '@shared/suspension/suspension-service';
-import { EntityRef } from '@shared/entities/entity-types';
+
+import { requireAdminOrEditorAuth } from '@/auth/requireAdminAuth';
 
 export async function getSuspensionRequestEntitiesAction() {
-  await requireAdminAuth();
+  await requireAdminOrEditorAuth();
   return runServerAction('getSuspensionRequestEntitiesAction', getSuspensionRequestOverviews)();
 }
 
 export async function suspendEntityAction(entityRef: EntityRef) {
-  await requireAdminAuth();
+  await requireAdminOrEditorAuth();
   return runServerAction('suspendEntityAction', suspendEntity)(entityRef);
 }
 
 export async function liftSuspensionAction(entityRef: EntityRef) {
-  await requireAdminAuth();
+  await requireAdminOrEditorAuth();
   return runServerAction('liftSuspensionAction', liftSuspensionOnEntity)(entityRef);
 }
 
 export async function markSuspensionRequestAsCheckedAction(suspensionRequestId: string) {
-  await requireAdminAuth();
+  await requireAdminOrEditorAuth();
   return runServerAction(
     'markSuspensionRequestAsCheckedAction',
     markSuspensionRequestAsChecked,
@@ -38,7 +39,7 @@ export async function getSuspensionRequestItemWithDetailsAction({
   entityType,
   entityId,
 }: EntityRef) {
-  await requireAdminAuth();
+  await requireAdminOrEditorAuth();
   return runServerAction(
     'getSuspensionRequestItemWithDetailsAction',
     getSuspensionRequestItemWithDetails,

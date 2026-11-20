@@ -1,82 +1,96 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
+import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
 import {
+  categoriesSchema,
+  federalStatesSchema,
+  FileModel,
+  gradeRangesSchema,
+  languagesSchema,
+  LearningScenarioOptionalShareDataModel,
+  schoolTypesSchema,
+  type SpeechVoice,
+  subjectsSchema,
+  webSearchScopeSchema,
+} from '@shared/db/schema';
+import { WebSource } from '@shared/db/types';
+import { Card, CardContent } from '@ui/components/card';
+import { FieldGroup } from '@ui/components/field';
+import { FormField } from '@ui/components/form/form-field';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { useCallback, useMemo, useRef } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import z from 'zod';
+
+import { BackButton } from '@/components/common/back-button';
+import { RichText, stripRichTextTags } from '@/components/common/rich-text';
+import { useToast } from '@/components/common/toast';
+import { CustomChatActionDelete } from '@/components/custom-chat/custom-chat-action-delete';
+import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
+import { CustomChatActionFavorite } from '@/components/custom-chat/custom-chat-action-favorite';
+import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
+import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
+import { CustomChatHeaderContent } from '@/components/custom-chat/custom-chat-header-content';
+import { CustomChatHeading2 } from '@/components/custom-chat/custom-chat-heading2';
+import { CustomChatImageUpload } from '@/components/custom-chat/custom-chat-image-upload';
+import { CustomChatInstructionsExampleDialog } from '@/components/custom-chat/custom-chat-instructions-example-dialog';
+import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
+import { CustomChatModelSelect } from '@/components/custom-chat/custom-chat-model-select';
+import { CustomChatShareInfo } from '@/components/custom-chat/custom-chat-share-info';
+import CustomShareSection from '@/components/custom-chat/custom-chat-share-section';
+import { CustomChatSuspensionError } from '@/components/custom-chat/custom-chat-suspension-error';
+import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
+import { CustomChatDidacticCommentaryEditView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-edit-view';
+import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
+import FilterSelectSection from '@/components/custom-chat/filter/custom-chat-filter-select-section';
+import {
+  extractFilterValues,
+  toFilterGroup,
+} from '@/components/custom-chat/filter/custom-chat-filter-utils';
+import { CustomChatLicenseInformationEditView } from '@/components/custom-chat/license-information/custom-chat-license-information-edit-view';
+import { CustomChatShareWithLearners } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners';
+import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
+import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
+import { resolveInitialVoice } from '@/components/custom-chat/speech/resolve-initial-voice';
+import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
+import { useLlmModels } from '@/components/providers/llm-model-provider';
+import {
+  DIDACTIC_COMMENTARY_LENGTH_LIMIT,
+  LICENSE_INFORMATION_LENGTH_LIMIT,
   SMALL_TEXT_INPUT_FIELDS_LIMIT,
+  STUDENT_EXERCISE_LENGTH_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS,
 } from '@/configuration-text-inputs/const';
-import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  FileModel,
-  LearningScenarioOptionalShareDataModel,
-  schoolTypesSchema,
-  gradeRangesSchema,
-  subjectsSchema,
-  categoriesSchema,
-  federalStatesSchema,
-  languagesSchema,
-  webSearchScopeSchema,
-} from '@shared/db/schema';
-import { BackButton } from '@/components/common/back-button';
-import { Card, CardContent } from '@ui/components/card';
-import { FieldGroup } from '@ui/components/field';
-import { useForm, useWatch } from 'react-hook-form';
-import { useCallback, useMemo, useRef } from 'react';
-import z from 'zod';
-import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
-import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
-import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
-import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
-import { CustomChatActionDelete } from '@/components/custom-chat/custom-chat-action-delete';
-import { useRouter } from 'next/navigation';
-import {
-  extendLearningScenarioShareExpirationAction,
-  getLearningScenarioShareDataAction,
-  removeFileFromLearningScenarioAction,
-  shareLearningScenarioAction,
-  unshareLearningScenarioAction,
-  updateLearningScenarioShareTokenPointsLimitAction,
-  updateLearningScenarioAccessLevelAction,
-  updateLearningScenarioAction,
-  uploadAvatarPictureForLearningScenarioAction,
-} from './actions';
+import { useEntitySharing } from '@/hooks/use-entity-sharing';
+import { useForceReloadOnBrowserBackButton } from '@/hooks/use-force-reload-on-browser-back-button';
+import { useFormAutosave } from '@/hooks/use-form-autosave';
+import { usePendingChangesGuard } from '@/hooks/use-pending-changes-guard';
+
 import {
   createNewLearningScenarioFromTemplateAction,
   deleteLearningScenarioAction,
   downloadFileFromLearningScenarioAction,
   linkFileToLearningScenarioAction,
 } from '../../actions';
-import { useToast } from '@/components/common/toast';
-import { useTranslations } from 'next-intl';
-import { CustomChatShareInfo } from '@/components/custom-chat/custom-chat-share-info';
-import { CustomChatImageUpload } from '@/components/custom-chat/custom-chat-image-upload';
-import { usePendingChangesGuard } from '@/hooks/use-pending-changes-guard';
-import { useForceReloadOnBrowserBackButton } from '@/hooks/use-force-reload-on-browser-back-button';
-import { useFormAutosave } from '@/hooks/use-form-autosave';
-import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
-import { CustomChatModelSelect } from '@/components/custom-chat/custom-chat-model-select';
-import { CustomChatWebSearch } from '@/components/custom-chat/custom-chat-web-search';
-import { WebSource } from '@shared/db/types';
-import CustomShareSection from '@/components/custom-chat/custom-chat-share-section';
-import { useLlmModels } from '@/components/providers/llm-model-provider';
-import { getDefaultModel } from '@shared/llm-models/llm-model-service';
-import { CustomChatShareWithLearners } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners';
-import { CustomChatHeading2 } from '@/components/custom-chat/custom-chat-heading2';
-import { CustomChatInstructionsExampleDialog } from '@/components/custom-chat/custom-chat-instructions-example-dialog';
-import { CustomChatHeaderContent } from '@/components/custom-chat/custom-chat-header-content';
-import { FormField } from '@ui/components/form/form-field';
-import { RichText, stripRichTextTags } from '@/components/common/rich-text';
-import { CustomChatSuspensionError } from '@/components/custom-chat/custom-chat-suspension-error';
 import {
-  getAccessLevelFromShareForm,
-  getShareFormValues,
-} from '@/components/custom-chat/access-level-sharing';
-import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
-import FilterSelectSection from '@/components/custom-chat/filter/custom-chat-filter-select-section';
-import {
-  extractFilterValues,
-  toFilterGroup,
-} from '@/components/custom-chat/filter/custom-chat-filter-utils';
+  cancelCommunityTemplateRequestAction,
+  createCommunityTemplateRequestAction,
+  extendLearningScenarioShareExpirationAction,
+  getLearningScenarioShareDataAction,
+  getLearningScenarioSharingStateAction,
+  removeFileFromLearningScenarioAction,
+  sendMessageToEditorAction,
+  shareLearningScenarioAction,
+  unshareLearningScenarioAction,
+  updateLearningScenarioAction,
+  updateLearningScenarioSchoolSharingAction,
+  updateLearningScenarioShareTokenPointsLimitAction,
+  uploadAvatarPictureForLearningScenarioAction,
+} from './actions';
 
 type LearningScenarioTranslator = ReturnType<typeof useTranslations<'learning-scenarios'>>;
 
@@ -102,9 +116,9 @@ function createLearningScenarioFieldValidationConfig(t: LearningScenarioTranslat
       }),
     },
     studentExercise: {
-      maxLength: TEXT_INPUT_FIELDS_LENGTH_LIMIT,
+      maxLength: STUDENT_EXERCISE_LENGTH_LIMIT,
       maxLengthErrorMessage: t('student-exercise-max-length', {
-        maxLength: TEXT_INPUT_FIELDS_LENGTH_LIMIT,
+        maxLength: STUDENT_EXERCISE_LENGTH_LIMIT,
       }),
     },
   };
@@ -116,6 +130,8 @@ function createLearningScenarioFormValuesSchema(t: LearningScenarioTranslator) {
     description: z.string(),
     additionalInstructions: z.string(),
     studentExercise: z.string(),
+    didacticCommentary: z.string().max(DIDACTIC_COMMENTARY_LENGTH_LIMIT),
+    licenseInformation: z.string().max(LICENSE_INFORMATION_LENGTH_LIMIT),
     modelId: z.string(),
     schoolTypes: z.array(schoolTypesSchema),
     gradeRanges: z.array(gradeRangesSchema),
@@ -129,6 +145,9 @@ function createLearningScenarioFormValuesSchema(t: LearningScenarioTranslator) {
     isWebSearchEnabled: z.boolean(),
     webSearchScope: webSearchScopeSchema,
     webSearchIncludedDomains: z.array(z.string()),
+    isSpeechEnabled: z.boolean(),
+    voice: z.string(),
+    speechOnly: z.boolean(),
   });
 }
 
@@ -141,32 +160,41 @@ export function LearningScenarioEdit({
   relatedFiles,
   initialLinks,
   avatarPictureUrl,
+  initialCommunityTemplateRequest,
   usedBudget,
   maxBudget,
   budgetUsedBySharedChat,
   isWebSearchAvailable,
+  isSpeechAvailable,
+  speechVoices,
+  initialIsFavorite,
 }: {
   learningScenario: LearningScenarioOptionalShareDataModel;
   relatedFiles: FileModel[];
   initialLinks: WebSource[];
   avatarPictureUrl?: string;
+  initialCommunityTemplateRequest: CommunityTemplateRequestWithEvents | null;
   usedBudget: number;
   maxBudget: number;
   budgetUsedBySharedChat: number;
   isWebSearchAvailable: boolean;
+  isSpeechAvailable: boolean;
+  speechVoices: SpeechVoice[];
+  initialIsFavorite: boolean;
 }) {
   useForceReloadOnBrowserBackButton();
   const router = useRouter();
   const toast = useToast();
   const t = useTranslations('learning-scenarios');
   const tToast = useTranslations('learning-scenarios.toasts');
+  const tChat = useTranslations('custom-chat');
   const learningScenarioFormValuesSchema = useMemo(
     () => createLearningScenarioFormValuesSchema(t),
     [t],
   );
 
-  const { models } = useLlmModels();
-  const maybeDefaultModelId = getDefaultModel(models)?.id;
+  const { models, defaultModel } = useLlmModels();
+  const maybeDefaultModelId = defaultModel?.id;
   const isModelAvailable =
     learningScenario.modelId && models.some((m) => m.id === learningScenario.modelId);
   const selectedModelId = isModelAvailable ? learningScenario.modelId : maybeDefaultModelId;
@@ -177,6 +205,8 @@ export function LearningScenarioEdit({
     description: learningScenario.description ?? '',
     additionalInstructions: learningScenario.additionalInstructions ?? '',
     studentExercise: learningScenario.studentExercise ?? '',
+    didacticCommentary: learningScenario.didacticCommentary,
+    licenseInformation: learningScenario.licenseInformation,
     modelId: selectedModelId ?? '',
     schoolTypes: filterValues.schoolTypes,
     gradeRanges: filterValues.gradeRanges,
@@ -184,11 +214,18 @@ export function LearningScenarioEdit({
     categories: filterValues.categories,
     federalStates: filterValues.federalStates,
     languages: filterValues.languages,
-    ...getShareFormValues(learningScenario.accessLevel),
+    isSchoolShared: learningScenario.isSchoolShared,
+    isCommunityShared: isCommunitySharingActive({
+      isCommunityShared: learningScenario.isCommunityShared,
+      requestState: initialCommunityTemplateRequest?.state,
+    }),
     hasLinkAccess: learningScenario.hasLinkAccess,
     isWebSearchEnabled: learningScenario.isWebSearchEnabled,
     webSearchScope: learningScenario.webSearchScope,
     webSearchIncludedDomains: learningScenario.webSearchIncludedDomains,
+    isSpeechEnabled: learningScenario.isSpeechEnabled,
+    voice: resolveInitialVoice(learningScenario.voice, speechVoices),
+    speechOnly: learningScenario.speechOnly,
   };
 
   const {
@@ -210,7 +247,12 @@ export function LearningScenarioEdit({
       isDirty,
       getValues,
       reset: (values) => {
-        reset({ ...values, name: values.name.trim() });
+        reset({
+          ...values,
+          name: values.name.trim(),
+          didacticCommentary: values.didacticCommentary.trimEnd(),
+          licenseInformation: values.licenseInformation.trimEnd(),
+        });
       },
       validate: trigger,
       saveValues: async (data) => {
@@ -222,6 +264,8 @@ export function LearningScenarioEdit({
             name: data.name.trim(),
             description: data.description ?? '',
             studentExercise: data.studentExercise ?? '',
+            didacticCommentary: data.didacticCommentary.trimEnd(),
+            licenseInformation: data.licenseInformation.trimEnd(),
             filterGroup: toFilterGroup(data),
             attachedLinks: attachedLinksRef.current,
           },
@@ -231,6 +275,33 @@ export function LearningScenarioEdit({
       },
     });
 
+  const {
+    communityTemplateRequest,
+    createCommunityTemplateRequest,
+    sendMessageToEditor,
+    handleSharingChange,
+  } = useEntitySharing({
+    setValue,
+    initialRequest: initialCommunityTemplateRequest,
+    actions: {
+      createCommunityTemplateRequest: () =>
+        createCommunityTemplateRequestAction({ learningScenarioId: learningScenario.id }),
+      cancelCommunityTemplateRequest: () =>
+        cancelCommunityTemplateRequestAction({ learningScenarioId: learningScenario.id }),
+      sendMessageToEditor: (message) =>
+        sendMessageToEditorAction({ learningScenarioId: learningScenario.id, message }),
+      getEntitySharingState: () =>
+        getLearningScenarioSharingStateAction({ learningScenarioId: learningScenario.id }),
+      updateSchoolSharing: (isSchoolShared) =>
+        updateLearningScenarioSchoolSharingAction({
+          learningScenarioId: learningScenario.id,
+          isSchoolShared,
+        }),
+    },
+    onError: () => toast.error(tToast('edit-toast-error')),
+    onSuccess: flushAutoSave,
+  });
+
   const name = useWatch({ control, name: 'name' });
   const schoolTypes = useWatch({ control, name: 'schoolTypes' });
   const gradeRanges = useWatch({ control, name: 'gradeRanges' });
@@ -238,7 +309,6 @@ export function LearningScenarioEdit({
   const categories = useWatch({ control, name: 'categories' });
   const federalStates = useWatch({ control, name: 'federalStates' });
   const languages = useWatch({ control, name: 'languages' });
-  const savedAccessLevelRef = useRef(learningScenario.accessLevel);
   const attachedLinksRef = useRef(learningScenario.attachedLinks);
   const isSchoolShared = useWatch({ control, name: 'isSchoolShared' });
   const isCommunityShared = useWatch({ control, name: 'isCommunityShared' });
@@ -345,36 +415,6 @@ export function LearningScenarioEdit({
     return result;
   }
 
-  const handleSharingChange = async ({ name, checked }: { name: string; checked: boolean }) => {
-    if (name === 'isSchoolShared' || name === 'isCommunityShared') {
-      const nextShareValues = {
-        isSchoolShared: name === 'isSchoolShared' ? checked : getValues('isSchoolShared'),
-        isCommunityShared: name === 'isCommunityShared' ? checked : getValues('isCommunityShared'),
-      };
-
-      const newAccessLevel = getAccessLevelFromShareForm(nextShareValues);
-
-      if (newAccessLevel !== savedAccessLevelRef.current) {
-        const result = await updateLearningScenarioAccessLevelAction({
-          learningScenarioId: learningScenario.id,
-          accessLevel: newAccessLevel,
-        });
-
-        if (!result.success) {
-          const savedShareValues = getShareFormValues(savedAccessLevelRef.current);
-          setValue('isSchoolShared', savedShareValues.isSchoolShared);
-          setValue('isCommunityShared', savedShareValues.isCommunityShared);
-          toast.error(tToast('edit-toast-error'));
-          return;
-        }
-
-        savedAccessLevelRef.current = newAccessLevel;
-      }
-    }
-
-    await flushAutoSave();
-  };
-
   const actionButtons = (
     <CustomChatActions>
       <CustomChatActionUse onClick={handleUseChat} />
@@ -385,6 +425,10 @@ export function LearningScenarioEdit({
         onClick={handleDeleteLearningScenario}
         modalTitle={t('delete-modal-title')}
         modalDescription={t('delete-modal-description')}
+      />
+      <CustomChatActionFavorite
+        entityRef={{ entityType: 'learningScenario', entityId: learningScenario.id }}
+        initialIsFavorite={initialIsFavorite}
       />
     </CustomChatActions>
   );
@@ -546,7 +590,7 @@ export function LearningScenarioEdit({
                     testId="learning-scenario-student-exercise-input"
                     onBlur={handleAutoSave}
                     type="textArea"
-                    className="h-27 resize-none"
+                    className="h-27"
                   />
                 </FieldGroup>
               </CardContent>
@@ -562,15 +606,30 @@ export function LearningScenarioEdit({
             />
 
             {isWebSearchAvailable && (
-              <CustomChatWebSearch
-                name="isWebSearchEnabled"
+              <CustomChatWebSearchEditView
                 control={control}
+                onCheckedChange={() => {
+                  void flushAutoSave();
+                }}
                 onChange={() => {
                   void flushAutoSave();
                 }}
-                showScopeOptions
-                scopeName="webSearchScope"
-                includedDomainsName="webSearchIncludedDomains"
+              />
+            )}
+
+            {isSpeechAvailable && (
+              <CustomChatSpeechEditView
+                control={control}
+                voices={speechVoices}
+                onCheckedChange={() => {
+                  void flushAutoSave();
+                }}
+                onVoiceChange={() => {
+                  void flushAutoSave();
+                }}
+                onSpeechOnlyChange={() => {
+                  void flushAutoSave();
+                }}
               />
             )}
 
@@ -583,6 +642,13 @@ export function LearningScenarioEdit({
               onShareChange={handleSharingChange}
               suspended={learningScenario.suspended}
             />
+            {communityTemplateRequest && (
+              <CommunityTemplateRequest
+                requestWithEvents={communityTemplateRequest}
+                onResubmit={createCommunityTemplateRequest}
+                onSendMessage={sendMessageToEditor}
+              />
+            )}
             <FilterSelectSection
               values={{
                 schoolTypes,
@@ -617,6 +683,12 @@ export function LearningScenarioEdit({
                 void flushAutoSave();
               }}
             />
+            <CustomChatDidacticCommentaryEditView
+              control={control}
+              onBlur={handleAutoSave}
+              tooltip={tChat('didactic-commentary.heading-tooltip-learning-scenario')}
+            />
+            <CustomChatLicenseInformationEditView control={control} onBlur={handleAutoSave} />
           </form>
         </div>
       </CustomChatLayoutContainer>

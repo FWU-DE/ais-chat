@@ -1,22 +1,12 @@
 'use client';
 
-import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
 import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from '@ais-chat/ui/components/sidebar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@ui/components/dropdown-menu';
-import Link from 'next/link';
-import { useCustomPathname } from '@/hooks/use-custom-pathname';
-import { cloneElement, type ReactElement, useEffect, useRef, useState } from 'react';
-import { ConversationModel } from '@shared/db/types';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   CheckSquareIcon,
   DotsThreeIcon,
@@ -28,11 +18,22 @@ import {
   TrashIcon,
   XSquareIcon,
 } from '@phosphor-icons/react';
+import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
+import { ConversationModel } from '@shared/db/types';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@ui/components/dropdown-menu';
+import { Input } from '@ui/components/input';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { cloneElement, type ReactElement, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import z from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Input } from '@ui/components/input';
-import { useTranslations } from 'next-intl';
+
+import { useCustomPathname } from '@/hooks/use-custom-pathname';
 
 const renameChatHistorySchema = z.object({
   name: z.string().min(1).max(256),

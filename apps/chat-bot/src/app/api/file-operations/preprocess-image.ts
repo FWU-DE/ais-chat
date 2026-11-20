@@ -1,11 +1,14 @@
-import { TRUNCATE_IMAGE_HEIGHT } from '@/const';
-import { FileMetadata, FileModel } from '@shared/db/schema';
-import { getFileFromS3, getReadOnlySignedUrl } from '@shared/s3';
-import { isImageFile } from '@/utils/files/generic';
-import sharp from 'sharp';
-import { logError } from '@shared/logging';
-import { Readable } from 'stream';
 import { ChatAttachment } from '@ais-chat/ai-core';
+import { FileMetadata, FileModel } from '@shared/db/schema';
+import { logError } from '@shared/logging';
+import { getFileFromS3, getReadOnlySignedUrl } from '@shared/s3';
+import sharp from 'sharp';
+
+import { TRUNCATE_IMAGE_HEIGHT } from '@/const';
+import { isImageFile } from '@/utils/files/generic';
+import { getImageContentType, streamToBase64 } from '@/utils/files/image-data';
+
+import { measureImageProcessing } from './metrics/image-processing-metrics';
 
 export type ChatAttachmentWithMessageId = ChatAttachment & {
   messageId: string;
@@ -26,6 +29,20 @@ export async function createImageAttachmentsForConversation(
     return [];
   }
 
+  // Only the base64 path materialises image bytes; url mode just signs S3 keys.
+  if (imageAttachmentType !== 'base64') {
+    return buildImageAttachments(imageFiles, imageAttachmentType);
+  }
+
+  return measureImageProcessing({ operation: 'attach' }, () =>
+    buildImageAttachments(imageFiles, imageAttachmentType),
+  );
+}
+
+async function buildImageAttachments(
+  imageFiles: (FileModel & { conversationMessageId: string })[],
+  imageAttachmentType: 'url' | 'base64',
+): Promise<ChatAttachmentWithMessageId[]> {
   const imagePromises = imageFiles.map(async (file) => {
     let url: string;
     const contentType = getImageContentType(file.type);
@@ -57,13 +74,38 @@ export async function createImageAttachmentsForConversation(
   return images.filter((img) => img !== undefined);
 }
 
-function getImageContentType(type: string): string {
-  if (type === 'jpg') return 'image/jpeg';
-  if (type === 'svg') return 'image/svg+xml';
-  return `image/${type}`;
+const DEFAULT_SVG_DENSITY = 72;
+const MAX_SVG_DENSITY = 100_000; // sharp's upper limit for vector rasterisation
+
+/**
+ * sharp rasterises SVGs at their intrinsic size, so small vector graphics can turn into tiny
+ * bitmaps that look blurry when displayed. Increase the density so the largest side is
+ * rasterised up to TRUNCATE_IMAGE_HEIGHT before any further resizing is applied.
+ */
+async function rasterizeSvgToPng(fileContent: Buffer): Promise<Buffer> {
+  const { width, height } = await sharp(fileContent).metadata();
+  const largestSide = Math.max(width ?? 0, height ?? 0);
+  const density =
+    largestSide > 0 && largestSide < TRUNCATE_IMAGE_HEIGHT
+      ? Math.min(
+          Math.round((TRUNCATE_IMAGE_HEIGHT / largestSide) * DEFAULT_SVG_DENSITY),
+          MAX_SVG_DENSITY,
+        )
+      : DEFAULT_SVG_DENSITY;
+
+  return sharp(fileContent, { density }).png().toBuffer();
 }
 
 export async function preprocessImage(
+  fileContent: Buffer,
+  type: string,
+): Promise<{ buffer: Buffer; metadata: FileMetadata; type: string }> {
+  return measureImageProcessing({ operation: 'upload', format: type }, () =>
+    runPreprocessImage(fileContent, type),
+  );
+}
+
+async function runPreprocessImage(
   fileContent: Buffer,
   type: string,
 ): Promise<{ buffer: Buffer; metadata: FileMetadata; type: string }> {
@@ -72,7 +114,7 @@ export async function preprocessImage(
   let processedType = type;
   if (type === 'svg') {
     try {
-      processedBuffer = await sharp(fileContent).png().toBuffer();
+      processedBuffer = await rasterizeSvgToPng(fileContent);
       processedType = 'png';
     } catch {
       throw new Error('Failed to convert SVG to PNG');
@@ -109,18 +151,6 @@ export async function preprocessImage(
     metadata: { width, height },
     type: processedType,
   };
-}
-
-async function streamToBase64(stream: Readable): Promise<string> {
-  const chunks: Buffer[] = [];
-
-  for await (const chunk of stream) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  }
-
-  const buffer = Buffer.concat(chunks);
-
-  return buffer.toString('base64');
 }
 
 // returns true if the file has a conversationMessageId which is needed to

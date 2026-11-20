@@ -1,10 +1,10 @@
-import { logError } from '@shared/logging';
 import {
   ForbiddenError,
   InvalidArgumentError,
   NotFoundError,
   UnauthenticatedError,
 } from '@shared/error';
+import { logError } from '@shared/logging';
 
 /**
  * Handles errors in route handlers and maps them to appropriate HTTP responses.

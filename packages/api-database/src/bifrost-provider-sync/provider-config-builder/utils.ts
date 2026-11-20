@@ -1,77 +1,5 @@
-import { LlmModel } from '../../schema';
-import { BifrostProviderSyncError } from '../error';
-import { buildKeyName } from '../key-name';
-import {
-  BifrostKey,
-  BifrostProvider,
-  BifrostProviderConfig,
-  BifrostProviderConfigFields,
-  BifrostSecret,
-} from '../types';
-
-type ProviderSettings = LlmModel['setting'];
-
-export function buildSingleKeyProviderConfigs({
-  provider,
-  models,
-  getGroupKey,
-  buildKey,
-  buildConfig,
-}: {
-  provider: BifrostProvider;
-  models: LlmModel[];
-  getGroupKey: (setting: ProviderSettings) => string | undefined;
-  buildKey: (setting: ProviderSettings, groupedModels: LlmModel[]) => BifrostKey;
-  buildConfig?: (
-    setting: ProviderSettings,
-    groupedModels: LlmModel[],
-  ) => BifrostProviderConfigFields;
-}): BifrostProviderConfig[] {
-  return groupModelsBySettings(models, getGroupKey).map((groupedModels) => {
-    const setting = getFirstModelSetting(groupedModels);
-
-    return {
-      provider,
-      ...buildConfig?.(setting, groupedModels),
-      keys: [buildKey(setting, groupedModels)],
-    };
-  });
-}
-
-export function buildBifrostKey({
-  provider,
-  readableValue,
-  uniqueValue,
-  value,
-  groupedModels,
-  extra,
-}: {
-  provider: BifrostProvider;
-  readableValue: string;
-  uniqueValue: string;
-  value: BifrostSecret;
-  groupedModels: LlmModel[];
-  extra?: Partial<BifrostKey>;
-}): BifrostKey {
-  return {
-    name: buildKeyName(provider, readableValue, uniqueValue),
-    value,
-    models: getModelNames(groupedModels),
-    weight: 1,
-    enabled: true,
-    ...extra,
-  };
-}
-
-export function buildAzureAliases(groupedModels: LlmModel[]): Record<string, string> {
-  return Object.fromEntries(
-    groupedModels.flatMap((model) => {
-      const parsedUrl =
-        model.setting.provider === 'azure' ? parseAzureBaseUrl(model.setting.baseUrl) : undefined;
-      return parsedUrl ? [[model.name, parsedUrl.deployment]] : [];
-    }),
-  );
-}
+import type { LlmProviderKeyWithModels } from '../../functions';
+import type { BifrostKey } from '../types';
 
 export function getOrigin(value: string): string | undefined {
   try {
@@ -81,49 +9,41 @@ export function getOrigin(value: string): string | undefined {
   }
 }
 
-export function parseAzureBaseUrl(
-  baseUrl: string,
-): { endpoint: string; deployment: string } | undefined {
-  let url: URL;
-  try {
-    url = new URL(baseUrl);
-  } catch {
-    return undefined;
-  }
+/**
+ * Strips a trailing `/v1` segment from a base URL, if present.
+ *
+ * Bifrost's built-in request-path templates for OpenAI-compatible providers already include
+ * `/v1` (e.g. the default chat completion path is `/v1/chat/completions`), so a configured base
+ * URL that also ends in `/v1` would otherwise produce a doubled `.../v1/v1/...` upstream request.
+ * Any other path segment is preserved.
+ */
+export function stripTrailingV1(value: string): string {
+  return value.replace(/\/v1\/?$/i, '');
+}
 
-  const urlParts = url.pathname.split('/').filter(Boolean);
-  const deploymentIndex = urlParts.findIndex((part) => part === 'deployments');
-  const deployment = urlParts[deploymentIndex + 1];
+export function getBifrostModelName(modelName: string): string {
+  return modelName.replace(/^anthropic\//, '');
+}
 
-  if (deploymentIndex === -1 || !deployment) return undefined;
-
+export function buildKey(
+  provider: string,
+  providerKey: LlmProviderKeyWithModels,
+  value: string,
+  extra?: Partial<BifrostKey>,
+): BifrostKey {
+  const activeMappings = providerKey.models.filter(({ model }) => !model.isDeleted);
+  const modelMappings = activeMappings.flatMap(({ model, upstreamModelName }) => {
+    const bifrostModelName = getBifrostModelName(model.name);
+    const bifrostUpstreamModelName = getBifrostModelName(upstreamModelName);
+    return [[bifrostModelName, bifrostUpstreamModelName]] as const;
+  });
   return {
-    endpoint: url.origin,
-    deployment,
+    name: providerKey.name.toLowerCase(),
+    value,
+    models: [...new Set(modelMappings.map(([modelName]) => modelName))].sort(),
+    aliases: Object.fromEntries(modelMappings),
+    weight: providerKey.weight,
+    enabled: providerKey.isEnabled,
+    ...extra,
   };
-}
-
-function getFirstModelSetting(groupedModels: LlmModel[]): ProviderSettings {
-  const setting = groupedModels[0]?.setting;
-  if (!setting) throw new BifrostProviderSyncError();
-  return setting;
-}
-
-function groupModelsBySettings(
-  models: LlmModel[],
-  getGroupKey: (setting: ProviderSettings) => string | undefined,
-): LlmModel[][] {
-  const groupedModels = new Map<string, LlmModel[]>();
-
-  for (const model of models) {
-    const key = getGroupKey(model.setting);
-    if (!key) continue;
-    groupedModels.set(key, [...(groupedModels.get(key) ?? []), model]);
-  }
-
-  return [...groupedModels.values()];
-}
-
-function getModelNames(models: LlmModel[]): string[] {
-  return [...new Set(models.map(({ name }) => name))].sort();
 }

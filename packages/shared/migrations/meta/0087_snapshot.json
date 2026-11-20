@@ -1,6 +1,6 @@
 {
-  "id": "7c5557aa-dacf-4a10-92ba-21426ca5a1a9",
-  "prevId": "24bd25d2-d386-47f2-886b-2e71f755ab20",
+  "id": "a7d468f3-6524-4945-932a-ec64938841cf",
+  "prevId": "331844a1-71e7-4a91-89a7-6b20911ffd24",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -584,12 +584,19 @@
           "notNull": true,
           "default": false
         },
-        "is_personal_context_enabled": {
-          "name": "is_personal_context_enabled",
-          "type": "boolean",
+        "web_search_scope": {
+          "name": "web_search_scope",
+          "type": "web_search_scope",
           "primaryKey": false,
           "notNull": true,
-          "default": false
+          "default": "'all-web'"
+        },
+        "web_search_included_domains": {
+          "name": "web_search_included_domains",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
         },
         "picture_id": {
           "name": "picture_id",
@@ -1135,6 +1142,31 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.configuration": {
+      "name": "configuration",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.conversation_message": {
       "name": "conversation_message",
       "schema": "",
@@ -1368,12 +1400,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'chat'"
-        },
-        "personal_context_enabled": {
-          "name": "personal_context_enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -2544,89 +2570,6 @@
           "columns": [
             "owner",
             "name"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.personal_context": {
-      "name": "personal_context",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "content": {
-          "name": "content",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "''"
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "auto_update_enabled": {
-          "name": "auto_update_enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "personal_context_user_id_user_entity_id_fk": {
-          "name": "personal_context_user_id_user_entity_id_fk",
-          "tableFrom": "personal_context",
-          "tableTo": "user_entity",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "personal_context_user_id_unique": {
-          "name": "personal_context_user_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "user_id"
           ]
         }
       },

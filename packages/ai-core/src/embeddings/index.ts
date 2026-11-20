@@ -1,8 +1,7 @@
-import { isApiKeyOverQuota } from '../api-keys/billing';
-import { generateEmbeddings } from './providers';
-import { hasAccessToModel } from '../api-keys/model-access';
-import { AiGenerationError, InvalidModelError } from '../errors';
+import { assertApiKeyCanUseModel } from '../api-keys/access';
+import { normalizeAiGenerationError } from '../errors';
 import { getEmbeddingModelById, getEmbeddingModelByName } from '../models';
+import { generateEmbeddings } from './providers';
 
 /**
  * Generates embeddings using the specified model and texts, with access control.
@@ -24,21 +23,7 @@ export async function generateEmbeddingsWithBilling(
 ) {
   const model = await getEmbeddingModelById(modelId);
 
-  // Run access check and quota check in parallel for better performance
-  const [hasAccess, isOverQuota] = await Promise.all([
-    hasAccessToModel(apiKeyId, model),
-    isApiKeyOverQuota(apiKeyId),
-  ]);
-
-  if (!hasAccess) {
-    throw new InvalidModelError(
-      `API key does not have access to the embedding model: ${model.name}`,
-    );
-  }
-
-  if (isOverQuota) {
-    throw new AiGenerationError(`API key has exceeded its monthly quota`);
-  }
+  await assertApiKeyCanUseModel(apiKeyId, model, 'embedding');
 
   try {
     const embeddingResponse = await generateEmbeddings(model, texts);
@@ -47,13 +32,7 @@ export async function generateEmbeddingsWithBilling(
 
     return embeddingResponse;
   } catch (error) {
-    // Wrap non-AiGenerationError errors
-    if (!(error instanceof AiGenerationError)) {
-      throw new AiGenerationError(
-        `Embedding generation failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-    throw error;
+    throw normalizeAiGenerationError(error, 'Embedding generation failed');
   }
 }
 

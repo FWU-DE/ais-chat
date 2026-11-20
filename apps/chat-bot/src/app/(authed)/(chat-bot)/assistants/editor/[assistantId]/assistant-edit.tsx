@@ -1,72 +1,87 @@
 'use client';
 
-import {
-  NUMBER_OF_EXAMPLE_PROMPTS_LIMIT,
-  SMALL_TEXT_INPUT_FIELDS_LIMIT,
-  TEXT_INPUT_FIELDS_LENGTH_LIMIT,
-  TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS,
-} from '@/configuration-text-inputs/const';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
+import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
 import {
   AssistantSelectModel,
-  FileModel,
-  schoolTypesSchema,
-  gradeRangesSchema,
-  subjectsSchema,
   categoriesSchema,
   federalStatesSchema,
+  FileModel,
+  gradeRangesSchema,
   languagesSchema,
+  schoolTypesSchema,
+  type SpeechVoice,
+  subjectsSchema,
+  webSearchScopeSchema,
 } from '@shared/db/schema';
-import { BackButton } from '@/components/common/back-button';
+import { WebSource } from '@shared/db/types';
 import { Card, CardContent } from '@ui/components/card';
 import { FieldGroup } from '@ui/components/field';
 import { FormField } from '@ui/components/form/form-field';
 import { useRouter } from 'next/navigation';
-import { useForm, useWatch } from 'react-hook-form';
-import { useCallback, useMemo, useRef } from 'react';
-import z from 'zod';
-import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
-import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
-import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
-import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
-import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
-import { CustomChatActionDelete } from '@/components/custom-chat/custom-chat-action-delete';
-import {
-  createNewAssistantAction,
-  deleteAssistantAction,
-  deleteFileMappingAndEntityAction,
-  downloadFileFromAssistantAction,
-  linkFileToAssistantAction,
-  updateAssistantAccessLevelAction,
-  updateAssistantAction,
-  uploadAvatarPictureForAssistantAction,
-} from '../../actions';
-import { useToast } from '@/components/common/toast';
 import { useTranslations } from 'next-intl';
-import { CustomChatShareInfo } from '@/components/custom-chat/custom-chat-share-info';
-import { CustomChatImageUpload } from '@/components/custom-chat/custom-chat-image-upload';
-import { usePendingChangesGuard } from '@/hooks/use-pending-changes-guard';
-import { useForceReloadOnBrowserBackButton } from '@/hooks/use-force-reload-on-browser-back-button';
-import { useFormAutosave } from '@/hooks/use-form-autosave';
-import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
-import { WebSource } from '@shared/db/types';
-import CustomShareSection from '@/components/custom-chat/custom-chat-share-section';
-import { CustomChatPromptSuggestions } from '@/components/custom-chat/custom-chat-prompt-suggestions';
-import { CustomChatInstructionsExampleDialog } from '@/components/custom-chat/custom-chat-instructions-example-dialog';
+import { useCallback, useMemo } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import z from 'zod';
+
+import { BackButton } from '@/components/common/back-button';
 import { RichText, stripRichTextTags } from '@/components/common/rich-text';
+import { useToast } from '@/components/common/toast';
+import { CustomChatActionDelete } from '@/components/custom-chat/custom-chat-action-delete';
+import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
+import { CustomChatActionFavorite } from '@/components/custom-chat/custom-chat-action-favorite';
+import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
+import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
 import { CustomChatHeaderContent } from '@/components/custom-chat/custom-chat-header-content';
-import { CustomChatWebSearch } from '@/components/custom-chat/custom-chat-web-search';
+import { CustomChatImageUpload } from '@/components/custom-chat/custom-chat-image-upload';
+import { CustomChatInstructionsExampleDialog } from '@/components/custom-chat/custom-chat-instructions-example-dialog';
+import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
 import { CustomChatPersonalContext } from '@/components/custom-chat/custom-chat-personal-context';
+import { CustomChatPromptSuggestions } from '@/components/custom-chat/custom-chat-prompt-suggestions';
+import { CustomChatShareInfo } from '@/components/custom-chat/custom-chat-share-info';
+import CustomShareSection from '@/components/custom-chat/custom-chat-share-section';
 import { CustomChatSuspensionError } from '@/components/custom-chat/custom-chat-suspension-error';
-import {
-  getAccessLevelFromShareForm,
-  getShareFormValues,
-} from '@/components/custom-chat/access-level-sharing';
+import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
+import { CustomChatDidacticCommentaryEditView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-edit-view';
+import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
 import FilterSelectSection from '@/components/custom-chat/filter/custom-chat-filter-select-section';
 import {
   extractFilterValues,
   toFilterGroup,
 } from '@/components/custom-chat/filter/custom-chat-filter-utils';
+import { CustomChatLicenseInformationEditView } from '@/components/custom-chat/license-information/custom-chat-license-information-edit-view';
+import { CommunityTemplateRequest } from '@/components/custom-chat/sharing/community-template-request';
+import { CustomChatSpeechEditView } from '@/components/custom-chat/speech/custom-chat-speech-edit-view';
+import { resolveInitialVoice } from '@/components/custom-chat/speech/resolve-initial-voice';
+import { CustomChatWebSearchEditView } from '@/components/custom-chat/web-search/custom-chat-web-search-edit-view';
+import {
+  DIDACTIC_COMMENTARY_LENGTH_LIMIT,
+  LICENSE_INFORMATION_LENGTH_LIMIT,
+  NUMBER_OF_EXAMPLE_PROMPTS_LIMIT,
+  SMALL_TEXT_INPUT_FIELDS_LIMIT,
+  TEXT_INPUT_FIELDS_LENGTH_LIMIT,
+  TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS,
+} from '@/configuration-text-inputs/const';
+import { useEntitySharing } from '@/hooks/use-entity-sharing';
+import { useForceReloadOnBrowserBackButton } from '@/hooks/use-force-reload-on-browser-back-button';
+import { useFormAutosave } from '@/hooks/use-form-autosave';
+import { usePendingChangesGuard } from '@/hooks/use-pending-changes-guard';
+
+import {
+  cancelCommunityTemplateRequestAction,
+  createCommunityTemplateRequestAction,
+  createNewAssistantAction,
+  deleteAssistantAction,
+  deleteFileMappingAndEntityAction,
+  downloadFileFromAssistantAction,
+  getAssistantSharingStateAction,
+  linkFileToAssistantAction,
+  sendMessageToEditorAction,
+  updateAssistantAction,
+  updateAssistantSchoolSharingAction,
+  uploadAvatarPictureForAssistantAction,
+} from '../../actions';
 
 type AssistantTranslator = ReturnType<typeof useTranslations<'assistants'>>;
 
@@ -103,6 +118,8 @@ function createAssistantFormValuesSchema(t: AssistantTranslator) {
     name: z.string().trim().min(1, t('name-required')).max(SMALL_TEXT_INPUT_FIELDS_LIMIT),
     description: z.string(),
     instructions: z.string(),
+    didacticCommentary: z.string().max(DIDACTIC_COMMENTARY_LENGTH_LIMIT),
+    licenseInformation: z.string().max(LICENSE_INFORMATION_LENGTH_LIMIT),
     schoolTypes: z.array(schoolTypesSchema),
     gradeRanges: z.array(gradeRangesSchema),
     subjects: z.array(subjectsSchema),
@@ -114,6 +131,11 @@ function createAssistantFormValuesSchema(t: AssistantTranslator) {
     hasLinkAccess: z.boolean(),
     isWebSearchEnabled: z.boolean(),
     isPersonalContextEnabled: z.boolean(),
+    webSearchScope: webSearchScopeSchema,
+    webSearchIncludedDomains: z.array(z.string()),
+    isSpeechEnabled: z.boolean(),
+    voice: z.string(),
+    speechOnly: z.boolean(),
     promptSuggestions: z
       .array(
         z.object({
@@ -134,20 +156,29 @@ export function AssistantEdit({
   relatedFiles,
   initialLinks,
   avatarPictureUrl,
+  initialCommunityTemplateRequest,
   isWebSearchAvailable,
   isPersonalContextAvailable,
+  isSpeechAvailable,
+  speechVoices,
+  initialIsFavorite,
 }: {
   assistant: AssistantSelectModel;
   relatedFiles: FileModel[];
   initialLinks: WebSource[];
   avatarPictureUrl?: string;
+  initialCommunityTemplateRequest: CommunityTemplateRequestWithEvents | null;
   isWebSearchAvailable: boolean;
   isPersonalContextAvailable: boolean;
+  isSpeechAvailable: boolean;
+  speechVoices: SpeechVoice[];
+  initialIsFavorite: boolean;
 }) {
   useForceReloadOnBrowserBackButton();
   const router = useRouter();
   const toast = useToast();
   const t = useTranslations('assistants');
+  const tChat = useTranslations('custom-chat');
   const assistantFormValuesSchema = useMemo(() => createAssistantFormValuesSchema(t), [t]);
   const assistantFieldValidationConfig = useMemo(
     () => createAssistantFieldValidationConfig(t),
@@ -158,16 +189,27 @@ export function AssistantEdit({
     name: assistant.name,
     description: assistant.description ?? '',
     instructions: assistant.instructions ?? '',
+    didacticCommentary: assistant.didacticCommentary,
+    licenseInformation: assistant.licenseInformation,
     schoolTypes: filterValues.schoolTypes,
     gradeRanges: filterValues.gradeRanges,
     subjects: filterValues.subjects,
     categories: filterValues.categories,
     federalStates: filterValues.federalStates,
     languages: filterValues.languages,
-    ...getShareFormValues(assistant.accessLevel),
+    isSchoolShared: assistant.isSchoolShared,
+    isCommunityShared: isCommunitySharingActive({
+      isCommunityShared: assistant.isCommunityShared,
+      requestState: initialCommunityTemplateRequest?.state,
+    }),
     hasLinkAccess: assistant.hasLinkAccess,
     isWebSearchEnabled: assistant.isWebSearchEnabled,
     isPersonalContextEnabled: assistant.isPersonalContextEnabled,
+    webSearchScope: assistant.webSearchScope,
+    webSearchIncludedDomains: assistant.webSearchIncludedDomains,
+    isSpeechEnabled: assistant.isSpeechEnabled,
+    voice: resolveInitialVoice(assistant.voice, speechVoices),
+    speechOnly: assistant.speechOnly,
     promptSuggestions:
       assistant.promptSuggestions && assistant.promptSuggestions.length > 0
         ? assistant.promptSuggestions.map((s) => ({ value: s }))
@@ -193,20 +235,32 @@ export function AssistantEdit({
       isDirty,
       getValues,
       reset: (values) => {
-        reset({ ...values, name: values.name.trim() });
+        reset({
+          ...values,
+          name: values.name.trim(),
+          didacticCommentary: values.didacticCommentary.trimEnd(),
+          licenseInformation: values.licenseInformation.trimEnd(),
+        });
       },
       validate: trigger,
       saveValues: async (data) => {
-        // accessLevel is handled separately in handleSharingChange
+        // isSchoolShared/isCommunityShared are handled separately in handleSharingChange
         const updateResult = await updateAssistantAction({
           assistantId: assistant.id,
           name: data.name.trim(),
           description: data.description,
           instructions: data.instructions,
+          didacticCommentary: data.didacticCommentary.trimEnd(),
+          licenseInformation: data.licenseInformation.trimEnd(),
           filterGroup: toFilterGroup(data),
           hasLinkAccess: data.hasLinkAccess,
           isWebSearchEnabled: data.isWebSearchEnabled,
           isPersonalContextEnabled: data.isPersonalContextEnabled,
+          webSearchScope: data.webSearchScope,
+          webSearchIncludedDomains: data.webSearchIncludedDomains,
+          isSpeechEnabled: data.isSpeechEnabled,
+          voice: data.voice,
+          speechOnly: data.speechOnly,
           promptSuggestions: data.promptSuggestions
             .map((suggestion) => suggestion.value.trim())
             .filter((suggestion) => suggestion.length > 0),
@@ -216,6 +270,29 @@ export function AssistantEdit({
       },
     });
 
+  const {
+    communityTemplateRequest,
+    createCommunityTemplateRequest,
+    sendMessageToEditor,
+    handleSharingChange,
+  } = useEntitySharing({
+    setValue,
+    initialRequest: initialCommunityTemplateRequest,
+    actions: {
+      createCommunityTemplateRequest: () =>
+        createCommunityTemplateRequestAction({ assistantId: assistant.id }),
+      cancelCommunityTemplateRequest: () =>
+        cancelCommunityTemplateRequestAction({ assistantId: assistant.id }),
+      sendMessageToEditor: (message) =>
+        sendMessageToEditorAction({ assistantId: assistant.id, message }),
+      getEntitySharingState: () => getAssistantSharingStateAction({ assistantId: assistant.id }),
+      updateSchoolSharing: (isSchoolShared) =>
+        updateAssistantSchoolSharingAction({ assistantId: assistant.id, isSchoolShared }),
+    },
+    onError: () => toast.error(t('toasts.edit-toast-error')),
+    onSuccess: flushAutoSave,
+  });
+
   const name = useWatch({ control, name: 'name' });
   const schoolTypes = useWatch({ control, name: 'schoolTypes' });
   const gradeRanges = useWatch({ control, name: 'gradeRanges' });
@@ -223,7 +300,6 @@ export function AssistantEdit({
   const categories = useWatch({ control, name: 'categories' });
   const federalStates = useWatch({ control, name: 'federalStates' });
   const languages = useWatch({ control, name: 'languages' });
-  const savedAccessLevelRef = useRef(assistant.accessLevel);
   const isSchoolShared = useWatch({ control, name: 'isSchoolShared' });
   const isCommunityShared = useWatch({ control, name: 'isCommunityShared' });
   const hasLinkAccess = useWatch({ control, name: 'hasLinkAccess' });
@@ -315,36 +391,6 @@ export function AssistantEdit({
     return result;
   }
 
-  const handleSharingChange = async ({ name, checked }: { name: string; checked: boolean }) => {
-    if (name === 'isSchoolShared' || name === 'isCommunityShared') {
-      const nextShareValues = {
-        isSchoolShared: name === 'isSchoolShared' ? checked : getValues('isSchoolShared'),
-        isCommunityShared: name === 'isCommunityShared' ? checked : getValues('isCommunityShared'),
-      };
-
-      const newAccessLevel = getAccessLevelFromShareForm(nextShareValues);
-
-      if (newAccessLevel !== savedAccessLevelRef.current) {
-        const result = await updateAssistantAccessLevelAction({
-          assistantId: assistant.id,
-          accessLevel: newAccessLevel,
-        });
-
-        if (!result.success) {
-          const savedShareValues = getShareFormValues(savedAccessLevelRef.current);
-          setValue('isSchoolShared', savedShareValues.isSchoolShared);
-          setValue('isCommunityShared', savedShareValues.isCommunityShared);
-          toast.error(t('toasts.edit-toast-error'));
-          return;
-        }
-
-        savedAccessLevelRef.current = newAccessLevel;
-      }
-    }
-
-    await flushAutoSave();
-  };
-
   const assistantActions = (
     <CustomChatActions>
       <CustomChatActionUse onClick={handleUseChat} />
@@ -353,6 +399,10 @@ export function AssistantEdit({
         onClick={handleDeleteAssistant}
         modalTitle={t('delete-modal-title')}
         modalDescription={t('delete-modal-description')}
+      />
+      <CustomChatActionFavorite
+        entityRef={{ entityType: 'assistant', entityId: assistant.id }}
+        initialIsFavorite={initialIsFavorite}
       />
     </CustomChatActions>
   );
@@ -456,10 +506,28 @@ export function AssistantEdit({
           />
 
           {isWebSearchAvailable && (
-            <CustomChatWebSearch
-              name="isWebSearchEnabled"
+            <CustomChatWebSearchEditView
               control={control}
               onCheckedChange={() => {
+                void flushAutoSave();
+              }}
+              onChange={() => {
+                void flushAutoSave();
+              }}
+            />
+          )}
+
+          {isSpeechAvailable && (
+            <CustomChatSpeechEditView
+              control={control}
+              voices={speechVoices}
+              onCheckedChange={() => {
+                void flushAutoSave();
+              }}
+              onVoiceChange={() => {
+                void flushAutoSave();
+              }}
+              onSpeechOnlyChange={() => {
                 void flushAutoSave();
               }}
             />
@@ -484,6 +552,13 @@ export function AssistantEdit({
             onShareChange={handleSharingChange}
             suspended={assistant.suspended}
           />
+          {communityTemplateRequest && (
+            <CommunityTemplateRequest
+              requestWithEvents={communityTemplateRequest}
+              onResubmit={createCommunityTemplateRequest}
+              onSendMessage={sendMessageToEditor}
+            />
+          )}
           <FilterSelectSection
             values={{
               schoolTypes,
@@ -518,6 +593,12 @@ export function AssistantEdit({
               void flushAutoSave();
             }}
           />
+          <CustomChatDidacticCommentaryEditView
+            control={control}
+            onBlur={handleAutoSave}
+            tooltip={tChat('didactic-commentary.heading-tooltip-assistant')}
+          />
+          <CustomChatLicenseInformationEditView control={control} onBlur={handleAutoSave} />
         </form>
       </CustomChatLayoutContainer>
     </>

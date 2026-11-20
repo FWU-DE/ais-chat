@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { constructBifrostEmbeddingGenerationFn } from './bifrost';
+
 import type { AiModel } from '../types';
+import { constructBifrostEmbeddingGenerationFn } from './bifrost';
 
 const { createMock, openAiConstructorMock, instrumentOpenAiClientMock, MockOpenAI } = vi.hoisted(
   () => {
@@ -23,7 +24,7 @@ const { createMock, openAiConstructorMock, instrumentOpenAiClientMock, MockOpenA
 
 vi.mock('openai', () => ({ default: MockOpenAI }));
 
-vi.mock('@sentry/core', () => ({ instrumentOpenAiClient: instrumentOpenAiClientMock }));
+vi.mock('@sentry/server-utils', () => ({ instrumentOpenAiClient: instrumentOpenAiClientMock }));
 
 vi.mock('../../env', () => ({
   env: {
@@ -56,9 +57,12 @@ describe('constructBifrostEmbeddingGenerationFn', () => {
     expect(openAiConstructorMock).toHaveBeenCalledWith({
       apiKey: 'bifrost-api-key',
       baseURL: 'http://localhost:8089/openai/v1',
+      defaultHeaders: { 'x-bf-vk': 'bifrost-api-key' },
+      timeout: 45_000,
+      maxRetries: 1,
     });
     expect(createMock).toHaveBeenCalledWith({
-      model: 'openai/embedding-model',
+      model: 'embedding-model',
       input: ['hello'],
       encoding_format: 'float',
     });
@@ -68,7 +72,7 @@ describe('constructBifrostEmbeddingGenerationFn', () => {
     });
   });
 
-  it('strips the anthropic prefix for vertex Claude embeddings', async () => {
+  it('preserves logical embedding model names containing a slash', async () => {
     createMock.mockResolvedValue({
       data: [{ embedding: [0.1, 0.2, 0.3] }],
       usage: { prompt_tokens: 4, total_tokens: 5 },
@@ -85,7 +89,7 @@ describe('constructBifrostEmbeddingGenerationFn', () => {
     await generateEmbeddings({ texts: ['hello'], model: model.name });
 
     expect(createMock).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'vertex/claude-embedding-model' }),
+      expect.objectContaining({ model: 'anthropic/claude-embedding-model' }),
     );
   });
 });

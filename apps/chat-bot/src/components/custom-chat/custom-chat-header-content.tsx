@@ -1,7 +1,8 @@
 'use client';
 
-import { CustomChatFormStateProps } from '@/components/custom-chat/custom-chat-form-state';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+
+import { CustomChatFormStateProps } from '@/components/custom-chat/custom-chat-form-state';
 
 type CustomChatHeaderContentContextValue = {
   formStateProps: CustomChatFormStateProps | null;
@@ -23,11 +24,7 @@ export function CustomChatHeaderContentProvider({ children }: { children: ReactN
     [formStateProps],
   );
 
-  return (
-    <CustomChatHeaderContentContext.Provider value={value}>
-      {children}
-    </CustomChatHeaderContentContext.Provider>
-  );
+  return <CustomChatHeaderContentContext value={value}>{children}</CustomChatHeaderContentContext>;
 }
 
 export function useCustomChatHeaderContent() {

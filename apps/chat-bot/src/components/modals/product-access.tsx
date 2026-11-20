@@ -1,7 +1,5 @@
 'use client';
 
-import React from 'react';
-import { useTranslations } from 'next-intl';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,6 +9,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@ui/components/alert-dialog';
+import { useTranslations } from 'next-intl';
+import React from 'react';
 
 const LOGOUT_URL = '/api/auth/logout';
 
@@ -32,6 +32,8 @@ export default function ProductAccessModal({ children, modalTitle }: ProductAcce
           <AlertDialogAction
             variant="outline"
             onClick={() => {
+              // Full page navigation is required so the browser follows the route handler's redirect after clearing the session cookie.
+              // eslint-disable-next-line @next/next/no-location-assign-relative-destination
               window.location.assign(LOGOUT_URL);
             }}
           >

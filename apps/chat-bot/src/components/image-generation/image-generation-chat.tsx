@@ -1,22 +1,30 @@
 'use client';
 
+import { FileModel } from '@shared/db/schema';
+import { ConversationMessageModel } from '@shared/db/types';
+import { logError } from '@shared/logging';
+import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import React, { useEffect, useRef, useState } from 'react';
+
+import aiBadge from '@/assets/ai-badge.png';
+import { IMAGE_GENERATION_INPUT_LIMIT } from '@/configuration-text-inputs/const';
+import { bakeAiBadge } from '@/utils/images/bake-ai-badge';
+
+import { ImageAttachment } from '../chat/message-image-attachment';
+import { defaultUploadFile, LocalFileState } from '../file-upload/upload-file';
 import { useImageModels } from '../providers/image-model-provider';
 import { useImageStyle } from '../providers/image-style-provider';
-import { generateImageAction } from '@/app/(authed)/(chat-bot)/image-generation/actions';
-import { ImageGenerationInputBox } from './image-generation-input-box';
 import { ImageActionButtons } from './image-action-buttons';
+import { useImageAspectRatio } from './image-aspect-ratio-provider';
 import { ImageGenerationError } from './image-generation-error';
-import { useTranslations } from 'next-intl';
+import { ImageGenerationInputBox } from './image-generation-input-box';
+import { ImageGenerationResult } from './image-generation-result';
+import { ImageGenerationWarning } from './image-generation-warning';
+import { ImageVersionSelect } from './image-version-select';
 import LoadingAnimation from './loading-animation';
-import { ConversationMessageModel } from '@shared/db/types';
-import { getReadOnlySignedUrlAction } from '@/app/api/file-operations/actions';
-import { FileModel } from '@shared/db/schema';
-import { useQueryClient } from '@tanstack/react-query';
-import { logError } from '@shared/logging';
-import { ResponsibleAIError } from '@ais-chat/ai-core/errors';
-import Image from 'next/image';
-import { navigateWithoutRefresh } from '@/utils/navigation/router';
+import { useImageGeneration } from './use-image-generation';
+import { useImageVersions } from './use-image-versions';
 
 interface ImageGenerationChatProps {
   conversationId?: string;
@@ -33,65 +41,90 @@ export default function ImageGenerationChat({
   const { selectedStyle } = useImageStyle();
   const tImageGeneration = useTranslations('image-generation');
 
+  const { versions, selectedIndex, selectedVersion, setSelectedIndex, appendVersion } =
+    useImageVersions({ initialMessages, fileMapping });
+
   const [input, setInput] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [lastPrompt, setLastPrompt] = useState('');
-  const [displayedImage, setDisplayedImage] = useState<{
-    prompt: string;
-    imageUrl: string;
-    fileId: string;
-  } | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const queryClient = useQueryClient();
+  const [files, setFiles] = useState<Map<string, LocalFileState>>(new Map());
   const imageRef = useRef<HTMLImageElement>(null);
-  // isImageReady indicates if the image is loaded and visible in the browser
-  const [isImageReady, setIsImageReady] = useState(false);
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const [showAiBadge, setShowAiBadge] = useState(true);
+  const [bakedEntry, setBakedEntry] = useState<{
+    sourceUrl: string;
+    objectUrl: string;
+  } | null>(null);
 
-  // Load the single image from initial messages and file attachments
+  const sourceUrl = selectedVersion?.imageUrl ?? null;
+
   useEffect(() => {
-    const loadImageFromFiles = async () => {
-      if (initialMessages.length >= 2 && fileMapping) {
-        const userMessage = initialMessages.find((msg) => msg.role === 'user');
-        const assistantMessage = initialMessages.find((msg) => msg.role === 'assistant');
-
-        if (userMessage && assistantMessage) {
-          // Get files attached to the assistant message
-          const attachedFiles = fileMapping.get(assistantMessage.id) || [];
-          const imageFile = attachedFiles.find((file) => file.type.startsWith('image/'));
-
-          if (imageFile) {
-            try {
-              // Generate signed URL for the image file
-              const signedUrl = await getReadOnlySignedUrlAction({
-                key: `message_attachments/${imageFile.id}`,
-                contentType: imageFile.type,
-                attachment: false,
-              });
-
-              if (signedUrl) {
-                setDisplayedImage({
-                  prompt: userMessage.content,
-                  imageUrl: signedUrl,
-                  fileId: imageFile.id,
-                });
-              }
-            } catch (error) {
-              logError('Error loading image from files:', error);
-            }
-          }
-        }
+    if (!showAiBadge || sourceUrl === null) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const blob = await bakeAiBadge(sourceUrl, aiBadge.src);
+        if (cancelled) return;
+        setBakedEntry({ sourceUrl, objectUrl: URL.createObjectURL(blob) });
+      } catch (error) {
+        if (!cancelled) logError('Failed to bake AI badge into image', error);
       }
+    })();
+    return () => {
+      cancelled = true;
     };
+  }, [showAiBadge, sourceUrl]);
 
-    loadImageFromFiles();
-  }, [initialMessages, fileMapping]);
+  useEffect(() => {
+    if (bakedEntry === null) return;
+    return () => URL.revokeObjectURL(bakedEntry.objectUrl);
+  }, [bakedEntry]);
+
+  const displaySrc =
+    showAiBadge && bakedEntry !== null && bakedEntry.sourceUrl === sourceUrl
+      ? bakedEntry.objectUrl
+      : (sourceUrl ?? '');
+
+  // The displayed image's src can change after it has already loaded (e.g. once
+  // the baked-AI-badge version becomes available), which resets img.complete.
+  // Track readiness per src so copy/download aren't clickable against a stale image.
+  const isImageReady = loadedSrc !== null && loadedSrc === displaySrc;
+
+  const { aspectRatio } = useImageAspectRatio();
+
+  const [pending, setPending] = useState<{
+    prompt: string;
+    attachedFiles: ImageAttachment[];
+  } | null>(null);
+
+  const { isGenerating, errorMessage, clearError, generate } = useImageGeneration({
+    initialConversationId: conversationId,
+    selectedModel,
+    selectedStyle,
+    aspectRatio,
+  });
+
+  const modelSupportsImageInput = (selectedModel?.supportedImageFormats?.length ?? 0) > 0;
+
+  const canAppendVersion = modelSupportsImageInput && selectedVersion !== null;
+  const maxFiles = canAppendVersion
+    ? IMAGE_GENERATION_INPUT_LIMIT - 1
+    : IMAGE_GENERATION_INPUT_LIMIT;
+
+  const showInputBox =
+    modelSupportsImageInput || (conversationId === undefined && selectedVersion === null);
+
+  const showInputBoxBelowImage =
+    showInputBox && modelSupportsImageInput && selectedVersion !== null;
 
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInput(e.target.value);
   }
 
-  function refetchConversations() {
-    void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+  function handleDeattachFile(localFileId: string) {
+    setFiles((prev) => {
+      const next = new Map(prev);
+      next.delete(localFileId);
+      return next;
+    });
   }
 
   async function customHandleSubmit(e: React.FormEvent) {
@@ -101,99 +134,125 @@ export default function ImageGenerationChat({
       return;
     }
 
-    const currentPrompt = input.trim();
-    setLastPrompt(currentPrompt);
-    setIsGenerating(true);
-    setErrorMessage(null);
+    const prompt = input.trim();
+    setInput('');
+    setFiles(new Map());
 
-    const result = await generateImageAction({
-      prompt: currentPrompt,
-      model: selectedModel,
-      style: selectedStyle,
-    });
-    if (result.success) {
-      // Update the displayed image
-      if (result.value.imageUrl) {
-        setIsImageReady(false);
-        setDisplayedImage({
-          prompt: currentPrompt,
-          imageUrl: result.value.imageUrl,
-          fileId: result.value.fileId,
-        });
-      }
+    const inputImageFileId =
+      canAppendVersion && selectedVersion !== null ? selectedVersion.imageFileId : null;
 
-      const newConversationId = result.value.conversationId;
-      if (conversationId === undefined || conversationId !== newConversationId) {
-        navigateWithoutRefresh(`/image-generation/d/${newConversationId}`);
-      }
-      refetchConversations();
-      // Clear the input after a successful generation
-      setInput('');
-    } else {
-      const error = result.error;
-      if (ResponsibleAIError.is(error)) {
-        setErrorMessage(tImageGeneration('responsible-ai-error'));
-      } else {
-        setErrorMessage(tImageGeneration('generation-error'));
-      }
+    const processedFiles = modelSupportsImageInput
+      ? Array.from(files.values()).filter(
+          (f): f is LocalFileState & { fileId: string } =>
+            f.status === 'processed' && f.fileId !== undefined,
+        )
+      : [];
+    const uploadedFileIds = processedFiles.map((f) => f.fileId);
+    const inputFileIds =
+      inputImageFileId !== null && !uploadedFileIds.includes(inputImageFileId)
+        ? [inputImageFileId, ...uploadedFileIds]
+        : uploadedFileIds;
+
+    const uploadedFileModels = processedFiles.map((f) => ({
+      id: f.fileId,
+      name: f.file.name,
+    }));
+    const inputImageFileModel =
+      inputImageFileId !== null
+        ? { id: inputImageFileId, name: tImageGeneration('generated-image-alt') }
+        : null;
+    const attachedFiles =
+      inputImageFileModel !== null
+        ? [inputImageFileModel, ...uploadedFileModels]
+        : uploadedFileModels;
+
+    setPending({ prompt, attachedFiles });
+
+    const generatedImage = await generate({ prompt, inputFileIds });
+    if (generatedImage !== null) {
+      appendVersion({ ...generatedImage, attachedFiles });
     }
-    setIsGenerating(false);
   }
+
+  const inputBox = (
+    <>
+      <ImageGenerationInputBox
+        isLoading={isGenerating}
+        handleInputChange={handleInputChange}
+        customHandleSubmit={customHandleSubmit}
+        input={input}
+        files={files}
+        setFiles={setFiles}
+        handleDeattachFile={handleDeattachFile}
+        fileUploadFn={defaultUploadFile}
+        supportedImageFormats={selectedModel?.supportedImageFormats}
+        maxFiles={maxFiles}
+        isEditMode={showInputBoxBelowImage}
+      />
+      {files.size > 0 && !modelSupportsImageInput && (
+        <ImageGenerationWarning message={tImageGeneration('input-images-not-supported-warning')} />
+      )}
+    </>
+  );
 
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex-1 flex flex-col justify-start p-6 w-full mx-auto">
-        <ImageGenerationInputBox
-          isLoading={isGenerating}
-          handleInputChange={handleInputChange}
-          customHandleSubmit={customHandleSubmit}
-          input={input}
-        />
-        <div className="w-3/4 mx-auto">
-          {/* Current generation in progress */}
-          {isGenerating && (
-            <div className="mt-6">
-              <h3 className="text-xs text-gray-700">{tImageGeneration('prompt-label')}</h3>
-              <p className="text-sm mb-3">{lastPrompt}</p>
+        {versions.length > 1 && (
+          <div className="mb-3 w-3/4 mx-auto">
+            <ImageVersionSelect
+              count={versions.length}
+              selectedIndex={selectedIndex}
+              onChange={(index) => {
+                clearError();
+                setSelectedIndex(index);
+              }}
+              disabled={isGenerating}
+            />
+          </div>
+        )}
+        {showInputBox && !showInputBoxBelowImage && inputBox}
+        <div className="w-3/4 mx-auto mt-6 first:mt-0">
+          {isGenerating && pending !== null && (
+            <ImageGenerationResult prompt={pending.prompt} attachedFiles={pending.attachedFiles}>
               <LoadingAnimation />
-            </div>
+            </ImageGenerationResult>
           )}
 
-          {/* Error state */}
-          {errorMessage && !isGenerating && (
-            <div className="mt-6">
-              <h3 className="text-xs text-gray-700">{tImageGeneration('prompt-label')}</h3>
-              <p className="text-sm mb-3">{lastPrompt}</p>
+          {errorMessage && !isGenerating && pending !== null && (
+            <ImageGenerationResult prompt={pending.prompt} attachedFiles={pending.attachedFiles}>
               <ImageGenerationError message={errorMessage} />
-            </div>
+            </ImageGenerationResult>
           )}
 
-          {/* Display the single image for this conversation */}
-          {displayedImage && !isGenerating && !errorMessage && (
-            <div className="mt-6">
-              <h3 className="text-xs text-gray-700">{tImageGeneration('prompt-label')}</h3>
-              <p className="text-sm mb-3">{displayedImage.prompt}</p>
+          {selectedVersion !== null && !isGenerating && !errorMessage && (
+            <ImageGenerationResult
+              prompt={selectedVersion.prompt}
+              attachedFiles={selectedVersion.attachedFiles}
+            >
               <Image
                 ref={imageRef}
-                src={displayedImage.imageUrl}
-                alt={displayedImage.prompt}
+                src={displaySrc}
+                alt={selectedVersion.prompt}
                 data-testid="generated-image"
                 className="w-full rounded-xl"
                 width={800}
                 height={800}
                 loading="eager"
-                unoptimized // Since we're using signed URLs from S3
+                unoptimized
                 crossOrigin="anonymous" // Needed for clipboard copy to work
-                onLoad={() => setIsImageReady(true)}
+                onLoad={() => setLoadedSrc(displaySrc)}
               />
               <ImageActionButtons
                 imageRef={imageRef}
-                fileId={displayedImage.fileId}
-                prompt={displayedImage.prompt}
+                fileId={selectedVersion.imageFileId}
                 isImageReady={isImageReady}
+                showAiBadge={showAiBadge}
+                onShowAiBadgeChange={setShowAiBadge}
               />
-            </div>
+            </ImageGenerationResult>
           )}
+          {showInputBoxBelowImage && <div className="mt-6">{inputBox}</div>}
         </div>
       </div>
     </div>

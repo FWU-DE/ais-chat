@@ -1,10 +1,5 @@
-import {
-  FinishReason,
-  FunctionCallingConfigMode,
-  createPartFromText,
-  createPartFromUri,
-} from '@google/genai';
 import { randomUUID } from 'node:crypto';
+
 import type {
   FunctionDeclaration,
   GenerateContentParameters,
@@ -12,9 +7,20 @@ import type {
   GenerateContentResponsePromptFeedback,
   GenerateContentResponseUsageMetadata,
   Part,
+  ThinkingConfig,
   Tool,
   ToolConfig,
 } from '@google/genai';
+import {
+  createPartFromBase64,
+  createPartFromText,
+  createPartFromUri,
+  FinishReason,
+  FunctionCallingConfigMode,
+} from '@google/genai';
+
+import { AiGenerationError, ResponsibleAIError } from '../../errors';
+import { createGoogleClient, formatGoogleError } from '../../google-client';
 import type {
   AgenticStreamFn,
   AiModel,
@@ -25,9 +31,7 @@ import type {
   ToolCall,
   ToolDefinition,
 } from '../types';
-import { AiGenerationError, ResponsibleAIError } from '../../errors';
-import { createGoogleClient, formatGoogleError } from '../../google-client';
-import { calculateCompletionUsage } from '../utils';
+import { estimateTokenUsage, isAbortError } from '../utils';
 import {
   constructGoogleAnthropicAgenticStreamFn,
   constructGoogleAnthropicTextGenerationFn,
@@ -55,7 +59,7 @@ function buildGoogleParts(message: Message): Part[] {
       continue;
     }
 
-    parts.push(createPartFromUri(attachment.url, attachment.contentType));
+    parts.push(createGoogleImagePart(attachment.url, attachment.contentType));
   }
 
   if (parts.length === 0) {
@@ -65,6 +69,14 @@ function buildGoogleParts(message: Message): Part[] {
   return parts;
 }
 
+function createGoogleImagePart(url: string, contentType: string): Part {
+  const base64DataUrl = /^data:image\/[a-z0-9.+-]+;base64,(.+)$/i.exec(url);
+  const base64Data = base64DataUrl?.[1];
+  return base64Data !== undefined
+    ? createPartFromBase64(base64Data, contentType)
+    : createPartFromUri(url, contentType);
+}
+
 function buildGoogleGenerateContentParameters({
   messages,
   model,
@@ -72,7 +84,11 @@ function buildGoogleGenerateContentParameters({
   temperature,
   tools,
   toolChoice,
-}: Parameters<TextGenerationFn>[0]): GenerateContentParameters {
+  abortSignal,
+  thinkingConfig,
+}: Parameters<TextGenerationFn>[0] & {
+  thinkingConfig?: ThinkingConfig;
+}): GenerateContentParameters {
   const contents = messages
     .filter((message) => message.role !== 'system')
     .map((message) => ({
@@ -86,6 +102,8 @@ function buildGoogleGenerateContentParameters({
     ...(systemInstruction.length > 0 ? { systemInstruction } : {}),
     ...(maxTokens !== undefined ? { maxOutputTokens: maxTokens } : {}),
     ...(temperature !== undefined ? { temperature } : {}),
+    ...(abortSignal !== undefined ? { abortSignal } : {}),
+    ...(thinkingConfig !== undefined ? { thinkingConfig } : {}),
     ...buildGoogleToolConfig(tools, toolChoice),
   };
 
@@ -94,6 +112,21 @@ function buildGoogleGenerateContentParameters({
     contents: contents.length > 0 ? contents : [{ role: 'user', parts: [createPartFromText('')] }],
     ...(Object.keys(config).length > 0 ? { config } : {}),
   };
+}
+
+// Gemini returns thought summary text as parts flagged `thought: true`, mixed in with normal content parts.
+function extractGoogleThoughtText(chunk: GenerateContentResponse): string {
+  const parts = chunk.candidates?.[0]?.content?.parts ?? [];
+  return parts
+    .filter((part) => part.thought === true && part.text !== undefined)
+    .map((part) => part.text)
+    .join('');
+}
+
+function getGoogleThinkingConfig(model: AiModel): ThinkingConfig | undefined {
+  const additionalParameters = model.additionalParameters as
+    { thinkingConfig?: ThinkingConfig } | undefined;
+  return additionalParameters?.thinkingConfig;
 }
 
 function toGoogleFunctionDeclarations(
@@ -208,16 +241,7 @@ function toTokenUsage({
     };
   }
 
-  const calculatedUsage = calculateCompletionUsage({
-    messages,
-    modelMessage: { role: 'assistant', content: text },
-  });
-
-  return {
-    promptTokens: calculatedUsage.prompt_tokens,
-    completionTokens: calculatedUsage.completion_tokens,
-    totalTokens: calculatedUsage.total_tokens,
-  };
+  return estimateTokenUsage({ messages, text });
 }
 
 export function constructGoogleTextStreamFn(model: AiModel): TextStreamFn {
@@ -227,7 +251,7 @@ export function constructGoogleTextStreamFn(model: AiModel): TextStreamFn {
   const clientConfig = createGoogleClient(model);
 
   return async function* getGoogleTextStream(
-    { messages, model: modelName, maxTokens, temperature },
+    { messages, model: modelName, maxTokens, temperature, abortSignal },
     onComplete,
   ) {
     try {
@@ -237,6 +261,7 @@ export function constructGoogleTextStreamFn(model: AiModel): TextStreamFn {
           model: modelName,
           maxTokens,
           temperature,
+          abortSignal,
         }),
       );
 
@@ -287,6 +312,7 @@ export function constructGoogleTextGenerationFn(model: AiModel): TextGenerationF
     model: modelName,
     maxTokens,
     temperature,
+    abortSignal,
   }) {
     try {
       const response = await clientConfig.client.models.generateContent(
@@ -295,6 +321,7 @@ export function constructGoogleTextGenerationFn(model: AiModel): TextGenerationF
           model: modelName,
           maxTokens,
           temperature,
+          abortSignal,
         }),
       );
 
@@ -333,7 +360,12 @@ export function constructGoogleAgenticStreamFn(model: AiModel): AgenticStreamFn 
     temperature,
     tools,
     toolChoice,
+    abortSignal,
   }) {
+    let text = '';
+    // Gemini reports cumulative usage on every chunk, so the last one survives an abort.
+    let usage: TokenUsage | undefined;
+
     try {
       const stream = await clientConfig.client.models.generateContentStream(
         buildGoogleGenerateContentParameters({
@@ -343,15 +375,20 @@ export function constructGoogleAgenticStreamFn(model: AiModel): AgenticStreamFn 
           temperature,
           tools,
           toolChoice,
+          abortSignal,
+          thinkingConfig: getGoogleThinkingConfig(model),
         }),
       );
 
-      let text = '';
-      let usage: TokenUsage | undefined;
       let functionCalls: NonNullable<GenerateContentResponse['functionCalls']> | undefined;
 
       for await (const chunk of stream) {
         assertGoogleResponseAllowed(chunk);
+
+        const thoughtText = extractGoogleThoughtText(chunk);
+        if (thoughtText !== '') {
+          yield { type: 'reasoning_summary', delta: thoughtText };
+        }
 
         const chunkText = chunk.text ?? '';
         if (chunkText !== '') {
@@ -398,6 +435,12 @@ export function constructGoogleAgenticStreamFn(model: AiModel): AgenticStreamFn 
     } catch (error) {
       if (error instanceof ResponsibleAIError || error instanceof AiGenerationError) {
         throw error;
+      }
+
+      if (isAbortError(error, abortSignal)) {
+        // Partial tool calls are unusable, but the prompt was consumed upstream and still costs money.
+        yield { type: 'finish', usage: usage ?? estimateTokenUsage({ messages, text }) };
+        return;
       }
 
       throw new AiGenerationError(formatGoogleError('Google Vertex AI Agentic stream', error));

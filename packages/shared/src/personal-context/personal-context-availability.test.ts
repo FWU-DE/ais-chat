@@ -1,13 +1,14 @@
-import { describe, it, expect } from 'vitest';
-import {
-  isPersonalContextAvailable,
-  resolvePersonalContextEnabled,
-} from './personal-context-availability';
+import { describe, expect, it } from 'vitest';
+
 import type {
   AssistantSelectModel,
   CharacterSelectModel,
   LearningScenarioSelectModel,
 } from '../db/schema';
+import {
+  isPersonalContextAvailable,
+  resolvePersonalContextEnabled,
+} from './personal-context-availability';
 
 const enabledToggles = { isPersonalContextEnabled: true } as Parameters<
   typeof isPersonalContextAvailable

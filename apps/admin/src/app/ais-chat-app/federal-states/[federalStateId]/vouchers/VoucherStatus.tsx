@@ -1,5 +1,5 @@
-import React from 'react';
 import { Voucher } from '@ais-chat/shared/vouchers/voucher';
+import React from 'react';
 
 type VoucherStatus = Voucher['status'];
 

@@ -7,7 +7,7 @@ const hilfeModusGpt: AssistantInsertModel & { id: string } = {
   name: 'Hilfe-Assistent',
   systemPrompt: '',
   userId: null,
-  accessLevel: 'global',
+  isGlobal: true,
   promptSuggestions: [],
   description: null,
   pictureId: null,

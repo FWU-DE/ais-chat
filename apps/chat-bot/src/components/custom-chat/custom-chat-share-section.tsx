@@ -1,18 +1,21 @@
 'use client';
 
-import CheckboxWithInfo from '@ui/components/common/checkbox-with-info';
-import { useToast } from '@/components/common/toast';
-import { useTranslations } from 'next-intl';
 import { LinkIcon } from '@phosphor-icons/react';
+import { Button } from '@ui/components/button';
+import { Card, CardRow } from '@ui/components/card';
+import { Checkbox } from '@ui/components/checkbox';
+import CheckboxWithInfo from '@ui/components/common/checkbox-with-info';
+import { FieldLabel } from '@ui/components/field';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { Control, FieldValues, Path, useController, useWatch } from 'react-hook-form';
+
+import { useToast } from '@/components/common/toast';
+
 import { useFederalState } from '../providers/federal-state-provider';
 import { CustomChatHeading2 } from './custom-chat-heading2';
-import { Card, CardRow } from '@ui/components/card';
-import { Button } from '@ui/components/button';
-import { Checkbox } from '@ui/components/checkbox';
-import { FieldLabel } from '@ui/components/field';
-import { useState } from 'react';
 import { CustomShareConfirmationDialog } from './custom-share-confirmation-dialog';
+import { CustomShareRemovalConfirmationDialog } from './custom-share-removal-confirmation-dialog';
 
 type CustomShareSectionProps<T extends FieldValues> = {
   control: Control<T>;
@@ -36,6 +39,7 @@ export default function CustomShareSection<T extends FieldValues>({
   const t = useTranslations('sharing');
   const toast = useToast();
   const [isCommunityConfirmOpen, setIsCommunityConfirmOpen] = useState(false);
+  const [isCommunityRemovalConfirmOpen, setIsCommunityRemovalConfirmOpen] = useState(false);
   const { field: communityField } = useController({
     name: communitySharingName,
     control,
@@ -95,8 +99,7 @@ export default function CustomShareSection<T extends FieldValues>({
                   onCheckedChange={(checked) => {
                     const nextChecked = checked === true;
                     if (!nextChecked) {
-                      communityField.onChange(false);
-                      onShareChange?.({ name: communitySharingName, checked: false });
+                      setIsCommunityRemovalConfirmOpen(true);
                       return;
                     }
 
@@ -147,6 +150,17 @@ export default function CustomShareSection<T extends FieldValues>({
           onAccept={() => {
             communityField.onChange(true);
             onShareChange?.({ name: communitySharingName, checked: true });
+          }}
+        />
+      )}
+
+      {communitySharingName && (
+        <CustomShareRemovalConfirmationDialog
+          open={isCommunityRemovalConfirmOpen}
+          onOpenChange={setIsCommunityRemovalConfirmOpen}
+          onConfirm={() => {
+            communityField.onChange(false);
+            onShareChange?.({ name: communitySharingName, checked: false });
           }}
         />
       )}

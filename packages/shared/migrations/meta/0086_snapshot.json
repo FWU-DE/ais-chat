@@ -1,5 +1,5 @@
 {
-  "id": "24bd25d2-d386-47f2-886b-2e71f755ab20",
+  "id": "331844a1-71e7-4a91-89a7-6b20911ffd24",
   "prevId": "2f905f50-8ee2-45ab-b048-562ba5948530",
   "version": "7",
   "dialect": "postgresql",
@@ -41,8 +41,12 @@
           "name": "assistant_file_mapping_file_id_file_table_id_fk",
           "tableFrom": "assistant_file_mapping",
           "tableTo": "file_table",
-          "columnsFrom": ["file_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "file_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -50,8 +54,12 @@
           "name": "assistant_file_mapping_assistant_id_assistant_id_fk",
           "tableFrom": "assistant_file_mapping",
           "tableTo": "assistant",
-          "columnsFrom": ["assistant_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "assistant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -61,7 +69,10 @@
         "assistant_file_mapping_assistant_id_file_id_unique": {
           "name": "assistant_file_mapping_assistant_id_file_id_unique",
           "nullsNotDistinct": false,
-          "columns": ["assistant_id", "file_id"]
+          "columns": [
+            "assistant_id",
+            "file_id"
+          ]
         }
       },
       "policies": {},
@@ -105,8 +116,12 @@
           "name": "character_file_mapping_file_id_file_table_id_fk",
           "tableFrom": "character_file_mapping",
           "tableTo": "file_table",
-          "columnsFrom": ["file_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "file_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -114,8 +129,12 @@
           "name": "character_file_mapping_character_id_character_id_fk",
           "tableFrom": "character_file_mapping",
           "tableTo": "character",
-          "columnsFrom": ["character_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "character_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -125,7 +144,10 @@
         "character_file_mapping_character_id_file_id_unique": {
           "name": "character_file_mapping_character_id_file_id_unique",
           "nullsNotDistinct": false,
-          "columns": ["character_id", "file_id"]
+          "columns": [
+            "character_id",
+            "file_id"
+          ]
         }
       },
       "policies": {},
@@ -191,8 +213,12 @@
           "name": "conversation_message_file_mapping_fileId_file_table_id_fk",
           "tableFrom": "conversation_message_file_mapping",
           "tableTo": "file_table",
-          "columnsFrom": ["fileId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "fileId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -200,8 +226,12 @@
           "name": "conversation_message_file_mapping_conversationMessageId_fk",
           "tableFrom": "conversation_message_file_mapping",
           "tableTo": "conversation_message",
-          "columnsFrom": ["conversationMessageId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "conversationMessageId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -209,8 +239,12 @@
           "name": "conversation_message_file_mapping_conversationId_fk",
           "tableFrom": "conversation_message_file_mapping",
           "tableTo": "conversation",
-          "columnsFrom": ["conversationId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "conversationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -220,7 +254,10 @@
         "conversation_message_file_mapping_conversationId_fileId_unique": {
           "name": "conversation_message_file_mapping_conversationId_fileId_unique",
           "nullsNotDistinct": false,
-          "columns": ["conversationId", "fileId"]
+          "columns": [
+            "conversationId",
+            "fileId"
+          ]
         }
       },
       "policies": {},
@@ -264,8 +301,12 @@
           "name": "learning_scenario_file_mapping_file_id_file_table_id_fk",
           "tableFrom": "learning_scenario_file_mapping",
           "tableTo": "file_table",
-          "columnsFrom": ["file_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "file_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -273,8 +314,12 @@
           "name": "learning_scenario_file_mapping_learning_scenario_id_fk",
           "tableFrom": "learning_scenario_file_mapping",
           "tableTo": "learning_scenario",
-          "columnsFrom": ["learning_scenario_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "learning_scenario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -284,7 +329,10 @@
         "learning_scenario_file_mapping_learningScenarioId_fileId_unique": {
           "name": "learning_scenario_file_mapping_learningScenarioId_fileId_unique",
           "nullsNotDistinct": false,
-          "columns": ["learning_scenario_id", "file_id"]
+          "columns": [
+            "learning_scenario_id",
+            "file_id"
+          ]
         }
       },
       "policies": {},
@@ -428,8 +476,12 @@
           "name": "voucher_federal_state_id_federal_state_id_fk",
           "tableFrom": "voucher",
           "tableTo": "federal_state",
-          "columnsFrom": ["federal_state_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "federal_state_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -437,8 +489,12 @@
           "name": "voucher_redeemed_by_user_entity_id_fk",
           "tableFrom": "voucher",
           "tableTo": "user_entity",
-          "columnsFrom": ["redeemed_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "redeemed_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -448,7 +504,9 @@
         "voucher_code_unique": {
           "name": "voucher_code_unique",
           "nullsNotDistinct": false,
-          "columns": ["code"]
+          "columns": [
+            "code"
+          ]
         }
       },
       "policies": {},
@@ -521,13 +579,6 @@
         },
         "is_web_search_enabled": {
           "name": "is_web_search_enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "is_personal_context_enabled": {
-          "name": "is_personal_context_enabled",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -615,8 +666,12 @@
           "name": "assistant_user_id_user_entity_id_fk",
           "tableFrom": "assistant",
           "tableTo": "user_entity",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -650,8 +705,12 @@
           "name": "assistant_template_mappings_assistant_id_assistant_id_fk",
           "tableFrom": "assistant_template_mappings",
           "tableTo": "assistant",
-          "columnsFrom": ["assistant_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "assistant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -659,8 +718,12 @@
           "name": "assistant_template_mappings_federal_state_id_fk",
           "tableFrom": "assistant_template_mappings",
           "tableTo": "federal_state",
-          "columnsFrom": ["federal_state_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "federal_state_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -668,7 +731,10 @@
       "compositePrimaryKeys": {
         "assistant_template_mappings_assistant_id_federal_state_id_pk": {
           "name": "assistant_template_mappings_assistant_id_federal_state_id_pk",
-          "columns": ["assistant_id", "federal_state_id"]
+          "columns": [
+            "assistant_id",
+            "federal_state_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -870,8 +936,12 @@
           "name": "character_user_id_user_entity_id_fk",
           "tableFrom": "character",
           "tableTo": "user_entity",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -879,8 +949,12 @@
           "name": "character_model_id_llm_model_id_fk",
           "tableFrom": "character",
           "tableTo": "llm_model",
-          "columnsFrom": ["model_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "model_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -914,8 +988,12 @@
           "name": "character_template_mappings_character_id_character_id_fk",
           "tableFrom": "character_template_mappings",
           "tableTo": "character",
-          "columnsFrom": ["character_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "character_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -923,8 +1001,12 @@
           "name": "character_template_mappings_federal_state_id_fk",
           "tableFrom": "character_template_mappings",
           "tableTo": "federal_state",
-          "columnsFrom": ["federal_state_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "federal_state_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -932,7 +1014,10 @@
       "compositePrimaryKeys": {
         "character_template_mappings_character_id_federal_state_id_pk": {
           "name": "character_template_mappings_character_id_federal_state_id_pk",
-          "columns": ["character_id", "federal_state_id"]
+          "columns": [
+            "character_id",
+            "federal_state_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -1018,8 +1103,12 @@
           "name": "chunk_file_id_file_table_id_fk",
           "tableFrom": "chunk",
           "tableTo": "file_table",
-          "columnsFrom": ["file_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "file_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1029,9 +1118,37 @@
         "chunk_source_url_order_index_unique": {
           "name": "chunk_source_url_order_index_unique",
           "nullsNotDistinct": false,
-          "columns": ["source_url", "order_index"]
+          "columns": [
+            "source_url",
+            "order_index"
+          ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.configuration": {
+      "name": "configuration",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1180,8 +1297,12 @@
           "name": "conversation_message_conversation_id_conversation_id_fk",
           "tableFrom": "conversation_message",
           "tableTo": "conversation",
-          "columnsFrom": ["conversation_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "conversation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1189,8 +1310,12 @@
           "name": "conversation_message_user_id_user_entity_id_fk",
           "tableFrom": "conversation_message",
           "tableTo": "user_entity",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1261,12 +1386,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'chat'"
-        },
-        "personal_context_enabled": {
-          "name": "personal_context_enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -1358,8 +1477,12 @@
           "name": "conversation_user_id_user_entity_id_fk",
           "tableFrom": "conversation",
           "tableTo": "user_entity",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1367,8 +1490,12 @@
           "name": "conversation_character_id_character_id_fk",
           "tableFrom": "conversation",
           "tableTo": "character",
-          "columnsFrom": ["character_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "character_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1376,8 +1503,12 @@
           "name": "conversation_learning_scenario_id_learning_scenario_id_fk",
           "tableFrom": "conversation",
           "tableTo": "learning_scenario",
-          "columnsFrom": ["learning_scenario_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "learning_scenario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1385,8 +1516,12 @@
           "name": "conversation_assistant_id_assistant_id_fk",
           "tableFrom": "conversation",
           "tableTo": "assistant",
-          "columnsFrom": ["assistant_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "assistant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1511,8 +1646,12 @@
           "name": "conversation_usage_tracking_model_id_llm_model_id_fk",
           "tableFrom": "conversation_usage_tracking",
           "tableTo": "llm_model",
-          "columnsFrom": ["model_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "model_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1560,8 +1699,12 @@
           "name": "federal_state_llm_model_mapping_llm_model_id_llm_model_id_fk",
           "tableFrom": "federal_state_llm_model_mapping",
           "tableTo": "llm_model",
-          "columnsFrom": ["llm_model_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "llm_model_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1569,8 +1712,12 @@
           "name": "federal_state_llm_model_mapping_federal_state_id_fk",
           "tableFrom": "federal_state_llm_model_mapping",
           "tableTo": "federal_state",
-          "columnsFrom": ["federal_state_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "federal_state_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1580,7 +1727,10 @@
         "federal_state_llm_model_mapping_federal_state_llm_model_unique": {
           "name": "federal_state_llm_model_mapping_federal_state_llm_model_unique",
           "nullsNotDistinct": false,
-          "columns": ["federal_state_id", "llm_model_id"]
+          "columns": [
+            "federal_state_id",
+            "llm_model_id"
+          ]
         }
       },
       "policies": {},
@@ -1759,8 +1909,12 @@
           "name": "file_table_user_id_user_entity_id_fk",
           "tableFrom": "file_table",
           "tableTo": "user_entity",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1810,8 +1964,12 @@
           "name": "info_banner_federal_state_mapping_info_banner_id_info_banner_id_fk",
           "tableFrom": "info_banner_federal_state_mapping",
           "tableTo": "info_banner",
-          "columnsFrom": ["info_banner_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "info_banner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1819,8 +1977,12 @@
           "name": "info_banner_mapping_federal_state_id_fk",
           "tableFrom": "info_banner_federal_state_mapping",
           "tableTo": "federal_state",
-          "columnsFrom": ["federal_state_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "federal_state_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1828,7 +1990,10 @@
       "compositePrimaryKeys": {
         "info_banner_federal_state_mapping_info_banner_id_federal_state_id_pk": {
           "name": "info_banner_federal_state_mapping_info_banner_id_federal_state_id_pk",
-          "columns": ["info_banner_id", "federal_state_id"]
+          "columns": [
+            "info_banner_id",
+            "federal_state_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -2012,8 +2177,12 @@
           "name": "info_banner_user_state_info_banner_id_info_banner_id_fk",
           "tableFrom": "info_banner_user_state",
           "tableTo": "info_banner",
-          "columnsFrom": ["info_banner_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "info_banner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2021,8 +2190,12 @@
           "name": "info_banner_user_state_user_id_user_entity_id_fk",
           "tableFrom": "info_banner_user_state",
           "tableTo": "user_entity",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2030,7 +2203,10 @@
       "compositePrimaryKeys": {
         "info_banner_user_state_info_banner_id_user_id_pk": {
           "name": "info_banner_user_state_info_banner_id_user_id_pk",
-          "columns": ["info_banner_id", "user_id"]
+          "columns": [
+            "info_banner_id",
+            "user_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -2212,8 +2388,12 @@
           "name": "learning_scenario_model_id_llm_model_id_fk",
           "tableFrom": "learning_scenario",
           "tableTo": "llm_model",
-          "columnsFrom": ["model_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "model_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2221,8 +2401,12 @@
           "name": "learning_scenario_user_id_user_entity_id_fk",
           "tableFrom": "learning_scenario",
           "tableTo": "user_entity",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2256,8 +2440,12 @@
           "name": "learning_scenario_template_mappings_learning_scenario_id_fk",
           "tableFrom": "learning_scenario_template_mappings",
           "tableTo": "learning_scenario",
-          "columnsFrom": ["learning_scenario_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "learning_scenario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2265,8 +2453,12 @@
           "name": "learning_scenario_template_mappings_federal_state_id_fk",
           "tableFrom": "learning_scenario_template_mappings",
           "tableTo": "federal_state",
-          "columnsFrom": ["federal_state_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "federal_state_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2274,7 +2466,10 @@
       "compositePrimaryKeys": {
         "learning_scenario_template_mappings_pk": {
           "name": "learning_scenario_template_mappings_pk",
-          "columns": ["learning_scenario_id", "federal_state_id"]
+          "columns": [
+            "learning_scenario_id",
+            "federal_state_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -2358,77 +2553,10 @@
         "llm_model_owner_name_unique": {
           "name": "llm_model_owner_name_unique",
           "nullsNotDistinct": false,
-          "columns": ["owner", "name"]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.personal_context": {
-      "name": "personal_context",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "content": {
-          "name": "content",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "''"
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "personal_context_user_id_user_entity_id_fk": {
-          "name": "personal_context_user_id_user_entity_id_fk",
-          "tableFrom": "personal_context",
-          "tableTo": "user_entity",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "personal_context_user_id_unique": {
-          "name": "personal_context_user_id_unique",
-          "nullsNotDistinct": false,
-          "columns": ["user_id"]
+          "columns": [
+            "owner",
+            "name"
+          ]
         }
       },
       "policies": {},
@@ -2549,8 +2677,12 @@
           "name": "shared_character_chat_usage_tracking_model_id_llm_model_id_fk",
           "tableFrom": "shared_character_chat_usage_tracking",
           "tableTo": "llm_model",
-          "columnsFrom": ["model_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "model_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2650,8 +2782,12 @@
           "name": "shared_character_conversation_user_id_user_entity_id_fk",
           "tableFrom": "shared_character_conversation",
           "tableTo": "user_entity",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2661,7 +2797,9 @@
         "shared_character_conversation_invite_code_unique": {
           "name": "shared_character_conversation_invite_code_unique",
           "nullsNotDistinct": false,
-          "columns": ["invite_code"]
+          "columns": [
+            "invite_code"
+          ]
         }
       },
       "policies": {},
@@ -2757,8 +2895,12 @@
           "name": "shared_learning_scenario_user_id_user_entity_id_fk",
           "tableFrom": "shared_learning_scenario",
           "tableTo": "user_entity",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2766,8 +2908,12 @@
           "name": "shared_learning_scenario_learning_scenario_id_fk",
           "tableFrom": "shared_learning_scenario",
           "tableTo": "learning_scenario",
-          "columnsFrom": ["learning_scenario_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "learning_scenario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2777,7 +2923,9 @@
         "shared_learning_scenario_invite_code_unique": {
           "name": "shared_learning_scenario_invite_code_unique",
           "nullsNotDistinct": false,
-          "columns": ["invite_code"]
+          "columns": [
+            "invite_code"
+          ]
         }
       },
       "policies": {},
@@ -2898,8 +3046,12 @@
           "name": "shared_learning_scenario_usage_tracking_model_id_fk",
           "tableFrom": "shared_learning_scenario_usage_tracking",
           "tableTo": "llm_model",
-          "columnsFrom": ["model_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "model_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -3054,8 +3206,12 @@
           "name": "suspension_request_assistant_id_assistant_id_fk",
           "tableFrom": "suspension_request",
           "tableTo": "assistant",
-          "columnsFrom": ["assistant_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "assistant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3063,8 +3219,12 @@
           "name": "suspension_request_character_id_character_id_fk",
           "tableFrom": "suspension_request",
           "tableTo": "character",
-          "columnsFrom": ["character_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "character_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3072,8 +3232,12 @@
           "name": "suspension_request_learning_scenario_id_learning_scenario_id_fk",
           "tableFrom": "suspension_request",
           "tableTo": "learning_scenario",
-          "columnsFrom": ["learning_scenario_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "learning_scenario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3081,8 +3245,12 @@
           "name": "suspension_request_requester_id_user_entity_id_fk",
           "tableFrom": "suspension_request",
           "tableTo": "user_entity",
-          "columnsFrom": ["requester_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "requester_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3176,7 +3344,9 @@
         "url_preset_name_unique": {
           "name": "url_preset_name_unique",
           "nullsNotDistinct": false,
-          "columns": ["name"]
+          "columns": [
+            "name"
+          ]
         }
       },
       "policies": {},
@@ -3240,8 +3410,12 @@
           "name": "user_entity_federal_state_id_federal_state_id_fk",
           "tableFrom": "user_entity",
           "tableTo": "federal_state",
-          "columnsFrom": ["federal_state_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "federal_state_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -3257,32 +3431,55 @@
     "public.access_level": {
       "name": "access_level",
       "schema": "public",
-      "values": ["private", "school", "community", "global"]
+      "values": [
+        "private",
+        "school",
+        "community",
+        "global"
+      ]
     },
     "public.chunk_source_type": {
       "name": "chunk_source_type",
       "schema": "public",
-      "values": ["file", "webpage"]
+      "values": [
+        "file",
+        "webpage"
+      ]
     },
     "public.conversation_role": {
       "name": "conversation_role",
       "schema": "public",
-      "values": ["system", "user", "assistant", "tool"]
+      "values": [
+        "system",
+        "user",
+        "assistant",
+        "tool"
+      ]
     },
     "public.conversation_type": {
       "name": "conversation_type",
       "schema": "public",
-      "values": ["chat", "image-generation"]
+      "values": [
+        "chat",
+        "image-generation"
+      ]
     },
     "public.info_banner_type": {
       "name": "info_banner_type",
       "schema": "public",
-      "values": ["warning", "info"]
+      "values": [
+        "warning",
+        "info"
+      ]
     },
     "public.llm_model_type": {
       "name": "llm_model_type",
       "schema": "public",
-      "values": ["text", "image", "fc"]
+      "values": [
+        "text",
+        "image",
+        "fc"
+      ]
     },
     "public.suspension_request_reason": {
       "name": "suspension_request_reason",
@@ -3301,22 +3498,34 @@
     "public.tool_call_name": {
       "name": "tool_call_name",
       "schema": "public",
-      "values": ["web_search"]
+      "values": [
+        "web_search"
+      ]
     },
     "public.user_school_role": {
       "name": "user_school_role",
       "schema": "public",
-      "values": ["student", "teacher"]
+      "values": [
+        "student",
+        "teacher"
+      ]
     },
     "public.voucher_status": {
       "name": "voucher_status",
       "schema": "public",
-      "values": ["created", "redeemed", "revoked"]
+      "values": [
+        "created",
+        "redeemed",
+        "revoked"
+      ]
     },
     "public.web_search_scope": {
       "name": "web_search_scope",
       "schema": "public",
-      "values": ["all-web", "included-domains"]
+      "values": [
+        "all-web",
+        "included-domains"
+      ]
     }
   },
   "schemas": {},
