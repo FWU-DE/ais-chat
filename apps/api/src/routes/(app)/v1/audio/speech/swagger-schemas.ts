@@ -12,8 +12,7 @@ export const speechRequestSwaggerSchema = {
       },
       input: {
         type: 'string',
-        maxLength: 4096,
-        description: 'The text to generate audio for, at most 4096 characters',
+        description: 'The text to generate audio for. Provider limits apply to each text segment.',
         example: 'Hallo, wie geht es dir?',
       },
       voice: {

@@ -80,7 +80,10 @@ API adapter. The adapter calls
 `streamSpeechForModel`.
 
 The voice must be a configured voice name listed by `GET /v1/models` (custom `{ id }` voice
-objects are not accepted). Input is trimmed, must be non-empty, and is limited to 4096 characters.
+objects are not accepted). Input is trimmed and must be non-empty. There is no API character limit;
+the HTTP body-size limit still applies. The existing pipeline splits input into segments of up to
+10,000 characters. Providers enforce their limits per segment, and provider errors are handled
+through the usual API error mapping.
 Only MP3 output is supported. Responses can be an audio stream or speech-audio SSE events.
 
 Speech is billed per input character. Billing is finalized by the stream generator when generation

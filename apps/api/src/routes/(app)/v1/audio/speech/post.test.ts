@@ -127,6 +127,19 @@ describe('POST /v1/audio/speech', () => {
     );
   });
 
+  it.each([4097, 20_001])('accepts %i characters through the OpenAI SDK', async (length) => {
+    const input = 'x'.repeat(length);
+    const response = await client().audio.speech.create({ model: 'tts', voice: 'alloy', input });
+
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(Buffer.concat(chunks));
+    expect(mocks.generateSpeechStreamByNameWithBilling).toHaveBeenCalledWith(
+      'tts',
+      input,
+      'alloy',
+      '7fde5f9b-a687-6e6c-bf1e-ad5dcdf6e7f9',
+    );
+  });
+
   it('returns base64 delta SSE events and a done event', async () => {
     const response = await fetch(`${baseUrl}/audio/speech`, {
       method: 'POST',
@@ -149,7 +162,8 @@ describe('POST /v1/audio/speech', () => {
 
   it.each([
     [{ response_format: 'wav' as const }, 'unsupported response format'],
-    [{ input: 'x'.repeat(4097) }, 'input length'],
+    [{ input: '' }, 'empty input'],
+    [{ input: '   ' }, 'whitespace-only input'],
     [{ speed: 1.5 }, 'speed'],
     [{ instructions: 'x' }, 'instructions'],
   ])('rejects %s with 400 (%s)', async (extra, description) => {
