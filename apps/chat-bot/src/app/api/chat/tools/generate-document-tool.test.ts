@@ -23,8 +23,19 @@ describe('generateDocumentArgsSchema', () => {
     { format: 'docx', title: 'a', content: '' },
     { format: 'docx', title: 'a'.repeat(81), content: 'b' },
     { format: 'docx', title: 'a', content: 'b'.repeat(100_001) },
+    { format: 'html', title: 'a', content: '# Not HTML' },
   ])('rejects invalid args %#', (args) => {
     expect(generateDocumentArgsSchema.safeParse(args).success).toBe(false);
+  });
+
+  it('accepts a complete HTML document for html output', () => {
+    expect(
+      generateDocumentArgsSchema.safeParse({
+        format: 'html',
+        title: 'Interaktiv',
+        content: '<!doctype html><html><body><p>Hallo</p></body></html>',
+      }).success,
+    ).toBe(true);
   });
 });
 
@@ -38,9 +49,14 @@ describe('buildGenerateDocumentTool', () => {
       required: ['format', 'title', 'content'],
       additionalProperties: false,
       properties: {
-        format: { enum: ['docx'] },
+        format: { enum: ['docx', 'html'] },
         title: { minLength: 1, maxLength: 80 },
         content: { minLength: 1, maxLength: 100_000 },
+      },
+    });
+    expect(definition.parameters).toMatchObject({
+      properties: {
+        content: { description: expect.stringContaining('<!doctype html>') },
       },
     });
   });

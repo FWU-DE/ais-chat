@@ -15,12 +15,24 @@ import type { ToolActivity, ToolDefinition, ToolRegistration } from './types';
 
 const MAX_DOCUMENT_CONTENT_LENGTH = 100_000;
 const FALLBACK_FILE_NAME = 'Dokument';
+const COMPLETE_HTML_DOCUMENT_PATTERN =
+  /^\s*<!doctype\s+html\b[\s\S]*<html[\s>][\s\S]*<\/html>\s*$/i;
 
-export const generateDocumentArgsSchema = z.object({
-  format: z.enum(GENERATED_DOCUMENT_FORMATS),
-  title: z.string().trim().min(1).max(MAX_FILE_NAME_LENGTH),
-  content: z.string().trim().min(1).max(MAX_DOCUMENT_CONTENT_LENGTH),
-});
+export const generateDocumentArgsSchema = z
+  .object({
+    format: z.enum(GENERATED_DOCUMENT_FORMATS),
+    title: z.string().trim().min(1).max(MAX_FILE_NAME_LENGTH),
+    content: z.string().trim().min(1).max(MAX_DOCUMENT_CONTENT_LENGTH),
+  })
+  .superRefine(({ format, content }, context) => {
+    if (format === 'html' && !COMPLETE_HTML_DOCUMENT_PATTERN.test(content)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['content'],
+        message: 'HTML content must be a complete document starting with <!doctype html>.',
+      });
+    }
+  });
 
 export type GenerateDocumentToolResult = {
   status: 'created';
@@ -69,7 +81,7 @@ export function buildGenerateDocumentTool(): ToolRegistration<GenerateDocumentTo
         content: {
           type: 'string',
           description:
-            'The complete document as Markdown, written in the language of the conversation.',
+            'For docx, provide the complete document as Markdown. For html, provide a complete HTML document starting with <!doctype html>, including an <html> root element and inline JavaScript where needed.',
           minLength: 1,
           maxLength: MAX_DOCUMENT_CONTENT_LENGTH,
         },

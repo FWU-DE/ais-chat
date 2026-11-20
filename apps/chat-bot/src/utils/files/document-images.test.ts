@@ -261,7 +261,10 @@ describe('loadDocumentImage', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: () => blob }));
     vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue(bitmap));
 
-    await expect(loadDocumentImage('/img/1')).resolves.toEqual(await blob.arrayBuffer());
+    await expect(loadDocumentImage('/img/1')).resolves.toEqual({
+      data: await blob.arrayBuffer(),
+      mimeType: 'image/png',
+    });
     expect(bitmap.close).toHaveBeenCalledOnce();
     vi.unstubAllGlobals();
   });
@@ -286,7 +289,10 @@ describe('loadDocumentImage', () => {
     vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue(bitmap));
     vi.stubGlobal('document', { createElement: vi.fn().mockReturnValue(canvas) });
 
-    await expect(loadDocumentImage('/img/1')).resolves.toEqual(await png.arrayBuffer());
+    await expect(loadDocumentImage('/img/1')).resolves.toEqual({
+      data: await png.arrayBuffer(),
+      mimeType: 'image/png',
+    });
     expect(canvas.width).toBe(240);
     expect(canvas.height).toBe(120);
     expect(context.drawImage).toHaveBeenCalledWith(bitmap, 0, 0, 240, 120);

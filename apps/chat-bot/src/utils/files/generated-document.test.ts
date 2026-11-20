@@ -59,6 +59,17 @@ describe('createGeneratedDocumentBlob', () => {
     vi.unstubAllGlobals();
   });
 
+  it('uses the document title for generated HTML metadata', async () => {
+    vi.stubGlobal('DOMParser', new JSDOM().window.DOMParser);
+    const blob = await createGeneratedDocumentBlob(
+      '<!doctype html><html><head><title>Arbeitsblatt</title></head><body><p>Inhalt</p></body></html>',
+      'html',
+    );
+
+    await expect(blob.text()).resolves.toContain('<title>Arbeitsblatt</title>');
+    vi.unstubAllGlobals();
+  });
+
   it('creates a DOCX (zip) and loads external images from Markdown', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const blob = await createGeneratedDocumentBlob(MARKDOWN, 'docx');
