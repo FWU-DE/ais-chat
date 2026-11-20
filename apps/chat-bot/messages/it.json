@@ -2,7 +2,31 @@
   "common": {
     "delete": "Cancella",
     "cancel": "Annulla",
-    "information-disclaimer": "AIS.chat può commettere errori. Mantieni un atteggiamento critico e verifica tutte le informazioni."
+    "information-disclaimer": "AIS.chat può commettere errori. Mantieni un atteggiamento critico e verifica tutte le informazioni.",
+    "message-copy": "Copia messaggio",
+    "regenerate-message-button": "Rigenera la risposta",
+    "code-download": "Scarica il file",
+    "plot": {
+      "label": "Grafico",
+      "download-png": "Scarica il grafico",
+      "reset": "Ripristina le modifiche",
+      "zoom-in": "Ingrandisci",
+      "zoom-out": "Riduci",
+      "fullscreen": "Mostra a schermo intero",
+      "description": "Grafico: {title}",
+      "error": "Non è stato possibile visualizzare il grafico."
+    },
+    "document": {
+      "download": "Scarica {fileName}",
+      "error": "Non è stato possibile creare il documento."
+    },
+    "read-aloud": "Leggi il messaggio ad alta voce",
+    "pause-message": "Metti in pausa la lettura",
+    "read-aloud-error": "La sintesi vocale non è riuscita.",
+    "listen-to-answer": "Ascolta la risposta",
+    "pause-audio": "Pausa",
+    "show-message-text": "Mostra il testo",
+    "hide-message-text": "Nascondi il testo"
   },
   "characters": {
     "shared": {
@@ -32,19 +56,39 @@
     "share-page": {
       "go-to": "Vai su",
       "enter-code": "Inserisci il codice.",
-      "open-chat": "Apri la chat",
-      "use-qr": "Scansiona il codice QR.",
+      "open-chat": "Apri chat",
+      "use-qr": "Oppure usa il codice QR",
       "copy-link": "Copia link di avvio",
       "learning-scenario": {
         "sub-header": "Scenario di apprendimento",
         "back-button": "Vai allo scenario di apprendimento",
-        "join": "Avvia lo scenario di apprendimento"
+        "join": "Iniziare lo scenario di apprendimento"
       },
       "character": {
         "sub-header": "Interlocutore",
         "back-button": "Vai all’interlocutore",
-        "join": "Partecipa al dialogo"
+        "join": "Partecipare al dialogo"
       }
+    }
+  },
+  "ai-activity": {
+    "title": "Attività IA",
+    "toggle": "Mostra/nascondi l’attività IA",
+    "open-source": "Apri la fonte: {source}",
+    "failed": "Non riuscito",
+    "steps": {
+      "analysis": "Analisi",
+      "analysis-summary": "Riepilogo dell’analisi",
+      "done": "Completato",
+      "web_search": "Ricerca web",
+      "web_scraper": "Pagina web letta",
+      "retrieve_text_chunks": "Estratti rilevanti del file letti",
+      "retrieve_text_chunks_prefix": "Termini di ricerca:",
+      "retrieve_entire_file": "File letto per intero",
+      "mundo_search": "Ricerca in Mundo",
+      "math_calculate": "Calcolo eseguito",
+      "create_plot": "Grafico creato",
+      "generate_document": "File creato"
     }
   }
 }

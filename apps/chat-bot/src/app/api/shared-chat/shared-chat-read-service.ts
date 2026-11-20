@@ -1,22 +1,24 @@
 import { dbGetFilesInIds } from '@shared/db/functions/files';
 import { ForbiddenError, NotFoundError } from '@shared/error';
-import { getReadOnlySignedUrl } from '@shared/s3';
-import { verify } from '.';
+import { verify } from '@shared/shared-chat';
+
 import { getSharedChatEntity } from './shared-chat-get-entity';
 
-export async function getSharedChatReadOnlySignedUrl({
+export async function verifySharedChatImageAccess({
   inviteCode,
   entityType,
   entityId,
   fileId,
   sharedSessionId,
+  allowExport = false,
 }: {
   inviteCode: string;
   entityType: 'character' | 'learningScenario';
   entityId: string;
   fileId: string;
   sharedSessionId: string;
-}): Promise<string> {
+  allowExport?: boolean;
+}): Promise<void> {
   if (sharedSessionId.trim() === '') {
     throw new ForbiddenError('Not authorized to access this file');
   }
@@ -27,7 +29,13 @@ export async function getSharedChatReadOnlySignedUrl({
     entityId,
   });
 
-  verify.sharedChatEntityIsAccessible(entity);
+  if (allowExport) {
+    // User should still be able to access files even if the chat has ended, as long as it is not deleted or suspended
+    verify.sharedChatIsNotDeleted(entity);
+    verify.sharedChatIsNotSuspended(entity);
+  } else {
+    verify.sharedChatEntityIsAccessible(entity);
+  }
 
   const files = await dbGetFilesInIds([fileId]);
   const file = files[0];
@@ -37,13 +45,4 @@ export async function getSharedChatReadOnlySignedUrl({
   }
 
   verify.filesDoNotBelongToAnyUser([file]);
-  verify.sharedChatFileOwnershipBySession({
-    files,
-    inviteCode,
-    entityType,
-    entityId,
-    sharedSessionId,
-  });
-
-  return getReadOnlySignedUrl({ key: `message_attachments/${file.id}` });
 }

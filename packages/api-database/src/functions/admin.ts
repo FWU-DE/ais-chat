@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm';
+
+import { verifyPassword } from '../crypto';
 import { db } from '../db';
 import { adminTable } from '../schema';
-import { verifyPassword } from '../crypto';
 
 export async function dbGetAdminByEmailAndPassword({
   email,

@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { chatWithImageAssistant } from './image-assistant-service';
 
 vi.mock('@shared/db/functions/federal-state', () => ({
-  dbGetFederalStateWithDecryptedApiKeyWithResult: vi.fn(),
+  dbGetFederalStateWithApiKeyIdWithResult: vi.fn(),
 }));
 
 vi.mock('@/app/api/utils/utils', () => ({
@@ -13,11 +14,12 @@ vi.mock('@ais-chat/ai-core', () => ({
   generateTextWithBilling: vi.fn(),
 }));
 
-import { dbGetFederalStateWithDecryptedApiKeyWithResult } from '@shared/db/functions/federal-state';
-import { getAuxiliaryModel } from '@/app/api/utils/utils';
 import { generateTextWithBilling } from '@ais-chat/ai-core';
+import { dbGetFederalStateWithApiKeyIdWithResult } from '@shared/db/functions/federal-state';
 
-const mockGetFederalState = vi.mocked(dbGetFederalStateWithDecryptedApiKeyWithResult);
+import { getAuxiliaryModel } from '@/app/api/utils/utils';
+
+const mockGetFederalState = vi.mocked(dbGetFederalStateWithApiKeyIdWithResult);
 const mockGetAuxiliaryModel = vi.mocked(getAuxiliaryModel);
 const mockGenerateText = vi.mocked(generateTextWithBilling);
 
@@ -33,7 +35,7 @@ describe('chatWithImageAssistant', () => {
       text: 'Response text',
       usage: { promptTokens: 10, completionTokens: 20, totalTokens: 30 },
       priceInCents: 0,
-    });
+    } as never);
   });
 
   it('should return the LLM response text', async () => {

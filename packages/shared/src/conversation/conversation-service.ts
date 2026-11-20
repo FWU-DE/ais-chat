@@ -1,3 +1,4 @@
+import { dbGetCharacterById } from '@shared/db/functions/character';
 import {
   dbGetConversationById,
   dbGetConversationMessageById,
@@ -9,9 +10,10 @@ import {
   dbDeleteConversationByIdAndUserId,
   dbDoesInviteCodeExist,
 } from '@shared/db/functions/conversation';
+import { dbGetRelatedFiles } from '@shared/db/functions/files';
 import { ConversationMessageModel, ConversationModel } from '@shared/db/types';
 import { ForbiddenError, NotFoundError } from '@shared/error';
-import { dbGetCharacterById } from '@shared/db/functions/character';
+import { isToolRelatedMessage } from '@shared/utils/tool-related-message';
 
 /**
  * Returns all conversations that belong to the user for the chat history.
@@ -113,9 +115,13 @@ export async function getConversationAndMessagesForExport({
 }) {
   const conversation = await getConversation({ conversationId, userId });
   let messages = await getConversationMessages({ conversationId, userId });
+  const fileMapping = await dbGetRelatedFiles(conversationId);
 
   if (conversation.characterId) {
-    const character = await dbGetCharacterById({ characterId: conversation.characterId });
+    const character = await dbGetCharacterById({
+      characterId: conversation.characterId,
+      includeDeleted: true,
+    });
 
     if (character?.initialMessage) {
       const initialMessage = {
@@ -128,7 +134,8 @@ export async function getConversationAndMessagesForExport({
   }
   return {
     conversation,
-    messages,
+    messages: messages.filter((message) => !isToolRelatedMessage(message)),
+    fileMapping,
   };
 }
 
@@ -152,9 +159,16 @@ export async function getConversationMessageForExport({
     throw new NotFoundError('Conversation message not found');
   }
 
+  if (isToolRelatedMessage(message)) {
+    throw new NotFoundError('Conversation message not found');
+  }
+
+  const fileMapping = await dbGetRelatedFiles(conversationId);
+
   return {
     conversation,
     message,
+    fileMapping,
   };
 }
 

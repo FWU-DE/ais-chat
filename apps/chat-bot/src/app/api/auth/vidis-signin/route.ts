@@ -1,6 +1,7 @@
+import type { NextRequest } from 'next/server';
+
 import { signIn } from '@/auth';
 import { getSafeCallbackUrl } from '@/auth/callback-url';
-import type { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;

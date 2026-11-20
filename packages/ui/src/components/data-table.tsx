@@ -1,24 +1,61 @@
 'use client';
 
 import {
-  ColumnDef,
-  ColumnFiltersState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  OnChangeFn,
-  SortingState,
-  useReactTable,
+  type ColumnDef,
+  columnFilteringFeature,
+  type ColumnFiltersState,
+  columnVisibilityFeature,
+  createFilteredRowModel,
+  createSortedRowModel,
+  filterFn_includesString,
+  type OnChangeFn,
+  type RowData,
+  rowSelectionFeature,
+  rowSortingFeature,
+  sortFn_alphanumeric,
+  sortFn_basic,
+  sortFn_datetime,
+  sortFn_text,
+  type SortingState,
+  tableFeatures,
+  useTable,
 } from '@tanstack/react-table';
-
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
 import { useState } from 'react';
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
+import {
+  ClickableTableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './table';
+
+export const dataTableFeatures = tableFeatures({
+  rowSortingFeature,
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  rowSelectionFeature,
+  sortedRowModel: createSortedRowModel(),
+  filteredRowModel: createFilteredRowModel(),
+  filterFns: { includesString: filterFn_includesString },
+  sortFns: {
+    alphanumeric: sortFn_alphanumeric,
+    text: sortFn_text,
+    datetime: sortFn_datetime,
+    basic: sortFn_basic,
+  },
+});
+
+export type DataTableFeatures = typeof dataTableFeatures;
+
+interface DataTableProps<TData extends RowData> {
+  columns: ColumnDef<DataTableFeatures, TData>[];
   data: TData[];
   rowClickHandler?: (row: TData) => void;
+  /** Set to false when rows contain their own focusable control, to avoid a duplicate tab stop. */
+  focusableRows?: boolean;
   columnFilters?: ColumnFiltersState;
   onColumnFiltersChange?: OnChangeFn<ColumnFiltersState>;
 }
@@ -26,27 +63,25 @@ interface DataTableProps<TData, TValue> {
 /**
  * Powerfull DataTable component built with Tanstack Table and our UI components.
  * It supports sorting, filtering, pagination and more.
- * For more advanced use cases, you can use the `useReactTable` hook directly.
+ * For more advanced use cases, you can use the `useTable` hook directly.
  * https://ui.shadcn.com/docs/components/radix/data-table
  */
-export function DataTable<TData, TValue>({
+export function DataTable<TData extends RowData>({
   columns,
   data,
   rowClickHandler,
+  focusableRows = true,
   columnFilters,
   onColumnFiltersChange,
-}: DataTableProps<TData, TValue>) {
+}: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([]);
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const table = useReactTable({
+  const table = useTable({
+    features: dataTableFeatures,
     data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
     enableMultiRowSelection: false,
     onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange,
-    getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
       columnFilters,
@@ -62,9 +97,7 @@ export function DataTable<TData, TValue>({
               {headerGroup.headers.map((header) => {
                 return (
                   <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.isPlaceholder ? null : <table.FlexRender header={header} />}
                   </TableHead>
                 );
               })}
@@ -74,18 +107,19 @@ export function DataTable<TData, TValue>({
         <TableBody>
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
-              <TableRow
+              <ClickableTableRow
                 key={row.id}
+                data-testid="data-table-row"
                 data-state={row.getIsSelected() && 'selected'}
-                className="cursor-pointer"
-                onClick={() => rowClickHandler?.(row.original)}
+                onActivate={rowClickHandler && (() => rowClickHandler(row.original))}
+                focusable={focusableRows}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    <table.FlexRender cell={cell} />
                   </TableCell>
                 ))}
-              </TableRow>
+              </ClickableTableRow>
             ))
           ) : (
             <TableRow>

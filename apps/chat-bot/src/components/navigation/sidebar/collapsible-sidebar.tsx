@@ -1,13 +1,15 @@
 'use client';
 
 import { useSidebar } from '@ais-chat/ui/components/sidebar';
-import { useRouter } from 'next/navigation';
 import { PlusSquareIcon, SidebarSimpleIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 export function ToggleSidebarButton({ forceVisibility = false }: { forceVisibility?: boolean }) {
   const { toggleSidebar, open, isMobile, openMobile } = useSidebar();
   const isOpen = isMobile ? openMobile : open;
+  const t = useTranslations('common');
 
   if (isOpen && !forceVisibility) return null;
 
@@ -17,7 +19,8 @@ export function ToggleSidebarButton({ forceVisibility = false }: { forceVisibili
       size="icon-round"
       title="Sidebar"
       onClick={toggleSidebar}
-      aria-label="sidebar-toggle-close"
+      aria-label={t(isOpen ? 'sidebar-toggle-close' : 'sidebar-toggle-open')}
+      aria-expanded={isOpen}
     >
       <SidebarSimpleIcon className="size-6 text-primary" />
     </Button>

@@ -1,8 +1,9 @@
-import { dbGetFederalStateWithDecryptedApiKeyWithResult } from '@shared/db/functions/federal-state';
 import { generateTextWithBilling } from '@ais-chat/ai-core';
-import { getAuxiliaryModel } from '@/app/api/utils/utils';
+import { dbGetFederalStateWithApiKeyIdWithResult } from '@shared/db/functions/federal-state';
 import { logError } from '@shared/logging';
 import sharp from 'sharp';
+
+import { getAuxiliaryModel } from '@/app/api/utils/utils';
 
 export type AssistantMessage = { role: 'user' | 'assistant'; content: string };
 
@@ -93,7 +94,7 @@ export async function chatWithImageEditAssistant({
   federalStateId: string;
 }): Promise<string> {
   const [[error, federalState], auxiliaryModel] = await Promise.all([
-    dbGetFederalStateWithDecryptedApiKeyWithResult({ federalStateId }),
+    dbGetFederalStateWithApiKeyIdWithResult({ federalStateId }),
     getAuxiliaryModel(federalStateId),
   ]);
 

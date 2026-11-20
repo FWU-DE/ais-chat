@@ -1,38 +1,66 @@
-import type { WebSearchResult } from '@shared/db/schema';
-import { resolveWebSearchConfig, searchWeb } from '../websearch';
-import type { BuildToolsContext, ToolDefinition, ToolRegistration } from './types';
+import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
+import { z } from 'zod';
 
-type WebSearchToolResult = {
+import { TOOL_NAMES } from '@/types/tool-names';
+import { parseJsonRecord, toLinks } from '@/utils/chat/tool-result-parsing';
+
+import { resolveWebSearchConfig, searchWeb } from '../websearch';
+import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
+import type { BuildToolsContext, ToolActivity, ToolDefinition, ToolRegistration } from './types';
+
+export const webSearchArgsSchema = z.object({
+  query: z.string().trim().min(1),
+});
+
+export type WebSearchToolResult = {
   title: string | null;
   url: string | null;
   content: string | null;
 };
 
-type WebSearchToolResponse = {
+export type WebSearchToolResponse = {
   results: WebSearchToolResult[];
-  error: string | null;
+};
+
+export const webSearchActivity: ToolActivity<WebSearchToolResponse> = {
+  createStep: (toolCall: ToolCall) => {
+    const parsed = webSearchArgsSchema.safeParse(parseJsonRecord(toolCall.arguments));
+    return {
+      kind: 'tool',
+      id: toolCall.id,
+      tool: TOOL_NAMES.webSearch,
+      detail: parsed.success ? parsed.data.query : undefined,
+    };
+  },
+  applyResult: (step, result) => {
+    const links = toLinks(result.results);
+    return links === undefined ? step : { ...step, links };
+  },
+  parsePersistedResult: (raw) => parseGenericPersistedToolResult<WebSearchToolResponse>(raw),
 };
 
 type BuildWebSearchToolParams = Pick<
   BuildToolsContext,
-  'user' | 'characterId' | 'learningScenarioId' | 'assistantId' | 'conversationId'
-> & {
-  onWebSearchResults?: (results: WebSearchResult[]) => void;
-};
+  | 'user'
+  | 'characterId'
+  | 'learningScenarioId'
+  | 'assistantId'
+  | 'conversationId'
+  | 'webSearchSettings'
+>;
 
-export async function buildWebSearchTool({
+export function buildWebSearchTool({
   user,
   characterId,
   learningScenarioId,
   assistantId,
   conversationId,
-  onWebSearchResults,
-}: BuildWebSearchToolParams): Promise<ToolRegistration | null> {
-  const config = await resolveWebSearchConfig({
+  webSearchSettings,
+}: BuildWebSearchToolParams): ToolRegistration<WebSearchToolResponse> | null {
+  const config = resolveWebSearchConfig({
     user,
-    characterId,
-    learningScenarioId,
     assistantId,
+    webSearchSettings,
   });
 
   if (!config.enabled) {
@@ -50,7 +78,7 @@ export async function buildWebSearchTool({
       : baseDescription;
 
   const definition: ToolDefinition = {
-    name: 'web_search',
+    name: TOOL_NAMES.webSearch,
     description,
     parameters: {
       type: 'object',
@@ -66,35 +94,38 @@ export async function buildWebSearchTool({
     },
   };
 
-  const handler = async (args: Record<string, unknown>) => {
-    const query = typeof args.query === 'string' ? args.query : '';
-    const results = await searchWeb({
-      query,
-      conversationId,
-      characterId,
-      learningScenarioId,
-      userId: user.id,
-      includedDomains,
-    });
+  const handler = async (args: Record<string, unknown>): ToolOutcome<WebSearchToolResponse> => {
+    const parsed = webSearchArgsSchema.safeParse(args);
 
-    const response: WebSearchToolResponse = {
-      results: results.map((result) => ({
-        title: result.name?.trim() ?? null,
-        url: result.url ?? null,
-        content: result.content?.trim() ?? null,
-      })),
-      error: null,
-    };
-
-    onWebSearchResults?.(results);
-
-    if (results.length === 0) {
-      response.error = 'No results found.';
-      return JSON.stringify(response);
+    if (!parsed.success) {
+      return { error: 'Missing search query.' };
     }
 
-    return JSON.stringify(response);
+    try {
+      const results = await searchWeb({
+        query: parsed.data.query,
+        conversationId,
+        characterId,
+        learningScenarioId,
+        userId: user.id,
+        includedDomains,
+      });
+
+      return {
+        results: results.map((result) => ({
+          title: result.name?.trim() ?? null,
+          url: result.url ?? null,
+          content: result.content?.trim() ?? null,
+        })),
+      };
+    } catch {
+      return { error: 'Web search failed.' };
+    }
   };
 
-  return { definition, handler };
+  return {
+    definition,
+    handler,
+    activity: webSearchActivity,
+  };
 }

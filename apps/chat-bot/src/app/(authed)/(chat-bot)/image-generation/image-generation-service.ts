@@ -1,28 +1,47 @@
-import { getUser, userHasCompletedTraining } from '@/auth/utils';
-import { checkProductAccess } from '@/utils/vidis/access';
-import { dbGetFederalStateWithDecryptedApiKeyWithResult } from '@shared/db/functions/federal-state';
-import { dbGetModelByIdAndFederalStateId } from '@shared/db/functions/llm-model';
-import { sendRabbitmqEvent } from '@/rabbitmq/send';
-import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
-import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
-import { dbInsertChatContent, dbGetOrCreateConversation } from '@shared/db/functions/chat';
-import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
-import { logError } from '@shared/logging';
-import { generateImageWithBilling } from '@ais-chat/ai-core';
-import { LlmModelSelectModel } from '@shared/db/schema';
-import { ImageStyle } from '@shared/utils/chat';
-import { generateUUID } from '@shared/utils/uuid';
-import { uploadFileToS3, getReadOnlySignedUrl } from '@shared/s3';
-import { cnanoid } from '@shared/random/randomService';
-import { linkFilesToConversation, dbInsertFile } from '@shared/db/functions/files';
+import { generateImageWithBilling, TokenPointsExceededError } from '@ais-chat/ai-core';
+import { ImageGenerationRequestOptions } from '@ais-chat/ai-core/images/types';
+import {
+  dbDeleteRegeneratedConversationMessage,
+  dbGetConversationAndMessages,
+  dbGetOrCreateConversation,
+  dbInsertChatContent,
+} from '@shared/db/functions/chat';
 import { dbDeleteConversationByIdAndUserId } from '@shared/db/functions/conversation';
+import { dbGetFederalStateWithApiKeyIdWithResult } from '@shared/db/functions/federal-state';
+import {
+  dbDeleteFileAndDetachFromConversation,
+  dbDetachFilesFromConversationMessages,
+  dbInsertFile,
+  linkFilesToConversation,
+} from '@shared/db/functions/files';
+import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
+import { LlmModelSelectModel } from '@shared/db/schema';
 import { NotFoundError } from '@shared/error';
 import { getAvailableImageModelsForFederalState } from '@shared/image-generation/image-generation-service';
+import { logError } from '@shared/logging';
+import {
+  constructNewMessageEvent,
+  constructTokenBudgetExceededEvent,
+  sendRabbitmqEvent,
+} from '@shared/rabbitmq';
+import { cnanoid } from '@shared/random/randomService';
+import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
+import { ImageStyle } from '@shared/utils/chat';
+import { generateUUID } from '@shared/utils/uuid';
+
+import { getSafetyModel } from '@/app/api/utils/utils';
+import { getUser, userHasCompletedTraining } from '@/auth/utils';
+import { ImageGenerationOptions } from '@/components/image-generation/image-generation-types';
+import { checkProductAccess } from '@/utils/vidis/access';
+
+import { fetchInputImages, validateInputFiles } from './image-generation-input-files';
+
 export interface ImageGenerationParams {
   prompt: string;
-  modelId: string;
+  model: LlmModelSelectModel;
   conversationId: string;
+  options: ImageGenerationRequestOptions;
 }
 
 export interface ImageGenerationResult {
@@ -59,28 +78,64 @@ async function createImageConversation(prompt: string): Promise<string> {
  */
 export async function handleImageGeneration({
   prompt,
-  model,
+  modelId,
   style,
   userId,
   federalStateId,
+  options,
+  inputFileIds = [],
+  conversationId: existingConversationId,
 }: {
   prompt: string;
-  model: LlmModelSelectModel;
+  modelId: string;
   style?: ImageStyle;
   userId: string;
   federalStateId: string;
+  options: ImageGenerationOptions;
+  inputFileIds?: string[];
+  conversationId?: string;
 }) {
-  await checkIfImageModelIsAssignedToFederalState(model, federalStateId);
+  const imageModels = await getAvailableImageModelsForFederalState({ federalStateId });
+  const model = imageModels.find((imageModel) => imageModel.id === modelId);
+  if (!model) {
+    throw new NotFoundError('Could not find image generation model for federal state');
+  }
 
   if (!prompt || prompt.trim().length === 0) {
     throw new Error('Prompt is required');
   }
 
+  validateInputFiles({ model, inputFileIds });
+
+  const inputImages = await fetchInputImages({ inputFileIds, userId });
+
   let conversationId: string | undefined;
+  let generatedFileId: string | undefined;
+  let generatedUserMessageId: string | undefined;
+  let generatedAssistantMessageId: string | undefined;
+  let baseOrderNumber = 0;
+  const isExistingConversation = existingConversationId !== undefined;
 
   try {
-    // Every image generation gets its own conversation
-    conversationId = await createImageConversation(prompt);
+    if (isExistingConversation) {
+      const existing = await dbGetConversationAndMessages({
+        conversationId: existingConversationId,
+        userId,
+      });
+      if (!existing || existing.conversation.type !== 'image-generation') {
+        throw new NotFoundError('Image generation conversation not found');
+      }
+      conversationId = existing.conversation.id;
+      baseOrderNumber = existing.messages.reduce(
+        (max, msg) => (msg.orderNumber > max ? msg.orderNumber : max),
+        0,
+      );
+    } else {
+      conversationId = await createImageConversation(prompt);
+    }
+
+    const userOrderNumber = baseOrderNumber + 1;
+    const assistantOrderNumber = baseOrderNumber + 2;
 
     // Construct the full prompt with style prompt if provided
     let fullPrompt = prompt;
@@ -89,21 +144,37 @@ export async function handleImageGeneration({
     }
 
     // Store user prompt as a message
-    await dbInsertChatContent({
+    const userMessage = await dbInsertChatContent({
       conversationId: conversationId,
       role: 'user',
       userId: userId,
       content: prompt,
       modelName: model.name,
-      orderNumber: 1,
-      parameters: style ? { imageStyle: style.name } : undefined,
+      orderNumber: userOrderNumber,
+      parameters: { imageStyle: style?.name, aspectRatio: options.aspectRatio },
     });
+
+    if (!userMessage) {
+      throw new Error('Failed to create user message');
+    }
+    generatedUserMessageId = userMessage.id;
+
+    if (inputFileIds.length > 0) {
+      await linkFilesToConversation({
+        conversationMessageId: userMessage.id,
+        conversationId,
+        fileIds: inputFileIds,
+      });
+    }
+
+    const size = model.imageGenerationConfig?.aspectRatio?.[options.aspectRatio] ?? 'auto';
 
     // Generate image using the service
     const result = await generateImage({
       prompt: fullPrompt.trim(),
-      modelId: model.id,
+      model,
       conversationId,
+      options: { size, inputImages },
     });
 
     const image = result.data[0];
@@ -121,6 +192,7 @@ export async function handleImageGeneration({
       body: imageBuffer,
       contentType: 'image/png',
     });
+    generatedFileId = fileId;
 
     // Create file record in database
     await dbInsertFile({
@@ -136,7 +208,7 @@ export async function handleImageGeneration({
       conversationId: conversationId,
       role: 'assistant',
       content: '', // No content needed since we're using file attachment
-      orderNumber: 2,
+      orderNumber: assistantOrderNumber,
       modelName: model.name,
       parameters: style ? { imageStyle: style.name } : undefined,
       userId,
@@ -145,6 +217,7 @@ export async function handleImageGeneration({
     if (!assistantMessage) {
       throw new Error('Failed to create assistant message');
     }
+    generatedAssistantMessageId = assistantMessage.id;
 
     // Link the image file to the assistant message
     await linkFilesToConversation({
@@ -165,13 +238,40 @@ export async function handleImageGeneration({
       conversationId,
       imageKey: key,
       fileId,
+      assistantMessageId: assistantMessage.id,
+      userMessageId: userMessage.id,
     };
   } catch (error) {
-    if (conversationId) {
+    if (generatedFileId !== undefined) {
+      await Promise.allSettled([
+        deleteFileFromS3({ key: `message_attachments/${generatedFileId}` }),
+        dbDeleteFileAndDetachFromConversation([generatedFileId]),
+      ]).then((results) => {
+        for (const result of results) {
+          if (result.status === 'rejected') {
+            logError('Error cleaning up generated image file:', result.reason);
+          }
+        }
+      });
+    }
+
+    if (conversationId !== undefined) {
       try {
-        await dbDeleteConversationByIdAndUserId({ conversationId, userId });
+        if (isExistingConversation) {
+          await dbDetachFilesFromConversationMessages(
+            [generatedUserMessageId, generatedAssistantMessageId].filter(
+              (messageId): messageId is string => messageId !== undefined,
+            ),
+          );
+          await dbDeleteRegeneratedConversationMessage({
+            conversationId,
+            orderNumber: baseOrderNumber,
+          });
+        } else {
+          await dbDeleteConversationByIdAndUserId({ conversationId, userId });
+        }
       } catch (deletionError) {
-        logError('Error deleting failed image conversation:', deletionError);
+        logError('Error cleaning up failed image generation:', deletionError);
       }
     }
     throw error instanceof Error
@@ -185,8 +285,9 @@ export async function handleImageGeneration({
  */
 export async function generateImage({
   prompt,
-  modelId,
+  model,
   conversationId,
+  options,
 }: ImageGenerationParams): Promise<ImageGenerationResult> {
   const [user, hasCompletedTraining] = await Promise.all([getUser(), userHasCompletedTraining()]);
   const productAccess = checkProductAccess({ ...user, hasCompletedTraining });
@@ -199,30 +300,12 @@ export async function generateImage({
     throw new Error('Prompt is required');
   }
 
-  const [federalStateError, federalStateObject] =
-    await dbGetFederalStateWithDecryptedApiKeyWithResult({
-      federalStateId: user.federalState.id,
-    });
-
-  if (federalStateError !== null) {
-    throw new Error(federalStateError.message);
-  }
-
-  if (!federalStateObject.apiKeyId) {
-    throw new Error('Federal state has no API key assigned');
-  }
-
-  const definedModel = await dbGetModelByIdAndFederalStateId({
-    modelId,
+  const [federalStateError, federalStateObject] = await dbGetFederalStateWithApiKeyIdWithResult({
     federalStateId: user.federalState.id,
   });
 
-  if (!definedModel) {
-    throw new Error(`Model ${modelId} not found`);
-  }
-
-  if (definedModel.priceMetadata.type !== 'image') {
-    throw new Error('Selected model is not an image generation model');
+  if (federalStateError !== null) {
+    throw new Error(federalStateError.message);
   }
 
   // Get conversation for RabbitMQ event
@@ -235,23 +318,20 @@ export async function generateImage({
 
   if (tokenPointsLimitReached) {
     if (conversation) {
-      await sendRabbitmqEvent(
-        constructTokenBudgetExceededEvent({
-          anonymous: false,
-          user,
-          conversation,
-        }),
-      );
+      await sendRabbitmqEvent(constructTokenBudgetExceededEvent({ user }));
     }
 
-    throw new Error('User has reached token points limit.');
+    throw new TokenPointsExceededError();
   }
 
   try {
+    const safetyModel = await getSafetyModel();
     const result = await generateImageWithBilling(
-      definedModel.id,
+      model.id,
       prompt.trim(),
       federalStateObject.apiKeyId,
+      options,
+      safetyModel?.name,
     );
 
     const costsInCent = result.priceInCents;
@@ -260,7 +340,7 @@ export async function generateImage({
     await dbInsertConversationUsage({
       conversationId,
       userId: user.id,
-      modelId: definedModel.id,
+      modelId: model.id,
       completionTokens: 0, // Images don't have completion tokens
       promptTokens: 0, // Images don't have prompt tokens
       costsInCent: costsInCent,
@@ -274,7 +354,8 @@ export async function generateImage({
           promptTokens: 0, // Images don't use tokens
           completionTokens: 0, // Images don't use tokens
           costsInCent: costsInCent,
-          provider: definedModel.provider,
+          provider: result.provider,
+          modelName: result.modelName,
           anonymous: false,
           conversation,
         }),
@@ -289,17 +370,5 @@ export async function generateImage({
     throw error instanceof Error
       ? error
       : new Error('Internal server error during image generation');
-  }
-}
-
-// Checks if the given image model is assigned to the federal state
-async function checkIfImageModelIsAssignedToFederalState(
-  imageModel: LlmModelSelectModel,
-  federalStateId: string,
-) {
-  const models = await getAvailableImageModelsForFederalState({ federalStateId });
-  const foundModel = models.find((model) => model.id === imageModel.id);
-  if (!foundModel) {
-    throw new NotFoundError('Could not find image generation model for federal state');
   }
 }

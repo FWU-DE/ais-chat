@@ -1,14 +1,15 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
+
+import { deleteFilesFromS3 } from '../../s3';
 import { db } from '..';
 import {
   ConversationMessageFileMappingTable,
   conversationMessageTable,
   conversationTable,
   fileTable,
-  sharedCharacterConversation,
+  sharedCharacter,
   sharedLearningScenarioTable,
 } from '../schema';
-import { deleteFilesFromS3 } from '../../s3';
 
 export async function dbDeleteConversationByIdAndUserId({
   conversationId,
@@ -34,12 +35,16 @@ export async function dbDeleteConversationByIdAndUserId({
       throw new Error('Could not delete the conversation');
     }
 
-    const filesToDelete = (
-      await tx
-        .select({ fileId: ConversationMessageFileMappingTable.fileId })
-        .from(ConversationMessageFileMappingTable)
-        .where(eq(ConversationMessageFileMappingTable.conversationId, conversationId))
-    ).map((f) => f.fileId);
+    const filesToDelete = Array.from(
+      new Set(
+        (
+          await tx
+            .select({ fileId: ConversationMessageFileMappingTable.fileId })
+            .from(ConversationMessageFileMappingTable)
+            .where(eq(ConversationMessageFileMappingTable.conversationId, conversationId))
+        ).map((f) => f.fileId),
+      ),
+    );
     await deleteFilesFromS3(filesToDelete);
     await tx
       .delete(ConversationMessageFileMappingTable)
@@ -83,14 +88,14 @@ SELECT
 }
 
 /**
- * @returns true if the invite code exists in either the sharedCharacterConversation
+ * @returns true if the invite code exists in either the sharedCharacter or sharedLearningScenario table
  * or sharedLearningScenarioTable, false otherwise.
  */
 export async function dbDoesInviteCodeExist(inviteCode: string) {
   const result = await db
-    .select({ inviteCode: sharedCharacterConversation.inviteCode })
-    .from(sharedCharacterConversation)
-    .where(eq(sharedCharacterConversation.inviteCode, inviteCode))
+    .select({ inviteCode: sharedCharacter.inviteCode })
+    .from(sharedCharacter)
+    .where(eq(sharedCharacter.inviteCode, inviteCode))
     .union(
       db
         .select({ inviteCode: sharedLearningScenarioTable.inviteCode })

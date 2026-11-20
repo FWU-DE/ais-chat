@@ -11,15 +11,14 @@ export const WAIT_TIMES_IN_MS = {
 export const LLM_MODELS = [
   { id: 'gpt-5-nano', displayName: 'GPT-5 nano' },
   { id: 'gpt-4o-mini', displayName: 'GPT-4o-mini' },
-  { id: 'meta-llama/Meta-Llama-3.1-8B-Instruct', displayName: 'Llama-3.1-8B' },
 ];
 
 export const SELECTORS = {
   MESSAGE_INPUT: '[data-testid="chat-input"]',
   SEND_BUTTON: 'button[aria-label="Nachricht abschicken"]',
   AI_MESSAGE: '[aria-label="assistant message 1"]',
-  RELOAD_BUTTON: '[aria-label="Reload"]',
-  PROFILE_BUTTON: '[aria-label="profileDropdown"]',
+  RELOAD_BUTTON: '[data-testid="regenerate-message-button"]',
+  PROFILE_BUTTON: '[data-testid="profile-dropdown"]',
   DROPDOWN_WRAPPER: 'div[data-radix-popper-content-wrapper]',
 } as const;
 

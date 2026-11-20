@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
 import { Button } from '@ui/components/button';
 import { Input } from '@ui/components/input';
 import { Label } from '@ui/components/label';
+import React, { useEffect, useState } from 'react';
+
 import { createTemplateFromUrlAction } from './actions';
 
 type CreateTemplateModalProps = {
@@ -118,8 +119,8 @@ export function CreateTemplateModal({ isOpen, onClose, onSuccess }: CreateTempla
               disabled={isLoading}
             />
             <p className="text-xs text-gray-500 mt-1">
-              Beispiele: <br />
-              • https://app.ais-chat.schule/custom/editor/12345 <br />• /characters/editor/67890
+              Beispiele: <br />• https://app.ais-chat.schule/custom/editor/12345 <br />•
+              /characters/editor/67890
             </p>
           </div>
 

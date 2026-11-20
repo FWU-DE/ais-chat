@@ -48,6 +48,24 @@
   "roles": {
     "realm": [
       {
+        "id": "8b2c4f34-1b7d-4c4a-9f75-2a0d63a11b2e",
+        "name": "Admin",
+        "description": "Full access to the AIS.chat admin UI",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "d1a51226-5a15-4087-9d4f-a9e825292aeb",
+        "attributes": {}
+      },
+      {
+        "id": "f4b5e8c7-2a31-4f5e-8d69-1c2b7a9e4f03",
+        "name": "Editor",
+        "description": "Access to templates and suspensions in the AIS.chat admin UI",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "d1a51226-5a15-4087-9d4f-a9e825292aeb",
+        "attributes": {}
+      },
+      {
         "id": "4da28a9e-3e7b-40ab-afc7-6158215dcd9a",
         "name": "default-roles-ais-chat-local",
         "description": "${role_default-roles}",
@@ -738,7 +756,7 @@
         "realm_client": "false",
         "oidc.ciba.grant.enabled": "false",
         "backchannel.logout.session.required": "true",
-        "backchannel.logout.url": "http://10.255.255.254:3000/api/auth/backchannel-logout",
+        "backchannel.logout.url": "${BACKCHANNEL_LOGOUT_URL}",
         "client_credentials.use_refresh_token": "false",
         "require.pushed.authorization.requests": "false",
         "request.object.encryption.enc": "any",
@@ -775,6 +793,23 @@
             "access.token.claim": "true",
             "claim.name": "bundesland",
             "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "6f0c2e1a-8d4b-4c7e-9a3f-2b1d5e7c9a40",
+          "name": "Pflichtschulung",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "is_ai_chat_eligible",
+            "id.token.claim": "true",
+            "lightweight.claim": "false",
+            "access.token.claim": "true",
+            "claim.name": "is_ai_chat_eligible",
+            "jsonType.label": "boolean"
           }
         },
         {
@@ -1023,7 +1058,8 @@
           "config": {
             "user.attribute": "foo",
             "introspection.token.claim": "true",
-            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "false",
             "claim.name": "resource_access.${client_id}.roles",
             "jsonType.label": "String",
             "multivalued": "true"
@@ -1038,7 +1074,8 @@
           "config": {
             "user.attribute": "foo",
             "introspection.token.claim": "true",
-            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "false",
             "claim.name": "realm_access.roles",
             "jsonType.label": "String",
             "multivalued": "true"
@@ -1744,7 +1781,7 @@
         "subComponents": {},
         "config": {
           "kc.user.profile.config": [
-            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"schulnummer\",\"displayName\":\"\",\"validations\":{},\"annotations\":{},\"permissions\":{\"view\":[],\"edit\":[\"admin\"]},\"multivalued\":true},{\"name\":\"role\",\"displayName\":\"Rolle\",\"validations\":{},\"annotations\":{},\"permissions\":{\"view\":[],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"federal_state\",\"displayName\":\"Bundesland\",\"validations\":{},\"annotations\":{},\"permissions\":{\"view\":[],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"is_ai_chat_eligble\",\"displayName\":\"Schulung\",\"validations\":{},\"annotations\":{},\"permissions\":{\"view\":[],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"Ablaufdatum\",\"displayName\":\"Ablaufdatum\",\"validations\":{},\"annotations\":{},\"permissions\":{\"view\":[],\"edit\":[\"admin\"]},\"multivalued\":false}],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"}]}"
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"schulnummer\",\"displayName\":\"\",\"validations\":{},\"annotations\":{},\"permissions\":{\"view\":[],\"edit\":[\"admin\"]},\"multivalued\":true},{\"name\":\"role\",\"displayName\":\"Rolle\",\"validations\":{},\"annotations\":{},\"permissions\":{\"view\":[],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"federal_state\",\"displayName\":\"Bundesland\",\"validations\":{},\"annotations\":{},\"permissions\":{\"view\":[],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"is_ai_chat_eligible\",\"displayName\":\"Schulung\",\"validations\":{},\"annotations\":{},\"permissions\":{\"view\":[],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"Ablaufdatum\",\"displayName\":\"Ablaufdatum\",\"validations\":{},\"annotations\":{},\"permissions\":{\"view\":[],\"edit\":[\"admin\"]},\"multivalued\":false}],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"}]}"
           ]
         }
       }
@@ -2683,7 +2720,8 @@
       "attributes": {
         "schulnummer": ["test_school1"],
         "federal_state": ["DE-TEST"],
-        "role": ["LEHR"]
+        "role": ["LEHR"],
+        "is_ai_chat_eligible": ["true"]
       },
       "enabled": true,
       "credentials": [
@@ -2718,6 +2756,24 @@
       "email": "teacher3@example.com",
       "attributes": {
         "schulnummer": ["test_school2", "test_school3"],
+        "federal_state": ["DE-TEST"],
+        "role": ["LEHR"]
+      },
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ]
+    },
+    {
+      "username": "teacherWithSettings",
+      "firstName": "Settings",
+      "lastName": "Teacher",
+      "email": "teacherWithSettings@example.com",
+      "attributes": {
+        "schulnummer": ["test_school1"],
         "federal_state": ["DE-TEST"],
         "role": ["LEHR"]
       },
@@ -2938,6 +2994,62 @@
         "role": ["LEHR"]
       },
       "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ]
+    },
+    {
+      "username": "teacher-sn",
+      "firstName": "Teacher",
+      "lastName": "Teacher",
+      "email": "teacher-sn@example.com",
+      "attributes": {
+        "schulnummer": ["test_school1-SN"],
+        "federal_state": ["DE-SN"],
+        "role": ["LEHR"]
+      },
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ]
+    },
+    {
+      "username": "admin",
+      "firstName": "Admin",
+      "lastName": "Admin",
+      "email": "admin@example.com",
+      "attributes": {
+        "schulnummer": ["test_school1"],
+        "federal_state": ["DE-TEST"],
+        "role": ["LEHR"]
+      },
+      "enabled": true,
+      "realmRoles": ["Admin"],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ]
+    },
+    {
+      "username": "editor",
+      "firstName": "Editor",
+      "lastName": "Editor",
+      "email": "editor@example.com",
+      "attributes": {
+        "schulnummer": ["test_school1"],
+        "federal_state": ["DE-TEST"],
+        "role": ["LEHR"]
+      },
+      "enabled": true,
+      "realmRoles": ["Editor"],
       "credentials": [
         {
           "type": "password",

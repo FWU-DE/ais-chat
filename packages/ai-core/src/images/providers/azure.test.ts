@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { constructAzureImageGenerationFn } from './azure';
+
 import { AiGenerationError, ProviderConfigurationError, ResponsibleAIError } from '../../errors';
 import type { AiModel } from '../types';
+import { constructAzureImageGenerationFn } from './azure';
 
 const {
   generateMock,
@@ -39,7 +40,7 @@ vi.mock('openai', () => ({
   default: MockOpenAI,
 }));
 
-vi.mock('@sentry/core', () => ({
+vi.mock('@sentry/server-utils', () => ({
   instrumentOpenAiClient: instrumentOpenAiClientMock,
   startSpan: startSpanMock,
 }));
@@ -58,6 +59,7 @@ function createAzureModel(baseUrl: string): AiModel {
     priceMetadata: {
       type: 'image',
       inputTextTokenPrice: 1,
+      inputImageTokenPrice: 4,
       outputTextTokenPrice: 2,
       outputImageTokenPrice: 3,
     },
@@ -80,6 +82,7 @@ describe('constructAzureImageGenerationFn', () => {
       usage: {
         input_tokens_details: {
           text_tokens: 4,
+          image_tokens: 7,
         },
         output_tokens_details: {
           text_tokens: 5,
@@ -95,7 +98,7 @@ describe('constructAzureImageGenerationFn', () => {
       apiKey: 'azure-api-key',
       baseURL: 'https://example.openai.azure.com',
       defaultQuery: {
-        'api-version': '2024-02-15-preview',
+        'api-version': '2025-04-01-preview',
         foo: 'bar',
       },
     });
@@ -115,9 +118,36 @@ describe('constructAzureImageGenerationFn', () => {
       output_format: 'png',
       usage: {
         input_text_tokens: 4,
+        input_image_tokens: 7,
         output_text_tokens: 5,
         output_image_tokens: 6,
       },
+    });
+  });
+
+  it('should default input_image_tokens to 0 when Azure omits image_tokens for a text-only prompt', async () => {
+    generateMock.mockResolvedValue({
+      data: [{ b64_json: 'base64-azure-image' }],
+      output_format: 'png',
+      usage: {
+        input_tokens_details: {
+          text_tokens: 26,
+        },
+        output_tokens_details: {
+          image_tokens: 1056,
+          text_tokens: 448,
+        },
+      },
+    });
+
+    const generateImage = constructAzureImageGenerationFn(model);
+    const result = await generateImage({ prompt: 'a duck with a hat', model: model.name });
+
+    expect(result.usage).toEqual({
+      input_text_tokens: 26,
+      input_image_tokens: 0,
+      output_text_tokens: 448,
+      output_image_tokens: 1056,
     });
   });
 

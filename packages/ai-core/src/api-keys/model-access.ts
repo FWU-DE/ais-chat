@@ -1,6 +1,7 @@
 import { dbHasApiKeyAccessToModel } from '@ais-chat/api-database';
-import { AiModel } from '../images/types';
+
 import type { AiModel as TextAiModel } from '../chat/types';
+import { AiModel } from '../images/types';
 
 /**
  * Checks whether the specified API key has access to the given model.

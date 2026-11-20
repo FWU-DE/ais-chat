@@ -1,5 +1,5 @@
+import { withSentryConfig } from '@sentry/nextjs/config';
 import type { NextConfig } from 'next';
-import { withSentryConfig } from '@sentry/nextjs';
 
 const isDevBuild = process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development';
 
@@ -30,6 +30,8 @@ const baseNextConfig: NextConfig = {
     useCache: true,
     // Speed up dev builds by pre-bundling heavy packages instead of re-resolving on every HMR
     optimizePackageImports: ['@ais-chat/ui', '@ais-chat/shared', '@ais-chat/ai-core'],
+    // Run the React Compiler natively inside Turbopack instead of via Babel
+    turbopackRustReactCompiler: true,
   },
 };
 

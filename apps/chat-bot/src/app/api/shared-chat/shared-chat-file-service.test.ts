@@ -2,10 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   dbGetFilesInIdsMock: vi.fn(),
+  dbGetSharedChatFileConversationIdsMock: vi.fn(),
 }));
 
 vi.mock('@shared/db/functions/files', () => ({
   dbGetFilesInIds: mocks.dbGetFilesInIdsMock,
+}));
+
+vi.mock('@shared/db/functions/shared-chat-conversation', () => ({
+  dbGetSharedChatFileConversationIds: mocks.dbGetSharedChatFileConversationIdsMock,
 }));
 
 const relatedFile = {
@@ -24,17 +29,15 @@ const uploadedFile = {
   type: 'png',
   size: 11,
   createdAt: new Date('2026-01-02'),
-  metadata: {
-    inviteCode: 'invite-1',
-    entityType: 'character',
-    entityId: 'character-1',
-    sessionId: 'session-1',
-  },
+  metadata: {},
   userId: null,
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.dbGetSharedChatFileConversationIdsMock.mockResolvedValue([
+    { fileId: 'uploaded-file', conversationId: 'session-1' },
+  ]);
 });
 
 describe('combineSharedRelatedFiles', () => {
@@ -44,9 +47,6 @@ describe('combineSharedRelatedFiles', () => {
     const result = await combineSharedRelatedFiles({
       relatedFileEntities: [relatedFile],
       fileIds: undefined,
-      inviteCode: 'invite-1',
-      entityType: 'character',
-      entityId: 'character-1',
       sharedSessionId: 'session-1',
     });
 
@@ -61,9 +61,6 @@ describe('combineSharedRelatedFiles', () => {
       combineSharedRelatedFiles({
         relatedFileEntities: [relatedFile],
         fileIds: ['uploaded-file'],
-        inviteCode: 'invite-1',
-        entityType: 'character',
-        entityId: 'character-1',
       }),
     ).rejects.toThrow('Not authorized to use uploaded files');
 
@@ -77,9 +74,6 @@ describe('combineSharedRelatedFiles', () => {
     const result = await combineSharedRelatedFiles({
       relatedFileEntities: [relatedFile],
       fileIds: ['uploaded-file'],
-      inviteCode: 'invite-1',
-      entityType: 'character',
-      entityId: 'character-1',
       sharedSessionId: 'session-1',
       userMessageId: 'user-message-1',
     });
@@ -98,9 +92,6 @@ describe('combineSharedRelatedFiles', () => {
     const result = await combineSharedRelatedFiles({
       relatedFileEntities: [relatedFile],
       fileIds: ['uploaded-file'],
-      inviteCode: 'invite-1',
-      entityType: 'character',
-      entityId: 'character-1',
       sharedSessionId: 'session-1',
       userMessageId: 'user-message-1',
     });
@@ -111,15 +102,10 @@ describe('combineSharedRelatedFiles', () => {
     ]);
   });
 
-  it('throws when uploaded file belongs to another shared session', async () => {
-    mocks.dbGetFilesInIdsMock.mockResolvedValue([
-      {
-        ...uploadedFile,
-        metadata: {
-          ...uploadedFile.metadata,
-          sessionId: 'session-other',
-        },
-      },
+  it('throws when uploaded file is mapped to another conversation', async () => {
+    mocks.dbGetFilesInIdsMock.mockResolvedValue([uploadedFile]);
+    mocks.dbGetSharedChatFileConversationIdsMock.mockResolvedValue([
+      { fileId: 'uploaded-file', conversationId: 'session-other' },
     ]);
 
     const { combineSharedRelatedFiles } = await import('./shared-chat-file-service');
@@ -128,9 +114,21 @@ describe('combineSharedRelatedFiles', () => {
       combineSharedRelatedFiles({
         relatedFileEntities: [relatedFile],
         fileIds: ['uploaded-file'],
-        inviteCode: 'invite-1',
-        entityType: 'character',
-        entityId: 'character-1',
+        sharedSessionId: 'session-1',
+      }),
+    ).rejects.toThrow('Not authorized to access this file');
+  });
+
+  it('throws when uploaded file is not mapped to any conversation', async () => {
+    mocks.dbGetFilesInIdsMock.mockResolvedValue([uploadedFile]);
+    mocks.dbGetSharedChatFileConversationIdsMock.mockResolvedValue([]);
+
+    const { combineSharedRelatedFiles } = await import('./shared-chat-file-service');
+
+    await expect(
+      combineSharedRelatedFiles({
+        relatedFileEntities: [relatedFile],
+        fileIds: ['uploaded-file'],
         sharedSessionId: 'session-1',
       }),
     ).rejects.toThrow('Not authorized to access this file');

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '../fixtures/test';
 import { AUTH_FILES } from '../utils/const';
 import { login } from '../utils/login';
 

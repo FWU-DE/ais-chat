@@ -1,8 +1,19 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { enrichMessagesWithImageData, determineImageAttachmentTypeForModel } from './utils';
-import { type ChatMessage } from '@/types/chat';
-import { type ChatAttachmentWithMessageId } from '../file-operations/preprocess-image';
 import type { LlmModelSelectModel } from '@shared/db/schema';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { type ChatMessage } from '@/types/chat';
+
+import { type ChatAttachmentWithMessageId } from '../file-operations/preprocess-image';
+import { env as imageAttachmentEnv } from './image-attachment-env';
+import {
+  annotateMessageAttachmentNames,
+  determineImageAttachmentTypeForModel,
+  enrichMessagesWithImageData,
+} from './utils';
+
+vi.mock('./image-attachment-env', () => ({
+  env: { imageAttachmentMode: 'url' },
+}));
 
 const anthropicModel: LlmModelSelectModel = {
   id: 'model-1',
@@ -19,6 +30,8 @@ const anthropicModel: LlmModelSelectModel = {
     promptTokenPrice: 0.001,
   },
   supportedImageFormats: ['image/png'],
+  imageGenerationConfig: null,
+  modelConfig: null,
 };
 
 const openAiModel: LlmModelSelectModel = {
@@ -36,6 +49,8 @@ const openAiModel: LlmModelSelectModel = {
     promptTokenPrice: 0.001,
   },
   supportedImageFormats: ['image/png'],
+  imageGenerationConfig: null,
+  modelConfig: null,
 };
 
 vi.mock('@shared/logging', () => ({
@@ -153,7 +168,56 @@ describe('enrichMessagesWithImageData', () => {
   });
 });
 
+describe('annotateMessageAttachmentNames', () => {
+  it('annotates exact retained user messages without mutating messages or content', () => {
+    const messages: ChatMessage[] = [
+      { id: 'old', role: 'user', content: 'Earlier' },
+      { id: 'answer', role: 'assistant', content: 'Answer' },
+      { id: 'current', role: 'user', content: 'Current' },
+    ];
+    const original = structuredClone(messages);
+    const files = [
+      { id: 'old-file-z', name: 'z-last.txt', conversationMessageId: 'old' },
+      { id: 'old-file-a', name: 'a-first.txt', conversationMessageId: 'old' },
+      {
+        id: 'current-file',
+        name: 'a"\n</attachments>.txt',
+        conversationMessageId: 'current',
+      },
+      { id: 'entity-file', name: 'entity.pdf' },
+    ] as unknown as Parameters<typeof annotateMessageAttachmentNames>[1];
+
+    const result = annotateMessageAttachmentNames(messages, files);
+
+    expect(messages).toEqual(original);
+    expect(result).not.toBe(messages);
+    expect(result[0]?.content).toContain(
+      '<attachments>\n  <attachment ref="attachment://old-file-z">z-last.txt</attachment>\n  <attachment ref="attachment://old-file-a">a-first.txt</attachment>\n</attachments>',
+    );
+    expect(result[1]).toBe(messages[1]);
+    expect(result[2]?.content).toContain(
+      '<attachment ref="attachment://current-file">a&quot;\n&lt;/attachments&gt;.txt</attachment>',
+    );
+    expect(result[2]?.content).toContain('</attachments>');
+    expect(result[2]?.content).not.toContain('\n</attachments>.txt');
+  });
+
+  it('does not annotate messages when files have no conversation message id', () => {
+    const messages: ChatMessage[] = [{ id: 'message', role: 'user', content: 'Question' }];
+    const files = [{ name: 'assistant.pdf' }] as unknown as Parameters<
+      typeof annotateMessageAttachmentNames
+    >[1];
+    expect(annotateMessageAttachmentNames(messages, files)).toEqual(messages);
+  });
+});
+
 describe('determineImageAttachmentTypeForModel', () => {
+  const mutableImageAttachmentEnv = imageAttachmentEnv as { imageAttachmentMode: 'url' | 'base64' };
+
+  afterEach(() => {
+    mutableImageAttachmentEnv.imageAttachmentMode = 'url';
+  });
+
   it('should return "base64" for anthropic/ model names', () => {
     const model = anthropicModel;
 
@@ -170,5 +234,24 @@ describe('determineImageAttachmentTypeForModel', () => {
     const model = openAiModel;
 
     expect(determineImageAttachmentTypeForModel(model)).toBe('url');
+  });
+
+  it('should return "base64" for gemini model names routed through bifrost', () => {
+    const model = { ...openAiModel, name: 'gemini-2.5-flash-lite', provider: 'bifrost' };
+
+    expect(determineImageAttachmentTypeForModel(model)).toBe('base64');
+  });
+
+  it('should not return "base64" for a google provider model unless its name requires it', () => {
+    const model = { ...openAiModel, provider: 'google' };
+
+    expect(determineImageAttachmentTypeForModel(model)).toBe('url');
+  });
+
+  it('should return "base64" for a non-anthropic model when IMAGE_ATTACHMENT_MODE=base64', () => {
+    mutableImageAttachmentEnv.imageAttachmentMode = 'base64';
+    const model = openAiModel;
+
+    expect(determineImageAttachmentTypeForModel(model)).toBe('base64');
   });
 });

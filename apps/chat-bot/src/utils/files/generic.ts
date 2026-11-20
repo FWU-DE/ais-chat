@@ -1,28 +1,38 @@
-import {
-  isSupportedDocumentExtension,
-  isSupportedFileExtension,
-  isSupportedImageExtension,
-} from '@/const';
+import type { SupportedFileExtension } from '@/const';
+import { isSupportedFileExtension, isSupportedImageExtension } from '@/const';
+
+function getLowercaseFileExtension(fileName: string): string | undefined {
+  const parts = fileName.split('.');
+  return parts.length > 1 ? parts.at(-1)?.toLowerCase() : undefined;
+}
+
+export function parseSupportedFileExtension(fileName: string): SupportedFileExtension | undefined {
+  const fileExtension = getLowercaseFileExtension(fileName);
+  return fileExtension !== undefined && isSupportedFileExtension(fileExtension)
+    ? fileExtension
+    : undefined;
+}
 
 export function getFileExtension(fileName: string) {
-  const fileExtension = fileName.split('.').at(-1)?.toLowerCase();
-  if (!fileExtension || !isSupportedFileExtension(fileExtension)) {
-    throw new Error(`file type ${fileExtension} is not supported`);
+  const fileExtension = parseSupportedFileExtension(fileName);
+  if (!fileExtension) {
+    throw new Error(`file type ${getLowercaseFileExtension(fileName)} is not supported`);
   }
   return fileExtension;
 }
 
 export function isImageFile(fileName: string): boolean {
-  try {
-    return isSupportedImageExtension(getFileExtension(fileName));
-  } catch {
-    return false;
-  }
+  const fileExtension = parseSupportedFileExtension(fileName);
+  return fileExtension !== undefined && isSupportedImageExtension(fileExtension);
 }
 
-export function validateFileExtension(fileName: string): boolean {
-  const lastPart = fileName.split('.').at(-1)?.toLowerCase();
-  return lastPart !== undefined && isSupportedDocumentExtension(lastPart);
+export function validateFileExtension(
+  fileName: string,
+  allowedFileExtensions: readonly string[],
+): boolean {
+  const fileExtension = getLowercaseFileExtension(fileName);
+
+  return fileExtension !== undefined && allowedFileExtensions.includes(fileExtension);
 }
 
 export function formatBytes(bytes: number): string {

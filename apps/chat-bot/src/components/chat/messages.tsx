@@ -1,11 +1,16 @@
-import { type UIMessage, type ChatStatus } from '@/types/chat';
-import { ChatBox, type PendingFileModel } from './chat-box';
-import LoadingAnimation from './loading-animation';
 import { FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
 
+import type { AiActivityStep } from '@/types/ai-activity';
+import { type ChatStatus, type UIMessage } from '@/types/chat';
+
+import { ChatBox, type MessageFileModel } from './chat-box';
+import LoadingAnimation from './loading-animation';
+import { AudioPlaybackCoordinatorProvider } from './speech/audio-playback-coordinator';
+import { GenerateSpeechStreamFn } from './speech/types';
+
 // Re-export for consumers that import from this file
-export type { ChatStatus, PendingFileModel };
+export type { ChatStatus, MessageFileModel };
 
 interface MessagesProps {
   messages: UIMessage[];
@@ -16,9 +21,14 @@ interface MessagesProps {
   assistantIcon?: React.ReactNode;
   containerClassName: string;
   fileMapping?: Map<string, FileModel[]>;
-  pendingFileMapping?: Map<string, PendingFileModel[]>;
+  messageFileMapping?: Map<string, MessageFileModel[]>;
   webSourceMapping?: Map<string, WebSource[]>;
-  getSignedUrlFn?: (fileId: string) => Promise<string>;
+  activitySteps?: AiActivityStep[];
+  showActivityDialog?: boolean;
+  generateSpeechStreamFn: GenerateSpeechStreamFn;
+  speechVoice?: string;
+  isSpeechModelEnabled: boolean;
+  speechOnly: boolean;
 }
 
 export function Messages({
@@ -30,32 +40,50 @@ export function Messages({
   assistantIcon,
   containerClassName,
   fileMapping,
-  pendingFileMapping,
+  messageFileMapping: messageFileMapping,
   webSourceMapping,
-  getSignedUrlFn,
-}: MessagesProps) {
+  activitySteps = [],
+  showActivityDialog = false,
+  generateSpeechStreamFn,
+  speechVoice,
+  isSpeechModelEnabled,
+  speechOnly,
+}: MessagesProps): React.JSX.Element {
+  const canRegenerateMessage = messages.some((message) => message.role === 'user');
+  const lastMessage = messages[messages.length - 1];
+  // Keep the loading animation visible until the assistant actually starts emitting text,
+  // even once the message placeholder exists for early activity steps (status: 'streaming').
+  const showLoadingAnimation =
+    isLoading ||
+    (status === 'streaming' && lastMessage?.role === 'assistant' && lastMessage.content === '');
+
   return (
     <div className={containerClassName}>
-      {messages.map((message, index) => (
-        <ChatBox
-          key={index}
-          index={index}
-          fileMapping={fileMapping}
-          pendingFileMapping={pendingFileMapping}
-          isLastNonUser={index === messages.length - 1 && message.role !== 'user'}
-          isLoading={isLoading}
-          regenerateMessage={reload}
-          conversationId={conversationId}
-          assistantIcon={assistantIcon}
-          webSources={message.role === 'user' ? webSourceMapping?.get(message.id) : undefined}
-          status={status}
-          getSignedUrlFn={getSignedUrlFn}
-        >
-          {message}
-        </ChatBox>
-      ))}
-
-      {isLoading && <LoadingAnimation />}
+      <AudioPlaybackCoordinatorProvider>
+        {messages.map((message, index) => (
+          <ChatBox
+            key={index}
+            index={index}
+            message={message}
+            fileMapping={fileMapping}
+            messageFileMapping={messageFileMapping}
+            isLastNonUser={index === messages.length - 1 && message.role !== 'user'}
+            isLoading={isLoading}
+            regenerateMessage={reload}
+            canRegenerateMessage={canRegenerateMessage}
+            conversationId={conversationId}
+            assistantIcon={assistantIcon}
+            webSources={message.role === 'user' ? webSourceMapping?.get(message.id) : undefined}
+            status={status}
+            showActivityDialog={showActivityDialog}
+            generateSpeechStreamFn={generateSpeechStreamFn}
+            speechVoice={speechVoice}
+            isSpeechModelEnabled={isSpeechModelEnabled}
+            speechOnly={speechOnly}
+          />
+        ))}
+      </AudioPlaybackCoordinatorProvider>
+      {showLoadingAnimation && <LoadingAnimation activitySteps={activitySteps} />}
     </div>
   );
 }

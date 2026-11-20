@@ -1,10 +1,13 @@
 'use client';
 
-import { LogoutIcon } from '@/components/icons/logout';
-import { cn } from '@/utils/tailwind';
 import { useTranslations } from 'next-intl';
 
+import { LogoutIcon } from '@/components/icons/logout';
+import { cn } from '@/utils/tailwind';
+
 async function logout() {
+  // Full page navigation is required so the browser follows the route handler's redirect after clearing the session cookie.
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
   window.location.assign('/api/auth/logout');
 }
 

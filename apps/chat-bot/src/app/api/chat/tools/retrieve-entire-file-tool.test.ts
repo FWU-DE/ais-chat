@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FileModel } from '@shared/db/schema';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT } from '@/configuration-text-inputs/const';
 
 const mocks = vi.hoisted(() => ({
@@ -68,13 +69,11 @@ describe('buildRetrieveEntireFileTool', () => {
     });
 
     expect(mocks.dbGetExtractedFileContentMock).toHaveBeenCalledWith('file-1');
-    expect(JSON.parse(result)).toEqual({
+    expect(result).toEqual({
       fileName: 'Arbeitsblatt.pdf',
       content: 'Erster Abschnitt. Zweiter Abschnitt. Dritter Abschnitt.',
-      truncated: false,
       characterCount: expect.any(Number),
       maxCharacters: RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT,
-      error: null,
     });
   });
 
@@ -95,19 +94,17 @@ describe('buildRetrieveEntireFileTool', () => {
       fileName: 'Grossdatei.txt',
     });
 
-    const parsed = JSON.parse(result) as {
-      truncated: boolean;
+    const parsed = result as {
       maxCharacters: number;
-      error: string | null;
       characterCount: number;
       content: string | null;
+      notice?: string;
     };
 
-    expect(parsed.truncated).toBe(true);
     expect(parsed.maxCharacters).toBe(RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT);
     expect(parsed.characterCount).toBeGreaterThan(RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT);
-    expect(parsed.error).toContain('truncated');
     expect(parsed.content).not.toBeNull();
+    expect(parsed.notice).toBe('File content was truncated to fit the character limit.');
   });
 
   it('returns error for missing file name', async () => {
@@ -121,7 +118,7 @@ describe('buildRetrieveEntireFileTool', () => {
       fileName: '',
     });
 
-    const parsed = JSON.parse(result);
+    const parsed = result as { error: string };
     expect(parsed.error).toBe('Missing file name.');
     expect(mocks.dbGetExtractedFileContentMock).not.toHaveBeenCalled();
   });
@@ -137,9 +134,64 @@ describe('buildRetrieveEntireFileTool', () => {
       fileName: 'NonExistent.txt',
     });
 
-    const parsed = JSON.parse(result);
+    const parsed = result as { error: string; fileName: string };
     expect(parsed.error).toBe('File not found.');
     expect(parsed.fileName).toBe('NonExistent.txt');
     expect(mocks.dbGetExtractedFileContentMock).not.toHaveBeenCalled();
+  });
+
+  it('returns a notice instead of an error when extraction yields no usable content', async () => {
+    const emptyFile = {
+      id: 'file-4',
+      name: 'Bild.png',
+    } as FileModel;
+    fileContentsById.set('file-4', '');
+
+    const { buildRetrieveEntireFileTool } = await import('./retrieve-entire-file-tool');
+
+    const tool = buildRetrieveEntireFileTool({
+      relatedFileEntities: [emptyFile],
+    });
+
+    const result = await tool!.handler({
+      fileName: 'Bild.png',
+    });
+
+    expect(result).toEqual({
+      fileName: 'Bild.png',
+      content: null,
+      characterCount: 0,
+      maxCharacters: RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT,
+      notice: 'No usable content found.',
+    });
+  });
+});
+
+describe('retrieveEntireFileActivity.parsePersistedResult', () => {
+  it('treats a `truncated: true` result with an explanatory `error` as success, not a failure', async () => {
+    const { retrieveEntireFileActivity } = await import('./retrieve-entire-file-tool');
+
+    expect(
+      retrieveEntireFileActivity.parsePersistedResult({
+        fileName: 'a.txt',
+        content: 'abc',
+        characterCount: 100_001,
+        maxCharacters: 100_000,
+        truncated: true,
+        error: 'File content was truncated to fit the character limit.',
+      }),
+    ).toEqual({
+      fileName: 'a.txt',
+      content: 'abc',
+      characterCount: 100_001,
+      maxCharacters: 100_000,
+    });
+  });
+
+  it('keeps `error` when `truncated` is not `true`', async () => {
+    const generic = { fileName: 'a.txt', error: 'File not found.' };
+    const { retrieveEntireFileActivity } = await import('./retrieve-entire-file-tool');
+
+    expect(retrieveEntireFileActivity.parsePersistedResult(generic)).toEqual(generic);
   });
 });

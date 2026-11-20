@@ -1,9 +1,11 @@
 'use server';
 
-import { requireAuth } from '@/auth/requireAuth';
 import { runServerAction } from '@shared/actions/run-server-action';
 import { ForbiddenError } from '@shared/error/forbidden-error';
-import { chatWithImageEditAssistant, type AssistantMessage } from './image-edit-assistant-service';
+
+import { requireAuth } from '@/auth/requireAuth';
+
+import { type AssistantMessage, chatWithImageEditAssistant } from './image-edit-assistant-service';
 
 export async function imageEditAssistantAction(
   messages: AssistantMessage[],

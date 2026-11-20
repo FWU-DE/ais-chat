@@ -1,8 +1,8 @@
-import { constructAzureEmbeddingGenerationFn } from './azure';
-import { constructIonosEmbeddingGenerationFn } from './ionos';
-import { constructBifrostEmbeddingGenerationFn } from './bifrost';
-import type { AiModel, EmbeddingGenerationFn } from '../types';
 import { ProviderConfigurationError } from '../../errors';
+import type { AiModel, EmbeddingGenerationFn } from '../types';
+import { constructAzureEmbeddingGenerationFn } from './azure';
+import { constructBifrostEmbeddingGenerationFn } from './bifrost';
+import { constructIonosEmbeddingGenerationFn } from './ionos';
 
 function getEmbeddingGenerationFnByModel({
   model,

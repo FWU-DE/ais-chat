@@ -1,8 +1,8 @@
 'use client';
 
+import { logError } from '@shared/logging';
 import { usePathname, useRouter } from 'next/navigation';
 import * as React from 'react';
-import { logError } from '@shared/logging';
 
 export default function Error({
   error,

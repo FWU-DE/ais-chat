@@ -1,5 +1,6 @@
-import { CHUNK_SIZE } from '@/configuration-text-inputs/const';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
+
+import { CHUNK_SIZE } from '@/configuration-text-inputs/const';
 
 const splitter = new RecursiveCharacterTextSplitter({
   chunkSize: CHUNK_SIZE,

@@ -1,16 +1,25 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { billImageGenerationUsageToApiKey, isApiKeyOverQuota } from './billing';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { AiModel } from '../images/types';
+import type { AiModel as SpeechAiModel } from '../speech/types';
+import {
+  billImageGenerationUsageToApiKey,
+  billSpeechUsageToApiKey,
+  calculatePriceInCentBySpeechModelAndUsage,
+  isApiKeyOverQuota,
+} from './billing';
 
 // Mock the api-database functions
 vi.mock('@ais-chat/api-database', () => ({
   dbCreateImageGenerationUsage: vi.fn(),
+  dbCreateCompletionUsage: vi.fn(),
   dbGetApiKeyLimit: vi.fn(),
   dbGetCompletionUsageCostsSinceStartOfCurrentMonth: vi.fn(),
   dbGetImageGenerationUsageCostsSinceStartOfCurrentMonth: vi.fn(),
 }));
 
 import {
+  dbCreateCompletionUsage,
   dbCreateImageGenerationUsage,
   dbGetApiKeyLimit,
   dbGetCompletionUsageCostsSinceStartOfCurrentMonth,
@@ -18,6 +27,7 @@ import {
 } from '@ais-chat/api-database';
 
 const mockDbCreateImageGenerationUsage = vi.mocked(dbCreateImageGenerationUsage);
+const mockDbCreateCompletionUsage = vi.mocked(dbCreateCompletionUsage);
 const mockDbGetApiKeyLimit = vi.mocked(dbGetApiKeyLimit);
 const mockDbGetCompletionUsageCostsSinceStartOfCurrentMonth = vi.mocked(
   dbGetCompletionUsageCostsSinceStartOfCurrentMonth,
@@ -65,6 +75,7 @@ describe('billImageGenerationUsageToApiKey', () => {
       priceMetadata: {
         type: 'image',
         inputTextTokenPrice: 1,
+        inputImageTokenPrice: 4,
         outputTextTokenPrice: 2,
         outputImageTokenPrice: 3,
       },
@@ -72,6 +83,7 @@ describe('billImageGenerationUsageToApiKey', () => {
 
     const usage = {
       input_text_tokens: 1_000_000,
+      input_image_tokens: 1_000_000,
       output_text_tokens: 1_000_000,
       output_image_tokens: 1_000_000,
     };
@@ -80,11 +92,11 @@ describe('billImageGenerationUsageToApiKey', () => {
 
     const result = await billImageGenerationUsageToApiKey(apiKeyId, imageModel, usage);
 
-    expect(result).toBe(6);
+    expect(result).toBe(10);
     expect(mockDbCreateImageGenerationUsage).toHaveBeenCalledWith({
       apiKeyId: 'test-api-key-123',
       modelId: 'model-789',
-      costsInCent: 6,
+      costsInCent: 10,
     });
   });
 
@@ -105,6 +117,33 @@ describe('billImageGenerationUsageToApiKey', () => {
     );
 
     expect(mockDbCreateImageGenerationUsage).not.toHaveBeenCalled();
+  });
+});
+
+describe('speech billing', () => {
+  it('calculates and records character usage', async () => {
+    const model = {
+      id: 'speech-model',
+      priceMetadata: { type: 'speech', priceInCentPer1MillionCharacters: 250 },
+    } as SpeechAiModel;
+    const usage = { characters: 2_000_000 };
+    mockDbCreateCompletionUsage.mockResolvedValue(undefined as never);
+
+    expect(
+      calculatePriceInCentBySpeechModelAndUsage({
+        priceMetadata: model.priceMetadata as never,
+        usage,
+      }),
+    ).toBe(500);
+    await expect(billSpeechUsageToApiKey('api-key', model, usage)).resolves.toBe(500);
+    expect(mockDbCreateCompletionUsage).toHaveBeenCalledWith({
+      apiKeyId: 'api-key',
+      modelId: 'speech-model',
+      completionTokens: 0,
+      promptTokens: 0,
+      totalTokens: 0,
+      costsInCent: 500,
+    });
   });
 });
 

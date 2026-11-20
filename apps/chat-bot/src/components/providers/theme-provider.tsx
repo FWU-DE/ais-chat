@@ -1,9 +1,10 @@
 'use client';
 
-import React, { startTransition } from 'react';
-import { DesignConfiguration } from '@ui/types/design-configuration';
-import { constructRootLayoutStyle } from '@/utils/tailwind/layout';
 import { PortalContainerProvider } from '@ui/components/portal-container';
+import { DesignConfiguration } from '@ui/types/design-configuration';
+import React, { startTransition } from 'react';
+
+import { constructRootLayoutStyle } from '@/utils/tailwind/layout';
 
 type ThemeContextType = {
   designConfiguration: DesignConfiguration;
@@ -37,12 +38,12 @@ export function ThemeProvider({
   }, [containerRef]);
 
   return (
-    <ThemeContext.Provider value={{ designConfiguration }}>
+    <ThemeContext value={{ designConfiguration }}>
       <PortalContainerProvider container={container}>
         <div ref={setContainerRef} style={constructRootLayoutStyle({ designConfiguration })}>
           {children}
         </div>
       </PortalContainerProvider>
-    </ThemeContext.Provider>
+    </ThemeContext>
   );
 }

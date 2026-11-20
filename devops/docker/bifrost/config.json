@@ -1,0 +1,37 @@
+{
+  "$schema": "https://www.getbifrost.ai/schema",
+  "source_of_truth": "split",
+  "framework": {
+    "pricing": {
+      "mcp_library_sync_interval": 0,
+      "live_models_sync_interval": 0
+    }
+  },
+  "client": {
+    "log_retention_days": 90,
+    "compat": {
+      "convert_chat_to_responses": true,
+      "convert_text_to_chat": true,
+      "should_convert_params": true,
+      "should_drop_params": true
+    },
+    "enforce_auth_on_inference": true
+  },
+  "governance": {
+    "auth_config": {
+      "admin_password": "env.BIFROST_ADMIN_PASSWORD",
+      "admin_username": "env.BIFROST_ADMIN_USERNAME",
+      "disable_auth_on_inference": false,
+      "is_enabled": true
+    },
+    "virtual_keys": [
+      {
+        "allow_all_providers": true,
+        "id": "vk-all",
+        "is_active": true,
+        "name": "access to all providers",
+        "value": "env.BIFROST_API_KEY"
+      }
+    ]
+  }
+}

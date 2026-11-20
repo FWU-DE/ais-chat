@@ -1,17 +1,38 @@
-import { db } from '..';
-import { and, arrayOverlaps, desc, eq, getTableColumns, inArray, or, sql } from 'drizzle-orm';
+import { UserModel } from '@shared/auth/user-model';
+import { NotFoundError } from '@shared/error';
 import {
-  conversationTable,
+  and,
+  arrayOverlaps,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  isNull,
+  or,
+  sql,
+} from 'drizzle-orm';
+
+import { db } from '..';
+import {
   AssistantFileMapping,
   type AssistantInsertModel,
   type AssistantSelectModel,
   assistantTable,
   assistantTemplateMappingTable,
-  fileTable,
+  conversationTable,
+  userFavoriteTable,
   userTable,
 } from '../schema';
-import { NotFoundError } from '@shared/error';
-import { UserModel } from '@shared/auth/user-model';
+import { PgTransactionObject } from '../types';
+import { dbDeleteFileIfUnreferenced } from './files';
+
+type IncludeDeletedOption = {
+  includeDeleted?: boolean;
+};
+
+function excludeDeletedAssistants(options?: IncludeDeletedOption) {
+  return options?.includeDeleted ? undefined : eq(assistantTable.isDeleted, false);
+}
 
 function baseAssistantQuery() {
   return db
@@ -25,43 +46,91 @@ function baseAssistantQuery() {
 
 export async function dbGetAssistantsByUserId({
   user,
+  includeDeleted,
 }: {
   user: Pick<UserModel, 'id'>;
-}): Promise<AssistantSelectModel[]> {
+} & IncludeDeletedOption): Promise<AssistantSelectModel[]> {
   return baseAssistantQuery()
-    .where(eq(assistantTable.userId, user.id))
+    .where(and(eq(assistantTable.userId, user.id), excludeDeletedAssistants({ includeDeleted })))
     .orderBy(desc(assistantTable.createdAt));
 }
 
 export async function dbGetAssistantById({
   assistantId,
+  includeDeleted,
 }: {
   assistantId: string;
-}): Promise<AssistantSelectModel> {
-  const [assistant] = await baseAssistantQuery().where(eq(assistantTable.id, assistantId));
+} & IncludeDeletedOption): Promise<AssistantSelectModel> {
+  const [assistant] = await baseAssistantQuery().where(
+    and(eq(assistantTable.id, assistantId), excludeDeletedAssistants({ includeDeleted })),
+  );
 
   if (!assistant) throw new NotFoundError('Assistant not found');
 
   return assistant;
 }
 
+export async function dbGetAssistantByIdForConversation({
+  assistantId,
+  conversationId,
+  userId,
+}: {
+  assistantId: string;
+  conversationId: string;
+  userId: string;
+}): Promise<AssistantSelectModel | undefined> {
+  const [assistant] = await baseAssistantQuery()
+    .innerJoin(conversationTable, eq(conversationTable.assistantId, assistantTable.id))
+    .where(
+      and(
+        eq(assistantTable.id, assistantId),
+        eq(conversationTable.id, conversationId),
+        eq(conversationTable.userId, userId),
+        isNull(conversationTable.deletedAt),
+      ),
+    );
+
+  return assistant;
+}
+
 export async function dbGetAssistantsByIds({
   assistantIds,
+  includeDeleted,
 }: {
   assistantIds: string[];
-}): Promise<AssistantSelectModel[]> {
+} & IncludeDeletedOption): Promise<AssistantSelectModel[]> {
   if (assistantIds.length === 0) {
     return [];
   }
 
-  return baseAssistantQuery().where(inArray(assistantTable.id, assistantIds));
+  return baseAssistantQuery().where(
+    and(inArray(assistantTable.id, assistantIds), excludeDeletedAssistants({ includeDeleted })),
+  );
+}
+
+export async function dbGetAssistantsByUserFavorite({
+  user,
+}: {
+  user: Pick<UserModel, 'id'>;
+}): Promise<AssistantSelectModel[]> {
+  return baseAssistantQuery()
+    .innerJoin(
+      userFavoriteTable,
+      and(
+        eq(userFavoriteTable.assistantId, assistantTable.id),
+        eq(userFavoriteTable.userId, user.id),
+      ),
+    )
+    .where(excludeDeletedAssistants())
+    .orderBy(desc(assistantTable.createdAt));
 }
 
 export async function dbGetGlobalGpts({
   user,
+  includeDeleted,
 }: {
   user: Pick<UserModel, 'id' | 'schoolIds' | 'federalStateId'>;
-}): Promise<AssistantSelectModel[]> {
+} & IncludeDeletedOption): Promise<AssistantSelectModel[]> {
   const federalStateId = user.federalStateId;
 
   if (federalStateId) {
@@ -72,40 +141,49 @@ export async function dbGetGlobalGpts({
       )
       .where(
         and(
-          eq(assistantTable.accessLevel, 'global'),
+          eq(assistantTable.isGlobal, true),
           eq(assistantTemplateMappingTable.federalStateId, federalStateId),
+          excludeDeletedAssistants({ includeDeleted }),
         ),
       )
       .orderBy(desc(assistantTable.createdAt));
   } else {
     return baseAssistantQuery()
-      .where(eq(assistantTable.accessLevel, 'global'))
+      .where(and(eq(assistantTable.isGlobal, true), excludeDeletedAssistants({ includeDeleted })))
       .orderBy(desc(assistantTable.createdAt));
   }
 }
 
-export async function dbGetCommunityGpts(): Promise<AssistantSelectModel[]> {
+export async function dbGetCommunityGpts(
+  options?: IncludeDeletedOption,
+): Promise<AssistantSelectModel[]> {
   return baseAssistantQuery()
-    .where(eq(assistantTable.accessLevel, 'community'))
+    .where(and(eq(assistantTable.isCommunityShared, true), excludeDeletedAssistants(options)))
     .orderBy(desc(assistantTable.createdAt));
 }
 
 export async function dbGetGlobalAssistantByName({
   name,
+  includeDeleted,
 }: {
   name: string;
-}): Promise<AssistantSelectModel | undefined> {
+} & IncludeDeletedOption): Promise<AssistantSelectModel | undefined> {
   const [assistant] = await baseAssistantQuery().where(
-    and(eq(assistantTable.name, name), eq(assistantTable.accessLevel, 'global')),
+    and(
+      eq(assistantTable.name, name),
+      eq(assistantTable.isGlobal, true),
+      excludeDeletedAssistants({ includeDeleted }),
+    ),
   );
   return assistant;
 }
 
 export async function dbGetGptsByAssociatedSchools({
   user,
+  includeDeleted,
 }: {
   user: Pick<UserModel, 'schoolIds'>;
-}): Promise<AssistantSelectModel[]> {
+} & IncludeDeletedOption): Promise<AssistantSelectModel[]> {
   if (user.schoolIds.length === 0) {
     return [];
   }
@@ -113,8 +191,9 @@ export async function dbGetGptsByAssociatedSchools({
   return baseAssistantQuery()
     .where(
       and(
-        eq(assistantTable.accessLevel, 'school'),
+        eq(assistantTable.isSchoolShared, true),
         arrayOverlaps(userTable.schoolIds, user.schoolIds),
+        excludeDeletedAssistants({ includeDeleted }),
       ),
     )
     .orderBy(desc(assistantTable.createdAt));
@@ -122,37 +201,52 @@ export async function dbGetGptsByAssociatedSchools({
 
 export async function dbGetGptsByUser({
   user,
+  includeDeleted,
 }: {
   user: Pick<UserModel, 'id'>;
-}): Promise<AssistantSelectModel[]> {
+} & IncludeDeletedOption): Promise<AssistantSelectModel[]> {
   return baseAssistantQuery()
-    .where(and(eq(assistantTable.userId, user.id), eq(assistantTable.accessLevel, 'private')))
+    .where(
+      and(
+        eq(assistantTable.userId, user.id),
+        eq(assistantTable.isSchoolShared, false),
+        eq(assistantTable.isCommunityShared, false),
+        eq(assistantTable.isGlobal, false),
+        excludeDeletedAssistants({ includeDeleted }),
+      ),
+    )
     .orderBy(desc(assistantTable.createdAt));
 }
 
 export async function dbGetAssistantByIdOrAssociatedSchool({
   assistantId,
   user,
+  includeDeleted,
 }: {
   assistantId: string;
   user: Pick<UserModel, 'id' | 'schoolIds'>;
-}) {
+} & IncludeDeletedOption) {
   const [assistant] = await baseAssistantQuery().where(
-    or(
-      and(
-        eq(assistantTable.id, assistantId),
-        eq(assistantTable.userId, user.id),
-        eq(assistantTable.accessLevel, 'private'),
+    and(
+      or(
+        and(
+          eq(assistantTable.id, assistantId),
+          eq(assistantTable.userId, user.id),
+          eq(assistantTable.isSchoolShared, false),
+          eq(assistantTable.isCommunityShared, false),
+          eq(assistantTable.isGlobal, false),
+        ),
+        user.schoolIds.length > 0
+          ? and(
+              eq(assistantTable.id, assistantId),
+              eq(assistantTable.isSchoolShared, true),
+              arrayOverlaps(userTable.schoolIds, user.schoolIds),
+            )
+          : undefined,
+        and(eq(assistantTable.id, assistantId), eq(assistantTable.isCommunityShared, true)),
+        and(eq(assistantTable.id, assistantId), eq(assistantTable.isGlobal, true)),
       ),
-      user.schoolIds.length > 0
-        ? and(
-            eq(assistantTable.id, assistantId),
-            eq(assistantTable.accessLevel, 'school'),
-            arrayOverlaps(userTable.schoolIds, user.schoolIds),
-          )
-        : undefined,
-      and(eq(assistantTable.id, assistantId), eq(assistantTable.accessLevel, 'community')),
-      and(eq(assistantTable.id, assistantId), eq(assistantTable.accessLevel, 'global')),
+      excludeDeletedAssistants({ includeDeleted }),
     ),
   );
 
@@ -174,7 +268,7 @@ export async function dbUpsertAssistant({
     .returning();
 
   if (!insertedAssistant) throw new Error('Could not insert or update assistant');
-  return dbGetAssistantById({ assistantId: insertedAssistant.id });
+  return dbGetAssistantById({ assistantId: insertedAssistant.id, includeDeleted: true });
 }
 
 export async function dbSetAssistantSuspended({ assistantId }: { assistantId: string }) {
@@ -182,7 +276,9 @@ export async function dbSetAssistantSuspended({ assistantId }: { assistantId: st
     .update(assistantTable)
     .set({
       suspended: true,
-      accessLevel: 'private',
+      isSchoolShared: false,
+      isCommunityShared: false,
+      isGlobal: false,
       hasLinkAccess: false,
     })
     .where(eq(assistantTable.id, assistantId))
@@ -192,7 +288,7 @@ export async function dbSetAssistantSuspended({ assistantId }: { assistantId: st
     throw new NotFoundError('Assistant not found');
   }
 
-  return dbGetAssistantById({ assistantId: updatedAssistant.id });
+  return dbGetAssistantById({ assistantId: updatedAssistant.id, includeDeleted: true });
 }
 
 export async function dbLiftSuspensionOnAssistant({ assistantId }: { assistantId: string }) {
@@ -206,7 +302,7 @@ export async function dbLiftSuspensionOnAssistant({ assistantId }: { assistantId
     throw new NotFoundError('Assistant not found');
   }
 
-  return dbGetAssistantById({ assistantId: updatedAssistant.id });
+  return dbGetAssistantById({ assistantId: updatedAssistant.id, includeDeleted: true });
 }
 
 export async function dbDeleteAssistant({ assistantId }: { assistantId: string }) {
@@ -239,12 +335,12 @@ export async function dbDeleteAssistantByIdAndUser({
       .where(eq(AssistantFileMapping.assistantId, assistant.id));
     await tx.delete(conversationTable).where(eq(conversationTable.assistantId, assistant.id));
     await tx.delete(AssistantFileMapping).where(eq(AssistantFileMapping.assistantId, assistant.id));
-    await tx.delete(fileTable).where(
-      inArray(
-        fileTable.id,
-        relatedFiles.map((f) => f.id),
-      ),
-    );
+    const deletedFileIds: string[] = [];
+    for (const { id } of relatedFiles) {
+      if (await dbDeleteFileIfUnreferenced(tx, id)) {
+        deletedFileIds.push(id);
+      }
+    }
     const deletedAssistant = (
       await tx
         .delete(assistantTable)
@@ -255,7 +351,7 @@ export async function dbDeleteAssistantByIdAndUser({
     if (deletedAssistant === undefined) {
       throw new Error('Could not delete assistant');
     }
-    return deletedAssistant;
+    return { deletedAssistant, deletedFileIds };
   });
 
   return deletedAssistant;
@@ -277,4 +373,65 @@ export async function dbInsertAssistantFileMapping({
     .returning();
 
   return insertedFileMapping;
+}
+
+/**
+ * Updates whether an assistant is community-shared, within the given transaction.
+ * Only called from the community-template-request workflow (approve/cancel), never directly
+ * from the owner-facing update path. The `updatedAt` timestamp is bumped automatically.
+ */
+export async function dbUpdateAssistantCommunityShared(
+  assistantId: string,
+  isCommunityShared: boolean,
+  tx: PgTransactionObject,
+): Promise<void> {
+  const [updatedAssistant] = await tx
+    .update(assistantTable)
+    .set({ isCommunityShared })
+    .where(eq(assistantTable.id, assistantId))
+    .returning({ id: assistantTable.id });
+
+  if (!updatedAssistant) {
+    throw new NotFoundError('Assistant not found');
+  }
+}
+
+/**
+ * Forces hasLinkAccess on for an assistant within the given transaction (admin needs link
+ * access to review a submitted community template request).
+ */
+export async function dbUpdateAssistantHasLinkAccess(
+  assistantId: string,
+  hasLinkAccess: boolean,
+  tx: PgTransactionObject,
+): Promise<void> {
+  const [updatedAssistant] = await tx
+    .update(assistantTable)
+    .set({ hasLinkAccess })
+    .where(eq(assistantTable.id, assistantId))
+    .returning({ id: assistantTable.id });
+
+  if (!updatedAssistant) {
+    throw new NotFoundError('Assistant not found');
+  }
+}
+
+/**
+ * Forces isSchoolShared on for an assistant within the given transaction (community sharing
+ * includes school sharing).
+ */
+export async function dbUpdateAssistantSchoolShared(
+  assistantId: string,
+  isSchoolShared: boolean,
+  tx: PgTransactionObject,
+): Promise<void> {
+  const [updatedAssistant] = await tx
+    .update(assistantTable)
+    .set({ isSchoolShared })
+    .where(eq(assistantTable.id, assistantId))
+    .returning({ id: assistantTable.id });
+
+  if (!updatedAssistant) {
+    throw new NotFoundError('Assistant not found');
+  }
 }

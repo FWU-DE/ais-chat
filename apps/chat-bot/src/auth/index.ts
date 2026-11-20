@@ -1,14 +1,16 @@
+import { generateErrorUrl } from '@shared/auth/authentication-service';
+import { logDebug, logError, logInfo, logWarning } from '@shared/logging';
 import NextAuth, { NextAuthResult } from 'next-auth';
+
+import { AUTH_COOKIES } from './cookies';
 import {
   handleVidisJWTCallback,
   validateAndSyncVidisUser,
   vidisConfig,
 } from './providers/vidis-provider';
-import { getUserAndContextByUserId } from './utils';
-import { UserAndContext, userAndContextSchema } from './types';
-import { logDebug, logError, logInfo, logWarning } from '@shared/logging';
 import { sessionBlockList } from './session';
-import { generateErrorUrl } from '@shared/auth/authentication-service';
+import { UserAndContext, userAndContextSchema } from './types';
+import { getUserAndContextByUserId } from './utils';
 
 declare module 'next-auth' {
   interface Session {
@@ -23,6 +25,7 @@ const SESSION_LIFETIME_SECONDS = 60 * 60 * 8;
 
 const result = NextAuth({
   providers: [vidisConfig],
+  cookies: AUTH_COOKIES,
   jwt: {
     maxAge: SESSION_LIFETIME_SECONDS,
   },

@@ -1,5 +1,3 @@
-import { Readable } from 'stream';
-import { cacheLife } from 'next/cache';
 import {
   CopyObjectCommand,
   CopyObjectCommandInput,
@@ -15,13 +13,16 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { env } from './env';
-import { nanoid } from 'nanoid';
-import { chunkArray } from '@shared/utils/arrays';
-import { ONE_DAY, ONE_HOUR, S3_DELETE_OBJECTS_MAX } from '@shared/s3/const';
-import { logError } from '@shared/logging';
 import { NotFoundError } from '@shared/error';
 import { UnexpectedError } from '@shared/error/unexpected-error';
+import { logError } from '@shared/logging';
+import { ONE_DAY, ONE_HOUR, S3_DELETE_OBJECTS_MAX } from '@shared/s3/const';
+import { chunkArray } from '@shared/utils/arrays';
+import { nanoid } from 'nanoid';
+import { cacheLife } from 'next/cache';
+import { Readable } from 'stream';
+
+import { env } from './env';
 
 /**
  * Encodes a filename for Content-Disposition `filename*` (RFC 5987).
@@ -37,15 +38,13 @@ function encodeRFC5987Value(value: string) {
   );
 }
 
-const s3Endpoint = env.otcS3Hostname.startsWith('http')
-  ? env.otcS3Hostname
-  : `https://${env.otcS3Hostname}`;
-
 const s3Client = new S3Client({
-  region: 'eu-nl',
-  endpoint: s3Endpoint,
-  // Use path-style for local S3-compatible services (e.g. RustFS on localhost)
-  forcePathStyle: new URL(s3Endpoint).hostname === 'localhost',
+  region: env.otcS3Region,
+  // otcS3Hostname is a bare hostname in production (OTC), but a full URL (e.g. http://rustfs:9000) for local RustFS.
+  endpoint: /^https?:\/\//.test(env.otcS3Hostname)
+    ? env.otcS3Hostname
+    : `https://${env.otcS3Hostname}`,
+  forcePathStyle: true,
   credentials: {
     accessKeyId: env.otcAccessKeyId,
     secretAccessKey: env.otcSecretAccessKey,

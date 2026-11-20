@@ -1,0 +1,1 @@
+ALTER TABLE "url_preset" DROP CONSTRAINT IF EXISTS "url_preset_name_unique";

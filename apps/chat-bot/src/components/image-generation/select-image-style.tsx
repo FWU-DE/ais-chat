@@ -1,106 +1,36 @@
 'use client';
 
-import React, { startTransition } from 'react';
-import { useImageStyle } from '../providers/image-style-provider';
+import { Separator } from '@ui/components/separator';
 import { useTranslations } from 'next-intl';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { cn } from '@/utils/tailwind';
-import { iconClassName } from '@/utils/tailwind/icon';
-import { ImageStyle } from '@shared/utils/chat';
-import { usePortalContainer } from '@ui/components/portal-container';
+import React from 'react';
+
+import { HeaderMainMenuItem } from '../layout/header-main-menu-item';
+import { HeaderMenuItem } from '../layout/header-menu-item';
+import { useImageStyle } from '../providers/image-style-provider';
 
 export default function SelectImageStyle() {
-  const { styles, selectedStyle, setSelectedStyle } = useImageStyle();
-  const tImageGeneration = useTranslations('image-generation');
-  const container = usePortalContainer();
-
-  async function handleSelectStyle(style: ImageStyle | undefined) {
-    startTransition(() => {
-      setOptimisticStyle(style);
-    });
-    setSelectedStyle(style);
-  }
-
-  const [optimisticStyle, setOptimisticStyle] = React.useOptimistic(selectedStyle);
+  const { selectableStyles, selectedStyle, setSelectedStyle } = useImageStyle();
+  const t = useTranslations('image-generation.style');
 
   return (
-    <div className="flex flex-col gap-2 rounded-enterprise-md p-2">
-      <span className="text-xs text-gray-600 hidden sm:block">
-        {tImageGeneration('style-label')}
-      </span>
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger
-          disabled={styles.length < 2}
-          asChild
-          className="cursor-pointer disabled:cursor-default focus:outline-hidden"
-        >
-          <button
-            type="button"
-            className="flex items-center gap-2 cursor-pointer disabled:cursor-default bg-transparent opacity-100"
-            aria-label="Select Style Dropdown"
-          >
-            <span className="text-primary text-base font-medium">
-              {optimisticStyle?.displayName ?? tImageGeneration('no-style')}
-            </span>
-            {styles.length > 1 && <ChevronDown className="text-primary" />}
-          </button>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Portal container={container}>
-          <DropdownMenu.Content
-            className={cn('flex flex-col bg-white shadow-dropdown rounded-xl ml-0')}
-            align="start"
-            sideOffset={10}
-          >
-            {styles
-              .filter((style) => {
-                if (selectedStyle === undefined) {
-                  return style.name !== 'none';
-                } else {
-                  return style.name !== selectedStyle.name;
-                }
-              })
-              .map((style) => {
-                return (
-                  <React.Fragment key={style.name}>
-                    <DropdownMenu.Item asChild>
-                      <button
-                        className={cn(
-                          'hover:bg-primary text-left py-6 px-7 outline-hidden flex flex-col',
-                          iconClassName,
-                        )}
-                        onClick={() => handleSelectStyle(style.name === 'none' ? undefined : style)}
-                        aria-label={`Select ${style.displayName} Style`}
-                      >
-                        <div className="flex gap-2 items-center">
-                          <span>{style.displayName}</span>
-                        </div>
-                      </button>
-                    </DropdownMenu.Item>
-                    <hr className="text-gray-200 mx-2 last:mb-2 last:hidden" />
-                  </React.Fragment>
-                );
-              })}
-          </DropdownMenu.Content>
-        </DropdownMenu.Portal>
-      </DropdownMenu.Root>
-    </div>
-  );
-}
-
-function ChevronDown(props: React.ComponentProps<'svg'>) {
-  return (
-    <svg
-      width="11"
-      height="7"
-      viewBox="0 0 11 7"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      {...props}
+    <HeaderMainMenuItem
+      caption={t('label')}
+      triggerLabel={selectedStyle?.displayName ?? t('no-style')}
+      triggerAriaLabel={t('aria-label')}
+      isDropdownEnabled={selectableStyles.length > 0}
     >
-      <path
-        d="M10.3331 0.199951L11 0.911514L5.5 6.79995L-3.11034e-08 0.911513L0.663437 0.199951L5.5 5.37339L10.3331 0.199951Z"
-        fill="currentColor"
-      />
-    </svg>
+      {selectableStyles.map((style) => {
+        return (
+          <React.Fragment key={style.name}>
+            <HeaderMenuItem
+              onClick={() => setSelectedStyle(style.name === 'none' ? undefined : style)}
+            >
+              {style.displayName}
+            </HeaderMenuItem>
+            <Separator className="mx-2 border-b-0 last:hidden" />
+          </React.Fragment>
+        );
+      })}
+    </HeaderMainMenuItem>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { MagicWandIcon, PaperPlaneRightIcon } from '@phosphor-icons/react';
+import { Button } from '@ui/components/button';
 import {
   Sheet,
   SheetContent,
@@ -9,12 +9,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@ui/components/sheet';
-import { Button } from '@ui/components/button';
 import { Spinner } from '@ui/components/spinner';
-import AutoResizeTextarea from '@/components/common/auto-resize-textarea';
+import { useTranslations } from 'next-intl';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+
 import { imageEditAssistantAction } from '@/app/(authed)/(chat-bot)/image-generation/image-edit-assistant-actions';
 import { type AssistantMessage } from '@/app/(authed)/(chat-bot)/image-generation/image-edit-assistant-service';
-import { MagicWandIcon, PaperPlaneRightIcon } from '@phosphor-icons/react';
+import AutoResizeTextarea from '@/components/common/auto-resize-textarea';
 
 const FINAL_PROMPT_MARKER = 'FINAL_PROMPT:';
 const DISPLAY_PROMPT_MARKER = 'DISPLAY_PROMPT:';

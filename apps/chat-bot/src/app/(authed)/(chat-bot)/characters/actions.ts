@@ -1,11 +1,12 @@
 'use server';
 
-import { requireAuth } from '@/auth/requireAuth';
+import { runServerAction } from '@shared/actions/run-server-action';
 import {
   createNewCharacter,
   downloadFileFromCharacter,
 } from '@shared/characters/character-service';
-import { runServerAction } from '@shared/actions/run-server-action';
+
+import { requireAuth } from '@/auth/requireAuth';
 
 export async function createNewCharacterAction({
   modelId,

@@ -1,0 +1,1 @@
+CREATE INDEX "conversation_message_file_mapping_conversation_id_index" ON "conversation_message_file_mapping" USING btree ("conversationId");

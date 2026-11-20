@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { chatWithImageEditAssistant } from './image-edit-assistant-service';
 
 vi.mock('@shared/db/functions/federal-state', () => ({
-  dbGetFederalStateWithDecryptedApiKeyWithResult: vi.fn(),
+  dbGetFederalStateWithApiKeyIdWithResult: vi.fn(),
 }));
 
 vi.mock('@/app/api/utils/utils', () => ({
@@ -26,11 +27,12 @@ vi.mock('sharp', () => {
   return { default: vi.fn(() => sharpInstance) };
 });
 
-import { dbGetFederalStateWithDecryptedApiKeyWithResult } from '@shared/db/functions/federal-state';
-import { getAuxiliaryModel } from '@/app/api/utils/utils';
 import { generateTextWithBilling } from '@ais-chat/ai-core';
+import { dbGetFederalStateWithApiKeyIdWithResult } from '@shared/db/functions/federal-state';
 
-const mockGetFederalState = vi.mocked(dbGetFederalStateWithDecryptedApiKeyWithResult);
+import { getAuxiliaryModel } from '@/app/api/utils/utils';
+
+const mockGetFederalState = vi.mocked(dbGetFederalStateWithApiKeyIdWithResult);
 const mockGetAuxiliaryModel = vi.mocked(getAuxiliaryModel);
 const mockGenerateText = vi.mocked(generateTextWithBilling);
 
@@ -58,7 +60,7 @@ describe('chatWithImageEditAssistant', () => {
     vi.stubGlobal('fetch', makeFetchMock());
     mockGetFederalState.mockResolvedValue([null, mockFederalState] as never);
     mockGetAuxiliaryModel.mockResolvedValue(mockTextOnlyModel as never);
-    mockGenerateText.mockResolvedValue(successResponse);
+    mockGenerateText.mockResolvedValue(successResponse as never);
   });
 
   it('returns the LLM response text', async () => {
@@ -239,7 +241,7 @@ describe('chatWithImageEditAssistant', () => {
       vi.clearAllMocks();
       mockGetFederalState.mockResolvedValue([null, mockFederalState] as never);
       mockGetAuxiliaryModel.mockResolvedValue(mockVisionModel as never);
-      mockGenerateText.mockResolvedValue(successResponse);
+      mockGenerateText.mockResolvedValue(successResponse as never);
 
       await chatWithImageEditAssistant({
         messages: [],

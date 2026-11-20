@@ -1,6 +1,7 @@
 import { db } from '@shared/db';
-import { fileTable, chunkTable } from '@shared/db/schema';
+import { chunkTable, fileTable } from '@shared/db/schema';
 import { cosineDistance, eq, inArray, or, type SQL } from 'drizzle-orm';
+
 import { RetrievedChunk } from './types';
 
 /**
