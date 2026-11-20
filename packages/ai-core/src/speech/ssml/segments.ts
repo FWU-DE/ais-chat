@@ -79,6 +79,9 @@ function serializeSegment(blocks: Node[], wrapper: Element | undefined): string 
     return blocks.map((block) => serializer.serializeToString(block)).join('');
   }
   const segmentWrapper = wrapper.cloneNode(false);
+  // Keeps an empty wrapper from serializing self-closing, so its length matches a filled one.
+  const emptyText = wrapper.ownerDocument?.createTextNode('');
+  if (emptyText) segmentWrapper.appendChild(emptyText);
   for (const block of blocks) {
     segmentWrapper.appendChild(block.cloneNode(true));
   }
@@ -115,10 +118,7 @@ export function buildSsmlSegments({
     throw new AiGenerationError('Invalid SSML: no content to synthesize');
   }
 
-  // An empty wrapper serializes self-closing, so its closing tag is added to stay on the safe side.
-  const overhead =
-    wrapInSpeakDocument(serializeSegment([], wrapper), voice).length +
-    (wrapper ? `</${wrapper.nodeName}>`.length : 0);
+  const overhead = wrapInSpeakDocument(serializeSegment([], wrapper), voice).length;
   const serializer = new XMLSerializer();
   const segments: string[] = [];
   let current: Node[] = [];

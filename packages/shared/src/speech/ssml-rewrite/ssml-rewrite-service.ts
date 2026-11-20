@@ -5,7 +5,7 @@ import { getSpeechAuxiliaryModel } from '@shared/llm-models/auxiliary-model-serv
 import { SpeechTextUsage } from '../types';
 import { SSML_REWRITE_SYSTEM_PROMPT } from './prompt';
 
-const SSML_REWRITE_TIMEOUT_MS = 30_000;
+const SSML_REWRITE_TIMEOUT_MS = 60_000;
 
 export type SsmlRewriteResult = {
   ssmlBody: string;
