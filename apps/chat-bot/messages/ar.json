@@ -26,7 +26,8 @@
     "listen-to-answer": "الاستماع إلى الإجابة",
     "pause-audio": "إيقاف مؤقت",
     "show-message-text": "إظهار النص",
-    "hide-message-text": "إخفاء النص"
+    "hide-message-text": "إخفاء النص",
+    "anonymization-hint": "إخفاء الهوية مفعّل: يتم استبدال البيانات الشخصية مثل الأسماء وعناوين البريد الإلكتروني وأرقام الهواتف تلقائيًا قبل المعالجة."
   },
   "characters": {
     "shared": {

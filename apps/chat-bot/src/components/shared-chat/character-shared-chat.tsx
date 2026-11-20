@@ -17,11 +17,13 @@ import GenericSharedChat from './generic-shared-chat';
  */
 export default function CharacterSharedChat({
   avatarPictureUrl,
+  showAnonymizationHint,
   isSpeechModelEnabled,
   ...character
 }: CharacterWithShareDataModel & {
   inviteCode: string;
   avatarPictureUrl?: string;
+  showAnonymizationHint?: boolean;
   isSpeechModelEnabled: boolean;
 }) {
   const t = useTranslations('characters.shared');
@@ -87,6 +89,7 @@ export default function CharacterSharedChat({
 
   return (
     <GenericSharedChat
+      showAnonymizationHint={showAnonymizationHint}
       headerT={t}
       entity={character}
       inviteCode={inviteCode}

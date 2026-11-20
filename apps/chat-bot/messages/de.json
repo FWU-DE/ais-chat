@@ -29,6 +29,7 @@
     "conversation-download": "Konversation herunterladen",
     "send-message-placeholder": "Wie kann ich Dir helfen?",
     "information-disclaimer": "AIS.chat kann Fehler machen. Sei kritisch und überprüfe alle Informationen.",
+    "anonymization-hint": "Anonymisierung aktiv: Persönliche Daten wie Namen, E-Mail-Adressen und Telefonnummern werden vor der Verarbeitung automatisch ersetzt.",
     "character-limit-reached": "Zeichenlimit erreicht",
     "chat-expired-error": "Der Chat ist abgelaufen.",
     "empty-response-error": "Antwort konnte nicht generiert werden",

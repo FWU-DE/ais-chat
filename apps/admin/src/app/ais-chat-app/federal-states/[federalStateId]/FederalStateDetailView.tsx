@@ -77,6 +77,8 @@ function transformToFederalStateEditForm(federalState: FederalStateModel): Feder
       isJsxGraphEnabled: federalState.featureToggles.isJsxGraphEnabled ?? false,
       isSharedPageLocaleDetectionEnabled:
         federalState.featureToggles.isSharedPageLocaleDetectionEnabled ?? true,
+      isAnonymizationEnabled: federalState.featureToggles.isAnonymizationEnabled ?? false,
+      anonymizationMode: federalState.featureToggles.anonymizationMode ?? 'placeholder',
     },
     supportContacts: federalState.supportContacts?.map((s) => ({ value: s })) ?? [],
     designConfiguration: federalState.designConfiguration
@@ -325,6 +327,36 @@ export function FederalStateView(props: FederalStateViewProps) {
             label="Spracherkennung für geteilte Seiten aktivieren"
             description="Ermittelt und setzt automatisch die Sprache für geteilte Seiten."
             control={control}
+          />
+          <FormFieldCheckbox
+            name="featureToggles.isAnonymizationEnabled"
+            label="Anonymisierung aktivieren"
+            description="Entfernt personenbezogene Daten (z.B. E-Mail-Adressen, Telefonnummern, IBANs) aus Chat-Nachrichten und hochgeladenen Dokumenten, bevor sie verarbeitet werden. Die Erkennung von Namen erfordert einen konfigurierten Presidio-Analyzer (ANONYMIZATION_SERVICE_URL)."
+            control={control}
+          />
+          <Controller
+            name="featureToggles.anonymizationMode"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="anonymizationMode">Anonymisierungs-Modus</FieldLabel>
+                <FieldDescription>
+                  Platzhalter ersetzt erkannte Daten durch generische Marker wie [PERSON] und [ORT].
+                  Pseudonyme ersetzt Personennamen durch konsistente fiktive Namen, damit längere
+                  Texte lesbar bleiben.
+                </FieldDescription>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className="h-11 w-full" id="anonymizationMode">
+                    <SelectValue placeholder="Modus auswählen" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" align="start">
+                    <SelectItem value="placeholder">Platzhalter</SelectItem>
+                    <SelectItem value="pseudonym">Pseudonyme</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FieldError errors={[fieldState.error]} />
+              </Field>
+            )}
           />
           <FormField
             name="designConfiguration"

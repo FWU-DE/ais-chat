@@ -64,6 +64,7 @@ jobs:
       CRAWL4AI_API_TOKEN: ais-chat-crawl4ai-token
       # Xberg
       XBERG_URL: http://localhost:8000
+      ANONYMIZATION_SERVICE_URL: http://localhost:5002
       # Bifrost
       BIFROST_BASE_URL: http://localhost:8089/openai/v1
       BIFROST_API_KEY: sk-bf-example-key
@@ -85,8 +86,9 @@ jobs:
           restore-keys: |
             test-history-${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}-
 
+      # The presidio-analyzer (anonymization profile) is built from devops/docker/presidio (German NER model)
       - name: Start e2e container dependencies
-        run: docker compose -f devops/docker/docker-compose.local.yml up -d --build &
+        run: docker compose -f devops/docker/docker-compose.local.yml --profile anonymization up -d --build &
 
       - name: Setup pnpm
         uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
@@ -232,7 +234,23 @@ jobs:
       # Stream container logs (with timestamps) to a file so the Playwright reporter can correlate them with tests.
       - name: Stream container logs to file
         if: ${{ !cancelled() }}
-        run: docker compose -f devops/docker/docker-compose.local.yml logs --no-color --timestamps --follow > "$CONTAINER_LOG_FILE" 2>&1 &
+        run: docker compose -f devops/docker/docker-compose.local.yml --profile anonymization logs --no-color --timestamps --follow > "$CONTAINER_LOG_FILE" 2>&1 &
+
+      # The anonymization e2e test fails closed when the configured Presidio
+      # service is unreachable, so make sure it is ready before running tests
+      - name: Wait for presidio-analyzer to be ready
+        run: |
+          timeout=300
+          elapsed=0
+          until curl -sf http://localhost:5002/health > /dev/null 2>&1; do
+            if [ $elapsed -ge $timeout ]; then
+              echo "presidio-analyzer did not become ready within ${timeout}s"
+              exit 1
+            fi
+            echo "$(date) - waiting for presidio-analyzer to be ready"
+            sleep 5
+            elapsed=$((elapsed + 5))
+          done
 
       - name: Run E2E tests (app)
         id: app-e2e

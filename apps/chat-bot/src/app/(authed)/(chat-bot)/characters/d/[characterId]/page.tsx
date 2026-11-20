@@ -77,6 +77,7 @@ export default async function Page(props: PageProps<'/characters/d/[characterId]
         }}
       >
         <Chat
+          showAnonymizationHint={federalState.featureToggles.isAnonymizationEnabled ?? false}
           id={id}
           initialMessages={initialMessages}
           character={character}

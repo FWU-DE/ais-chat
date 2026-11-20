@@ -90,6 +90,10 @@ vi.mock('./build-tools', () => ({
   toolActivityRegistry: {},
 }));
 
+vi.mock('../anonymization/anonymization-service', () => ({
+  anonymizeUserContent: vi.fn(async (text: string) => `[ANON]${text}`),
+}));
+
 vi.mock('./websearch', () => ({
   isWebSearchEnabledForEntity: mocks.isWebSearchEnabledForEntityMock,
 }));
@@ -489,6 +493,34 @@ describe('sendChatMessage', () => {
           role: 'assistant',
         }),
       ]),
+    );
+  });
+
+  it('anonymizes the user message at ingress when the toggle is enabled', async () => {
+    const { sendChatMessage } = await import('./chat-service');
+    const { anonymizeUserContent } = await import('../anonymization/anonymization-service');
+
+    const user = createUser();
+    user.federalState.featureToggles.isAnonymizationEnabled = true;
+
+    const piiMessages: ChatMessage[] = [
+      { id: 'pii-message', role: 'user', content: 'Kontakt: maria@example.org' },
+    ];
+
+    const result = await sendChatMessage({
+      conversationId: conversation.id,
+      messages: piiMessages,
+      modelId: mainModel.id,
+      user,
+    });
+    await collectStream(result.stream);
+
+    expect(vi.mocked(anonymizeUserContent)).toHaveBeenCalledWith(
+      'Kontakt: maria@example.org',
+      undefined,
+    );
+    expect(mocks.dbInsertChatContentMock).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'user', content: '[ANON]Kontakt: maria@example.org' }),
     );
   });
 

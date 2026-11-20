@@ -236,6 +236,8 @@ export const federalStateFeatureTogglesSchema = z.object({
   isCalculatorEnabled: z.boolean().optional(),
   isSpeechModelEnabled: z.boolean().optional(),
   isJsxGraphEnabled: z.boolean().optional(),
+  isAnonymizationEnabled: z.boolean().optional(),
+  anonymizationMode: z.enum(['placeholder', 'pseudonym']).optional(),
 });
 export type FederalStateFeatureToggles = z.infer<typeof federalStateFeatureTogglesSchema>;
 

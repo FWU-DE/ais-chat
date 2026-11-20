@@ -66,6 +66,7 @@ export default async function Page(
       >
         <ThemeProvider designConfiguration={designConfiguration}>
           <LearningScenarioSharedChat
+            showAnonymizationHint={federalState?.featureToggles.isAnonymizationEnabled ?? false}
             {...learningScenario}
             inviteCode={searchParams.inviteCode}
             avatarPictureUrl={avatarPictureUrl}

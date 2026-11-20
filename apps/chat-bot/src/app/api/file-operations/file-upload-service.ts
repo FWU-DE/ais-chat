@@ -1,3 +1,4 @@
+import { dbGetFederalState } from '@shared/db/functions/federal-state';
 import { dbInsertFileWithChunks } from '@shared/db/functions/files';
 import { FileMetadata } from '@shared/db/schema';
 import { InvalidArgumentError } from '@shared/error';
@@ -7,6 +8,7 @@ import { cnanoid } from '@shared/random/randomService';
 import { isSupportedImageExtension, MAX_FILE_SIZE } from '@/const';
 import { parseSupportedFileExtension } from '@/utils/files/generic';
 
+import { anonymizeUserContent } from '../anonymization/anonymization-service';
 import { fileExtractionXberg } from '../file-extraction/file-extraction-xberg';
 import { chunkAndEmbed } from '../rag/rag-service';
 import { preprocessImage } from './preprocess-image';
@@ -131,7 +133,15 @@ async function uploadDocumentFile({
   federalStateId: string;
   userId: string | null;
 }): Promise<string> {
-  const content = await fileExtractionXberg({ buffer, filename: file.name });
+  const extractedContent = await fileExtractionXberg({ buffer, filename: file.name });
+
+  // Anonymize extracted text before chunking/embedding and persistence, so RAG chunks
+  // and downstream LLM requests never contain the personal data
+  // (see docs/pii-anonymization.md). The original file in object storage is unchanged.
+  const federalState = await dbGetFederalState(federalStateId);
+  const content = federalState.featureToggles.isAnonymizationEnabled
+    ? await anonymizeUserContent(extractedContent, federalState.featureToggles.anonymizationMode)
+    : extractedContent;
 
   const [chunks] = await Promise.all([
     chunkAndEmbed({ text: content, fileId, federalStateId }),

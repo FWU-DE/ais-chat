@@ -3,6 +3,7 @@ import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
 import type {
   AssistantSelectModel,
   CharacterSelectModel,
+  FederalStateFeatureToggles,
   LearningScenarioSelectModel,
 } from '@shared/db/schema';
 import { formatDateToDayMonthYear } from '@shared/utils/date';
@@ -50,11 +51,15 @@ function constructHelpModeSystemPrompt({
   isTeacher,
   federalStateSupportEmails,
   chatStorageDuration,
+  isAnonymizationEnabled,
+  anonymizationMode,
   activeToolDefinitions,
 }: {
   isTeacher: boolean;
   federalStateSupportEmails: string[] | null;
   chatStorageDuration: number;
+  isAnonymizationEnabled: boolean;
+  anonymizationMode: FederalStateFeatureToggles['anonymizationMode'];
   activeToolDefinitions: ToolDefinition[];
 }) {
   return `Du bist der integrierte Hilfechat zu AIS.chat, dem datenschutzkonformen KI-Chatbot für den Schulunterricht.
@@ -93,6 +98,11 @@ Assistenten, Dialogpartner und Lernszenarien lassen sich außerdem schulintern, 
 }
 
 Die Datenverarbeitung von AIS.chat erfolgt ausschließlich in der EU. Nutzerdaten werden nur pseudonymisiert verarbeitet.
+${
+  isAnonymizationEnabled
+    ? `Für dieses Bundesland ist zusätzlich die automatische Anonymisierung aktiviert: Personenbezogene Daten (z.B. Namen, E-Mail-Adressen, Telefonnummern) werden in Chat-Nachrichten und hochgeladenen Dokumenten automatisch erkannt und ${anonymizationMode === 'pseudonym' ? 'durch konsistente Pseudonyme (z.B. Fantasienamen) ersetzt, bevor sie an ein Sprachmodell gesendet werden' : 'durch Platzhalter wie [PERSON] oder [ORT] ersetzt, bevor sie an ein Sprachmodell gesendet werden'}. Ein Hinweis dazu wird unterhalb des Chat-Eingabefelds angezeigt.`
+    : ''
+}
 
 Die Bildgenerierung wird über die Sidebar erreicht. Die Bildgenerierung ist eine Funktion für Lehrkräfte und kann nicht den Schülern zur Verfügung gestellt werden. Imagen 4 kann keine Bilder von Kindern erstellen, alternativ kann hier gpt-image-1.5 genutzt werden.
 AIS.chat kann keine Dateien erstellen. User können Chatverläufe ausschließlich im docx-Format herunterladen.
@@ -142,6 +152,8 @@ export function constructChatSystemPrompt({
         isTeacher,
         federalStateSupportEmails: federalState.supportContacts,
         chatStorageDuration: federalState.chatStorageTime,
+        isAnonymizationEnabled: federalState.featureToggles.isAnonymizationEnabled ?? false,
+        anonymizationMode: federalState.featureToggles.anonymizationMode,
         activeToolDefinitions,
       });
     }

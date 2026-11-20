@@ -26,7 +26,8 @@
     "listen-to-answer": "Écouter la réponse",
     "pause-audio": "Pause",
     "show-message-text": "Afficher le texte",
-    "hide-message-text": "Masquer le texte"
+    "hide-message-text": "Masquer le texte",
+    "anonymization-hint": "Anonymisation active : les données personnelles telles que les noms, adresses e-mail et numéros de téléphone sont automatiquement remplacées avant le traitement."
   },
   "characters": {
     "shared": {

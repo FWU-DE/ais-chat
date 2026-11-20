@@ -11,11 +11,13 @@ import GenericSharedChat from './generic-shared-chat';
 
 export default function LearningScenarioSharedChat({
   avatarPictureUrl,
+  showAnonymizationHint,
   isSpeechModelEnabled,
   ...sharedSchoolChat
 }: LearningScenarioWithShareDataModel & {
   inviteCode: string;
   avatarPictureUrl?: string;
+  showAnonymizationHint?: boolean;
   isSpeechModelEnabled: boolean;
 }) {
   const t = useTranslations('learning-scenarios.shared');
@@ -72,6 +74,7 @@ export default function LearningScenarioSharedChat({
 
   return (
     <GenericSharedChat
+      showAnonymizationHint={showAnonymizationHint}
       headerT={t}
       entity={sharedSchoolChat}
       inviteCode={inviteCode}

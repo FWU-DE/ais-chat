@@ -61,6 +61,7 @@ export default async function Page(props: PageProps<'/ua/characters/[characterId
       >
         <ThemeProvider designConfiguration={designConfiguration}>
           <CharacterSharedChat
+            showAnonymizationHint={federalState?.featureToggles.isAnonymizationEnabled ?? false}
             {...character}
             initialMessage={character.initialMessage ?? ''}
             inviteCode={searchParams.inviteCode}

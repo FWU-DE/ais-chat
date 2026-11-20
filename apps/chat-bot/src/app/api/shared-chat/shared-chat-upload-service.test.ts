@@ -37,6 +37,14 @@ vi.mock('../file-extraction/file-extraction-xberg', () => ({
   fileExtractionXberg: mocks.fileExtractionXbergMock,
 }));
 
+vi.mock('@shared/db/functions/federal-state', () => ({
+  dbGetFederalState: vi.fn().mockResolvedValue({ featureToggles: {} }),
+}));
+
+vi.mock('../anonymization/anonymization-service', () => ({
+  anonymizeUserContent: vi.fn(async (text: string) => text),
+}));
+
 vi.mock('../file-operations/preprocess-image', () => ({
   preprocessImage: mocks.preprocessImageMock,
 }));
@@ -161,6 +169,35 @@ describe('uploadSharedChatFile', () => {
       }),
       expect.any(Array),
     );
+  });
+
+  it('anonymizes extracted document text when the federal state toggle is enabled', async () => {
+    const { dbGetFederalState } = await import('@shared/db/functions/federal-state');
+    vi.mocked(dbGetFederalState).mockResolvedValueOnce({
+      featureToggles: { isAnonymizationEnabled: true },
+    } as Awaited<ReturnType<typeof dbGetFederalState>>);
+
+    mocks.dbGetLearningScenarioByIdAndInviteCodeMock.mockResolvedValue({
+      ...validEntity,
+      id: 'learning-scenario-1',
+    });
+
+    const { uploadSharedChatFile } = await import('./shared-chat-upload-service');
+    const { anonymizeUserContent } = await import('../anonymization/anonymization-service');
+
+    const file = new File([new Uint8Array([4, 5, 6])], 'notes.pdf', {
+      type: 'application/pdf',
+    });
+
+    await uploadSharedChatFile({
+      file,
+      inviteCode: 'invite',
+      entityType: 'learningScenario',
+      entityId: 'learning-scenario-1',
+      sharedSessionId: 'session-1',
+    });
+
+    expect(vi.mocked(anonymizeUserContent)).toHaveBeenCalledWith('content', undefined);
   });
 
   it('rejects an oversized upload before copying it into a buffer', async () => {

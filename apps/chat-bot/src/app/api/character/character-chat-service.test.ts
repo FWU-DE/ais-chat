@@ -58,6 +58,10 @@ vi.mock('@ais-chat/ai-core/chat/safety', () => ({
   checkTextInputSafety: mocks.checkTextInputSafetyMock,
 }));
 
+vi.mock('../anonymization/anonymization-service', () => ({
+  anonymizeChatMessages: vi.fn(async (messages) => messages),
+}));
+
 vi.mock('@/auth/utils', () => ({
   getUserAndContextByUserId: mocks.getUserAndContextByUserIdMock,
 }));
@@ -303,6 +307,31 @@ describe('sendCharacterMessage', () => {
         }),
       }),
     );
+  });
+
+  it('anonymizes all incoming user messages when the toggle is enabled', async () => {
+    mocks.getUserAndContextByUserIdMock.mockResolvedValue({
+      ...teacherUserAndContext,
+      federalState: {
+        ...teacherUserAndContext.federalState,
+        featureToggles: {
+          ...teacherUserAndContext.federalState.featureToggles,
+          isAnonymizationEnabled: true,
+        },
+      },
+    });
+
+    const { sendCharacterMessage } = await import('./character-chat-service');
+    const { anonymizeChatMessages } = await import('../anonymization/anonymization-service');
+
+    const result = await sendCharacterMessage({
+      characterId: character.id,
+      inviteCode: 'invite-code',
+      messages,
+    });
+    await collectStream(result.stream);
+
+    expect(vi.mocked(anonymizeChatMessages)).toHaveBeenCalledWith(messages, undefined);
   });
 
   it('forwards fileIds to shared file service', async () => {

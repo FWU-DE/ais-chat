@@ -7,9 +7,15 @@ import {
   federalStateTable,
 } from '../schema';
 
-const ALL_FEATURE_TOGGLES_ENABLED = federalStateFeatureTogglesSchema.parse(
-  Object.fromEntries(Object.keys(federalStateFeatureTogglesSchema.shape).map((key) => [key, true])),
-);
+const ALL_FEATURE_TOGGLES_ENABLED = federalStateFeatureTogglesSchema.parse({
+  ...Object.fromEntries(
+    Object.keys(federalStateFeatureTogglesSchema.shape)
+      .filter((key) => key !== 'anonymizationMode')
+      .map((key) => [key, true]),
+  ),
+  // Anonymization depends on an external Presidio service, so it stays opt-in.
+  isAnonymizationEnabled: false,
+});
 
 export async function insertFederalStates({ skip = true }: { skip: boolean }) {
   if (skip) return;

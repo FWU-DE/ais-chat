@@ -1,0 +1,21 @@
+# NLP engine configuration for presidio-analyzer with German as primary language.
+# See https://microsoft.github.io/presidio/analyzer/customizing_nlp_models/
+nlp_engine_name: spacy
+models:
+  - lang_code: de
+    model_name: de_core_news_lg
+  - lang_code: en
+    model_name: en_core_web_lg
+ner_model_configuration:
+  model_to_presidio_entity_mapping:
+    PER: PERSON
+    PERSON: PERSON
+    LOC: LOCATION
+    GPE: LOCATION
+    LOCATION: LOCATION
+    ORG: ORGANIZATION
+    ORGANIZATION: ORGANIZATION
+    NORP: NRP
+  labels_to_ignore:
+    - MISC
+    - O

@@ -95,6 +95,7 @@ export default async function Page(
         }}
       >
         <Chat
+          showAnonymizationHint={federalState.featureToggles.isAnonymizationEnabled ?? false}
           id={chat.id}
           initialMessages={chatMessages}
           learningScenario={learningScenario}

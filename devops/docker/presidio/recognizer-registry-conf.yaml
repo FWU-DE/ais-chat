@@ -1,0 +1,28 @@
+# Recognizer registry configuration. The registry's supported languages must be
+# consistent with the analyzer engine's (analyzer-conf.yaml), otherwise the
+# analyzer fails to boot. Only recognizers relevant for the anonymization
+# feature are enabled; the app-side allowlist filters entity types anyway.
+supported_languages:
+  - de
+  - en
+recognizers:
+  - name: SpacyRecognizer
+    type: predefined
+    supported_languages:
+      - de
+      - en
+  - name: EmailRecognizer
+    type: predefined
+    supported_languages:
+      - de
+      - en
+  - name: PhoneRecognizer
+    type: predefined
+    supported_languages:
+      - de
+      - en
+  - name: IbanRecognizer
+    type: predefined
+    supported_languages:
+      - de
+      - en

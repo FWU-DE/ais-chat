@@ -95,6 +95,7 @@ export default async function Page(props: PageProps<'/d/[conversationId]'>) {
         }}
       >
         <Chat
+          showAnonymizationHint={federalState.featureToggles.isAnonymizationEnabled ?? false}
           id={conversation.id}
           initialMessages={convertedMessages}
           initialFileMapping={fileMapping}

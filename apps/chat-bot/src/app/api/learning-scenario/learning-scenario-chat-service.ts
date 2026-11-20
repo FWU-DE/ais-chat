@@ -29,6 +29,7 @@ import { ChatMessage, createErrorResult, SendMessageResult } from '@/types/chat'
 import { createTextStream } from '@/utils/streaming';
 import { checkProductAccess } from '@/utils/vidis/access';
 
+import { anonymizeChatMessages } from '../anonymization/anonymization-service';
 import { createAiActivityStream } from '../chat/ai-activity-stream';
 import { buildTools } from '../chat/build-tools';
 import { prepareAgentMessages } from '../chat/prepare-agent-messages';
@@ -85,6 +86,15 @@ export async function sendLearningScenarioMessage({
 
   if (teacherUserAndContext.userRole !== 'teacher') {
     throw new Error('The user assigned to this chat is not a teacher');
+  }
+
+  // Anonymize the client-supplied messages before the current user message is persisted
+  // to the shared conversation and sent to the model
+  if (teacherUserAndContext.federalState.featureToggles.isAnonymizationEnabled) {
+    messages = await anonymizeChatMessages(
+      messages,
+      teacherUserAndContext.federalState.featureToggles.anonymizationMode,
+    );
   }
 
   // Get model and API key

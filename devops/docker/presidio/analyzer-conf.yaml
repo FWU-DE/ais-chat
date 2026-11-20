@@ -1,0 +1,5 @@
+# Analyzer engine configuration: enable German in addition to English so that
+# requests with "language": "de" are accepted and German recognizers are loaded.
+supported_languages:
+  - de
+  - en

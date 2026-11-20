@@ -1,0 +1,51 @@
+name: Presidio Analyzer (German)
+
+# Builds the German-configured presidio-analyzer image and smoke-tests that
+# German NER actually works (person and location detection on a German sentence).
+on:
+  pull_request:
+    paths:
+      - 'devops/docker/presidio/**'
+      - '.github/workflows/presidio.yml'
+  workflow_dispatch:
+
+jobs:
+  build_and_smoke_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Build image
+        run: docker build -t presidio-analyzer-de devops/docker/presidio
+
+      - name: Start container
+        run: docker run -d --name presidio -p 5002:3000 presidio-analyzer-de
+
+      - name: Wait for analyzer to be ready
+        run: |
+          timeout=120
+          elapsed=0
+          until curl -sf http://localhost:5002/health > /dev/null 2>&1; do
+            if [ $elapsed -ge $timeout ]; then
+              echo "presidio-analyzer did not become ready within ${timeout}s"
+              exit 1
+            fi
+            echo "$(date) - waiting for presidio-analyzer to be ready"
+            sleep 2
+            elapsed=$((elapsed + 2))
+          done
+
+      - name: Analyze German text detects PERSON and LOCATION
+        run: |
+          response=$(curl -sf -X POST http://localhost:5002/analyze \
+            -H 'Content-Type: application/json' \
+            -d '{"text": "Anna Schmidt wohnt in München und geht dort zur Schule.", "language": "de"}')
+          echo "Response: $response"
+          echo "$response" | grep -q '"PERSON"'
+          echo "$response" | grep -q '"LOCATION"'
+
+      - name: Print container logs
+        if: always()
+        run: docker logs presidio

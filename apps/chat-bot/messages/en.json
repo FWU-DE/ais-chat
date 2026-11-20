@@ -26,7 +26,8 @@
     "listen-to-answer": "Listen to answer",
     "pause-audio": "Pause",
     "show-message-text": "Show text",
-    "hide-message-text": "Hide text"
+    "hide-message-text": "Hide text",
+    "anonymization-hint": "Anonymization active: personal data such as names, email addresses and phone numbers is automatically replaced before processing."
   },
   "characters": {
     "shared": {
