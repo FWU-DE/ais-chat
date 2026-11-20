@@ -1,5 +1,5 @@
-import { FederalStateId } from '@/utils/vidis/const';
 import disclaimerDeBw from '@/assets/disclaimer/disclaimer-de-bw.png';
+import { FederalStateId } from '@/utils/vidis/const';
 
 /**
  * The following markdown options are allowed in disclaimer texts:
@@ -251,12 +251,23 @@ Nutzerinnen und Nutzer können ihre DSGVO-Rechte (Auskunft, Berichtigung, Lösch
 
 Mit dem Klick auf „Gelesen und akzeptiert" bestätigen Sie, sämtliche Bedingungen verstanden zu haben und einzuhalten.`;
 
+const EDUCATION_HINT_SN = `Die Verordnung über künstliche Intelligenz der Europäischen Union ([AI Act](https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:32024R1689)) sieht vor, dass Anbieter und Betreiber von KI-Systemen Maßnahmen ergreifen, um nach besten Kräften sicherzustellen, dass ihr Personal und andere Personen, die KI-Systeme nutzen, über ausreichende KI-Kompetenz verfügen.
+
+Das [Sächsische Staatsministerium für Kultus](https://www.smk.sachsen.de/) und das [Landesamt für Schule und Bildung](https://www.lasub.smk.sachsen.de/) stellen im [MeSax Wissensportal](http://mesax.de/ki), in Fortbildungen aus dem [Fortbildungskatalog](https://www.schulportal.sachsen.de/fortbildungen/suche_kategorisierung.php) und im [Selbstlernkurs oLis](https://www.opal-schule.de/olat/auth/RepositoryEntry/1861943308?0) umfangreiche Informationen bereit.`;
+
+const AI_COMPETENCE_CONFIRMATION_SN =
+  'Ich bestätige, das Informationsangebot unter [http://mesax.de/ki](http://mesax.de/ki) gelesen und verstanden zu haben.';
+
 // increment this number to prompt renewed acceptance from all users
 export const VERSION: number = 1;
 export type DisclaimerConfig = {
   pageContents: string[];
   showCheckBox?: boolean;
+  /** Use `checkboxes` instead if more than one confirmation is required. */
   acceptLabel?: string;
+  /** Multiple confirmations; all have to be checked before the disclaimer can be accepted. */
+  checkboxes?: string[];
+  footerText?: string;
   image?: string;
 };
 // Ids of all States which explicitly have to accept to the terms & conditions
@@ -287,6 +298,15 @@ export const federalStateDisclaimers: Partial<Record<FederalStateId, DisclaimerC
     pageContents: [
       'KI-Tools neigen zu Halluzinationen und Vorurteilen. Bitte überprüfen Sie die Ausgaben des KI-Chatbots kritisch.',
     ],
+  },
+  'DE-SN': {
+    pageContents: [EDUCATION_HINT_SN],
+    showCheckBox: true,
+    checkboxes: [
+      'Ich bestätige die [Nutzungsbedingungen](https://ais-chat.schule/terms-of-use/) von AIS.chat.',
+      AI_COMPETENCE_CONFIRMATION_SN,
+    ],
+    footerText: 'Diese Bestätigung ist Voraussetzung für die Nutzung von AIS.chat.',
   },
   'DE-ST': {
     pageContents: [TERMS_AND_CONDITIONS_ST],

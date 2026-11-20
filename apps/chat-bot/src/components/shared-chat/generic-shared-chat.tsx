@@ -1,34 +1,39 @@
 'use client';
 
-import { ReactNode, RefObject, SyntheticEvent, useEffect, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
-import ExpiredChatModal from '@/components/common/expired-chat-modal';
-import { SharedChatHeader } from '@/components/chat/shared-header-bar';
-import { InitialChatContentDisplay } from '@/components/chat/initial-content-display';
-import { ChatInputBox } from '@/components/chat/chat-input-box';
-import { FloatingText } from '../chat/floating-text';
-import { Messages } from '../chat/messages';
-import StreamingFinishedMarker from '../chat/streaming-finished-marker';
-import { useAutoScroll } from '@/hooks/use-auto-scroll';
+import { SharedChatExpiredError, TokenPointsExceededError } from '@ais-chat/ai-core/errors';
+import { logError } from '@shared/logging';
 import {
   calculateShareSessionState,
   ShareSessionState,
 } from '@shared/sharing/calculate-share-session-state';
-import { logError } from '@shared/logging';
-import type { UseChatReturn } from '@/hooks/use-chat-hooks';
-import { SharedChatExpiredError, TokenPointsExceededError } from '@ais-chat/ai-core/errors';
+import { useTranslations } from 'next-intl';
+import { ReactNode, RefObject, SyntheticEvent, useEffect, useRef, useState } from 'react';
+
+import { loadSharedChatConversationMessagesAction } from '@/app/api/shared-chat/actions';
+import { ChatInputBox } from '@/components/chat/chat-input-box';
+import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
+import { InitialChatContentDisplay } from '@/components/chat/initial-content-display';
+import { SharedChatHeader } from '@/components/chat/shared-header-bar';
+import ExpiredChatModal from '@/components/common/expired-chat-modal';
 import { getErrorMessageByType } from '@/error/get-error-message-by-type';
-import { ErrorChatPlaceholder } from '../chat/error-chat-placeholder';
-import { LocalFileState } from '../chat/send-message-form';
+import { useAutoScroll } from '@/hooks/use-auto-scroll';
+import type { ChatMessage, UseChatReturn } from '@/hooks/use-chat-hooks';
 import { getFileExtension, isImageFile } from '@/utils/files/generic';
-import { PendingFileModel } from '../chat/messages';
+import { getSharedChatImageUrl } from '@/utils/shared-chat-files';
 import {
   clearSharedChat,
   loadSharedChat,
   newSharedChatSessionId,
   saveSharedChat,
 } from '@/utils/shared-chat-storage';
-import { cnanoid } from '@shared/random/randomService';
+import { cn } from '@/utils/tailwind';
+
+import { ErrorChatPlaceholder } from '../chat/error-chat-placeholder';
+import { FloatingText } from '../chat/floating-text';
+import { MessageFileModel, Messages } from '../chat/messages';
+import { GenerateSpeechStreamFn } from '../chat/speech/types';
+import StreamingFinishedMarker from '../chat/streaming-finished-marker';
+import { LocalFileState } from '../file-upload/upload-file';
 
 type ShareSessionInput = Parameters<typeof calculateShareSessionState>[0];
 type Translator = ReturnType<typeof useTranslations>;
@@ -52,6 +57,7 @@ export type SharedChatViewProps = {
    */
   entity: EntityMeta;
   inviteCode: string;
+  sharedEntityType: 'character' | 'learningScenario';
   avatarPictureUrl?: string;
   /**
    * Chat hook result owned by the caller. The caller is responsible for wiring
@@ -82,13 +88,21 @@ export type SharedChatViewProps = {
    * `w-full` outer/inner, extra hr spacing).
    */
   enableFloatingText?: boolean;
+  showActivityDialog?: boolean;
   /**
    * Icon rendered next to assistant messages. When provided, also rendered by the
    * `Messages` list.
    */
   assistantIcon?: ReactNode;
   uploadFileFn?: (file: File, sharedSessionId: string) => Promise<{ fileId: string }>;
-  getSignedUrlFn?: (fileId: string, sharedSessionId: string) => Promise<string>;
+  isSpeechModelEnabled: boolean;
+  speechOnly: boolean;
+  generateSpeechStreamFn: GenerateSpeechStreamFn;
+  /**
+   * Opening messages specified by the user in the entity. They are not stored with the conversation,
+   * so they are put in front of the restored history.
+   */
+  initialMessages?: ChatMessage[];
 };
 
 /**
@@ -103,15 +117,20 @@ export default function GenericSharedChat({
   showAnonymizationHint = false,
   entity,
   inviteCode,
+  sharedEntityType,
   avatarPictureUrl,
   chat,
   dialogStartMode,
   exerciseDescription,
   exerciseTitle,
   enableFloatingText = false,
+  showActivityDialog = false,
   assistantIcon,
   uploadFileFn,
-  getSignedUrlFn,
+  isSpeechModelEnabled,
+  speechOnly,
+  generateSpeechStreamFn,
+  initialMessages = [],
 }: SharedChatViewProps) {
   const tCommon = useTranslations('common');
   const tCustomChat = useTranslations('custom-chat.shared');
@@ -122,30 +141,10 @@ export default function GenericSharedChat({
   const [sharedSessionId, setSharedSessionId] = useState(
     () => loadSharedChat(inviteCode)?.sharedSessionId ?? newSharedChatSessionId(),
   );
+  const [historyLoading, setHistoryLoading] = useState(() => loadSharedChat(inviteCode) !== null);
   const [files, setFiles] = useState<Map<string, LocalFileState>>(new Map());
-  const [pendingFileMapping, setPendingFileMapping] = useState<Map<string, PendingFileModel[]>>(
-    () => {
-      const restored = loadSharedChat(inviteCode);
-      const mapping = new Map<string, PendingFileModel[]>();
-      if (restored === null) return mapping;
-
-      for (const message of restored.messages) {
-        if (message.files.length > 0) {
-          // Persisted files only keep id/name/type/size; fill in the remaining
-          // FileModel fields with placeholders since they aren't used for display.
-          mapping.set(
-            message.id,
-            message.files.map((file) => ({
-              ...file,
-              createdAt: new Date(),
-              metadata: null,
-              userId: null,
-            })),
-          );
-        }
-      }
-      return mapping;
-    },
+  const [messageFileMapping, setMessageFileMapping] = useState<Map<string, MessageFileModel[]>>(
+    new Map(),
   );
 
   const {
@@ -164,6 +163,8 @@ export default function GenericSharedChat({
   const { scrollRef, reactivateAutoScrolling } = useAutoScroll([messages, entity.id, inviteCode]);
   const containerRef = useRef<HTMLDivElement>(null);
   const alreadyMounted = useRef(false); // Guard against the mount effect running twice (e.g. React StrictMode dev behavior)
+  // If a response was interrupted (meaning last persisted msg is a user msg), this flag indicates that a regeneration of the response is needed.
+  const recoverInterruptedResponse = useRef(false);
 
   const chatUsable =
     chatActive && !TokenPointsExceededError.is(error) && !SharedChatExpiredError.is(error);
@@ -178,16 +179,16 @@ export default function GenericSharedChat({
       reactivateAutoScrolling();
 
       const currentFiles = Array.from(files);
-      const previousFileIds = Array.from(pendingFileMapping.values())
-        .flatMap((pendingFiles) => pendingFiles.map((pendingFile) => pendingFile.id))
-        .filter((id): id is string => id.trim() !== '');
-      const currentFileIds = currentFiles
-        .map(([, file]) => file.fileId)
-        .filter((id): id is string => id !== undefined && id.trim() !== '');
-      const fileIds = [...new Set([...previousFileIds, ...currentFileIds])];
+      const fileIds = [
+        ...new Set(
+          currentFiles
+            .map(([, file]) => file.fileId)
+            .filter((id): id is string => id !== undefined && id.trim() !== ''),
+        ),
+      ];
       const userMessageId = crypto.randomUUID();
 
-      const pendingFiles: PendingFileModel[] = currentFiles.reduce<PendingFileModel[]>(
+      const messageFiles: MessageFileModel[] = currentFiles.reduce<MessageFileModel[]>(
         (acc, [, file]) => {
           const fileId = file.fileId;
 
@@ -211,10 +212,10 @@ export default function GenericSharedChat({
         [],
       );
 
-      if (pendingFiles.length > 0) {
-        setPendingFileMapping((prev) => {
+      if (messageFiles.length > 0) {
+        setMessageFileMapping((prev) => {
           const next = new Map(prev);
-          next.set(userMessageId, pendingFiles);
+          next.set(userMessageId, messageFiles);
           return next;
         });
       }
@@ -236,40 +237,100 @@ export default function GenericSharedChat({
   }
 
   function handleOpenNewChat() {
-    for (const pendingFiles of pendingFileMapping.values()) {
-      for (const pendingFile of pendingFiles) {
-        if (pendingFile.localUrl) {
-          URL.revokeObjectURL(pendingFile.localUrl);
+    for (const messageFiles of messageFileMapping.values()) {
+      for (const messageFile of messageFiles) {
+        if (messageFile.localUrl) {
+          URL.revokeObjectURL(messageFile.localUrl);
         }
       }
     }
 
-    const nextSharedSessionId = cnanoid();
+    const nextSharedSessionId = newSharedChatSessionId();
+
+    setHistoryLoading(false);
+    recoverInterruptedResponse.current = false;
 
     setFiles(new Map());
-    setPendingFileMapping(new Map());
+    setMessageFileMapping(new Map());
     setSharedSessionId(nextSharedSessionId);
     clearSharedChat(inviteCode);
     setMessages([]);
   }
 
   useEffect(() => {
-    // Do not persist messages during streaming (assistant content is incomplete).
-    if (status === 'streaming') return;
+    // Guard against the effect running twice (e.g. React StrictMode dev behavior)
+    if (alreadyMounted.current) return;
+    alreadyMounted.current = true;
 
-    saveSharedChat(inviteCode, {
+    if (!historyLoading) return;
+
+    void loadSharedChatConversationMessagesAction({
       sharedSessionId,
-      messages: messages.map((message) => ({
-        id: message.id,
-        role: message.role,
-        content: message.content,
-        files: pendingFileMapping.get(message.id) ?? [],
-      })),
-    });
-  }, [inviteCode, sharedSessionId, messages, pendingFileMapping, status]);
+      inviteCode,
+      entityType: sharedEntityType,
+      entityId: entity.id,
+    })
+      .then((result) => {
+        if (!result.success) {
+          logError('Failed to load shared chat history', new Error(result.error.message));
+          return;
+        }
+
+        if (result.value.messages.length > 0) {
+          setMessages([...initialMessages, ...result.value.messages]);
+          recoverInterruptedResponse.current = true;
+        }
+
+        const restoredFileMapping = new Map<string, MessageFileModel[]>();
+        for (const { messageId, files: restoredFiles } of result.value.filesByMessageId) {
+          restoredFileMapping.set(
+            messageId,
+            restoredFiles.map((file) => ({
+              ...file,
+              createdAt: new Date(),
+              metadata: null,
+              userId: null,
+              localUrl: isImageFile(file.name)
+                ? getSharedChatImageUrl({
+                    fileId: file.id,
+                    inviteCode,
+                    entityType: sharedEntityType,
+                    entityId: entity.id,
+                    sharedSessionId,
+                  })
+                : undefined,
+            })),
+          );
+        }
+        setMessageFileMapping(restoredFileMapping);
+      })
+      .catch((error) => {
+        logError('Failed to load shared chat history', error);
+      })
+      .finally(() => {
+        setHistoryLoading(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // Runs after the restored messages are rendered, so the chat hook knows the last user message.
+    if (!recoverInterruptedResponse.current || historyLoading) return;
+    recoverInterruptedResponse.current = false;
+
+    if (!chatUsable || messages.at(-1)?.role !== 'user') return;
+
+    reactivateAutoScrolling();
+    void reload({ sharedSessionId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyLoading]);
+
+  useEffect(() => {
+    saveSharedChat(inviteCode, { sharedSessionId });
+  }, [inviteCode, sharedSessionId]);
 
   function handleReload() {
-    void reload();
+    void reload({ sharedSessionId });
   }
 
   function handleRetry() {
@@ -277,30 +338,24 @@ export default function GenericSharedChat({
   }
 
   const isLoading = status === 'submitted';
+  const isGenerating = status === 'submitted' || status === 'streaming';
   const hasExerciseDescription =
     enableFloatingText && exerciseDescription !== undefined && exerciseDescription.trim() !== '';
   const showInitialContent =
     dialogStartMode === 'explicit'
       ? messages.length === 0 && !dialogStarted
       : messages.length === 0;
-  const showChatInputBox = dialogStartMode === 'explicit' ? dialogStarted : true;
-
-  useEffect(() => {
-    if (alreadyMounted.current) {
-      return;
-    }
-    alreadyMounted.current = true;
-
-    const lastMessage = messages.at(-1);
-
-    if (!chatUsable || lastMessage === undefined || lastMessage.role !== 'user') {
-      return;
-    }
-
-    reactivateAutoScrolling();
-    void reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const showChatInputBox =
+    !historyLoading && (dialogStartMode === 'explicit' ? dialogStarted : true);
+  const imageUrl = (file: ConversationDownloadFile) =>
+    getSharedChatImageUrl({
+      fileId: file.id,
+      inviteCode,
+      entityType: sharedEntityType,
+      entityId: entity.id,
+      sharedSessionId,
+      forExport: true,
+    });
 
   return (
     <>
@@ -308,13 +363,15 @@ export default function GenericSharedChat({
         <ExpiredChatModal
           conversationMessages={uiMessages}
           title={entity.name}
-          inviteCode={inviteCode}
+          imageUrl={imageUrl}
+          fileMapping={messageFileMapping}
           handleRetry={handleRetry}
         />
       )}
       <div className="flex h-dvh min-h-0 flex-col overflow-hidden">
         <SharedChatHeader
-          chatActive={chatUsable}
+          chatActive={chatUsable && !historyLoading}
+          disableNewChat={historyLoading}
           hasMessages={messages.length > 0}
           t={headerT}
           handleOpenNewChat={handleOpenNewChat}
@@ -322,13 +379,11 @@ export default function GenericSharedChat({
           messages={uiMessages}
           dialogStarted={dialogStarted}
           imageSource={avatarPictureUrl}
-          inviteCode={inviteCode}
+          imageUrl={imageUrl}
+          fileMapping={messageFileMapping}
         />
         <div ref={containerRef} className="relative flex min-h-0 flex-1 flex-col items-center">
-          <div
-            ref={scrollRef}
-            className="min-h-0 w-full flex-1 max-w-5xl overflow-y-auto p-4 pb-20"
-          >
+          <div ref={scrollRef} className="min-h-0 w-full flex-1 max-w-5xl overflow-y-auto p-4">
             {hasExerciseDescription && (
               <FloatingText
                 learningContext={exerciseDescription ?? ''}
@@ -358,15 +413,18 @@ export default function GenericSharedChat({
                 messages={uiMessages}
                 isLoading={isLoading}
                 status={status}
-                reload={reload}
+                reload={handleReload}
                 assistantIcon={assistantIcon}
-                containerClassName="flex flex-col gap-4"
-                pendingFileMapping={pendingFileMapping}
-                getSignedUrlFn={
-                  getSignedUrlFn === undefined
-                    ? undefined
-                    : (fileId) => getSignedUrlFn(fileId, sharedSessionId)
-                }
+                containerClassName={cn(
+                  'flex flex-col gap-4',
+                  hasExerciseDescription && 'max-lg:mt-4',
+                )}
+                messageFileMapping={messageFileMapping}
+                activitySteps={chat.activitySteps}
+                showActivityDialog={showActivityDialog}
+                generateSpeechStreamFn={generateSpeechStreamFn}
+                isSpeechModelEnabled={isSpeechModelEnabled}
+                speechOnly={speechOnly}
               />
             )}
             {/* If there is a TokenPointsExceededError or SharedChatExpiredError we show a dialog instead */}
@@ -377,7 +435,7 @@ export default function GenericSharedChat({
               />
             )}
           </div>
-          <div className="w-full max-w-5xl shrink-0 mx-auto px-4 pb-4">
+          <div className="w-full max-w-5xl shrink-0 mx-auto p-4">
             {showChatInputBox && (
               <div className="flex flex-col">
                 <ChatInputBox
@@ -387,18 +445,13 @@ export default function GenericSharedChat({
                   customHandleSubmit={customHandleSubmit}
                   handleStopGeneration={stop}
                   input={input}
-                  isLoading={isLoading}
+                  isGenerating={isGenerating}
                   handleInputChange={handleInputChange}
                   enableFileUpload
                   fileUploadFn={
                     uploadFileFn === undefined
                       ? undefined
                       : (file) => uploadFileFn(file, sharedSessionId)
-                  }
-                  getSignedUrlFn={
-                    getSignedUrlFn === undefined
-                      ? undefined
-                      : (fileId) => getSignedUrlFn(fileId, sharedSessionId)
                   }
                   handleDeattachFile={handleDeattachFile}
                   showPlaceholder={false}

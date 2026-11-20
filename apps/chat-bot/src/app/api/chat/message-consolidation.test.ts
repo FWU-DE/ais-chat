@@ -1,6 +1,8 @@
+import { describe, expect, it } from 'vitest';
+
 import { type ChatMessage as Message } from '@/types/chat';
+
 import { consolidateMessages } from './utils';
-import { describe, it, expect } from 'vitest';
 
 describe('consolidateMessages', () => {
   it('should consolidate consecutive messages with the same role', () => {

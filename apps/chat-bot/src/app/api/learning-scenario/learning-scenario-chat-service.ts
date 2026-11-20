@@ -1,48 +1,53 @@
 import {
-  generateTextStreamWithBilling,
-  type ToolDefinition,
-  TokenPointsExceededError,
-  SharedChatExpiredError,
+  type ModelUsage,
+  ResponsibleAIError,
   runAgentLoop,
+  SharedChatExpiredError,
+  TokenPointsExceededError,
+  type TokenUsage,
 } from '@ais-chat/ai-core';
-import { NotFoundError } from '@shared/error';
-import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
-import { getUserAndContextByUserId } from '@/auth/utils';
-import { checkProductAccess } from '@/utils/vidis/access';
-import { getModelAndApiKeyWithResult } from '../utils/utils';
+import { dbGetRelatedLearningScenarioFiles } from '@shared/db/functions/files';
 import {
   dbGetLearningScenarioByIdAndInviteCode,
   dbUpdateTokenUsageBySharedLearningScenarioId,
 } from '@shared/db/functions/learning-scenario';
-import { dbGetRelatedLearningScenarioFiles } from '@shared/db/functions/files';
-import { sendRabbitmqEvent } from '@/rabbitmq/send';
-import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
-import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
-import { constructLearningScenarioSystemPrompt } from './system-prompt';
-import {
-  convertToAiCoreMessages,
-  determineImageAttachmentTypeForModel,
-  enrichMessagesWithImageData,
-  getMostRecentUserMessage,
-  limitChatHistory,
-} from '../chat/utils';
-import { retrieveChunks } from '../rag/rag-service';
+import { NotFoundError } from '@shared/error';
 import { logError } from '@shared/logging';
-import { buildTools } from '../chat/build-tools';
-import { isWebSearchEnabledForEntity } from '../chat/websearch';
-import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
-import { createImageAttachmentsForConversation } from '../file-operations/preprocess-image';
-import { ingestWebContent } from '../rag/ingestWebContent';
-import { RetrievedChunk } from '../rag/types';
-import { resolveAgentNameForTracing } from '../utils/agent-name';
-import { extractUrls } from '../utils/extract-urls';
-import { combineSharedRelatedFiles } from '../shared-chat/shared-chat-file-service';
-import { anonymizeChatMessages } from '../anonymization/anonymization-service';
+import {
+  constructNewMessageEvent,
+  constructTokenBudgetExceededEvent,
+  sendRabbitmqEvent,
+} from '@shared/rabbitmq';
 import {
   sharedChatHasExpired,
   sharedLearningScenarioChatHasReachedTokenPointsLimit,
   userHasReachedTokenPointsLimit,
 } from '@shared/users/usage';
+
+import { getUserAndContextByUserId } from '@/auth/utils';
+import { ChatMessage, createErrorResult, SendMessageResult } from '@/types/chat';
+import { createTextStream } from '@/utils/streaming';
+import { checkProductAccess } from '@/utils/vidis/access';
+
+import { anonymizeChatMessages } from '../anonymization/anonymization-service';
+import { createAiActivityStream } from '../chat/ai-activity-stream';
+import { buildTools } from '../chat/build-tools';
+import { prepareAgentMessages } from '../chat/prepare-agent-messages';
+import {
+  annotateMessageAttachmentNames,
+  convertToAiCoreMessages,
+  getMostRecentUserMessage,
+  limitChatHistory,
+} from '../chat/utils';
+import { isWebSearchEnabledForEntity } from '../chat/websearch';
+import { ingestWebContent } from '../rag/ingestWebContent';
+import { prepareSharedChatConversation } from '../shared-chat/shared-chat-conversation-service';
+import { combineSharedRelatedFiles } from '../shared-chat/shared-chat-file-service';
+import { resolveAgentNameForTracing } from '../utils/agent-name';
+import { extractUrls } from '../utils/extract-urls';
+import { getChatModelSelection } from '../utils/model-circuit-breaker';
+import { getModelAndApiKeyWithResult, getSafetyModel } from '../utils/utils';
+import { constructLearningScenarioSystemPrompt } from './system-prompt';
 
 /**
  * Server Action to send a learning scenario message and stream the response.
@@ -51,14 +56,12 @@ export async function sendLearningScenarioMessage({
   learningScenarioId,
   inviteCode,
   messages,
-  modelId,
   fileIds,
   sharedSessionId,
 }: {
   learningScenarioId: string;
   inviteCode: string;
   messages: ChatMessage[];
-  modelId: string;
   fileIds?: string[];
   sharedSessionId?: string;
 }): Promise<SendMessageResult> {
@@ -85,8 +88,8 @@ export async function sendLearningScenarioMessage({
     throw new Error('The user assigned to this chat is not a teacher');
   }
 
-  // The shared chat history is not persisted server-side and arrives from the client
-  // in the original form on every turn, so all user messages must be anonymized
+  // Anonymize the client-supplied messages before the current user message is persisted
+  // to the shared conversation and sent to the model
   if (teacherUserAndContext.federalState.featureToggles.isAnonymizationEnabled) {
     messages = await anonymizeChatMessages(
       messages,
@@ -96,7 +99,7 @@ export async function sendLearningScenarioMessage({
 
   // Get model and API key
   const [error, modelAndApiKey] = await getModelAndApiKeyWithResult({
-    modelId,
+    modelId: learningScenario.modelId,
     federalStateId: teacherUserAndContext.federalState.id,
   });
 
@@ -105,8 +108,11 @@ export async function sendLearningScenarioMessage({
   }
 
   const { model: definedModel, apiKeyId } = modelAndApiKey;
-  const agenticChatEnabled =
-    teacherUserAndContext.federalState.featureToggles.isAgenticChatEnabled ?? false;
+  const modelSelection = await getChatModelSelection({
+    model: definedModel,
+    federalStateId: teacherUserAndContext.federalState.id,
+  });
+  const safetyModel = await getSafetyModel();
 
   // Check expiry
   if (sharedChatHasExpired(learningScenario)) {
@@ -123,207 +129,175 @@ export async function sendLearningScenarioMessage({
   ]);
 
   if (tokenPointsLimitReached) {
-    await sendRabbitmqEvent(
-      constructTokenBudgetExceededEvent({
-        anonymous: true,
-        user: teacherUserAndContext,
-        sharedChat: learningScenario,
-      }),
-    );
+    await sendRabbitmqEvent(constructTokenBudgetExceededEvent({ user: teacherUserAndContext }));
   }
 
   if (sharedChatLimitReached || tokenPointsLimitReached) {
     return createErrorResult(new TokenPointsExceededError());
   }
 
+  const sharedChatConversation = await prepareSharedChatConversation({
+    sharedSessionId,
+    inviteCode,
+    entityType: 'learningScenario',
+    entityId: learningScenario.id,
+    clientMessages: messages,
+    fileIds,
+  });
+
   // Get related files and web sources
   const relatedFileEntities = await combineSharedRelatedFiles({
     relatedFileEntities: await dbGetRelatedLearningScenarioFiles(learningScenario.id),
-    fileIds,
-    inviteCode,
-    entityType: 'learningScenario',
-    entityId: learningScenarioId,
+    fileIds: sharedChatConversation.fileIds ?? fileIds,
     sharedSessionId,
     userMessageId: getMostRecentUserMessage(messages)?.id,
   });
   const urls = extractUrls({
     learningScenario,
-    messages,
   });
   const { processedUrls } = await ingestWebContent({
     urls,
     federalStateId: teacherUserAndContext.federalState.id,
   });
 
-  let activeToolDefinitions: ToolDefinition[] = [];
-  let chunks: RetrievedChunk[] = [];
-  let toolRegistry:
-    | Record<
-        string,
-        { definition: ToolDefinition; handler: (args: Record<string, unknown>) => Promise<string> }
-      >
-    | undefined;
+  const allowWebTools = isWebSearchEnabledForEntity({
+    featureToggles: teacherUserAndContext.federalState.featureToggles,
+    entity: learningScenario,
+  });
 
-  const { stream, update, done, error: streamError } = createTextStream();
+  // Prune messages
+  const prunedMessages = limitChatHistory(
+    annotateMessageAttachmentNames(sharedChatConversation.messages, relatedFileEntities),
+  );
+
+  let messagesWithImages: ChatMessage[];
+  try {
+    messagesWithImages = await prepareAgentMessages({
+      messages: prunedMessages,
+      relatedFileEntities,
+      model: definedModel,
+      modelSelection,
+      safetyModelName: safetyModel?.name,
+      apiKeyId,
+    });
+  } catch (error) {
+    if (ResponsibleAIError.is(error)) {
+      return createErrorResult(error);
+    }
+    throw error;
+  }
+
+  const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
   const assistantMessageId = crypto.randomUUID();
 
-  if (agenticChatEnabled) {
-    const allowWebTools = isWebSearchEnabledForEntity({
-      featureToggles: teacherUserAndContext.federalState.featureToggles,
-      entity: learningScenario,
-    });
+  const tools = buildTools({
+    user: teacherUserAndContext,
+    learningScenarioId: learningScenario.id,
+    webSearchSettings: learningScenario,
+    relatedFileEntities,
+    attachedLinks: learningScenario.attachedLinks,
+    sourceUrls: processedUrls,
+    allowWebTools,
+    allowMundoSearch: false,
+    modelSelection,
+    apiKeyId,
+  });
 
-    const tools = await buildTools({
-      user: teacherUserAndContext,
-      learningScenarioId: learningScenario.id,
-      relatedFileEntities,
-      attachedLinks: learningScenario.attachedLinks,
-      sourceUrls: processedUrls,
-      allowWebTools,
-      onWebSearchResults: (results) => {
-        update(
-          encodeChatStreamEvent({
-            type: 'web_search_results',
-            webSearchResults: results,
-          }),
-        );
-      },
-    });
-
-    activeToolDefinitions = Object.values(tools.toolRegistry).map((entry) => entry.definition);
-
-    toolRegistry = tools.toolRegistry;
-  } else {
-    chunks = await retrieveChunks({
-      messages,
-      federalStateId: teacherUserAndContext.federalState.id,
-      relatedFileEntities,
-      sourceUrls: processedUrls,
-    });
-  }
+  const aiActivity = createAiActivityStream(update, { hideSensitiveDetails: true });
 
   // Build system prompt
   const systemPrompt = constructLearningScenarioSystemPrompt({
     learningScenario: learningScenario,
-    chunks,
-    activeToolDefinitions,
+    activeToolDefinitions: Object.values(tools.toolRegistry).map((entry) => entry.definition),
   });
 
-  // Prune messages
-  const prunedMessages = limitChatHistory(messages);
+  const persistUsage = async ({
+    usage,
+    priceInCents,
+    modelUsages,
+  }: {
+    usage: TokenUsage;
+    priceInCents: number;
+    modelUsages: ModelUsage[];
+  }) => {
+    if (modelUsages.length === 0) {
+      return;
+    }
 
-  // Check if the model supports images based on supportedImageFormats
-  const modelSupportsImages =
-    definedModel.supportedImageFormats !== null && definedModel.supportedImageFormats.length > 0;
+    // Agentic requests can invoke several models across iterations. Persist each usage
+    // entry separately so pricing and reporting stay associated with the serving model.
+    for (const modelUsage of modelUsages) {
+      await dbUpdateTokenUsageBySharedLearningScenarioId({
+        modelId: modelUsage.modelId,
+        completionTokens: modelUsage.usage.completionTokens,
+        promptTokens: modelUsage.usage.promptTokens,
+        learningScenarioId: learningScenario.id,
+        userId: teacherUserAndContext.id,
+        costsInCent: modelUsage.priceInCents,
+      });
+    }
 
-  const imageAttachmentType = determineImageAttachmentTypeForModel(definedModel);
+    // Report the real provider/model that generated the first response, i.e. the one that
+    // served the first agentic iteration.
+    const firstModelUsage = modelUsages.at(0);
+    if (!firstModelUsage) {
+      return;
+    }
+    const { provider, modelName } = firstModelUsage;
 
-  // attach the image url to each of the image files within relatedFileEntities
-  const extractedImages = await createImageAttachmentsForConversation(
-    relatedFileEntities,
-    imageAttachmentType,
-  );
+    await sendRabbitmqEvent(
+      constructNewMessageEvent({
+        user: teacherUserAndContext,
+        provider,
+        modelName,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        costsInCent: priceInCents,
+        anonymous: true,
+        sharedChat: learningScenario,
+      }),
+    );
+  };
 
-  // Format messages with images if the model supports vision
-  const messagesWithImages = enrichMessagesWithImageData(
-    prunedMessages,
-    extractedImages,
-    modelSupportsImages,
-    imageAttachmentType,
-  );
-
-  // Convert to ai-core format
-  const aiCoreMessages = convertToAiCoreMessages(systemPrompt, messagesWithImages);
-
-  if (agenticChatEnabled) {
-    const agentName = resolveAgentNameForTracing({ learningScenarioId: learningScenario.id });
-
-    runAgentLoop({
-      modelId: definedModel.id,
-      modelName: definedModel.name,
-      apiKeyId,
-      messages: aiCoreMessages,
-      toolRegistry,
-      agentName,
-      onTextChunk: (delta) => {
-        update(delta);
-      },
-      onComplete: async ({ usage, priceInCents }) => {
-        const { promptTokens, completionTokens } = usage;
-
-        await dbUpdateTokenUsageBySharedLearningScenarioId({
-          modelId: definedModel.id,
-          completionTokens,
-          promptTokens,
-          learningScenarioId: learningScenario.id,
-          userId: teacherUserAndContext.id,
-          costsInCent: priceInCents,
-        });
-
-        await sendRabbitmqEvent(
-          constructNewMessageEvent({
-            user: teacherUserAndContext,
-            provider: definedModel.provider,
-            promptTokens,
-            completionTokens,
-            costsInCent: priceInCents,
-            anonymous: true,
-            sharedChat: learningScenario,
-          }),
-        );
-
-        done();
-      },
-      onError: (error) => {
-        logError('Error during shared chat streaming:', error);
-        streamError(error);
-      },
-    });
-  } else {
-    // Start streaming in the background
-    void (async () => {
+  runAgentLoop({
+    modelSelection,
+    apiKeyId,
+    messages: convertToAiCoreMessages(systemPrompt, messagesWithImages),
+    toolRegistry: tools.toolRegistry,
+    agentName: resolveAgentNameForTracing({ learningScenarioId: learningScenario.id }),
+    abortSignal: generationSignal,
+    onTextChunk: (delta) => {
+      update(delta);
+    },
+    onReasoningSummary: aiActivity.onReasoningSummary,
+    onToolCalls: aiActivity.onToolCalls,
+    onToolResult: aiActivity.onToolResult,
+    onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {
       try {
-        const textStream = generateTextStreamWithBilling(
-          definedModel.id,
-          aiCoreMessages,
-          apiKeyId,
-          async ({ usage, priceInCents }) => {
-            const { promptTokens, completionTokens } = usage;
-
-            await dbUpdateTokenUsageBySharedLearningScenarioId({
-              modelId: definedModel.id,
-              completionTokens,
-              promptTokens,
-              learningScenarioId: learningScenario.id,
-              userId: teacherUserAndContext.id,
-              costsInCent: priceInCents,
-            });
-
-            await sendRabbitmqEvent(
-              constructNewMessageEvent({
-                user: teacherUserAndContext,
-                provider: definedModel.provider,
-                promptTokens,
-                completionTokens,
-                costsInCent: priceInCents,
-                anonymous: true,
-                sharedChat: learningScenario,
-              }),
-            );
-          },
-        );
-
-        for await (const chunk of textStream) {
-          update(chunk);
-        }
-
+        aiActivity.finish();
+        await sharedChatConversation.persistResponse({
+          assistantMessageId,
+          fullText,
+          agentLoopMessages,
+        });
+        await persistUsage({ usage, priceInCents, modelUsages });
         done();
       } catch (error) {
-        logError('Error during shared chat streaming:', error);
+        logError('Error persisting shared learning scenario chat completion:', error);
         streamError(error instanceof Error ? error : new Error('Unknown error'));
       }
-    })();
-  }
+    },
+    onError: async (error, billedUsage) => {
+      logError('Error during shared chat streaming:', error);
+      try {
+        await persistUsage(billedUsage);
+      } catch (persistenceError) {
+        logError('Error persisting failed shared chat usage:', persistenceError);
+      } finally {
+        streamError(error);
+      }
+    },
+  });
 
   return {
     stream,

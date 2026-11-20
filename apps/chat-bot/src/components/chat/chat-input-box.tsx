@@ -1,35 +1,37 @@
 import { useTranslations } from 'next-intl';
-import AutoResizeTextarea from '../common/auto-resize-textarea';
-import DisplayUploadedFile from './display-uploaded-file';
-import { LocalFileState } from './send-message-form';
-import {
-  CHAT_MESSAGE_LENGTH_LIMIT,
-  NUMBER_OF_FILES_LIMIT,
-  NUMBER_OF_IMAGES_LIMIT,
-} from '@/configuration-text-inputs/const';
-import StopIcon from '../icons/stop';
-import ArrowRightIcon from '../icons/arrow-right';
-import UploadFileButton from './upload-file-button';
-import type { FileUploadResponse } from './upload-file-button';
-import { useToast } from '../common/toast';
 import {
   ChangeEvent,
   Dispatch,
   KeyboardEvent,
   SetStateAction,
   startTransition,
-  useEffect,
-  useState,
   SyntheticEvent,
+  useEffect,
 } from 'react';
-import { iconClassName } from '@/utils/tailwind/icon';
-import { cn } from '@/utils/tailwind';
+
+import {
+  CHAT_MESSAGE_LENGTH_LIMIT,
+  NUMBER_OF_FILES_LIMIT,
+  NUMBER_OF_IMAGES_LIMIT,
+} from '@/configuration-text-inputs/const';
+import { unlockAudioPlayback } from '@/utils/audio/unlock-audio-playback';
 import { isImageFile } from '@/utils/files/generic';
+import { cn } from '@/utils/tailwind';
+import { iconClassName } from '@/utils/tailwind/icon';
+
+import AutoResizeTextarea from '../common/auto-resize-textarea';
+import { useToast } from '../common/toast';
+import type { FileUploadResponse, LocalFileState } from '../file-upload/upload-file';
+import { useFileUpload } from '../file-upload/use-file-upload';
+import ArrowRightIcon from '../icons/arrow-right';
+import StopIcon from '../icons/stop';
+import ChatInputAttachmentPreview from './chat-input-attachment-preview';
+import UploadFileButton from './upload-file-button';
 
 export function ChatInputBox({
   files,
   setFiles,
-  isLoading,
+  isGenerating,
   handleDeattachFile,
   handleInputChange,
   handleStopGeneration,
@@ -37,13 +39,12 @@ export function ChatInputBox({
   input,
   enableFileUpload = false,
   fileUploadFn,
-  getSignedUrlFn,
   showPlaceholder = true,
   showAnonymizationHint = false,
 }: {
   files?: Map<string, LocalFileState>;
   setFiles?: Dispatch<SetStateAction<Map<string, LocalFileState>>>;
-  isLoading: boolean;
+  isGenerating: boolean;
   handleDeattachFile?: (localId: string) => void;
   handleInputChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
   handleStopGeneration: () => void;
@@ -51,14 +52,18 @@ export function ChatInputBox({
   input: string;
   enableFileUpload?: boolean;
   fileUploadFn?: (file: File) => Promise<FileUploadResponse>;
-  getSignedUrlFn?: (fileId: string) => Promise<string>;
   showPlaceholder?: boolean;
   showAnonymizationHint?: boolean;
 }) {
+  const tChat = useTranslations('chat');
   const tCommon = useTranslations('common');
   const tFileInteraction = useTranslations('file-interaction');
   const toast = useToast();
-  const [fileUploading, setFileUploading] = useState(false);
+  const { allowedFileExtensions, handlePaste, hasUploadingFiles, uploadFiles } = useFileUpload({
+    files,
+    setFiles,
+    fileUploadFn,
+  });
 
   useEffect(() => {
     if (files && setFiles && files.size > NUMBER_OF_FILES_LIMIT) {
@@ -71,7 +76,6 @@ export function ChatInputBox({
       const trimmedFiles = new Map(Array.from(files.entries()).slice(0, NUMBER_OF_FILES_LIMIT));
       startTransition(() => {
         setFiles(trimmedFiles);
-        setFileUploading(false);
       });
     }
     const imageEntries = Array.from(files?.entries() ?? []).filter(([, file]) =>
@@ -94,68 +98,73 @@ export function ChatInputBox({
       });
       startTransition(() => {
         setFiles(newFiles);
-        setFileUploading(false);
       });
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files]);
 
+  const canSubmit = input.trim().length > 0 && !hasUploadingFiles;
+
+  // Single entry point for every submit, so speech that autoplays later (speech-only replies have
+  // no user gesture of their own) is always unlocked while this gesture is still active.
+  async function handleSubmit(e: SyntheticEvent) {
+    unlockAudioPlayback();
+    await customHandleSubmit(e);
+  }
+
   async function handleSubmitOnEnter(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !isLoading && !e.shiftKey) {
+    if (e.key === 'Enter' && !isGenerating && !e.shiftKey) {
       e.preventDefault();
-      if (e.currentTarget.value.trim().length > 0) {
-        await customHandleSubmit(e);
+      if (canSubmit) {
+        await handleSubmit(e);
       }
     }
   }
 
   /** Either Send or StopGeneration */
-  const userActionButton = isLoading ? (
+  const userActionButton = isGenerating ? (
     <button
       type="button"
-      title="Stop generating"
+      title={tChat('stop-generating')}
       onClick={handleStopGeneration}
       className={cn(
         'p-1.5 my-2 flex items-center justify-center group disabled:cursor-not-allowed me-2',
         iconClassName,
       )}
-      aria-label="Stop"
+      aria-label={tChat('stop-generating')}
     >
       <StopIcon className={cn('w-6 h-6')} />
     </button>
   ) : (
     <button
       type="submit"
-      title="Nachricht abschicken"
-      disabled={input.trim().length === 0 || fileUploading}
+      title={tChat('send-message')}
+      disabled={!canSubmit}
       className={cn(
         iconClassName,
         'my-2 mx-2 flex items-center self-end justify-center group disabled:cursor-not-allowed text-dark-gray',
       )}
-      aria-label="Nachricht abschicken"
+      aria-label={tChat('send-message')}
       data-testid="submit-button"
     >
-      <ArrowRightIcon className={cn('h-9 w-9')} />
+      <ArrowRightIcon className={cn('h-9 w-9')} aria-hidden="true" />
     </button>
   );
 
   return (
     <>
       <form
-        onSubmit={customHandleSubmit}
+        onSubmit={handleSubmit}
         className="relative bg-white w-full p-1 border focus-within:border-primary rounded-xl"
       >
         {files !== undefined && handleDeattachFile !== undefined && files.size > 0 && (
           <div className="mx-2 py-2 flex gap-1 overflow-x-auto">
             {Array.from(files).map(([localId, file]) => (
-              <DisplayUploadedFile
-                fileName={file.file.name}
+              <ChatInputAttachmentPreview
                 key={localId}
-                status={file.status}
                 file={file}
                 onDeattachFile={() => handleDeattachFile(localId)}
-                getSignedUrl={getSignedUrlFn}
                 height="large"
                 width="small"
               />
@@ -171,17 +180,18 @@ export function ChatInputBox({
             onChange={handleInputChange}
             value={input}
             onKeyDown={handleSubmitOnEnter}
+            onPaste={enableFileUpload ? handlePaste : undefined}
             maxLength={CHAT_MESSAGE_LENGTH_LIMIT}
             data-testid="chat-input"
+            aria-label={tChat('chat-textarea')}
           />
           {enableFileUpload && files !== undefined && setFiles !== undefined && (
             <div className="flex flex-row gap-x-3 rounded-enterprise-sm">
               <UploadFileButton
                 className={iconClassName}
-                setFiles={setFiles}
                 files={files}
-                setFileUploading={setFileUploading}
-                fileUploadFn={fileUploadFn}
+                allowedFileExtensions={allowedFileExtensions}
+                onFilesSelected={uploadFiles}
               />
             </div>
           )}

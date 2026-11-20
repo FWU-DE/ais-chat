@@ -1,29 +1,43 @@
+import { computeBlobHash } from '@ais-chat/shared-core/crypto/blob-hash';
+import {
+  filterCommunitySharedByAssociatedSchool,
+  filterReadableCustomChats,
+  verifyReadAccess,
+  verifySuspensionState,
+  verifyWriteAccess,
+} from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
+import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import {
   getConversation,
   getConversationMessages,
 } from '@shared/conversation/conversation-service';
 import { db } from '@shared/db';
 import {
-  dbGetAssistantsByUserId,
   dbDeleteAssistantByIdAndUser,
   dbGetAssistantById,
+  dbGetAssistantByIdForConversation,
+  dbGetAssistantsByUserFavorite,
+  dbGetAssistantsByUserId,
   dbGetCommunityGpts,
   dbGetGlobalGpts,
   dbGetGptsByAssociatedSchools,
   dbGetGptsByUser,
   dbInsertAssistantFileMapping,
 } from '@shared/db/functions/assistants';
-import { dbGetFileForAssistant, dbGetRelatedAssistantFiles } from '@shared/db/functions/files';
 import {
-  AccessLevel,
-  accessLevelSchema,
+  dbDeleteFileIfUnreferenced,
+  dbGetFileForAssistant,
+  dbGetRelatedAssistantFiles,
+  dbVerifyFileOwner,
+} from '@shared/db/functions/files';
+import { dbIsUserFavorite } from '@shared/db/functions/user-favorites';
+import {
   AssistantFileMapping,
   AssistantSelectModel,
   assistantTable,
   assistantUpdateSchema,
   FileModel,
-  fileTable,
 } from '@shared/db/schema';
 import { checkParameterUUID, ForbiddenError, NotFoundError } from '@shared/error';
 import {
@@ -31,30 +45,20 @@ import {
   deleteMessageAttachments,
   getAvatarPictureUrl,
 } from '@shared/files/fileService';
-import { buildAssistantPictureKey } from '@shared/utils/picture-key';
+import { OverviewFilter } from '@shared/overview-filter';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
-import {
-  copyAssistant,
-  copyEntityPictureIfExists,
-  copyRelatedTemplateFiles,
-} from '@shared/templates/template-service';
-import { OverviewFilter } from '@shared/overview-filter';
-import { generateUUID } from '@shared/utils/uuid';
+import { copyAssistant, copyRelatedTemplateFiles } from '@shared/templates/template-service';
+import { getUserSettings } from '@shared/users/user-settings-service';
+import { uniqueById } from '@shared/utils/arrays';
+import { buildAssistantPictureKey } from '@shared/utils/picture-key';
 import {
   getChangedKeys,
   getPreservedUpdatedAtForExemptedKeys,
 } from '@shared/utils/preserve-updated-at';
+import { generateUUID } from '@shared/utils/uuid';
 import { and, eq } from 'drizzle-orm';
 import z from 'zod';
-import { computeBlobHash } from '@ais-chat/shared-core/crypto/blob-hash';
-import {
-  verifySuspensionState,
-  verifyReadAccess,
-  verifyWriteAccess,
-  filterCommunitySharedByAssociatedSchool,
-  filterReadableCustomChats,
-} from '@shared/auth/authorization-service';
 
 function buildAvatarFilename(hash: string) {
   return `avatar_${hash}`;
@@ -81,6 +85,7 @@ export async function getAssistantByUser({
   assistant: AssistantSelectModel;
   fileMappings: FileModel[];
   pictureUrl: string | undefined;
+  isFavorite: boolean;
 }> {
   checkParameterUUID(assistantId);
   const assistant = await dbGetAssistantById({ assistantId });
@@ -89,12 +94,16 @@ export async function getAssistantByUser({
     user,
   });
 
-  const [fileMappings, pictureUrl] = await Promise.all([
+  const [fileMappings, pictureUrl, isFavorite] = await Promise.all([
     dbGetRelatedAssistantFiles(assistantId),
     getAvatarPictureUrl(assistant.pictureId),
+    dbIsUserFavorite({
+      userId: user.id,
+      entityRef: { entityType: 'assistant', entityId: assistantId },
+    }),
   ]);
 
-  return { assistant, fileMappings, pictureUrl };
+  return { assistant, fileMappings, pictureUrl, isFavorite };
 }
 
 /**
@@ -114,13 +123,32 @@ export async function getAssistantForNewChat({
   user: Pick<UserModel, 'id' | 'schoolIds'>;
 }) {
   checkParameterUUID(assistantId);
-  const assistant = await dbGetAssistantById({
-    assistantId,
-  });
+  const assistant = await dbGetAssistantById({ assistantId });
   verifyReadAccess({
     item: assistant,
     user,
   });
+
+  return assistant;
+}
+
+export async function getAssistantForExistingConversation({
+  assistantId,
+  conversationId,
+  user,
+}: {
+  assistantId: string;
+  conversationId: string;
+  user: Pick<UserModel, 'id' | 'schoolIds'>;
+}) {
+  checkParameterUUID(assistantId, conversationId);
+  const assistant = await dbGetAssistantByIdForConversation({
+    assistantId,
+    conversationId,
+    userId: user.id,
+  });
+  if (!assistant) throw new NotFoundError('Assistant not found');
+  verifyReadAccess({ item: assistant, user });
 
   return assistant;
 }
@@ -142,12 +170,12 @@ export async function getConversationWithMessagesAndAssistant({
 }) {
   checkParameterUUID(assistantId, conversationId);
   const [assistant, conversation, messages] = await Promise.all([
-    dbGetAssistantById({ assistantId }),
+    dbGetAssistantByIdForConversation({ assistantId, conversationId, userId }),
     getConversation({ conversationId, userId }),
     getConversationMessages({ conversationId, userId }),
   ]);
 
-  if (conversation.assistantId !== assistantId) {
+  if (!assistant || conversation.assistantId !== assistantId) {
     throw new NotFoundError('Conversation not found');
   }
 
@@ -158,35 +186,6 @@ export async function getConversationWithMessagesAndAssistant({
  * Returns a list of custom gpts for the user based on
  * userId, schools associated with the user, federalStateId and access level.
  */
-export async function getAssistantByAccessLevel({
-  accessLevel,
-  user,
-}: {
-  accessLevel: AccessLevel;
-  user: Pick<UserModel, 'id' | 'schoolIds' | 'federalStateId'>;
-}): Promise<AssistantSelectModel[]> {
-  let assistants: AssistantSelectModel[];
-
-  switch (accessLevel) {
-    case 'community':
-      assistants = await dbGetCommunityGpts();
-      break;
-    case 'global':
-      assistants = await dbGetGlobalGpts({ user });
-      break;
-    case 'school':
-      assistants = await dbGetGptsByAssociatedSchools({ user });
-      break;
-    case 'private':
-      assistants = await dbGetGptsByUser({ user });
-      break;
-    default:
-      return [];
-  }
-
-  return filterReadableCustomChats({ items: assistants, user });
-}
-
 export async function getAssistantsByOverviewFilter({
   filter,
   user,
@@ -205,12 +204,13 @@ export async function getAssistantsByOverviewFilter({
           dbGetCommunityGpts(),
           dbGetGlobalGpts({ user }),
         ]);
-      assistants = [
+      // An assistant can match several sharing queries, e.g. school-shared and community-shared
+      assistants = uniqueById([
         ...privateAssistants,
         ...schoolAssistants,
         ...communityAssistants,
         ...globalAssistants,
-      ];
+      ]);
       break;
     }
     case 'mine':
@@ -227,10 +227,14 @@ export async function getAssistantsByOverviewFilter({
         dbGetGptsByAssociatedSchools({ user }),
         dbGetCommunityGpts(),
       ]);
-      assistants = [
+      assistants = uniqueById([
         ...schoolAssistants,
         ...filterCommunitySharedByAssociatedSchool({ items: communityAssistants, user }),
-      ];
+      ]);
+      break;
+    }
+    case 'favorites': {
+      assistants = await dbGetAssistantsByUserFavorite({ user });
       break;
     }
     default:
@@ -264,37 +268,14 @@ export async function createNewAssistant({
     });
     verifySuspensionState({ item: sourceAssistant });
 
-    let insertedAssistant = await copyAssistant(
-      templateId,
-      'private',
-      user,
-      duplicateAssistantName,
-    );
+    const insertedAssistant = await copyAssistant(templateId, false, user, duplicateAssistantName);
 
-    const copyOfTemplatePicture = await copyEntityPictureIfExists({
-      sourcePictureId: insertedAssistant.pictureId,
-      newEntityId: insertedAssistant.id,
-      buildPictureKey: buildAssistantPictureKey,
-    });
-
-    if (copyOfTemplatePicture) {
-      // Update the assistant with the new picture
-      const [updatedAssistant] = await db
-        .update(assistantTable)
-        .set({ pictureId: copyOfTemplatePicture })
-        .where(eq(assistantTable.id, insertedAssistant.id))
-        .returning();
-
-      if (updatedAssistant) {
-        insertedAssistant = { ...updatedAssistant, ownerSchoolIds: user.schoolIds };
-      }
-    }
-
-    await copyRelatedTemplateFiles('assistant', templateId, insertedAssistant.id);
+    await copyRelatedTemplateFiles('assistant', templateId, insertedAssistant.id, user.id);
     return insertedAssistant;
   }
 
   const assistantId = generateUUID();
+  const userSettings = await getUserSettings({ userId: user.id });
 
   const [insertedAssistant] = await db
     .insert(assistantTable)
@@ -306,6 +287,8 @@ export async function createNewAssistant({
       description: '',
       instructions: '',
       promptSuggestions: [],
+      voice: userSettings?.defaultSpeechVoice,
+      speechOnly: userSettings?.defaultIsSpeechOnly,
     })
     .returning();
 
@@ -332,6 +315,10 @@ export async function linkFileToAssistant({
   checkParameterUUID(assistantId);
   const assistant = await dbGetAssistantById({ assistantId });
   verifyWriteAccess({ item: assistant, user });
+
+  if (!(await dbVerifyFileOwner({ fileId, userId: user.id }))) {
+    throw new ForbiddenError('Not authorized to link this file');
+  }
 
   const insertedFileMapping = await dbInsertAssistantFileMapping({
     assistantId,
@@ -361,14 +348,29 @@ export async function deleteFileMappingAndEntity({
   const assistant = await dbGetAssistantById({ assistantId });
   verifyWriteAccess({ item: assistant, user });
 
-  // delete mapping and file entry in db
-  await db.transaction(async (tx) => {
-    await tx.delete(AssistantFileMapping).where(eq(AssistantFileMapping.fileId, fileId));
-    await tx.delete(fileTable).where(eq(fileTable.id, fileId));
+  if (
+    (await dbGetFileForAssistant({ assistantId, fileId })) === undefined ||
+    !(await dbVerifyFileOwner({ fileId, userId: user.id }))
+  ) {
+    throw new ForbiddenError('Not authorized to delete this file');
+  }
+
+  // Delete the mapping and remove the file only when it has no other references.
+  const fileWasDeleted = await db.transaction(async (tx) => {
+    await tx
+      .delete(AssistantFileMapping)
+      .where(
+        and(
+          eq(AssistantFileMapping.assistantId, assistantId),
+          eq(AssistantFileMapping.fileId, fileId),
+        ),
+      );
+    return dbDeleteFileIfUnreferenced(tx, fileId);
   });
 
-  // Delete the file from S3
-  await deleteMessageAttachments([fileId]);
+  if (fileWasDeleted) {
+    await deleteMessageAttachments([fileId]);
+  }
 }
 
 /**
@@ -396,47 +398,50 @@ export async function getFileMappings({
 }
 
 /**
- * Update access level, e.g. from private to school/community or back to private.
- * Throws if the user is not the owner of the custom gpt.
+ * User can share an assistant they own with the school, or unshare it (private).
+ * Community sharing is handled separately via the community-template-request workflow;
+ * this function is not authorized to change it.
  */
-export async function updateAssistantAccessLevel({
-  accessLevel,
+export async function updateAssistantSchoolSharing({
+  isSchoolShared,
   assistantId,
   user,
 }: {
-  accessLevel: AccessLevel;
+  isSchoolShared: boolean;
   assistantId: string;
   user: Pick<UserModel, 'id'>;
 }) {
   checkParameterUUID(assistantId);
-  accessLevelSchema.parse(accessLevel);
-
-  if (accessLevel === 'global') {
-    throw new ForbiddenError('Not authorized to set the access level to global');
-  }
 
   const assistant = await dbGetAssistantById({ assistantId });
   verifyWriteAccess({ item: assistant, user });
   verifySuspensionState({ item: assistant });
 
-  if (assistant.accessLevel === accessLevel) {
+  if (assistant.isSchoolShared === isSchoolShared) {
     return assistant;
+  }
+
+  if (!isSchoolShared) {
+    await verifyCommunitySharingInactive({
+      entityRef: { entityType: 'assistant', entityId: assistantId },
+      isCommunityShared: assistant.isCommunityShared,
+    });
   }
 
   const preservedUpdatedAt = getPreservedUpdatedAtForExemptedKeys({
     entity: assistant,
-    values: { accessLevel },
-    exemptedKeys: ['accessLevel'],
+    values: { isSchoolShared },
+    exemptedKeys: ['isSchoolShared'],
   });
 
   const [updatedAssistant] = await db
     .update(assistantTable)
-    .set({ accessLevel, ...(preservedUpdatedAt ? { updatedAt: preservedUpdatedAt } : {}) })
+    .set({ isSchoolShared, ...(preservedUpdatedAt ? { updatedAt: preservedUpdatedAt } : {}) })
     .where(and(eq(assistantTable.id, assistantId), eq(assistantTable.userId, user.id)))
     .returning();
 
   if (!updatedAssistant) {
-    throw new Error('Could not update the access level of the assistant');
+    throw new Error('Could not update the school sharing state of the assistant');
   }
 
   return updatedAssistant;
@@ -446,7 +451,9 @@ const updateAssistantSchema = assistantUpdateSchema.omit({
   id: true,
   isDeleted: true,
   originalAssistantId: true,
-  accessLevel: true,
+  isSchoolShared: true,
+  isCommunityShared: true,
+  isGlobal: true,
   pictureId: true,
 });
 
@@ -475,6 +482,13 @@ export async function updateAssistant({
 
   if (changedKeys.length === 0) {
     return assistant;
+  }
+
+  if (changedKeys.includes('hasLinkAccess') && !parsedValues.hasLinkAccess) {
+    await verifyCommunitySharingInactive({
+      entityRef: { entityType: 'assistant', entityId: assistantId },
+      isCommunityShared: assistant.isCommunityShared,
+    });
   }
 
   const preservedUpdatedAt = getPreservedUpdatedAtForExemptedKeys({
@@ -512,16 +526,17 @@ export async function deleteAssistant({
   const assistant = await dbGetAssistantById({ assistantId });
   verifyWriteAccess({ item: assistant, user });
 
-  const relatedFiles = await dbGetRelatedAssistantFiles(assistantId);
-
   // delete assistant from db
-  const deletedAssistant = await dbDeleteAssistantByIdAndUser({ gptId: assistantId, user });
+  const { deletedAssistant, deletedFileIds } = await dbDeleteAssistantByIdAndUser({
+    gptId: assistantId,
+    user,
+  });
 
   // delete avatar picture from S3
   await deleteAvatarPicture(assistant.pictureId);
 
   // delete all related files from s3
-  await deleteMessageAttachments(relatedFiles.map((file) => file.id));
+  await deleteMessageAttachments(deletedFileIds);
 
   return deletedAssistant;
 }

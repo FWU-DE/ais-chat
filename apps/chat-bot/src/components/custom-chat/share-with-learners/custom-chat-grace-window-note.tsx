@@ -1,12 +1,12 @@
 'use client';
 
-import { formatDurationAsClock } from '@shared/utils/date';
-import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
 import {
   calculateGracePeriodTimeLeftInSeconds,
   ShareSessionState,
 } from '@shared/sharing/calculate-share-session-state';
+import { formatDurationAsClock } from '@shared/utils/date';
+import { useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
 
 interface CustomChatGraceWindowNoteProps {
   expiredAt: Date | null;
@@ -43,7 +43,7 @@ export function CustomChatGraceWindowNote({
   if (shareSessionState !== ShareSessionState.EXPIRED_RECENTLY) return null;
 
   return (
-    <p className="text-sm text-gray-600 text-center">
+    <p className="text-sm text-gray-600 text-center" data-testid="grace-window-note">
       {t('session-will-be-closed', {
         time: formatDurationAsClock(gracePeriodTimeLeftInSeconds),
       })}

@@ -1,11 +1,7 @@
+import { requiredNonEmptyString } from '@shared/utils/zod';
 import { z } from 'zod';
 
-const requiredNonEmptyString = (message: string) =>
-  z
-    .custom<string>((value) => typeof value === 'string' && value.trim() !== '', {
-      message,
-    })
-    .transform((value) => value.trim());
+import { MAX_SCALED_IMAGE_DIMENSION } from '@/const';
 
 export const sharedChatCommonRequestSchema = z.object({
   inviteCode: requiredNonEmptyString('inviteCode is required'),
@@ -16,10 +12,13 @@ export const sharedChatCommonRequestSchema = z.object({
 
 export const sharedChatUploadFormSchema = sharedChatCommonRequestSchema.extend({
   file: z.custom<File>((value) => value instanceof File, {
-    message: 'Invalid or missing file in form data',
+    error: 'Invalid or missing file in form data',
   }),
 });
 
-export const sharedChatSignedUrlRequestSchema = sharedChatCommonRequestSchema.extend({
+export const sharedChatImageRequestSchema = sharedChatCommonRequestSchema.extend({
   fileId: requiredNonEmptyString('fileId is required'),
+  width: z.coerce.number().int().positive().max(MAX_SCALED_IMAGE_DIMENSION),
+  height: z.coerce.number().int().positive().max(MAX_SCALED_IMAGE_DIMENSION),
+  export: z.literal('true').optional(),
 });

@@ -1,3 +1,10 @@
+import { ToolCall } from '@ais-chat/ai-core/chat/types';
+import {
+  type LlmModelPriceMetadata,
+  llmModelPriceMetadataSchema,
+} from '@ais-chat/shared-core/schemas/llm-model-price-metadata';
+import { logError } from '@shared/logging';
+import { isNull, sql } from 'drizzle-orm';
 import {
   boolean,
   check,
@@ -6,6 +13,7 @@ import {
   index,
   integer,
   json,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -14,14 +22,16 @@ import {
   unique,
   uniqueIndex,
   uuid,
-  vector,
   varchar,
+  vector,
 } from 'drizzle-orm/pg-core';
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { type KnotenpunktPriceMetadata } from '@shared/knotenpunkt/schema';
+
 import {
   conversationRoleSchema,
   conversationTypeSchema,
+  imageAspectRatioPresetSchema,
   imageStyleTypeSchema,
 } from '../utils/chat';
 
@@ -32,11 +42,7 @@ export type DesignConfiguration = {
   secondaryTextColor: string;
 };
 
-export type LlmModelPriceMetadata = KnotenpunktPriceMetadata;
-import { isNull, sql } from 'drizzle-orm';
-import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod';
-import { ToolCall } from '@ais-chat/ai-core/chat/types';
-import { logError } from '@shared/logging';
+export { type LlmModelPriceMetadata, llmModelPriceMetadataSchema };
 
 // can be expanded to include other metadata of other file types
 export type FileMetadata = Record<string, unknown>;
@@ -72,6 +78,24 @@ export const userUpdateSchema = createUpdateSchema(userTable).omit({ createdAt: 
 export type UserSelectModel = z.infer<typeof userSelectSchema>;
 export type UserInsertModel = z.infer<typeof userInsertSchema>;
 export type UserUpdateModel = z.infer<typeof userUpdateSchema>;
+
+/**
+ * Schema for table user_settings
+ *
+ * Stores user-specific default settings as a JSON bag so that adding new
+ * settings does not require a database migration. The row is created lazily
+ * on first write.
+ */
+export const userSettingsTable = pgTable('user_settings', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => userTable.id, { onDelete: 'cascade' }),
+  settings: jsonb('settings').$type<UserSettings>().notNull().default({}),
+  updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdateFn(() => new Date()),
+});
 
 /**
  * Schema for table conversation
@@ -133,6 +157,7 @@ export const conversationRoleEnum = pgEnum('conversation_role', conversationRole
 // Define the parameters type for conversation messages
 export const conversationMessageParametersSchema = z.object({
   imageStyle: imageStyleTypeSchema.optional(),
+  aspectRatio: imageAspectRatioPresetSchema.optional(),
 });
 
 export type ConversationMessageParameters = z.infer<typeof conversationMessageParametersSchema>;
@@ -162,9 +187,9 @@ export const conversationMessageTable = pgTable(
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp('deleted_at', { mode: 'date', withTimezone: true }),
     parameters: json('parameters').$type<ConversationMessageParameters>(),
-    webSearchResults: json('web_search_results').$type<ConversationMessageWebSearchResult[]>(),
     toolCalls: json('tool_calls').$type<ToolCall[]>(),
     toolCallId: text('tool_call_id'),
+    reasoningSummary: text('reasoning_summary'),
   },
   (table) => [
     index().on(table.conversationId),
@@ -206,9 +231,11 @@ export const federalStateFeatureTogglesSchema = z.object({
   isCustomGptEnabled: z.boolean().default(true),
   isShareTemplateWithSchoolEnabled: z.boolean().default(true),
   isSharedPageLocaleDetectionEnabled: z.boolean().optional(),
-  isAgenticChatEnabled: z.boolean().optional(),
   isImageGenerationEnabled: z.boolean().optional(),
   isWebSearchEnabled: z.boolean().optional(),
+  isCalculatorEnabled: z.boolean().optional(),
+  isSpeechModelEnabled: z.boolean().optional(),
+  isJsxGraphEnabled: z.boolean().optional(),
   isAnonymizationEnabled: z.boolean().optional(),
   anonymizationMode: z.enum(['placeholder', 'pseudonym']).optional(),
 });
@@ -379,15 +406,17 @@ export type InfoBannerUserStateInsertModel = z.infer<typeof infoBannerUserStateI
 /**
  * Schema for table character
  */
-export const accessLevelSchema = z.enum(['private', 'school', 'community', 'global']);
-export const accessLevelEnum = pgEnum('access_level', accessLevelSchema.enum);
-export type AccessLevel = z.infer<typeof accessLevelSchema>;
-
 export const webSearchScopeSchema = z.enum(['all-web', 'included-domains']);
 export const webSearchScopeEnum = pgEnum('web_search_scope', webSearchScopeSchema.enum);
 export type WebSearchScope = z.infer<typeof webSearchScopeSchema>;
 
-export const webSearchIncludedDomainsSchema = z.array(z.httpUrl());
+export type WebSearchModel = {
+  isWebSearchEnabled: boolean;
+  webSearchScope: WebSearchScope;
+  webSearchIncludedDomains: string[];
+};
+
+export const webSearchIncludedDomainsSchema = z.array(z.string());
 
 export const suspensionRequestReasonSchema = z.enum([
   'copyright_violation',
@@ -542,9 +571,8 @@ export const characterTable = pgTable(
     userId: uuid('user_id')
       .references(() => userTable.id)
       .notNull(),
-    modelId: uuid('model_id')
-      .notNull()
-      .references(() => llmModelTable.id),
+    // References llm_model in the API database, so no FK constraint
+    modelId: uuid('model_id').notNull(),
     // required
     name: text('name').notNull(),
     description: text('description').notNull().default(''),
@@ -560,7 +588,11 @@ export const characterTable = pgTable(
     restrictions: text('restrictions'),
     pictureId: text('picture_id'),
     initialMessage: text('initial_message'),
-    accessLevel: accessLevelEnum('access_level').notNull().default('private'),
+    licenseInformation: text('license_information').notNull().default(''),
+    didacticCommentary: text('didactic_commentary').notNull().default(''),
+    isSchoolShared: boolean('is_school_shared').notNull().default(false),
+    isCommunityShared: boolean('is_community_shared').notNull().default(false),
+    isGlobal: boolean('is_global').notNull().default(false),
     hasLinkAccess: boolean('has_link_access').notNull().default(false),
     isWebSearchEnabled: boolean('is_web_search_enabled').notNull().default(false),
     webSearchScope: webSearchScopeEnum('web_search_scope').notNull().default('all-web'),
@@ -568,6 +600,9 @@ export const characterTable = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    isSpeechEnabled: boolean('is_speech_enabled').notNull().default(true),
+    voice: text('voice').notNull().default(''),
+    speechOnly: boolean('speech_only').notNull().default(false),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
       .defaultNow()
@@ -580,31 +615,28 @@ export const characterTable = pgTable(
     suspended: boolean('suspended').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
     originalCharacterId: uuid('original_character_id'),
+    popularity: integer('popularity').notNull().default(0),
   },
   (table) => [index().on(table.userId)],
 );
 
-export const characterSelectSchema = createSelectSchema(characterTable)
-  // for any reason accessLevel has a different type so we have to override it here
-  .extend({
-    createdAt: z.coerce.date(),
-    updatedAt: z.coerce.date(),
-    accessLevel: accessLevelSchema,
-    filterGroup: filterGroupSchema,
-    ownerSchoolIds: z.array(z.string()),
-    webSearchScope: webSearchScopeSchema,
-    webSearchIncludedDomains: webSearchIncludedDomainsSchema,
-  });
+export const characterSelectSchema = createSelectSchema(characterTable).extend({
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  filterGroup: filterGroupSchema,
+  ownerSchoolIds: z.array(z.string()),
+  webSearchScope: webSearchScopeSchema,
+  webSearchIncludedDomains: webSearchIncludedDomainsSchema,
+});
 export const characterInsertSchema = createInsertSchema(characterTable)
   .omit({
     id: true,
     createdAt: true,
     updatedAt: true,
     suspended: true,
+    popularity: true,
   })
-  // for any reason accessLevel has a different type so we have to override it here
   .extend({
-    accessLevel: accessLevelSchema,
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
@@ -615,11 +647,10 @@ export const characterUpdateSchema = createUpdateSchema(characterTable)
     createdAt: true,
     updatedAt: true,
     suspended: true,
+    popularity: true,
   })
-  // for any reason accessLevel has a different type so we have to override it here
   .extend({
     id: z.string(),
-    accessLevel: accessLevelSchema,
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
@@ -673,6 +704,61 @@ export type CharacterTemplateMappingInsertModel = z.infer<
 export const llmModelTypeSchema = z.enum(['text', 'image', 'fc']);
 export const llmModelTypeEnum = pgEnum('llm_model_type', llmModelTypeSchema.enum);
 export type LlmModeType = z.infer<typeof llmModelTypeSchema>;
+export const staticModelRoleSchema = z.enum([
+  'default-chat',
+  'fallback',
+  'auxiliary',
+  'strong-auxiliary',
+  'auxiliary-fallback',
+  'default-image',
+  'safety',
+]);
+export type StaticModelRole = z.infer<typeof staticModelRoleSchema>;
+export const staticModelsConfigurationSchema = z.object({
+  'default-chat': z.string().uuid(),
+  fallback: z.string().uuid(),
+  auxiliary: z.string().uuid(),
+  'strong-auxiliary': z.string().uuid(),
+  'auxiliary-fallback': z.string().uuid(),
+  'default-image': z.string().uuid(),
+  safety: z.string().uuid().optional(),
+});
+export type StaticModelsConfiguration = z.infer<typeof staticModelsConfigurationSchema>;
+
+export const imageGenerationConfigSchema = z.object({
+  aspectRatio: z.record(z.string(), z.string()),
+});
+
+export type ImageGenerationConfig = z.infer<typeof imageGenerationConfigSchema>;
+
+export const speechVoiceSchema = z.object({
+  name: z.string().trim().min(1),
+  displayName: z.string().trim().min(1),
+});
+
+export const speechConfigSchema = z.object({
+  voices: z.array(speechVoiceSchema),
+  // Opt-in for Azure AI Speech (`{endpoint}/tts/cognitiveservices/v1`). Azure OpenAI TTS
+  // deployments are speech models too, but must keep the Azure OpenAI deployment route.
+  useAzureSpeechEndpoint: z.boolean().optional(),
+});
+
+export type SpeechVoice = z.infer<typeof speechVoiceSchema>;
+export type SpeechConfig = z.infer<typeof speechConfigSchema>;
+
+export const userSettingsSchema = z.object({
+  defaultSpeechVoice: z.string().trim().min(1).optional(),
+  defaultIsSpeechOnly: z.boolean().optional(),
+});
+
+export type UserSettings = z.infer<typeof userSettingsSchema>;
+
+export const userSettingsSelectSchema = createSelectSchema(userSettingsTable).extend({
+  settings: userSettingsSchema,
+  updatedAt: z.coerce.date(),
+});
+
+export type UserSettingsSelectModel = z.infer<typeof userSettingsSelectSchema>;
 
 export const llmModelTable = pgTable(
   'llm_model',
@@ -682,16 +768,20 @@ export const llmModelTable = pgTable(
     name: text('name').notNull(),
     displayName: text('display_name').notNull(),
     description: text('description').notNull().default(''),
-    priceMetadata: json('price_metadata').$type<LlmModelPriceMetadata>().notNull(),
+    priceMetadata: jsonb('price_metadata').$type<LlmModelPriceMetadata>().notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     supportedImageFormats: json('supported_image_formats').$type<string[]>(),
+    imageGenerationConfig: jsonb('image_generation_config').$type<ImageGenerationConfig>(),
+    modelConfig: jsonb('model_config').$type<SpeechConfig>(),
     isNew: boolean('is_new').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
   },
   (table) => [unique().on(table.provider, table.name)],
 );
 
-export const llmModelSelectSchema = createSelectSchema(llmModelTable);
+export const llmModelSelectSchema = createSelectSchema(llmModelTable).extend({
+  createdAt: z.coerce.date(),
+});
 export const llmModelInsertSchema = createInsertSchema(llmModelTable).omit({
   id: true,
   createdAt: true,
@@ -705,6 +795,14 @@ export const llmModelUpdateSchema = createUpdateSchema(llmModelTable)
 export type LlmModelSelectModel = z.infer<typeof llmModelSelectSchema>;
 export type LlmModelInsertModel = z.infer<typeof llmModelInsertSchema>;
 export type LlmModelUpdateModel = z.infer<typeof llmModelUpdateSchema>;
+
+/** Generic project-wide JSON configuration object; services validate each key's value schema. */
+export type ConfigurationValue = Record<string, unknown>;
+export const configurationTable = pgTable('configuration', {
+  key: text('key').primaryKey(),
+  value: json('value').$type<ConfigurationValue>().notNull(),
+});
+export type Configuration = typeof configurationTable.$inferSelect;
 
 /**
  * Schema for table federal_state_llm_model_mapping
@@ -770,9 +868,8 @@ export const learningScenarioTable = pgTable(
     author: text('author').notNull().default(''),
     name: text('name').notNull(),
     description: text('description').notNull().default(''),
-    modelId: uuid('model_id')
-      .notNull()
-      .references(() => llmModelTable.id),
+    // References llm_model in the API database, so no FK constraint
+    modelId: uuid('model_id').notNull(),
     userId: uuid('user_id')
       .references(() => userTable.id)
       .notNull(),
@@ -781,6 +878,8 @@ export const learningScenarioTable = pgTable(
       .notNull()
       .default(sql`'{}'::json`),
     studentExercise: text('student_exercise').default('').notNull(),
+    licenseInformation: text('license_information').notNull().default(''),
+    didacticCommentary: text('didactic_commentary').notNull().default(''),
     additionalInstructions: text('additional_instructions'),
     restrictions: text('restrictions'), // Not used anymore
     attachedLinks: text('attached_links')
@@ -795,8 +894,11 @@ export const learningScenarioTable = pgTable(
       .notNull(),
     suspended: boolean('suspended').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
-    accessLevel: accessLevelEnum('access_level').notNull().default('private'),
+    isSchoolShared: boolean('is_school_shared').notNull().default(false),
+    isCommunityShared: boolean('is_community_shared').notNull().default(false),
+    isGlobal: boolean('is_global').notNull().default(false),
     originalLearningScenarioId: uuid('original_learning_scenario_id'),
+    popularity: integer('popularity').notNull().default(0),
     hasLinkAccess: boolean('has_link_access').notNull().default(false),
     isWebSearchEnabled: boolean('is_web_search_enabled').notNull().default(false),
     webSearchScope: webSearchScopeEnum('web_search_scope').notNull().default('all-web'),
@@ -804,40 +906,43 @@ export const learningScenarioTable = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    isSpeechEnabled: boolean('is_speech_enabled').notNull().default(true),
+    voice: text('voice').notNull().default(''),
+    speechOnly: boolean('speech_only').notNull().default(false),
   },
   (table) => [index().on(table.userId)],
 );
 
-export const learningScenarioSelectSchema = createSelectSchema(learningScenarioTable)
-  // for any reason accessLevel has a different type so we have to override it here
-  .extend({
-    createdAt: z.coerce.date(),
-    updatedAt: z.coerce.date(),
-    accessLevel: accessLevelSchema,
-    filterGroup: filterGroupSchema,
-    ownerSchoolIds: z.array(z.string()),
-    webSearchScope: webSearchScopeSchema,
-    webSearchIncludedDomains: webSearchIncludedDomainsSchema,
-  });
+export const learningScenarioSelectSchema = createSelectSchema(learningScenarioTable).extend({
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  filterGroup: filterGroupSchema,
+  ownerSchoolIds: z.array(z.string()),
+  webSearchScope: webSearchScopeSchema,
+  webSearchIncludedDomains: webSearchIncludedDomainsSchema,
+});
 export const learningScenarioInsertSchema = createInsertSchema(learningScenarioTable)
   .omit({
     createdAt: true,
     updatedAt: true,
     suspended: true,
+    popularity: true,
   })
-  // for any reason accessLevel has a different type so we have to override it here
   .extend({
-    accessLevel: accessLevelSchema,
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
   });
 export const learningScenarioUpdateSchema = createUpdateSchema(learningScenarioTable)
-  .omit({ userId: true, createdAt: true, updatedAt: true, suspended: true })
-  // for any reason accessLevel has a different type so we have to override it here
+  .omit({
+    userId: true,
+    createdAt: true,
+    updatedAt: true,
+    suspended: true,
+    popularity: true,
+  })
   .extend({
     id: z.string(),
-    accessLevel: accessLevelSchema,
     filterGroup: filterGroupSchema.optional(),
     webSearchScope: webSearchScopeSchema.optional(),
     webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
@@ -942,6 +1047,47 @@ export type SharedLearningScenarioSelectModel = z.infer<typeof sharedLearningSce
 export type SharedLearningScenarioInsertModel = z.infer<typeof sharedLearningScenarioInsertSchema>;
 export type SharedLearningScenarioUpdateModel = z.infer<typeof sharedLearningScenarioUpdateSchema>;
 
+/**
+ * Message history for an anonymous shared-chat conversation.
+ */
+export const sharedChatEntityTypeSchema = z.enum(['character', 'learningScenario']);
+export const sharedChatEntityTypeEnum = pgEnum(
+  'shared_chat_entity_type',
+  sharedChatEntityTypeSchema.enum,
+);
+
+export const sharedChatConversationTable = pgTable('shared_chat_conversation', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  entityType: sharedChatEntityTypeEnum('entity_type').notNull(),
+  shareId: uuid('share_id').notNull(),
+  createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+});
+
+export const sharedChatConversationMessageTable = pgTable(
+  'shared_chat_conversation_message',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    conversationId: uuid('conversation_id').notNull(),
+    content: text('content').notNull(),
+    role: conversationRoleEnum('role').notNull(),
+    orderNumber: integer('order_number').notNull(),
+    toolCalls: json('tool_calls').$type<ToolCall[]>(),
+    toolCallId: text('tool_call_id'),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('shared_chat_message_order_unique').on(table.conversationId, table.orderNumber),
+    foreignKey({
+      columns: [table.conversationId],
+      foreignColumns: [sharedChatConversationTable.id],
+      name: 'shared_chat_conversation_fk',
+    }).onDelete('cascade'),
+  ],
+);
+
+export type InsertSharedChatConversationMessageModel =
+  typeof sharedChatConversationMessageTable.$inferInsert;
+
 // Type for learning scenario with sharing data (from JOIN with sharedLearningScenario)
 const sharedLearningScenarioTransformedSchema = sharedLearningScenarioSelectSchema
   .omit({ id: true, learningScenarioId: true, userId: true })
@@ -1034,13 +1180,6 @@ export const sharedLearningScenarioUsageTracking = pgTable(
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    foreignKey({
-      columns: [table.modelId],
-      foreignColumns: [llmModelTable.id],
-      // Set a custom name because the auto-generated name is too long and will be silently truncated to 63 characters
-      // The custom name can only be set with foreignKey() function
-      name: 'shared_learning_scenario_usage_tracking_model_id_fk',
-    }),
     index('shared_learning_scenario_usage_tracking_conversation_id_index').on(
       table.learningScenarioId,
     ),
@@ -1089,9 +1228,9 @@ export const conversationUsageTracking = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     // Exactly one billing source is stored per row: either a model call or a tool call.
-    modelId: uuid('model_id').references(() => llmModelTable.id),
+    modelId: uuid('model_id'),
     toolCallName: toolCallNameEnum('tool_call_name'),
-    // this rows will be kept forever even if conversations are deleted, therefore we cannot enforce a foreign key constaint here
+    // these rows will be kept forever even if conversations are deleted, therefore we cannot enforce a foreign key constraint here
     conversationId: uuid('conversation_id').notNull(),
     // for easier tracking we add a user_id here to make less joins as this table will contain a lot of entries
     // this is not database normalization conform tho, we need to keep these rows forever too
@@ -1137,10 +1276,10 @@ export type ConversationUsageTrackingUpdateModel = z.infer<
 >;
 
 /**
- * Schema for table shared_character_conversation
+ * Schema for table shared_character
  */
-export const sharedCharacterConversation = pgTable(
-  'shared_character_conversation',
+export const sharedCharacter = pgTable(
+  'shared_character',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     characterId: uuid('character_id').notNull(),
@@ -1157,36 +1296,30 @@ export const sharedCharacterConversation = pgTable(
   (table) => [index().on(table.characterId, table.userId)],
 );
 
-export const sharedCharacterConversationSelectSchema = createSelectSchema(
-  sharedCharacterConversation,
-).extend({
+export const sharedCharacterSelectSchema = createSelectSchema(sharedCharacter).extend({
   startedAt: z.coerce.date(),
   expiredAt: z.coerce.date(),
   manuallyStoppedAt: z.coerce.date().nullable(),
 });
-export const sharedCharacterConversationInsertSchema = createInsertSchema(
-  sharedCharacterConversation,
-).omit({ id: true, inviteCode: true, startedAt: true, expiredAt: true, manuallyStoppedAt: true });
-export const sharedCharacterConversationUpdateSchema = createUpdateSchema(
-  sharedCharacterConversation,
-)
+export const sharedCharacterInsertSchema = createInsertSchema(sharedCharacter).omit({
+  id: true,
+  inviteCode: true,
+  startedAt: true,
+  expiredAt: true,
+  manuallyStoppedAt: true,
+});
+export const sharedCharacterUpdateSchema = createUpdateSchema(sharedCharacter)
   .omit({ characterId: true, userId: true })
   .extend({
     id: z.string(),
   });
 
-export type SharedCharacterConversationSelectModel = z.infer<
-  typeof sharedCharacterConversationSelectSchema
->;
-export type SharedCharacterConversationInsertModel = z.infer<
-  typeof sharedCharacterConversationInsertSchema
->;
-export type SharedCharacterConversationUpdateModel = z.infer<
-  typeof sharedCharacterConversationUpdateSchema
->;
+export type SharedCharacterSelectModel = z.infer<typeof sharedCharacterSelectSchema>;
+export type SharedCharacterInsertModel = z.infer<typeof sharedCharacterInsertSchema>;
+export type SharedCharacterUpdateModel = z.infer<typeof sharedCharacterUpdateSchema>;
 
-// Type for character with sharing data (from JOIN with sharedCharacterConversation)
-const sharedCharacterTransformedSchema = sharedCharacterConversationSelectSchema
+// Type for character with sharing data (from JOIN with sharedCharacter)
+const sharedCharacterTransformedSchema = sharedCharacterSelectSchema
   .omit({ id: true, characterId: true, userId: true })
   .extend({ startedBy: z.string() });
 export const characterWithShareDataModel = characterSelectSchema.and(
@@ -1214,7 +1347,7 @@ export const sharedCharacterChatUsageTrackingTable = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     // Exactly one billing source is stored per row: either a model call or a tool call.
-    modelId: uuid('model_id').references(() => llmModelTable.id),
+    modelId: uuid('model_id'),
     toolCallName: toolCallNameEnum('tool_call_name'),
     characterId: uuid('character_id').notNull(),
     userId: uuid('user_id').notNull(),
@@ -1274,12 +1407,24 @@ export const assistantTable = pgTable(
       .defaultNow()
       .$onUpdateFn(() => new Date())
       .notNull(),
-    accessLevel: accessLevelEnum('access_level').notNull().default('private'),
+    isSchoolShared: boolean('is_school_shared').notNull().default(false),
+    isCommunityShared: boolean('is_community_shared').notNull().default(false),
+    isGlobal: boolean('is_global').notNull().default(false),
     hasLinkAccess: boolean('has_link_access').notNull().default(false),
     isWebSearchEnabled: boolean('is_web_search_enabled').notNull().default(false),
+    webSearchScope: webSearchScopeEnum('web_search_scope').notNull().default('all-web'),
+    webSearchIncludedDomains: text('web_search_included_domains')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    isSpeechEnabled: boolean('is_speech_enabled').notNull().default(true),
+    voice: text('voice').notNull().default(''),
+    speechOnly: boolean('speech_only').notNull().default(false),
     pictureId: text('picture_id'),
     description: text('description'),
     instructions: text('instructions'),
+    licenseInformation: text('license_information').notNull().default(''),
+    didacticCommentary: text('didactic_commentary').notNull().default(''),
     filterGroup: json('filter_attributes')
       .$type<FilterGroup>()
       .notNull()
@@ -1295,6 +1440,7 @@ export const assistantTable = pgTable(
     suspended: boolean('suspended').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
     originalAssistantId: uuid('original_assistant_id'),
+    popularity: integer('popularity').notNull().default(0),
   },
   (table) => [index().on(table.userId)],
 );
@@ -1302,15 +1448,17 @@ export const assistantTable = pgTable(
 export const assistantSelectSchema = createSelectSchema(assistantTable).extend({
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
-  accessLevel: accessLevelSchema,
   filterGroup: filterGroupSchema,
   ownerSchoolIds: z.array(z.string()),
+  webSearchScope: webSearchScopeSchema,
+  webSearchIncludedDomains: webSearchIncludedDomainsSchema,
 });
 export const assistantInsertSchema = createInsertSchema(assistantTable)
-  .omit({ id: true, createdAt: true, updatedAt: true, suspended: true })
+  .omit({ id: true, createdAt: true, updatedAt: true, suspended: true, popularity: true })
   .extend({
-    accessLevel: accessLevelSchema,
     filterGroup: filterGroupSchema.optional(),
+    webSearchScope: webSearchScopeSchema.optional(),
+    webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
   });
 export const assistantUpdateSchema = createUpdateSchema(assistantTable)
   .omit({
@@ -1318,12 +1466,13 @@ export const assistantUpdateSchema = createUpdateSchema(assistantTable)
     createdAt: true,
     updatedAt: true,
     suspended: true,
+    popularity: true,
   })
   .extend({
     id: z.string(),
-    // for any reason accessLevel has a different type so we have to override it here
-    accessLevel: accessLevelSchema.optional(),
     filterGroup: filterGroupSchema.optional(),
+    webSearchScope: webSearchScopeSchema.optional(),
+    webSearchIncludedDomains: webSearchIncludedDomainsSchema.optional(),
   });
 
 export type AssistantSelectModel = z.infer<typeof assistantSelectSchema>;
@@ -1384,6 +1533,45 @@ export const suspensionRequestUpdateSchema = createUpdateSchema(suspensionReques
 export type SuspensionRequestSelectModel = z.infer<typeof suspensionRequestSelectSchema>;
 export type SuspensionRequestInsertModel = z.infer<typeof suspensionRequestInsertSchema>;
 export type SuspensionRequestUpdateModel = z.infer<typeof suspensionRequestUpdateSchema>;
+
+/**
+ * Schema for table user_favorite. Exactly one of the entity columns is set per row.
+ */
+export const userFavoriteTable = pgTable(
+  'user_favorite',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => userTable.id, { onDelete: 'cascade' }),
+    assistantId: uuid('assistant_id').references(() => assistantTable.id, { onDelete: 'cascade' }),
+    characterId: uuid('character_id').references(() => characterTable.id, { onDelete: 'cascade' }),
+    learningScenarioId: uuid('learning_scenario_id').references(() => learningScenarioTable.id, {
+      onDelete: 'cascade',
+    }),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    check(
+      'user_favorite_exactly_one_target_ck',
+      sql`((${table.assistantId} IS NOT NULL)::int + (${table.characterId} IS NOT NULL)::int + (${table.learningScenarioId} IS NOT NULL)::int) = 1`,
+    ),
+    uniqueIndex('user_favorite_user_assistant_uq')
+      .on(table.userId, table.assistantId)
+      .where(sql`${table.assistantId} IS NOT NULL`),
+    uniqueIndex('user_favorite_user_character_uq')
+      .on(table.userId, table.characterId)
+      .where(sql`${table.characterId} IS NOT NULL`),
+    uniqueIndex('user_favorite_user_learning_scenario_uq')
+      .on(table.userId, table.learningScenarioId)
+      .where(sql`${table.learningScenarioId} IS NOT NULL`),
+    index().on(table.assistantId),
+    index().on(table.characterId),
+    index().on(table.learningScenarioId),
+  ],
+);
+
+export type UserFavoriteSelectModel = typeof userFavoriteTable.$inferSelect;
 
 /**
  * Schema for table assistant_template_mappings
@@ -1456,6 +1644,42 @@ export type FileUpdateModel = z.infer<typeof fileUpdateSchema>;
 export type FileModel = typeof fileTable.$inferSelect;
 export type FileModelAndUrl = FileModel & { signedUrl: string };
 
+export const SharedChatConversationMessageFileMappingTable = pgTable(
+  'shared_chat_conversation_message_file_mapping',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    fileId: text('file_id').notNull(),
+    // Null while the file is uploaded to the conversation but not yet attached to a message.
+    conversationMessageId: uuid('conversation_message_id'),
+    conversationId: uuid('conversation_id').notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('shared_chat_message_file_message_idx').on(table.conversationMessageId),
+    index('shared_chat_message_file_conversation_idx').on(table.conversationId),
+    unique('shared_chat_message_file_unique').on(
+      table.conversationMessageId,
+      table.conversationId,
+      table.fileId,
+    ),
+    foreignKey({
+      columns: [table.fileId],
+      foreignColumns: [fileTable.id],
+      name: 'shared_chat_message_file_file_fk',
+    }),
+    foreignKey({
+      columns: [table.conversationMessageId],
+      foreignColumns: [sharedChatConversationMessageTable.id],
+      name: 'shared_chat_message_file_message_fk',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.conversationId],
+      foreignColumns: [sharedChatConversationTable.id],
+      name: 'shared_chat_message_file_conversation_fk',
+    }).onDelete('cascade'),
+  ],
+);
+
 /**
  * Schema for table conversation_message_file_mapping
  */
@@ -1467,13 +1691,17 @@ export const ConversationMessageFileMappingTable = pgTable(
       .references(() => fileTable.id)
       .notNull(),
     conversationMessageId: uuid('conversationMessageId').notNull(),
-    // technically redundant but there files and conversations should be unique and it makes clean-up easier
+    // Redundant with conversationMessageId join, kept to make cleanup queries cheaper.
     conversationId: uuid('conversationId').notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index().on(table.conversationMessageId),
-    unique().on(table.conversationId, table.fileId),
+    index('conversation_message_file_mapping_conversation_id_index').on(table.conversationId),
+    unique('conversation_message_file_mapping_message_id_file_id_unique').on(
+      table.conversationMessageId,
+      table.fileId,
+    ),
     foreignKey({
       columns: [table.conversationMessageId],
       foreignColumns: [conversationMessageTable.id],
@@ -1740,13 +1968,148 @@ export type VoucherInsertModel = z.infer<typeof voucherInsertSchema>;
 export type VoucherUpdateModel = z.infer<typeof voucherUpdateSchema>;
 
 /**** Url Presets ****/
-export const urlPresetTable = pgTable(
-  'url_preset',
+export const urlPresetTable = pgTable('url_preset', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  orderNumber: integer('order_number').notNull().default(0),
+  urls: text('urls').array().notNull(),
+});
+
+/**** Community Templates *****/
+export const templateRequestStatusSchema = z.enum([
+  'submitted',
+  'approved',
+  'rejected',
+  'cancelled',
+]);
+export const templateRequestStatus = pgEnum(
+  'template_request_status',
+  templateRequestStatusSchema.enum,
+);
+export type TemplateRequestStatus = z.infer<typeof templateRequestStatusSchema>;
+
+export const CommunityTemplateRequestTable = pgTable(
+  'community_template_request',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    name: text('name').notNull(),
-    orderNumber: integer('order_number').notNull().default(0),
-    urls: text('urls').array().notNull(),
+    assistantId: uuid('assistant_id').references(() => assistantTable.id, { onDelete: 'cascade' }),
+    characterId: uuid('character_id').references(() => characterTable.id, { onDelete: 'cascade' }),
+    learningScenarioId: uuid('learning_scenario_id').references(() => learningScenarioTable.id, {
+      onDelete: 'cascade',
+    }),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    createdBy: uuid('created_by').notNull(),
+    state: templateRequestStatus('status').notNull().default('submitted'),
+    note: text('note').notNull().default(''),
   },
-  (table) => [unique().on(table.name)],
+  (table) => [
+    check(
+      'community_template_request_exactly_one_target_ck',
+      sql`((${table.assistantId} IS NOT NULL)::int + (${table.characterId} IS NOT NULL)::int + (${table.learningScenarioId} IS NOT NULL)::int) = 1`,
+    ),
+    uniqueIndex('community_template_request_assistant_id_unique').on(table.assistantId),
+    uniqueIndex('community_template_request_character_id_unique').on(table.characterId),
+    uniqueIndex('community_template_request_learning_scenario_id_unique').on(
+      table.learningScenarioId,
+    ),
+    index().on(table.state),
+  ],
 );
+
+export const CommunityTemplateRequestSelectSchema = createSelectSchema(
+  CommunityTemplateRequestTable,
+).extend({
+  createdAt: z.coerce.date(),
+  state: templateRequestStatusSchema,
+});
+export const CommunityTemplateRequestInsertSchema = createInsertSchema(
+  CommunityTemplateRequestTable,
+)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    state: templateRequestStatusSchema,
+  });
+export const CommunityTemplateRequestUpdateSchema = createUpdateSchema(
+  CommunityTemplateRequestTable,
+)
+  .omit({
+    createdAt: true,
+    createdBy: true,
+  })
+  .extend({
+    id: z.uuid(),
+    state: templateRequestStatusSchema,
+  });
+
+export type CommunityTemplateRequestSelectModel = z.infer<
+  typeof CommunityTemplateRequestSelectSchema
+>;
+export type CommunityTemplateRequestInsertModel = z.infer<
+  typeof CommunityTemplateRequestInsertSchema
+>;
+export type CommunityTemplateRequestUpdateModel = z.infer<
+  typeof CommunityTemplateRequestUpdateSchema
+>;
+
+export const templateRequestEventTypeSchema = z.enum([
+  'submit',
+  'approve',
+  'reject',
+  'cancel',
+  'user_message',
+  'editor_message',
+]);
+export const templateRequestEventType = pgEnum(
+  'template_request_event_type',
+  templateRequestEventTypeSchema.enum,
+);
+export const templateRequestCreatorRoleSchema = z.enum(['user', 'editor']);
+export const templateRequestCreatorRole = pgEnum(
+  'template_request_creator_role',
+  templateRequestCreatorRoleSchema.enum,
+);
+export const CommunityTemplateRequestEventTable = pgTable(
+  'community_template_request_events',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    templateRequestId: uuid('template_request_id')
+      .references(() => CommunityTemplateRequestTable.id, { onDelete: 'cascade' })
+      .notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    createdById: uuid('created_by_id').notNull(),
+    createdByName: text('created_by_name'),
+    createdByRole: templateRequestCreatorRole('created_by_role').notNull(),
+    eventType: templateRequestEventType('event_type').notNull(),
+    message: text('message').notNull().default(''),
+  },
+  (table) => [index().on(table.templateRequestId)],
+);
+
+export const CommunityTemplateRequestEventSelectSchema = createSelectSchema(
+  CommunityTemplateRequestEventTable,
+).extend({
+  createdAt: z.coerce.date(),
+  createdByRole: templateRequestCreatorRoleSchema,
+  eventType: templateRequestEventTypeSchema,
+});
+export const CommunityTemplateRequestEventInsertSchema = createInsertSchema(
+  CommunityTemplateRequestEventTable,
+)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    createdByRole: templateRequestCreatorRoleSchema,
+    eventType: templateRequestEventTypeSchema,
+  });
+
+export type CommunityTemplateRequestEventSelectModel = z.infer<
+  typeof CommunityTemplateRequestEventSelectSchema
+>;
+export type CommunityTemplateRequestEventInsertModel = z.infer<
+  typeof CommunityTemplateRequestEventInsertSchema
+>;

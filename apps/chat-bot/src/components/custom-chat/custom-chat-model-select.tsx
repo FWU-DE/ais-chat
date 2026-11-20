@@ -1,8 +1,7 @@
 'use client';
 
 import { LlmModelSelectModel } from '@shared/db/schema';
-import { useTranslations } from 'next-intl';
-import { getFilteredTextModels } from '@shared/llm-models/llm-model-service';
+import { getFilteredTextModels } from '@shared/llm-models/llm-model-utils';
 import {
   Select,
   SelectContent,
@@ -10,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/select';
+import { useTranslations } from 'next-intl';
 
 type CustomChatModelSelectProps = {
   models: LlmModelSelectModel[];

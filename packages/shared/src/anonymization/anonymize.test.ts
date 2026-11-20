@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import { anonymizeText, applyEntities } from './anonymize';
-import { isValidIban, recognizePiiEntities } from './recognizers';
 import { analyzeWithPresidio } from './presidio';
+import { isValidIban, recognizePiiEntities } from './recognizers';
 
 describe('recognizePiiEntities', () => {
   it('detects e-mail addresses', () => {

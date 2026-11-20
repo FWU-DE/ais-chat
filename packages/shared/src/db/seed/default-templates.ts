@@ -1,20 +1,20 @@
+import { db } from '@shared/db';
+import { findStaticModelByRole } from '@shared/llm-models/llm-model-service';
+import { updateTemplateMappings } from '@shared/templates/template-service';
+import * as fs from 'fs';
+import * as path from 'path';
+
+import { uploadFileToS3 } from '../../s3';
+import { dbUpsertAssistant } from '../functions/assistants';
+import { dbCreateCharacter } from '../functions/character';
+import { dbGetFederalStates } from '../functions/federal-state';
 import {
-  CharacterInsertModel,
   AssistantInsertModel,
+  CharacterInsertModel,
   LearningScenarioInsertModel,
   learningScenarioTable,
 } from '../schema';
-import * as fs from 'fs';
-import * as path from 'path';
-import { uploadFileToS3 } from '../../s3';
-import { dbCreateCharacter } from '../functions/character';
-import { DUMMY_USER_ID } from './user-entity';
-import { dbUpsertAssistant } from '../functions/assistants';
-import { updateTemplateMappings } from '@shared/templates/template-service';
-import { FEDERAL_STATES } from './federal-state';
-import { dbGetModelByName } from '@shared/db/functions/llm-model';
-import { DEFAULT_CHAT_MODEL } from '@shared/llm-models/default-llm-models';
-import { db } from '@shared/db';
+import { PLACEHOLDER_USER_ID } from './user-entity';
 
 export async function insertTemplateCharacters() {
   await processStaticJpegFiles(
@@ -33,7 +33,7 @@ export async function insertTemplateCharacters() {
     await updateTemplateMappings(
       'character',
       id,
-      FEDERAL_STATES.map((fs) => ({ federalStateId: fs.id, isMapped: true })),
+      (await dbGetFederalStates()).map((fs) => ({ federalStateId: fs.id, isMapped: true })),
     );
   }
   console.log('template character seed successful');
@@ -56,7 +56,7 @@ export async function insertTemplateAssistant() {
     await updateTemplateMappings(
       'assistant',
       id,
-      FEDERAL_STATES.map((fs) => ({ federalStateId: fs.id, isMapped: true })),
+      (await dbGetFederalStates()).map((fs) => ({ federalStateId: fs.id, isMapped: true })),
     );
   }
   console.log('template assistant seed successful');
@@ -68,7 +68,7 @@ export async function insertTemplateLearningScenarios() {
     'shared-chats/_templates',
   );
 
-  const modelId = (await dbGetModelByName(DEFAULT_CHAT_MODEL))?.id;
+  const modelId = (await findStaticModelByRole('default-chat'))?.id;
   if (!modelId) {
     throw new Error('No default model found');
   }
@@ -92,7 +92,7 @@ export async function insertTemplateLearningScenarios() {
     await updateTemplateMappings(
       'learning-scenario',
       newLearningScenario.id,
-      FEDERAL_STATES.map((fs) => ({ federalStateId: fs.id, isMapped: true })),
+      (await dbGetFederalStates()).map((fs) => ({ federalStateId: fs.id, isMapped: true })),
     );
   }
   console.log('template learning scenario seed successful');
@@ -161,7 +161,7 @@ async function processStaticJpegFiles(rootFolder: string, rootRemoteDir: string)
  */
 export const defaultTemplates: Omit<CharacterInsertModel, 'modelId'>[] = [
   {
-    userId: DUMMY_USER_ID,
+    userId: PLACEHOLDER_USER_ID,
     name: 'Johann Wolfgang von Goethe',
     description: 'Dichter der Klassik und des Sturm und Drang, Verfasser des "Faust" ',
     competence: 'Die Schüler lesen den Faust und versuchen Bezüge zu unserer Zeit herzustellen.',
@@ -171,7 +171,7 @@ export const defaultTemplates: Omit<CharacterInsertModel, 'modelId'>[] = [
       'Einfache, relativ kurze Antworten geben. In jeder Antwort soll auf Inhalte des Faust hingewiesen werden. Der Dialogpartner soll immer wieder versuchen, den Schüler in ein Gespräch über Inhalte des Faust zu verwickeln. Bei Nachfragen soll mit Zitaten aus dem Werk geantwortet werden und es soll erklärt werden, welchen Bezug zur Lebenswelt der Schüler man herstellen kann.',
     restrictions: 'Er soll nicht vom Thema abweichen.',
 
-    accessLevel: 'global',
+    isGlobal: true,
     pictureId: 'characters/_templates/Goethe_Static',
   },
 ];
@@ -180,13 +180,13 @@ export type AssistantInsertModelWithId = AssistantInsertModel & { id: string };
 export const defaultAssistant: AssistantInsertModelWithId[] = [
   {
     id: 'edb34bca-9868-4948-af68-7e80810806ac',
-    userId: DUMMY_USER_ID,
+    userId: PLACEHOLDER_USER_ID,
     name: 'Schulorganisationsassistent',
     description: 'Planer für organisatorische Aufgaben innerhalb der Schule',
     instructions:
       'Der Assistent soll mich in meiner täglichen organisatorischen Arbeit unterstützen. Er soll Vorlagen für Elternbriefe, Elternabende, Rundschreiben, Vorlagen für Protokolle für Elterngespräche, Bewertungsvorlagen für Schüler:innenarbeiten etc. generieren, die ich mir einfach anpassen kann. Das Format sollte so gewählt sein, dass ich es einfach exportieren kann, ohne große Formatänderungen vornehmen zu müssen.',
     systemPrompt: '',
-    accessLevel: 'global',
+    isGlobal: true,
     pictureId: 'custom-gpts/_templates/Schulorganisationsassistent_Static',
     promptSuggestions: [
       'Erstelle mir einen Elternbrief zu einem Wandertag.',
@@ -201,7 +201,7 @@ export const defaultAssistant: AssistantInsertModelWithId[] = [
 export const defaultLearningScenario: Omit<LearningScenarioInsertModel, 'modelId'>[] = [
   {
     id: 'bd84c3e7-7789-4284-9125-196d321c3715',
-    userId: DUMMY_USER_ID,
+    userId: PLACEHOLDER_USER_ID,
     name: 'Lern was über KI',
     description: 'Die Schüler sollen lernen wie KI funktioniert',
     studentExercise: `1. Was kann KI?
@@ -210,7 +210,7 @@ export const defaultLearningScenario: Omit<LearningScenarioInsertModel, 'modelId
 4. Wie kannst du beurteilen, was von KI richtig oder falsch ist?`,
     additionalInstructions:
       'Du bist eine künstliche Intelligenz. Du bringst dem Schüler bei, was du gut machst, wo deine Schwächen liegen und wo du einfach nur halluzinierst. Wenn du Fehler machst, stehe dafür ein.',
-    accessLevel: 'global',
+    isGlobal: true,
     pictureId: 'shared-chats/_templates/AI-Lernszenario_Static',
   },
 ];

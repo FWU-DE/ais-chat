@@ -1,8 +1,9 @@
 'use client';
 
-import { cn } from '@/utils/tailwind';
 import React, { forwardRef } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
+
+import { cn } from '@/utils/tailwind';
 
 const AutoResizeTextarea = forwardRef<HTMLTextAreaElement, React.ComponentProps<'textarea'>>(
   ({ className, value, ...props }, ref) => {

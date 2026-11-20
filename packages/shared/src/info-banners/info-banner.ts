@@ -39,7 +39,7 @@ export const manageInfoBannerBaseSchema = z.object({
 
     const trimmed = value.trim();
     return trimmed === '' ? null : trimmed;
-  }, z.string().url('Bitte geben Sie eine gültige URL ein.').nullable()),
+  }, z.url('Bitte geben Sie eine gültige URL ein.').nullable()),
   startsAt: z.coerce.date(),
   endsAt: z.coerce.date(),
   maxLoginCount: z.preprocess((value) => {
@@ -66,7 +66,7 @@ export function validateManageInfoBanner(
 ) {
   if (value.endsAt <= value.startsAt) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'Die Endzeit muss nach der Startzeit liegen.',
       path: ['endsAt'],
     });
@@ -77,7 +77,7 @@ export function validateManageInfoBanner(
 
   if (hasButtonLabel !== hasButtonUrl) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'Button-Beschriftung und Link müssen gemeinsam gesetzt werden.',
       path: hasButtonLabel ? ['buttonUrl'] : ['buttonLabel'],
     });

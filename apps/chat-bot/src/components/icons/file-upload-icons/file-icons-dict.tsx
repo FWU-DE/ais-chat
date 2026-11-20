@@ -1,4 +1,3 @@
-import { isSupportedDocumentExtension, SupportedDocumentExtension } from '@/const';
 import {
   FileCsvIcon,
   FileDocIcon,
@@ -12,6 +11,8 @@ import {
   FileXlsIcon,
   Icon,
 } from '@phosphor-icons/react';
+
+import { isSupportedDocumentExtension, SupportedDocumentExtension } from '@/const';
 
 type FileIconConfig = {
   Icon: Icon;

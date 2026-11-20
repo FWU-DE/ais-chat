@@ -1,12 +1,32 @@
+import { withTrustedOrigin } from '@shared/utils/with-trusted-origin';
+import { NextResponse } from 'next/server';
 import NextAuth, { NextAuthResult } from 'next-auth';
 import KeycloakProvider from 'next-auth/providers/keycloak';
-import { NextResponse } from 'next/server';
+
+import { AUTH_COOKIES } from '@/auth/cookies';
+import { AdminRole, getAdminRoleFromClaims } from '@/auth/roles';
 import { env } from '@/consts/env';
-import { withTrustedOrigin } from '@shared/utils/with-trusted-origin';
+
+function getClaimsFromToken(token: string): Record<string, unknown> {
+  const payload = token.split('.')[1];
+  if (!payload) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as Record<
+      string,
+      unknown
+    >;
+  } catch {
+    return {};
+  }
+}
 
 declare module 'next-auth' {
   interface Session {
     idToken?: string; // needed for logout at identity provider (keycloak)
+    adminRole?: AdminRole;
   }
 }
 
@@ -21,6 +41,7 @@ const keycloakProvider = KeycloakProvider({
 
 const result = NextAuth({
   providers: [keycloakProvider],
+  cookies: AUTH_COOKIES,
   trustHost: true,
   callbacks: {
     async signIn() {
@@ -38,10 +59,22 @@ const result = NextAuth({
 
       return NextResponse.redirect(signInUrl);
     },
-    async jwt({ token, account }) {
+    async jwt({ token, account, profile }) {
       // Capture idToken from account during sign-in
       if (account?.id_token) {
         token.id_token = account.id_token;
+      }
+      const idToken =
+        account?.id_token ?? (typeof token.id_token === 'string' ? token.id_token : undefined);
+      const idTokenClaims = idToken ? getClaimsFromToken(idToken) : {};
+      const adminRole = getAdminRoleFromClaims({
+        ...profile,
+        ...idTokenClaims,
+      });
+      if (adminRole) {
+        token.adminRole = adminRole;
+      } else {
+        delete token.adminRole;
       }
       return token;
     },
@@ -49,6 +82,12 @@ const result = NextAuth({
       // Pass idToken from token to session for logout flow
       if (token?.id_token) {
         session.idToken = token.id_token as string;
+      }
+      if (session.user && token?.sub) {
+        session.user.id = token.sub;
+      }
+      if (token?.adminRole) {
+        session.adminRole = token.adminRole as AdminRole;
       }
       return session;
     },

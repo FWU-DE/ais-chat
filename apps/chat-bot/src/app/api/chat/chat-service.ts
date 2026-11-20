@@ -1,61 +1,76 @@
 import {
-  generateTextStreamWithBilling,
   type Message as AiCoreMessage,
-  type TokenUsage,
-  TokenPointsExceededError,
-  type ToolDefinition,
+  type ModelUsage,
+  ResponsibleAIError,
   runAgentLoop,
+  TokenPointsExceededError,
+  type TokenUsage,
 } from '@ais-chat/ai-core';
-import { createTextStream, encodeChatStreamEvent } from '@/utils/streaming';
-import { getModelAndApiKeyWithResult, getAuxiliaryModel } from '../utils/utils';
 import {
+  getAssistantForExistingConversation,
+  getAssistantForNewChat,
+} from '@shared/assistants/assistant-service';
+import {
+  getCharacterForChatSession,
+  getCharacterForExistingConversation,
+} from '@shared/characters/character-service';
+import {
+  dbDeleteRegeneratedConversationMessage,
   dbGetConversationAndMessages,
   dbGetOrCreateConversation,
-  dbUpdateConversationTitle,
-  dbDeleteRegeneratedConversationMessage,
   dbInsertChatContent,
   dbInsertChatContentBatch,
+  dbUpdateConversationTitle,
 } from '@shared/db/functions/chat';
+import {
+  dbGetAttachedFileByEntityId,
+  dbVerifyFileOwner,
+  linkFilesToConversation,
+} from '@shared/db/functions/files';
 import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
 import { dbUpdateLastUsedModelByUserId } from '@shared/db/functions/user';
-import { dbGetAttachedFileByEntityId, linkFilesToConversation } from '@shared/db/functions/files';
-import { sendRabbitmqEvent } from '@/rabbitmq/send';
-import { constructNewMessageEvent } from '@/rabbitmq/events/new-message';
-import { constructTokenBudgetExceededEvent } from '@/rabbitmq/events/budget-exceeded';
-import { constructChatSystemPrompt } from './system-prompt';
-import {
-  convertToAiCoreMessages,
-  determineImageAttachmentTypeForModel,
-  enrichMessagesWithImageData,
-  getChatTitle,
-  limitChatHistory,
-} from './utils';
-import { convertMessageModelToMessage } from '@/utils/chat/messages';
-import { retrieveChunks } from '../rag/rag-service';
-import { logError } from '@shared/logging';
-import { ChatMessage, SendMessageResult, createErrorResult } from '@/types/chat';
-import { extractUrls } from '../utils/extract-urls';
-import { UserAndContext } from '@/auth/types';
-import { createImageAttachmentsForConversation } from '../file-operations/preprocess-image';
-import { ingestWebContent } from '../rag/ingestWebContent';
-import { buildTools } from './build-tools';
-import { isWebSearchEnabledForEntity, runWebSearchPipeline } from './websearch';
-import type { WebSearchResult } from '@shared/db/schema';
 import type {
   AssistantSelectModel,
   CharacterSelectModel,
   LearningScenarioSelectModel,
 } from '@shared/db/schema';
 import type { ConversationMessageModel } from '@shared/db/types';
-import { RetrievedChunk } from '../rag/types';
-import { NotFoundError } from '@shared/error';
-import { getCharacterForChatSession } from '@shared/characters/character-service';
-import { getLearningScenarioForChatSession } from '@shared/learning-scenarios/learning-scenario-service';
-import { getAssistantForNewChat } from '@shared/assistants/assistant-service';
-import { deepEqual } from '@/utils/object';
-import { resolveAgentNameForTracing } from '../utils/agent-name';
+import { ForbiddenError, NotFoundError } from '@shared/error';
+import {
+  getLearningScenarioForChatSession,
+  getLearningScenarioForExistingConversation,
+} from '@shared/learning-scenarios/learning-scenario-service';
+import { logError } from '@shared/logging';
+import {
+  constructNewMessageEvent,
+  constructTokenBudgetExceededEvent,
+  sendRabbitmqEvent,
+} from '@shared/rabbitmq';
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
+
+import { UserAndContext } from '@/auth/types';
+import { ChatMessage, createErrorResult, SendMessageResult } from '@/types/chat';
+import { convertMessageModelToMessage } from '@/utils/chat/messages';
+import { deepEqual } from '@/utils/object';
+import { createTextStream } from '@/utils/streaming';
+
 import { anonymizeUserContent } from '../anonymization/anonymization-service';
+import { ingestWebContent } from '../rag/ingestWebContent';
+import { resolveAgentNameForTracing } from '../utils/agent-name';
+import { extractUrls } from '../utils/extract-urls';
+import { getChatModelSelection } from '../utils/model-circuit-breaker';
+import { getAuxiliaryModel, getModelAndApiKeyWithResult, getSafetyModel } from '../utils/utils';
+import { createAiActivityStream } from './ai-activity-stream';
+import { buildTools } from './build-tools';
+import { prepareAgentMessages } from './prepare-agent-messages';
+import { constructChatSystemPrompt } from './system-prompt';
+import {
+  annotateMessageAttachmentNames,
+  convertToAiCoreMessages,
+  getChatTitle,
+  limitChatHistory,
+} from './utils';
+import { isWebSearchEnabledForEntity } from './websearch';
 
 // Exports for testing
 export { handleRegenerationProcessing, prepareMessageForProcessing };
@@ -65,44 +80,6 @@ type CustomChatIds = {
   learningScenarioId?: string | undefined;
   assistantId?: string | undefined;
 };
-
-function filterPersistedAgentLoopMessages(agentLoopMessages: AiCoreMessage[]) {
-  const excludedToolCallIds = new Set<string>();
-
-  return agentLoopMessages.flatMap((message) => {
-    if (message.role === 'assistant' && message.toolCalls?.length) {
-      const retainedToolCalls = message.toolCalls.filter((toolCall) => {
-        if (toolCall.name === 'retrieve_entire_file') {
-          excludedToolCallIds.add(toolCall.id);
-          return false;
-        }
-
-        return true;
-      });
-
-      if (retainedToolCalls.length === 0 && message.content.trim().length === 0) {
-        return [];
-      }
-
-      return [
-        {
-          ...message,
-          toolCalls: retainedToolCalls.length > 0 ? retainedToolCalls : undefined,
-        },
-      ];
-    }
-
-    if (
-      message.role === 'tool' &&
-      message.toolCallId &&
-      excludedToolCallIds.has(message.toolCallId)
-    ) {
-      return [];
-    }
-
-    return [message];
-  });
-}
 
 function ensureConversationCustomChatIdsMatch({
   incomingIds,
@@ -204,6 +181,15 @@ export async function sendChatMessage({
   fileIds?: string[];
   user: UserAndContext;
 }): Promise<SendMessageResult> {
+  if (fileIds && fileIds.length > 0) {
+    const ownsAllFiles = await Promise.all(
+      fileIds.map((fileId) => dbVerifyFileOwner({ fileId, userId: user.id })),
+    );
+    if (ownsAllFiles.some((isOwner) => !isOwner)) {
+      throw new ForbiddenError('Not authorized to attach this file');
+    }
+  }
+
   // Get model and API key
   const [error, modelAndApiKey] = await getModelAndApiKeyWithResult({
     modelId,
@@ -215,6 +201,11 @@ export async function sendChatMessage({
   }
 
   const { model: definedModel, apiKeyId } = modelAndApiKey;
+  const modelSelection = await getChatModelSelection({
+    model: definedModel,
+    federalStateId: user.federalState.id,
+  });
+  const safetyModel = await getSafetyModel();
 
   // Get auxiliary model for title generation
   const auxiliaryModel = await getAuxiliaryModel(user.federalState.id);
@@ -233,11 +224,30 @@ export async function sendChatMessage({
   let activeLearningScenario: LearningScenarioSelectModel | undefined;
   let activeAssistant: AssistantSelectModel | undefined;
 
-  if (characterId !== undefined) {
-    activeCharacter = await getCharacterForChatSession({
-      characterId,
-      user,
+  const existingConversationObject = await dbGetConversationAndMessages({
+    conversationId,
+    userId: user.id,
+  });
+
+  if (existingConversationObject !== undefined) {
+    ensureConversationCustomChatIdsMatch({
+      incomingIds: { characterId, learningScenarioId, assistantId },
+      storedIds: {
+        characterId: existingConversationObject.conversation.characterId ?? undefined,
+        learningScenarioId: existingConversationObject.conversation.learningScenarioId ?? undefined,
+        assistantId: existingConversationObject.conversation.assistantId ?? undefined,
+      },
     });
+  }
+
+  if (characterId !== undefined) {
+    activeCharacter = existingConversationObject
+      ? await getCharacterForExistingConversation({
+          characterId,
+          conversationId,
+          user,
+        })
+      : await getCharacterForChatSession({ characterId, user });
 
     if (activeCharacter.suspended) {
       throw new NotFoundError('Character not found');
@@ -245,10 +255,13 @@ export async function sendChatMessage({
   }
 
   if (learningScenarioId !== undefined) {
-    activeLearningScenario = await getLearningScenarioForChatSession({
-      learningScenarioId,
-      user,
-    });
+    activeLearningScenario = existingConversationObject
+      ? await getLearningScenarioForExistingConversation({
+          learningScenarioId,
+          conversationId,
+          user,
+        })
+      : await getLearningScenarioForChatSession({ learningScenarioId, user });
 
     if (activeLearningScenario.suspended) {
       throw new NotFoundError('Learning scenario not found');
@@ -256,10 +269,9 @@ export async function sendChatMessage({
   }
 
   if (assistantId !== undefined) {
-    activeAssistant = await getAssistantForNewChat({
-      assistantId,
-      user,
-    });
+    activeAssistant = existingConversationObject
+      ? await getAssistantForExistingConversation({ assistantId, conversationId, user })
+      : await getAssistantForNewChat({ assistantId, user });
 
     if (activeAssistant.suspended) {
       throw new NotFoundError('Assistant not found');
@@ -281,17 +293,18 @@ export async function sendChatMessage({
 
   const activeConversation = conversation;
 
-  const conversationObject = await dbGetConversationAndMessages({
-    conversationId: activeConversation.id,
-    userId: user.id,
-  });
+  const conversationObject =
+    existingConversationObject ??
+    (await dbGetConversationAndMessages({
+      conversationId: activeConversation.id,
+      userId: user.id,
+    }));
 
   if (conversationObject === undefined) {
     throw new Error('Could not get conversation object');
   }
 
   const activeConversationObject = conversationObject;
-  const agenticChatEnabled = user.federalState.featureToggles.isAgenticChatEnabled ?? false;
 
   ensureConversationCustomChatIdsMatch({
     incomingIds: { characterId, learningScenarioId, assistantId },
@@ -304,13 +317,7 @@ export async function sendChatMessage({
 
   // Check budget limit after we have the conversation for proper event tracking
   if (await userHasReachedTokenPointsLimit({ user })) {
-    await sendRabbitmqEvent(
-      constructTokenBudgetExceededEvent({
-        anonymous: false,
-        user,
-        conversation,
-      }),
-    );
+    await sendRabbitmqEvent(constructTokenBudgetExceededEvent({ user }));
     return createErrorResult(new TokenPointsExceededError());
   }
 
@@ -348,7 +355,7 @@ export async function sendChatMessage({
       content: userMessage.content,
       role: 'user',
       userId: user.id,
-      modelName: definedModel.name,
+      modelName: modelSelection.modelName,
       orderNumber: userMessageOrderNumber,
     });
   }
@@ -370,84 +377,28 @@ export async function sendChatMessage({
     assistantId,
   });
 
-  let webSearchResults: WebSearchResult[] = [];
-  let chunks: RetrievedChunk[] = [];
-  let errorUrls: string[] = [];
-  let toolRegistry:
-    | Record<
-        string,
-        { definition: ToolDefinition; handler: (args: Record<string, unknown>) => Promise<string> }
-      >
-    | undefined;
-  let activeToolDefinitions: ToolDefinition[] = [];
-
   const urls = extractUrls({
     assistant: activeAssistant,
     character: activeCharacter,
     learningScenario: activeLearningScenario,
-    messages,
   });
   const ingestResult = await ingestWebContent({
     urls,
     federalStateId: user.federalState.id,
   });
-  errorUrls = ingestResult.errorUrls;
 
-  if (agenticChatEnabled) {
-    const attachedLinks =
-      activeAssistant?.attachedLinks ??
-      activeCharacter?.attachedLinks ??
-      activeLearningScenario?.attachedLinks ??
-      [];
+  const attachedLinks =
+    activeAssistant?.attachedLinks ??
+    activeCharacter?.attachedLinks ??
+    activeLearningScenario?.attachedLinks ??
+    [];
 
-    const allowWebTools = isWebSearchEnabledForEntity({
-      featureToggles: user.federalState.featureToggles,
-      entity: activeCharacter ??
-        activeLearningScenario ??
-        activeAssistant ?? { isWebSearchEnabled: true },
-    });
-
-    const tools = await buildTools({
-      user,
-      characterId,
-      learningScenarioId,
-      assistantId,
-      conversationId: activeConversation.id,
-      relatedFileEntities,
-      attachedLinks,
-      sourceUrls: ingestResult.processedUrls,
-      allowWebTools,
-      onWebSearchResults: (results) => {
-        update(
-          encodeChatStreamEvent({
-            type: 'web_search_results',
-            webSearchResults: results,
-          }),
-        );
-      },
-    });
-
-    toolRegistry = tools.toolRegistry;
-    activeToolDefinitions = Object.values(toolRegistry).map((entry) => entry.definition);
-  } else {
-    // Fallback implementations of Websearch and Chunk Retrieval.
-    webSearchResults = await runWebSearchPipeline({
-      messages,
-      user,
-      characterId,
-      learningScenarioId,
-      assistantId,
-      modelId: auxiliaryModel.id,
-      apiKeyId: activeAuxiliaryModelAndApiKey.apiKeyId,
-      conversationId: activeConversation.id,
-    });
-    chunks = await retrieveChunks({
-      messages,
-      federalStateId: user.federalState.id,
-      relatedFileEntities,
-      sourceUrls: ingestResult.processedUrls,
-    });
-  }
+  const allowWebTools = isWebSearchEnabledForEntity({
+    featureToggles: user.federalState.featureToggles,
+    entity: activeCharacter ??
+      activeLearningScenario ??
+      activeAssistant ?? { isWebSearchEnabled: true },
+  });
 
   // Update last used model
   await dbUpdateLastUsedModelByUserId({ modelName: definedModel.name, userId: user.id });
@@ -459,7 +410,45 @@ export async function sendChatMessage({
     : [...convertMessageModelToMessage(activeConversationMessages), userMessage];
 
   // Prune messages
-  const prunedMessages = limitChatHistory(fullMessages);
+  const prunedMessages = limitChatHistory(
+    annotateMessageAttachmentNames(fullMessages, relatedFileEntities),
+  );
+
+  let messagesWithImages: ChatMessage[];
+  try {
+    messagesWithImages = await prepareAgentMessages({
+      messages: prunedMessages,
+      relatedFileEntities,
+      model: definedModel,
+      modelSelection,
+      safetyModelName: safetyModel?.name,
+      apiKeyId,
+    });
+  } catch (error) {
+    if (ResponsibleAIError.is(error)) {
+      return createErrorResult(error);
+    }
+    throw error;
+  }
+
+  const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
+
+  const tools = buildTools({
+    user,
+    characterId,
+    learningScenarioId,
+    assistantId,
+    conversationId: activeConversation.id,
+    webSearchSettings: activeCharacter ?? activeLearningScenario ?? activeAssistant,
+    relatedFileEntities,
+    attachedLinks,
+    sourceUrls: ingestResult.processedUrls,
+    allowWebTools,
+    allowMundoSearch: true,
+    modelSelection,
+    apiKeyId,
+  });
+  const aiActivity = createAiActivityStream(update);
 
   // Build system prompt
   const systemPrompt = constructChatSystemPrompt({
@@ -468,56 +457,80 @@ export async function sendChatMessage({
     assistant: activeAssistant,
     isTeacher: user.userRole === 'teacher',
     federalState: user.federalState,
-    chunks,
-    errorUrls,
-    webSearchResults,
-    activeToolDefinitions,
+    activeToolDefinitions: Object.values(tools.toolRegistry).map((entry) => entry.definition),
   });
 
-  // Check if the model supports images based on supportedImageFormats
-  const modelSupportsImages =
-    definedModel.supportedImageFormats !== null && definedModel.supportedImageFormats.length > 0;
-
-  const imageAttachmentType = determineImageAttachmentTypeForModel(definedModel);
-
-  // attach the image url to each of the image files within relatedFileEntities
-  const extractedImages = await createImageAttachmentsForConversation(
-    relatedFileEntities,
-    imageAttachmentType,
-  );
-
-  // Format messages with images if the model supports vision
-  const messagesWithImages = enrichMessagesWithImageData(
-    prunedMessages,
-    extractedImages,
-    modelSupportsImages,
-    imageAttachmentType,
-  );
-
-  // Convert to ai-core format
-  const aiCoreMessages = convertToAiCoreMessages(systemPrompt, messagesWithImages);
-
-  // Create native stream
-  const { stream, update, done, error: streamError } = createTextStream();
   const assistantMessageId = crypto.randomUUID();
   const assistantMessageOrderNumber = userMessageOrderNumber + 1;
+
+  async function persistUsage({
+    usage,
+    priceInCents,
+    modelUsages,
+  }: {
+    usage: TokenUsage;
+    priceInCents: number;
+    modelUsages: ModelUsage[];
+  }) {
+    if (modelUsages.length === 0) {
+      return;
+    }
+
+    // Agentic requests can invoke several models across iterations. Persist each usage
+    // entry separately so pricing and reporting stay associated with the serving model.
+    await Promise.all(
+      modelUsages.map((modelUsage) =>
+        dbInsertConversationUsage({
+          conversationId: activeConversation.id,
+          userId: user.id,
+          modelId: modelUsage.modelId,
+          completionTokens: modelUsage.usage.completionTokens,
+          promptTokens: modelUsage.usage.promptTokens,
+          costsInCent: modelUsage.priceInCents,
+        }),
+      ),
+    );
+
+    // Report the real provider/model that generated the first response, i.e. the one that
+    // served the first agentic iteration.
+    const firstModelUsage = modelUsages.at(0);
+    if (!firstModelUsage) {
+      return;
+    }
+    const { provider, modelName } = firstModelUsage;
+
+    await sendRabbitmqEvent(
+      constructNewMessageEvent({
+        user,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        costsInCent: priceInCents,
+        provider,
+        modelName,
+        anonymous: false,
+        conversation: activeConversation,
+      }),
+    );
+  }
 
   async function persistAssistantMessage({
     fullText,
     usage,
     priceInCents,
-    agentLoopMessages = [],
+    agentLoopMessages,
+    modelUsages,
+    reasoningSummary,
   }: {
     fullText: string;
     usage: TokenUsage;
     priceInCents: number;
-    agentLoopMessages?: AiCoreMessage[];
+    agentLoopMessages: AiCoreMessage[];
+    modelUsages: ModelUsage[];
+    reasoningSummary?: string;
   }) {
-    const persistedAgentLoopMessages = filterPersistedAgentLoopMessages(agentLoopMessages);
-
     // Persist intermediate tool call/result messages and the final assistant message in one query
     const messagesToInsert = [
-      ...persistedAgentLoopMessages.map((msg, index) => ({
+      ...agentLoopMessages.map((msg, index) => ({
         content: msg.content,
         role: msg.role,
         userId: user.id,
@@ -532,10 +545,10 @@ export async function sendChatMessage({
         content: fullText,
         role: 'assistant' as const,
         userId: user.id,
-        orderNumber: assistantMessageOrderNumber + persistedAgentLoopMessages.length,
+        orderNumber: assistantMessageOrderNumber + agentLoopMessages.length,
         modelName: definedModel.name,
         conversationId: activeConversation.id,
-        webSearchResults,
+        reasoningSummary: reasoningSummary ?? null,
       },
     ];
 
@@ -554,28 +567,7 @@ export async function sendChatMessage({
       });
     }
 
-    const { promptTokens, completionTokens } = usage;
-
-    await dbInsertConversationUsage({
-      conversationId: activeConversation.id,
-      userId: user.id,
-      modelId: definedModel.id,
-      completionTokens,
-      promptTokens,
-      costsInCent: priceInCents,
-    });
-
-    await sendRabbitmqEvent(
-      constructNewMessageEvent({
-        user,
-        promptTokens,
-        completionTokens,
-        costsInCent: priceInCents,
-        provider: definedModel.provider,
-        anonymous: false,
-        conversation: activeConversation,
-      }),
-    );
+    await persistUsage({ usage, priceInCents, modelUsages });
   }
 
   async function persistEmptyAssistantMessage() {
@@ -590,68 +582,50 @@ export async function sendChatMessage({
     });
   }
 
-  if (agenticChatEnabled) {
-    const agentName = resolveAgentNameForTracing({ characterId, learningScenarioId, assistantId });
-
-    // Start the agent loop in the background
-    runAgentLoop({
-      modelId: definedModel.id,
-      modelName: definedModel.name,
-      apiKeyId,
-      messages: aiCoreMessages,
-      toolRegistry,
-      agentName,
-      onTextChunk: (delta: string) => {
-        update(delta);
-      },
-      onComplete: async ({ fullText, usage, priceInCents, agentLoopMessages }) => {
-        try {
-          await persistAssistantMessage({ fullText, usage, priceInCents, agentLoopMessages });
-          done();
-        } catch (error) {
-          logError('Error during agent loop completion:', error);
-          streamError(error instanceof Error ? error : new Error('Unknown error'));
-        }
-      },
-      onError: async (error: Error) => {
-        await persistEmptyAssistantMessage();
-
-        streamError(error);
-      },
-    });
-  } else {
-    void (async () => {
-      let fullText = '';
-
+  runAgentLoop({
+    modelSelection,
+    apiKeyId,
+    messages: convertToAiCoreMessages(systemPrompt, messagesWithImages),
+    toolRegistry: tools.toolRegistry,
+    agentName: resolveAgentNameForTracing({ characterId, learningScenarioId, assistantId }),
+    abortSignal: generationSignal,
+    onTextChunk: (delta: string) => {
+      update(delta);
+    },
+    onReasoningSummary: aiActivity.onReasoningSummary,
+    onToolCalls: aiActivity.onToolCalls,
+    onToolResult: aiActivity.onToolResult,
+    onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {
       try {
-        const textStream = generateTextStreamWithBilling(
-          definedModel.id,
-          aiCoreMessages,
-          apiKeyId,
-          async ({ usage, priceInCents }) => {
-            await persistAssistantMessage({ fullText, usage, priceInCents });
-          },
-        );
-
-        for await (const chunk of textStream) {
-          fullText += chunk;
-          update(chunk);
-        }
-
+        aiActivity.finish();
+        await persistAssistantMessage({
+          fullText,
+          usage,
+          priceInCents,
+          modelUsages,
+          agentLoopMessages,
+          reasoningSummary: aiActivity.getReasoningSummary(),
+        });
         done();
       } catch (error) {
-        logError('Error during chat streaming:', error);
-
-        await persistEmptyAssistantMessage();
-
+        logError('Error during agent loop completion:', error);
         streamError(error instanceof Error ? error : new Error('Unknown error'));
       }
-    })();
-  }
+    },
+    onError: async (error: Error, billedUsage) => {
+      try {
+        await persistEmptyAssistantMessage();
+        await persistUsage(billedUsage);
+      } catch (persistenceError) {
+        logError('Error persisting failed agent loop usage:', persistenceError);
+      } finally {
+        streamError(error);
+      }
+    },
+  });
 
   return {
     stream,
     messageId: assistantMessageId,
-    webSearchResults,
   };
 }

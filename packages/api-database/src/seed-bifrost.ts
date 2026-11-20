@@ -1,9 +1,20 @@
-import { syncBifrostProviders } from './bifrost-provider-sync';
-import { LlmModel, LlmInsertModel } from './schema';
+import { createHash } from 'node:crypto';
+
+import { and, eq } from 'drizzle-orm';
+
+import { syncAllBifrostProviders } from './bifrost-provider-sync';
+import { db } from './db';
+import { isLlmProvider } from './llm-model';
+import {
+  LlmInsertModel,
+  llmModelProviderKeyMappingTable,
+  llmProviderKeyTable,
+  SensitiveLlmModel,
+} from './schema';
 
 const BIFROST_UPSTREAM_PROVIDERS = new Set(['azure', 'openai', 'ionos', 'google']);
 
-type SeedModel = LlmInsertModel | LlmModel;
+type SeedModel = LlmInsertModel | SensitiveLlmModel;
 
 export function normalizeSeedModelForBifrost<TModel extends SeedModel>(model: TModel): TModel {
   if (!BIFROST_UPSTREAM_PROVIDERS.has(model.setting.provider)) return model;
@@ -14,16 +25,74 @@ export function normalizeSeedModelForBifrost<TModel extends SeedModel>(model: TM
   };
 }
 
+export async function seedProviderKeysForModels(models: SeedModel[]): Promise<void> {
+  const groupedModels = new Map<string, SeedModel[]>();
+  for (const model of models) {
+    if (!BIFROST_UPSTREAM_PROVIDERS.has(model.setting.provider)) continue;
+    const providerKeySettings = getProviderKeySettings(model);
+    const groupKey = stableStringify(providerKeySettings);
+    groupedModels.set(groupKey, [...(groupedModels.get(groupKey) ?? []), model]);
+  }
+
+  for (const providerModels of groupedModels.values()) {
+    const firstModel = providerModels[0];
+    if (!firstModel) continue;
+    const provider = firstModel.setting.provider;
+    const settings = getProviderKeySettings(firstModel);
+    const name = `${provider}-${createHash('sha256').update(stableStringify(settings)).digest('hex').slice(0, 8)}`;
+    const [providerKey] = await db
+      .insert(llmProviderKeyTable)
+      .values({
+        name,
+        provider,
+        settings,
+      })
+      .onConflictDoUpdate({
+        target: llmProviderKeyTable.name,
+        set: { provider, settings },
+      })
+      .returning();
+    if (!providerKey) continue;
+
+    for (const model of providerModels) {
+      if (!model.id) continue;
+      await db
+        .delete(llmModelProviderKeyMappingTable)
+        .where(
+          and(
+            eq(llmModelProviderKeyMappingTable.llmModelId, model.id),
+            eq(llmModelProviderKeyMappingTable.providerKeyId, providerKey.id),
+          ),
+        );
+      await db.insert(llmModelProviderKeyMappingTable).values({
+        llmModelId: model.id,
+        providerKeyId: providerKey.id,
+        upstreamModelName: getUpstreamModelName(model),
+      });
+    }
+  }
+}
+
+function getProviderKeySettings(model: SeedModel): SeedModel['setting'] {
+  if (!isLlmProvider(model.setting, 'azure')) return model.setting;
+  try {
+    return { ...model.setting, baseUrl: new URL(model.setting.baseUrl).origin };
+  } catch {
+    return model.setting;
+  }
+}
+
 export function normalizeSeedModelsForBifrost<TModel extends SeedModel>(
   models: TModel[],
 ): TModel[] {
   return models.map(normalizeSeedModelForBifrost);
 }
 
-export async function syncSeedModelsToBifrost(models: LlmModel[]): Promise<void> {
-  await syncBifrostProviders(models, {
+export async function syncSeedModelsToBifrost(): Promise<void> {
+  await syncAllBifrostProviders({
     bifrostAdminUrl: process.env.BIFROST_ADMIN_URL,
-    bifrostManagementApiKey: process.env.BIFROST_MANAGEMENT_API_KEY,
+    bifrostAdminUsername: process.env.BIFROST_ADMIN_USERNAME,
+    bifrostAdminPassword: process.env.BIFROST_ADMIN_PASSWORD,
     logger: {
       info: (message, context) => {
         console.log(message, context ?? '');
@@ -36,4 +105,27 @@ export async function syncSeedModelsToBifrost(models: LlmModel[]): Promise<void>
       },
     },
   });
+}
+
+function getUpstreamModelName(model: SeedModel): string {
+  if (!isLlmProvider(model.setting, 'azure')) return model.name;
+  try {
+    const parts = new URL(model.setting.baseUrl).pathname.split('/').filter(Boolean);
+    const deploymentIndex = parts.indexOf('deployments');
+    if (deploymentIndex === -1) return model.name;
+    return parts[deploymentIndex + 1] ?? model.name;
+  } catch {
+    return model.name;
+  }
+}
+
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${stableStringify(entry)}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
 }

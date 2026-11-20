@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
-import { AUTH_FILES } from '../utils/const';
+import { expect, test } from '../fixtures/test';
 import { focusPage } from '../utils/browser';
+import { AUTH_FILES } from '../utils/const';
 
 test.use({ storageState: AUTH_FILES.teacher });
 

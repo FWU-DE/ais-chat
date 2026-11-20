@@ -1,20 +1,21 @@
-import { useLlmModels } from '@/components/providers/llm-model-provider';
-import { useTranslations } from 'next-intl';
-import { useToast } from '@/components/common/toast';
-import { useRouter } from 'next/navigation';
-import { createNewLearningScenarioAction } from './actions';
-import { getDefaultModel } from '@shared/llm-models/llm-model-service';
-import { Button } from '@ui/components/button';
 import { PlusIcon } from '@phosphor-icons/react';
+import { Button } from '@ui/components/button';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+
+import { useToast } from '@/components/common/toast';
+import { useLlmModels } from '@/components/providers/llm-model-provider';
+
+import { createNewLearningScenarioAction } from './actions';
 
 export function CreateNewLearningScenarioButton() {
   const router = useRouter();
   const toast = useToast();
   const t = useTranslations('learning-scenarios');
 
-  const { models } = useLlmModels();
+  const { defaultModel } = useLlmModels();
 
-  const maybeDefaultModelId = getDefaultModel(models)?.id;
+  const maybeDefaultModelId = defaultModel?.id;
 
   async function handleNewLearningScenario() {
     if (!maybeDefaultModelId) {

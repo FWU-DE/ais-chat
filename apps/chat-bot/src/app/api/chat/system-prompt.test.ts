@@ -1,8 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { constructChatSystemPrompt } from './system-prompt';
 import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
 import type { AssistantSelectModel } from '@shared/db/schema';
+import { describe, expect, it } from 'vitest';
+
 import type { ObscuredFederalState } from '@/auth/utils';
+
+import { constructChatSystemPrompt } from './system-prompt';
 
 const helpModeAssistant = { id: HELP_MODE_ASSISTANT_ID } as AssistantSelectModel;
 
@@ -23,8 +25,6 @@ describe('constructChatSystemPrompt (help mode)', () => {
       assistant: helpModeAssistant,
       isTeacher: true,
       federalState: createFederalState({ isAnonymizationEnabled: false }),
-      chunks: [],
-      errorUrls: [],
     });
 
     expect(prompt).not.toContain('Anonymisierung');
@@ -35,8 +35,6 @@ describe('constructChatSystemPrompt (help mode)', () => {
       assistant: helpModeAssistant,
       isTeacher: true,
       federalState: createFederalState({ isAnonymizationEnabled: true }),
-      chunks: [],
-      errorUrls: [],
     });
 
     expect(prompt).toContain('automatische Anonymisierung aktiviert');
@@ -51,8 +49,6 @@ describe('constructChatSystemPrompt (help mode)', () => {
         isAnonymizationEnabled: true,
         anonymizationMode: 'pseudonym',
       }),
-      chunks: [],
-      errorUrls: [],
     });
 
     expect(prompt).toContain('automatische Anonymisierung aktiviert');

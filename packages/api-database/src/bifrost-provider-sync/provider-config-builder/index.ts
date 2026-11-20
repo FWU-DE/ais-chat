@@ -1,93 +1,55 @@
-import { LlmModel } from '../../schema';
+import type { LlmProviderKeyWithModels } from '../../functions';
+import type { BifrostProvider, BifrostProviderConfig, BifrostProviderSyncLogger } from '../types';
 import {
-  buildAzureProviderConfigs,
-  buildIonosProviderConfigs,
-  buildOpenAiProviderConfigs,
-  buildVertexProviderConfigs,
+  buildAzureProviderConfig,
+  buildBifrostNativeProviderConfig,
+  buildIonosProviderConfig,
+  buildOpenAiProviderConfig,
+  buildVertexProviderConfig,
 } from './providers';
-import { BifrostProvider, BifrostProviderConfig, BifrostProviderSyncLogger } from '../types';
 
-/**
- * Converts API DB model rows into Bifrost provider/key configuration.
- *
- * The app-facing `model.provider` may be `bifrost`, but the upstream provider is always read
- * from `model.setting.provider`. This lets admins switch runtime routing without rewriting the
- * provider-specific settings JSON.
- */
 export function buildBifrostProviderConfigs(
-  models: LlmModel[],
+  providerKeys: LlmProviderKeyWithModels[],
   logger?: BifrostProviderSyncLogger,
 ): BifrostProviderConfig[] {
-  const providerModels = new Map<BifrostProvider, LlmModel[]>();
-  for (const model of models) {
-    const provider = getBifrostProviderFromSettings(model.setting.provider);
-    if (!provider) {
-      logger?.warning?.('Skipping unsupported provider for Bifrost sync', {
-        provider: model.provider,
-        settingProvider: model.setting.provider,
-        modelId: model.id,
-        modelName: model.name,
-      });
+  const configs = providerKeys.flatMap((providerKey) => {
+    if (!providerKey.isEnabled || providerKey.models.every(({ model }) => model.isDeleted))
+      return [];
+    const config = buildProviderConfig(getBifrostProvider(providerKey.provider), providerKey);
+    return config ? [config] : [];
+  });
+
+  const merged = new Map<BifrostProvider, BifrostProviderConfig>();
+  for (const config of configs) {
+    const existing = merged.get(config.provider);
+    if (!existing) {
+      merged.set(config.provider, config);
       continue;
     }
-
-    providerModels.set(provider, [...(providerModels.get(provider) ?? []), model]);
-  }
-
-  return mergeBifrostProviderConfigs(
-    [...providerModels.entries()].flatMap(([provider, providerModels]) =>
-      buildBifrostProviderConfig(provider, providerModels),
-    ),
-    logger,
-  );
-}
-
-function buildBifrostProviderConfig(
-  provider: BifrostProvider,
-  models: LlmModel[],
-): BifrostProviderConfig[] {
-  if (provider === 'azure') return buildAzureProviderConfigs(models);
-  if (provider === 'openai') return buildOpenAiProviderConfigs(models);
-  if (provider === 'ionos') return buildIonosProviderConfigs(models);
-  if (provider === 'vertex') return buildVertexProviderConfigs(models);
-  return [];
-}
-
-function mergeBifrostProviderConfigs(
-  providerConfigs: BifrostProviderConfig[],
-  logger?: BifrostProviderSyncLogger,
-): BifrostProviderConfig[] {
-  const mergedProviderConfigs = new Map<BifrostProvider, BifrostProviderConfig>();
-
-  for (const providerConfig of providerConfigs) {
-    const existingConfig = mergedProviderConfigs.get(providerConfig.provider);
-    if (!existingConfig) {
-      mergedProviderConfigs.set(providerConfig.provider, providerConfig);
-      continue;
-    }
-
-    if (
-      JSON.stringify(existingConfig.network_config) !==
-      JSON.stringify(providerConfig.network_config)
-    ) {
+    if (JSON.stringify(existing.network_config) !== JSON.stringify(config.network_config)) {
       logger?.warning?.('Multiple network configs found while syncing Bifrost provider', {
-        provider: providerConfig.provider,
+        provider: config.provider,
       });
     }
-
-    mergedProviderConfigs.set(providerConfig.provider, {
-      ...existingConfig,
-      keys: [...existingConfig.keys, ...providerConfig.keys],
-    });
+    merged.set(config.provider, { ...existing, keys: [...existing.keys, ...config.keys] });
   }
-
-  return [...mergedProviderConfigs.values()];
+  return [...merged.values()];
 }
 
-function getBifrostProviderFromSettings(provider: string): BifrostProvider | undefined {
-  if (provider === 'azure') return 'azure';
-  if (provider === 'openai') return 'openai';
-  if (provider === 'ionos') return 'ionos';
-  if (provider === 'google') return 'vertex';
-  return undefined;
+function buildProviderConfig(
+  provider: BifrostProvider,
+  providerKey: LlmProviderKeyWithModels,
+): BifrostProviderConfig | undefined {
+  if (provider === 'azure') return buildAzureProviderConfig(providerKey);
+  if (provider === 'openai') return buildOpenAiProviderConfig(providerKey);
+  if (provider === 'ionos') return buildIonosProviderConfig(providerKey);
+  if (provider === 'vertex') return buildVertexProviderConfig(providerKey);
+  return buildBifrostNativeProviderConfig(providerKey);
+}
+
+// Falls through to the arbitrary provider name for any value not in our reserved set.
+function getBifrostProvider(provider: string): BifrostProvider {
+  if (provider === 'azure' || provider === 'openai' || provider === 'ionos') return provider;
+  if (provider === 'google' || provider === 'vertex') return 'vertex';
+  return provider;
 }

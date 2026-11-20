@@ -15,10 +15,10 @@ This guide helps you run AIS.chat using pre-built Docker images with minimal con
 
 ### Quick Start
 
-1. **Start all services:**
+1. **Start all services (pulling the latest images):**
 
    ```sh
-   docker compose -f devops/docker/docker-compose.yml up -d
+   docker compose -f devops/docker/docker-compose.yml up -d --pull always
    ```
 
 2. **Wait for initialization**
@@ -29,15 +29,15 @@ This guide helps you run AIS.chat using pre-built Docker images with minimal con
    - Create S3 bucket in RustFS
 
 3. **Access the applications:**
-   - **Chat-bot app**: http://localhost:3000
-   - **Admin app**: http://localhost:3001
+   - **Chat-bot app**: http://localhost:3000 (credentials: `teacher` / `password`)
+   - **Admin app**: http://localhost:3001 (credentials: `admin` / `password` or `editor` / `password`)
    - **API**: http://localhost:3002
    - **Keycloak**: http://localhost:8080 (credentials: `admin` / `admin`)
-   - **RustFS Console**: http://localhost:9001 (S3-compatible storage, credentials: `rustfsadmin` / `rustfsadmin123`)
+   - **RustFS Console**: http://localhost:9001 (S3-compatible storage, credentials: `rustfsadmin` / `RustFS-Admin-123456`)
 
 4. **Configure the application using ais-chat-admin:**
    - Navigate to the admin app at http://localhost:3001
-   - Login with teacher credentials (username: `teacher`, password: `password`)
+   - Login with admin credentials (username: `admin`, password: `password`)
    - In `ais-chat-api` section:
      - Create your LLM models
      - Create Projects (i.e., federal states) and assign the models to them.
@@ -49,7 +49,7 @@ This guide helps you run AIS.chat using pre-built Docker images with minimal con
 
 5. **Login with default credentials:**
 
-   Use any of the predefined users from the Keycloak realm configuration:
+   Open the chat-bot app at http://localhost:3000 and log in with any of the predefined users from the Keycloak realm configuration:
    - Username: `teacher` / Password: `password` (teacher)
    - See [ais-chat-local-realm.json](devops/docker/keycloak/ais-chat-local-realm.json) for all available users
 
@@ -90,23 +90,34 @@ corepack prepare
 pnpm i # installs the dependencies
 ```
 
+### Updating Node.js
+
+If your local Node version doesn't match the version required in `.nvmrc` (e.g. `pnpm install` or `pnpm dev` fails with an engine version error), install the correct version and set it as your nvm default:
+
+```sh
+nvm install # installs the node version from .nvmrc
+nvm alias default "$(cat .nvmrc)" # sets it as the default node version
+```
+
 ### Environment variables
 
-The project uses environment variables in `.env.local` files for local development configuration.
+The tracked `apps/*/.env.development` files hold working local defaults (ports, connection settings, dummy secrets), so the steps below work without any `.env.local`.
+Create `apps/<app>/.env.local` (gitignored) only for personal overrides and real credentials, e.g. `LINKUP_API_KEY` or real LLM keys.
 
-**Required `.env.local` files:**
+For detailed variable documentation, see the `.env.example` files in each app directory and [docs/concepts/local-env.md](docs/concepts/local-env.md).
 
-- `apps/chat-bot/.env.local` — For the chat-bot app (database URLs, API connection, authentication, storage)
-- `apps/api/.env.local` — For the API app (database URL, logging, telemetry)
+**How env files are loaded:**
 
-For detailed variable documentation and values for local development with docker-compose, see the `.env.example` files in each app directory.
+- Precedence (highest to lowest): `.env.local` > `.env.development`. `.env.development` holds working defaults for local dev, so `.env.local` doesn't need to set them.
+- `apps/chat-bot`/`apps/admin` get this (plus a lower-priority `.env` tier) via Next.js's built-in env loading.
+- `apps/api` (Fastify) has no built-in loading, so `apps/api/src/load-env.ts` replicates the `.env.local` > `.env.development` precedence manually (no `.env` tier, since no app ships one).
 
 ### Service dependencies
 
 For local development spin up all required services using docker compose:
 
 ```sh
-docker compose -f devops/docker/docker-compose.local.yml up -d --build
+docker compose -f devops/docker/docker-compose.local.yml up -d --build --pull always
 ```
 
 To remove all data and start from scratch, you can stop and remove the container and its volume.
@@ -116,10 +127,10 @@ This will delete your database and keycloak configuration.
 docker compose -f devops/docker/docker-compose.local.yml down -v
 ```
 
-To delete only the keycloak data, shutdown all containers and delete the volume:
+To delete only the keycloak data, stop and remove the keycloak container and its ownership-fix sidecar, then delete the volume:
 
 ```sh
-docker compose -f devops/docker/docker-compose.local.yml down
+docker compose -f devops/docker/docker-compose.local.yml rm -fsv keycloak fix-keycloak-volume-ownership
 docker volume rm ais-chat_keycloak_data
 ```
 
@@ -143,8 +154,6 @@ If you start with a fresh database, apply migrations and seed both databases; ot
 pnpm db:migrate
 ```
 
-Add api keys in your `.env.local` files for all federal states that you want to seed. These keys are used to fetch the available LLM models from the ais-chat-api (e.g. `DE_BY_API_KEY` for Bavaria). If you previously seeded the api database, use the resulting API key.
-
 The api database seed also requires LLM provider credentials for the models it creates locally. Add these to `apps/api/.env.local`:
 
 ```sh
@@ -158,7 +167,7 @@ LLM_GPT5NANO_BASE_URL=...
 
 Without these, placeholder values are used and the models will not work until real keys are configured.
 
-The seeded models are routed through Bifrost. Start the local Docker services before seeding and keep `BIFROST_ADMIN_URL` configured so the seed can sync provider keys to Bifrost. With the standard local Docker Compose setup, leave `LLM_MOCK_BASE_URL` unset or set it to `http://mock-llm:6556`; the URL must be reachable from the Bifrost container, not from the host.
+The seeded models are routed through Bifrost. Start the local Docker services before seeding and keep `BIFROST_ADMIN_URL`, `BIFROST_ADMIN_USERNAME`, and `BIFROST_ADMIN_PASSWORD` configured so the seed can sync provider keys to Bifrost. With the standard local Docker Compose setup, `BIFROST_ADMIN_USERNAME=admin` and `BIFROST_ADMIN_PASSWORD=admin` work out of the box. Leave `LLM_MOCK_BASE_URL` unset or set it to `http://mock-llm:6556`; the URL must be reachable from the Bifrost container, not from the host.
 
 ```sh
 pnpm db:seed
@@ -170,14 +179,32 @@ You can now start the application from the root directory:
 pnpm dev
 ```
 
+To run several copies at once (e.g. in git worktrees), run `pnpm dev:ports` before starting the apps: it writes free ports into `apps/*/.env.local`. The copies share one docker stack and database, and Keycloak backchannel logout and login sessions only work for one copy at a time (see [docs/concepts/local-env.md](docs/concepts/local-env.md)).
+
+### Run as Docker container
+
+To run an app image locally with the same behavior as `pnpm dev` (host network, local env files):
+
+```sh
+pnpm build:docker:chat-bot
+docker run --rm --network host \
+  --env-file apps/chat-bot/.env.development \
+  --env-file apps/chat-bot/.env.local \
+  ais-chat-app
+```
+
+If you have no `.env.local`, omit its `--env-file` line. Don't quote values in env files, Docker keeps the quotes. The same works for `admin` (`ais-chat-admin`) and `api` (`ais-chat-api`) with their `apps/<app>/` env files.
+
 ### Keycloak
 
 Keycloak is used for logins both locally and in e2e tests.
-The realm, client and several predefined users are configured in [ais-chat-local-realm.json](devops/docker/keycloak/ais-chat-local-realm.json).
-Users are defined at the bottom of the json.
+Two realms are imported: [ais-chat-local-realm.json](devops/docker/keycloak/ais-chat-local-realm.json) for the chat-bot app,
+and [ais-chat-admin-local-realm.json](devops/docker/keycloak/ais-chat-admin-local-realm.json) for the admin app.
+Each realm's client and predefined users are configured at the bottom of its json.
+The admin realm defines the `admin` / `password` and `editor` / `password` users used to log into ais-chat-admin.
 
-The json is imported once when starting keycloak, but only if the realm does not yet exist.
-When updating the json, remember to drop your local keycloak docker volume to re-import the realm.
+The jsons are imported once when starting keycloak, but only if the corresponding realm does not yet exist.
+When updating a json, remember to drop your local keycloak docker volume to re-import the realms.
 
 ### Valkey
 

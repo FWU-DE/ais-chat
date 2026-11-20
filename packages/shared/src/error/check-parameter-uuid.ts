@@ -1,4 +1,5 @@
 import { isUUID } from '@shared/utils/uuid';
+
 import { InvalidArgumentError } from './invalid-argument-error';
 
 export function checkParameterUUID(...uuids: string[]): void {

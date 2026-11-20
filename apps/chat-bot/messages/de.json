@@ -16,37 +16,99 @@
     "cancel": "Abbrechen",
     "continue": "Weiter",
     "back": "Zurück",
+    "maximize": "Maximieren",
+    "minimize": "Minimieren",
     "accept": "Akzeptieren",
+    "ais-chat-logo": "AIS.chat-Logo",
     "image": "Bild",
     "upload-image": "Bild hochladen",
     "llm-model": "Sprachmodell",
     "current-language-model": "Aktuelles Sprachmodell",
     "no-language-model-available": "Kein Sprachmodell verfügbar",
+    "energy-efficient-model": "Energieeffizientes Modell",
     "conversation-download": "Konversation herunterladen",
     "send-message-placeholder": "Wie kann ich Dir helfen?",
     "information-disclaimer": "AIS.chat kann Fehler machen. Sei kritisch und überprüfe alle Informationen.",
     "anonymization-hint": "Anonymisierung aktiv: Persönliche Daten wie Namen, E-Mail-Adressen und Telefonnummern werden vor der Verarbeitung automatisch ersetzt.",
     "character-limit-reached": "Zeichenlimit erreicht",
     "chat-expired-error": "Der Chat ist abgelaufen.",
+    "empty-response-error": "Antwort konnte nicht generiert werden",
     "new-chat": "Neuer Chat",
+    "favorite-add": "Als Favorit markieren",
+    "favorite-remove": "Favorit entfernen",
+    "favorite-error": "Der Favorit konnte nicht gespeichert werden.",
     "stop": "Stop",
     "copy": "Kopieren",
     "edit": "Bearbeiten",
     "copy-clipboard": "In die Zwischenablage kopieren",
     "copy-clipboard-success": "In die Zwischenablage kopiert",
     "copy-clipboard-error": "Fehler beim Kopieren in die Zwischenablage",
+    "message-copy": "Nachricht kopieren",
     "message-download": "Nachricht als Word-Datei herunterladen",
     "message-download-error": "Der Download der Nachricht ist fehlgeschlagen.",
-    "regenerate-message": "Antwort erneut generieren",
+    "code-download": "Datei herunterladen",
+    "regenerate-message-button": "Antwort erneut generieren",
+    "plot": {
+      "label": "Grafik",
+      "download-png": "Grafik herunterladen",
+      "reset": "Änderungen zurücksetzen",
+      "zoom-in": "Vergrößern",
+      "zoom-out": "Verkleinern",
+      "fullscreen": "Im Vollbild anzeigen",
+      "description": "Grafik: {title}",
+      "error": "Die Grafik konnte nicht dargestellt werden."
+    },
+    "document": {
+      "download": "{fileName} herunterladen",
+      "error": "Das Dokument konnte nicht erstellt werden."
+    },
+    "read-aloud": "Nachricht vorlesen",
+    "pause-message": "Vorlesen pausieren",
+    "read-aloud-error": "Die Sprachausgabe ist fehlgeschlagen.",
+    "listen-to-answer": "Antwort anhören",
+    "pause-audio": "Pause",
+    "show-message-text": "Text anzeigen",
+    "hide-message-text": "Text ausblenden",
+    "show-audio-player": "Audio-Player anzeigen",
+    "hide-audio-player": "Audio-Player ausblenden",
+    "jump-back-5-seconds": "5 Sekunden zurück",
+    "5-seconds-label": "5s",
+    "playback-speed": "Wiedergabegeschwindigkeit",
+    "audio-playback-position": "Audio-Wiedergabeposition",
     "image-load-failed": "Bild konnte nicht geladen werden",
     "rate-limit-error": "Das bereitgestellte Tokenvolumen wurde aufgebraucht.",
+    "api-key-quota-error": "Das bereitgestellte Kontingent des Bundeslandes wurde aufgebraucht.",
+    "api-key-unusable-error": "Der API-Schlüssel des Bundeslandes ist nicht nutzbar.",
+    "provider-rate-limit-error": "Das Modell ist derzeit ausgelastet. Bitte versuche es später erneut.",
+    "responsible-ai-error": "Diese Anfrage wurde nicht ausgeführt, da sie möglicherweise gegen die Nutzungsrichtlinien verstößt.",
+    "invalid-model-error": "Das ausgewählte Modell ist nicht verfügbar.",
     "not-found-error": "Diese Ressource existiert nicht oder ist nicht freigegeben.",
     "generic-error": "Ein Fehler ist aufgetreten",
     "retry-button": "Erneut versuchen",
-    "please-select": "Bitte auswählen"
+    "please-select": "Bitte auswählen",
+    "sidebar-toggle-close": "Seitenleiste schließen",
+    "sidebar-toggle-open": "Seitenleiste öffnen",
+    "profile-dropdown": "Profil-Dropdown",
+    "profile-picture": "Profilbild"
+  },
+  "chat": {
+    "send-message": "Nachricht abschicken",
+    "chat-textarea": "Chat-Eingabefeld",
+    "stop-generating": "Antwort stoppen"
   },
   "errors": {
     "no-api-key": "Dem Bundesland wurde noch kein API-Schlüssel zugewiesen."
+  },
+  "settings": {
+    "menu-label": "Einstellungen",
+    "title": "Einstellungen",
+    "default-voice-label": "Standardstimme der Sprachausgabe",
+    "voice-placeholder": "Stimme auswählen",
+    "speech-only-label": "Antworten im Chat primär als Audio",
+    "toasts": {
+      "save-success": "Die Einstellungen wurden gespeichert.",
+      "save-error": "Die Einstellungen konnten nicht gespeichert werden."
+    }
   },
   "info-banner": {
     "close": "Hinweis schließen"
@@ -68,7 +130,7 @@
       "title": "Community-Freigabe bestätigen",
       "description": "Damit alle geteilten Inhalte in der Community hilfreich, hochwertig und rechtlich unbedenklich bleiben, sind vor dem Teilen die folgenden Kriterien sorgfältig zu prüfen und per Checkbox zu bestätigen.",
       "cancel": "Abbrechen",
-      "accept": "Akzeptieren",
+      "accept": "Einreichen",
       "sections": {
         "copyright": "Urheberrecht",
         "personal-data": "Personenbezogene oder ‑beziehbare Daten",
@@ -89,6 +151,43 @@
         "content-no-false-outdated": "Die Vorlage enthält keine falschen oder veralteten Inhalte (z.B. telli statt AIS.chat).",
         "terms-accepted": "Ich habe die [Nutzungsbedingungen](https://ais-chat.schule/terms-of-use/) gelesen und akzeptiere sie."
       }
+    },
+    "community-removal-confirmation": {
+      "title": "Community-Freigabe entfernen?",
+      "description": "Soll die Community-Freigabe entfernt werden? Der Freigabeprozess muss dann erneut durchlaufen werden.",
+      "cancel": "Abbrechen",
+      "accept": "Freigabe entfernen"
+    }
+  },
+  "community-sharing": {
+    "title": "Community-Freigabe",
+    "status": {
+      "approved": "Genehmigt",
+      "cancelled": "Zurückgezogen",
+      "rejected": "Änderung erforderlich",
+      "submitted": "Eingereicht"
+    },
+    "event-type": {
+      "approve": "Genehmigt",
+      "cancel": "Zurückgezogen",
+      "submit": "Eingereicht",
+      "reject": "Überarbeitung angefordert",
+      "user_message": "Nachricht von mir",
+      "editor_message": "Nachricht von AIS.chat-Redaktion"
+    },
+    "actions": {
+      "resubmit": "Erneut einreichen",
+      "message-editor": "Nachricht an AIS.chat-Redaktion"
+    },
+    "message-dialog": {
+      "title": "Nachricht an AIS.chat-Redaktion",
+      "message-label": "Nachricht",
+      "message-placeholder": "Nachricht",
+      "send": "Senden"
+    },
+    "toasts": {
+      "resubmit-toast-error": "Die Anfrage konnte nicht erneut eingereicht werden.",
+      "send-message-toast-error": "Die Nachricht konnte nicht gesendet werden."
     }
   },
   "usage-disclaimer": {
@@ -123,22 +222,24 @@
     "untitled-conversation": "Neue Konversation",
     "search-clear": "Suche löschen"
   },
-  "websearch": {
-    "placeholders": {
-      "loading": "Titel wird geladen...",
-      "unknown-title": "Titel unbekannt"
-    },
-    "action": {
-      "delete": "Link entfernen"
-    },
-    "results": {
-      "title": "Internetquellen",
-      "show": "Internetquellen einblenden",
-      "toggle": "Internetquellen ein-/ausblenden",
-      "open-source": "Quelle öffnen: {source}"
-    },
-    "toasts": {
-      "error-loading-page": "Verarbeitung des Links fehlgeschlagen"
+  "ai-activity": {
+    "title": "KI-Aktivität",
+    "toggle": "KI-Aktivität ein-/ausblenden",
+    "open-source": "Quelle öffnen: {source}",
+    "failed": "Fehlgeschlagen",
+    "steps": {
+      "analysis": "Analyse",
+      "analysis-summary": "Analyse Zusammenfassung",
+      "done": "Fertig",
+      "web_search": "Websuche",
+      "web_scraper": "Webseite gelesen",
+      "retrieve_text_chunks": "Relevante Dateiausschnitte gelesen",
+      "retrieve_text_chunks_prefix": "Suchbegriffe:",
+      "retrieve_entire_file": "Datei vollständig gelesen",
+      "mundo_search": "Mundo durchsucht",
+      "math_calculate": "Berechnung durchgeführt",
+      "create_plot": "Grafik erstellt",
+      "generate_document": "Datei erstellt"
     }
   },
   "file-interaction": {
@@ -426,20 +527,34 @@
     }
   },
   "image-generation": {
+    "aspect-ratio": {
+      "label": "Format",
+      "aria-label": "Bildformat auswählen",
+      "quadratic": "Quadratisch",
+      "portrait": "Hochformat",
+      "landscape": "Querformat"
+    },
     "page-titles": {
       "chat": "Bildgenerierung"
+    },
+    "style": {
+      "label": "Bildstil",
+      "aria-label": "Bildstil auswählen",
+      "no-style": "Kein Stil",
+      "photorealistic": "Fotorealistisch",
+      "cartoon": "Cartoon"
     },
     "image-generation-model": "Modell",
     "no-model-available": "Kein Modell verfügbar",
     "placeholder": "Beschreibe, wie das Bild aussehen soll.",
     "generate-button": "Bild generieren",
+    "edit-heading": "Sollen Änderungen vorgenommen werden?",
+    "edit-placeholder": "z.B. \"Füge mehr Details hinzu\" oder \"Verwende wärmere Farben\"",
+    "edit-button": "Neue Version erstellen",
     "prompt-label": "Prompt",
-    "style-label": "Bildstil",
-    "no-style": "Kein Stil",
-    "style-photorealistic-name": "Fotorealistisch",
-    "style-cartoon-name": "Cartoon",
+    "attached-files-label": "Verwendete Anhänge",
     "generation-error": "Die Bildgenerierung ist fehlgeschlagen. Bitte versuche es erneut.",
-    "responsible-ai-error": "Diese Anfrage wurde nicht ausgeführt, da sie möglicherweise gegen die Nutzungsrichtlinien verstößt.",
+    "input-images-not-supported-warning": "Das ausgewählte Modell kann angehängte Bilder nicht verarbeiten.",
     "copy-image-success": "Bild in die Zwischenablage kopiert",
     "copy-image-error": "Bild konnte nicht kopiert werden",
     "copy-prompt-success": "Prompt in die Zwischenablage kopiert",
@@ -447,7 +562,11 @@
     "download-image-error": "Bild konnte nicht heruntergeladen werden",
     "copy-image-tooltip": "Bild kopieren",
     "download-image-tooltip": "Bild herunterladen",
-    "copy-prompt-tooltip": "Prompt kopieren"
+    "copy-prompt-tooltip": "Prompt kopieren",
+    "version-option-label": "Version {n}",
+    "version-select-aria-label": "Version auswählen",
+    "generated-image-alt": "Generiertes Bild",
+    "ai-badge-toggle-label": "KI-Kennzeichnung"
   },
   "authentication": {
     "login-error": {
@@ -581,10 +700,26 @@
       "title": "Instruktionen: Beispielhafter Inhalt",
       "close": "Schließen"
     },
+    "didactic-commentary": {
+      "heading": "Didaktischer Kommentar",
+      "heading-tooltip-assistant": "Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieser Assistent eingesetzt werden kann.",
+      "heading-tooltip-character": "Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieser Dialogpartner eingesetzt werden kann.",
+      "heading-tooltip-learning-scenario": "Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieses Lernszenario eingesetzt werden kann.",
+      "toggle-aria-label": "Didaktischen Kommentar ein-/ausklappen",
+      "max-length": "Der didaktische Kommentar darf maximal {maxLength} Zeichen lang sein."
+    },
+    "license-information": {
+      "heading": "Lizenzinformationen",
+      "heading-tooltip": "Sofern erforderlich, können hier Lizenzinformationen zu verwendeten Medien angegeben werden.",
+      "toggle-aria-label": "Lizenzinformationen ein- oder ausklappen",
+      "copyright-link": "Übersicht zum Urheberrecht",
+      "max-length": "Die Lizenzinformationen dürfen maximal {maxLength} Zeichen lang sein."
+    },
     "web-search": {
       "heading": "Websuche für Aktuelles",
       "heading-tooltip": "Falls aktiviert, sucht AIS.chat automatisch im Internet, sofern aktuelle Informationen nötig sind.",
       "activated": "Aktiviert",
+      "deactivated": "Deaktiviert",
       "scope-aria-label": "Umfang der Websuche",
       "scope-all-web": "Gesamtes Web",
       "scope-included-domains": "Nur nachfolgende Webseiten",
@@ -595,7 +730,25 @@
       "websites-empty-error": "Bitte eine URL eingeben.",
       "websites-duplicate-error": "Diese URL wurde bereits hinzugefügt",
       "websites-invalid-error": "Bitte eine gültige URL eingeben.",
-      "websites-counter": "{count} / {max} Domains"
+      "websites-counter": "{count} / {max} Webseiten",
+      "websites-clear-button": "Alle entfernen",
+      "websites-presets-load-error": "Fehler beim Laden der Webseitenpakete",
+      "presets-title": "Webseitenpakete",
+      "presets-title-unassigned": "Selbst hinzugefügt",
+      "presets-domain-count": "{count, plural, =1 {# Webseite} other {# Webseiten}}",
+      "presets-add-preset-button": "Paket hinzufügen"
+    },
+    "speech": {
+      "heading": "Sprachausgabe",
+      "heading-tooltip": "Falls aktiviert, können Antworten als Sprache ausgegeben werden.",
+      "activated": "Aktiviert",
+      "deactivated": "Deaktiviert",
+      "voice-label": "Stimme",
+      "voice-placeholder": "Stimme auswählen",
+      "voice-preview-label": "Stimme anhören",
+      "voice-preview-text": "Hallo, schön, dass du da bist. Wie kann ich dir heute helfen?",
+      "speech-only-label": "Nur Sprache, kein Text",
+      "speech-only-tooltip": "Falls aktiviert, werden die Antworten initial nur als Audio bereitgestellt. Über ein Text-Icon kann bei Bedarf der Text angezeigt werden."
     }
   },
   "assistants": {
@@ -662,9 +815,11 @@
     "filter-official": "Offiziell",
     "filter-school": "Schulintern",
     "filter-community": "Community",
+    "filter-favorites": "Favoriten",
     "filter-label": "Filter",
     "filter-reset": "Zurücksetzen",
     "filter-tabs-label": "Filteroptionen",
+    "filter-aria-delete": "Filter {filter_name} entfernen",
     "info-tooltip-label": "Informationen anzeigen",
     "badge-mine": "von mir",
     "sort-label": "Sortierung",
@@ -672,9 +827,11 @@
     "sort-date-asc": "Älteste zuerst",
     "sort-name-asc": "Alphabetisch A-Z",
     "sort-name-desc": "Alphabetisch Z-A",
+    "sort-popularity": "Beliebteste zuerst",
     "hits-for": "{count} Treffer zu",
     "close": "Schließen",
-    "chat": "Chatten"
+    "chat": "Chatten",
+    "chat-with-character": "Mit Dialogpartner chatten"
   },
   "filter": {
     "filter-label": "Filter",
@@ -770,7 +927,7 @@
     "projects": "Projekte",
     "coaching": "Lernbegleitung & Coaching",
     "organisation": "Organisation",
-    "feedback": "Feedback & Beurteilung",
+    "feedback": "Feedback",
     "conversation": "Sprachpraxis & Konversationen",
     "historical-figures": "Historische Persönlichkeiten & Zeitzeugen",
     "experts": "Fachliche Experten",

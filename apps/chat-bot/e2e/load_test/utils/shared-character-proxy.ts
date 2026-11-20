@@ -1,8 +1,10 @@
-import { PatchCharacterSchema } from '@/app/api/v1/admin/characters/[characterId]/route';
-import { HttpProxy } from './http-proxy';
-import z from 'zod';
-import { check } from 'k6';
 import { generateUUID } from '@shared/utils/uuid';
+import { check } from 'k6';
+import z from 'zod';
+
+import { PatchCharacterSchema } from '@/app/api/v1/admin/characters/[characterId]/route';
+
+import { HttpProxy } from './http-proxy';
 
 const getCharacterResponseSchema = z.object({
   id: z.string(),

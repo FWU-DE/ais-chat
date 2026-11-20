@@ -1,25 +1,26 @@
 import test, { expect } from '@playwright/test';
-import { authorizationHeader } from '../../../../../utils/authorizationHeader';
 import { db } from '@shared/db';
+import { dbGetAllLlmModels } from '@shared/db/functions/llm-model';
 import {
+  AssistantFileMapping,
+  assistantTable,
   CharacterFileMapping,
   characterTable,
   chunkTable,
-  AssistantFileMapping,
-  assistantTable,
   conversationMessageTable,
   conversationTable,
   fileTable,
   LearningScenarioFileMapping,
   learningScenarioTable,
-  llmModelTable,
   userTable,
 } from '@shared/db/schema';
 import { addDays } from '@shared/utils/date';
-import { eq } from 'drizzle-orm';
 import { generateUUID } from '@shared/utils/uuid';
+import { eq } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
+
+import { authorizationHeader } from '../../../../../utils/authorizationHeader';
 
 const cleanupRoute = '/api/v1/admin/cleanup';
 
@@ -41,7 +42,7 @@ test.describe('cleanup', () => {
       }
       userId = user.id;
 
-      const [model] = await tx.select().from(llmModelTable).limit(1);
+      const [model] = await dbGetAllLlmModels();
       if (!model) {
         throw new Error('Failed to find model');
       }
@@ -183,14 +184,17 @@ test.describe('cleanup', () => {
   });
 });
 
-test('should return 403 if authorization header is missing', async ({ request }) => {
-  const response = await request.delete(cleanupRoute);
-  expect(response.status()).toBe(403);
-});
+test(
+  'should return 403 if authorization header is missing',
+  { tag: '@smoke' },
+  async ({ request }) => {
+    const response = await request.delete(cleanupRoute);
+    expect(response.status()).toBe(403);
+  },
+);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const learningScenarioInsertSchema = createInsertSchema(learningScenarioTable).omit({
-  accessLevel: true,
   webSearchScope: true,
 });
 async function createLearningScenario(
@@ -219,7 +223,6 @@ async function createLearningScenario(
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const characterInsertSchema = createInsertSchema(characterTable).omit({
-  accessLevel: true,
   webSearchScope: true,
 });
 async function createCharacter(data?: Partial<z.infer<typeof characterInsertSchema>>) {
@@ -247,7 +250,10 @@ async function createCharacter(data?: Partial<z.infer<typeof characterInsertSche
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const assistantInsertSchema = createInsertSchema(assistantTable).omit({ accessLevel: true });
+const assistantInsertSchema = createInsertSchema(assistantTable).omit({
+  webSearchScope: true,
+  webSearchIncludedDomains: true,
+});
 async function createAssistant(data?: Partial<z.infer<typeof assistantInsertSchema>>) {
   const userId = data?.userId ?? generateUUID();
   const [assistant] = await db

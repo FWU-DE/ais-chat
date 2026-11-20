@@ -1,15 +1,19 @@
+import type { runAgentLoop } from '@ais-chat/ai-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { ChatMessage } from '@/types/chat';
 
 const mocks = vi.hoisted(() => ({
-  generateTextStreamWithBillingMock: vi.fn(),
   runAgentLoopMock: vi.fn(),
+  checkTextInputSafetyMock: vi.fn(),
   getUserAndContextByUserIdMock: vi.fn(),
   checkProductAccessMock: vi.fn(),
   sharedChatHasExpiredMock: vi.fn(),
   sharedLearningScenarioChatHasReachedTokenPointsLimitMock: vi.fn(),
   userHasReachedTokenPointsLimitMock: vi.fn(),
   getModelAndApiKeyWithResultMock: vi.fn(),
+  getSafetyModelMock: vi.fn(),
+  getChatModelSelectionMock: vi.fn(),
   dbGetLearningScenarioByIdAndInviteCodeMock: vi.fn(),
   dbUpdateTokenUsageBySharedLearningScenarioIdMock: vi.fn(),
   dbGetRelatedLearningScenarioFilesMock: vi.fn(),
@@ -22,21 +26,32 @@ const mocks = vi.hoisted(() => ({
   enrichMessagesWithImageDataMock: vi.fn(),
   getMostRecentUserMessageMock: vi.fn(),
   limitChatHistoryMock: vi.fn(),
-  retrieveChunksMock: vi.fn(),
+  annotateMessageAttachmentNamesMock: vi.fn(),
   logErrorMock: vi.fn(),
   buildToolsMock: vi.fn(),
   createImageAttachmentsForConversationMock: vi.fn(),
   ingestWebContentMock: vi.fn(),
   resolveAgentNameForTracingMock: vi.fn(),
   combineSharedRelatedFilesMock: vi.fn(),
+  prepareSharedChatConversationMock: vi.fn(),
+  persistSharedChatResponseMock: vi.fn(),
   isWebSearchEnabledForEntityMock: vi.fn(),
 }));
 
 vi.mock('@ais-chat/ai-core', () => ({
-  generateTextStreamWithBilling: mocks.generateTextStreamWithBillingMock,
   runAgentLoop: mocks.runAgentLoopMock,
   TokenPointsExceededError: class TokenPointsExceededError extends Error {},
   SharedChatExpiredError: class SharedChatExpiredError extends Error {},
+  ResponsibleAIError: class ResponsibleAIError extends Error {
+    static is(error: unknown): error is Error {
+      return Boolean(
+        error &&
+        typeof error === 'object' &&
+        'name' in error &&
+        error.name === 'ResponsibleAIError',
+      );
+    }
+  },
 }));
 
 vi.mock('../anonymization/anonymization-service', () => ({
@@ -45,6 +60,10 @@ vi.mock('../anonymization/anonymization-service', () => ({
 
 vi.mock('@/auth/utils', () => ({
   getUserAndContextByUserId: mocks.getUserAndContextByUserIdMock,
+}));
+
+vi.mock('@ais-chat/ai-core/chat/safety', () => ({
+  checkTextInputSafety: mocks.checkTextInputSafetyMock,
 }));
 
 vi.mock('@/utils/vidis/access', () => ({
@@ -60,6 +79,11 @@ vi.mock('@shared/users/usage', () => ({
 
 vi.mock('../utils/utils', () => ({
   getModelAndApiKeyWithResult: mocks.getModelAndApiKeyWithResultMock,
+  getSafetyModel: mocks.getSafetyModelMock,
+}));
+
+vi.mock('../utils/model-circuit-breaker', () => ({
+  getChatModelSelection: mocks.getChatModelSelectionMock,
 }));
 
 vi.mock('@shared/db/functions/learning-scenario', () => ({
@@ -72,15 +96,15 @@ vi.mock('@shared/db/functions/files', () => ({
   dbGetRelatedLearningScenarioFiles: mocks.dbGetRelatedLearningScenarioFilesMock,
 }));
 
-vi.mock('@/rabbitmq/send', () => ({
+vi.mock('@shared/rabbitmq/send', () => ({
   sendRabbitmqEvent: mocks.sendRabbitmqEventMock,
 }));
 
-vi.mock('@/rabbitmq/events/new-message', () => ({
+vi.mock('@shared/rabbitmq/events/new-message', () => ({
   constructNewMessageEvent: mocks.constructNewMessageEventMock,
 }));
 
-vi.mock('@/rabbitmq/events/budget-exceeded', () => ({
+vi.mock('@shared/rabbitmq/events/budget-exceeded', () => ({
   constructTokenBudgetExceededEvent: mocks.constructTokenBudgetExceededEventMock,
 }));
 
@@ -94,10 +118,7 @@ vi.mock('../chat/utils', () => ({
   enrichMessagesWithImageData: mocks.enrichMessagesWithImageDataMock,
   getMostRecentUserMessage: mocks.getMostRecentUserMessageMock,
   limitChatHistory: mocks.limitChatHistoryMock,
-}));
-
-vi.mock('../rag/rag-service', () => ({
-  retrieveChunks: mocks.retrieveChunksMock,
+  annotateMessageAttachmentNames: mocks.annotateMessageAttachmentNamesMock,
 }));
 
 vi.mock('@shared/logging', () => ({
@@ -106,6 +127,7 @@ vi.mock('@shared/logging', () => ({
 
 vi.mock('../chat/build-tools', () => ({
   buildTools: mocks.buildToolsMock,
+  toolActivityRegistry: {},
 }));
 
 vi.mock('../file-operations/preprocess-image', () => ({
@@ -124,6 +146,10 @@ vi.mock('../shared-chat/shared-chat-file-service', () => ({
   combineSharedRelatedFiles: mocks.combineSharedRelatedFilesMock,
 }));
 
+vi.mock('../shared-chat/shared-chat-conversation-service', () => ({
+  prepareSharedChatConversation: mocks.prepareSharedChatConversationMock,
+}));
+
 vi.mock('../chat/websearch', () => ({
   isWebSearchEnabledForEntity: mocks.isWebSearchEnabledForEntityMock,
 }));
@@ -135,9 +161,17 @@ const model = {
   supportedImageFormats: [],
 };
 
+const safetyModel = {
+  id: 'safety-model-1',
+  name: 'Safety model',
+  provider: 'mock-provider',
+  supportedImageFormats: [],
+};
+
 const learningScenario = {
   id: 'learning-scenario-1',
   name: 'Learning scenario',
+  modelId: model.id,
   attachedLinks: ['https://scenario.example/context'],
   startedBy: 'teacher-1',
   suspended: false,
@@ -148,9 +182,7 @@ const teacherUserAndContext = {
   userRole: 'teacher',
   federalState: {
     id: 'federal-state-1',
-    featureToggles: {
-      isAgenticChatEnabled: false,
-    },
+    featureToggles: { isCalculatorEnabled: true },
   },
 };
 
@@ -186,16 +218,31 @@ beforeEach(() => {
   mocks.getUserAndContextByUserIdMock.mockResolvedValue(teacherUserAndContext);
   mocks.checkProductAccessMock.mockReturnValue({ hasAccess: true });
   mocks.getModelAndApiKeyWithResultMock.mockResolvedValue([null, { model, apiKeyId: 'api-key-1' }]);
+  mocks.getSafetyModelMock.mockResolvedValue(safetyModel);
+  mocks.getChatModelSelectionMock.mockResolvedValue({
+    modelIds: [model.id],
+    modelName: model.name,
+  });
   mocks.sharedChatHasExpiredMock.mockReturnValue(false);
   mocks.sharedLearningScenarioChatHasReachedTokenPointsLimitMock.mockResolvedValue(false);
   mocks.userHasReachedTokenPointsLimitMock.mockResolvedValue(false);
   mocks.dbGetRelatedLearningScenarioFilesMock.mockResolvedValue([]);
   mocks.combineSharedRelatedFilesMock.mockResolvedValue([]);
+  mocks.persistSharedChatResponseMock.mockResolvedValue(undefined);
+  mocks.prepareSharedChatConversationMock.mockImplementation(
+    ({ clientMessages }: { clientMessages: ChatMessage[] }) => ({
+      messages: clientMessages,
+      persistResponse: mocks.persistSharedChatResponseMock,
+    }),
+  );
   mocks.ingestWebContentMock.mockResolvedValue({ processedUrls: [], errorUrls: [] });
   mocks.isWebSearchEnabledForEntityMock.mockReturnValue(true);
-  mocks.retrieveChunksMock.mockResolvedValue([]);
+  mocks.buildToolsMock.mockReturnValue({ toolRegistry: {} });
   mocks.constructLearningScenarioSystemPromptMock.mockReturnValue('system-prompt');
   mocks.limitChatHistoryMock.mockImplementation(
+    (incomingMessages: ChatMessage[]) => incomingMessages,
+  );
+  mocks.annotateMessageAttachmentNamesMock.mockImplementation(
     (incomingMessages: ChatMessage[]) => incomingMessages,
   );
   mocks.getMostRecentUserMessageMock.mockImplementation((incomingMessages: ChatMessage[]) =>
@@ -212,21 +259,26 @@ beforeEach(() => {
   mocks.dbUpdateTokenUsageBySharedLearningScenarioIdMock.mockResolvedValue(undefined);
   mocks.constructNewMessageEventMock.mockReturnValue({ type: 'new-message' });
   mocks.sendRabbitmqEventMock.mockResolvedValue(undefined);
-  mocks.generateTextStreamWithBillingMock.mockImplementation(async function* (
-    _modelId: string,
-    _messages: unknown[],
-    _apiKeyId: string,
-    onComplete?: (args: {
-      usage: { promptTokens: number; completionTokens: number; totalTokens: number };
-      priceInCents: number;
-    }) => Promise<void> | void,
-  ) {
-    yield 'shared response';
-    await onComplete?.({
-      usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
-      priceInCents: 4,
-    });
-  });
+  mocks.runAgentLoopMock.mockImplementation(
+    ({ onComplete }: Parameters<typeof runAgentLoop>[0]) => {
+      void onComplete({
+        fullText: 'shared response',
+        usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
+        priceInCents: 4,
+        modelId: model.id,
+        modelUsages: [
+          {
+            modelId: model.id,
+            usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
+            priceInCents: 4,
+            provider: model.provider,
+            modelName: model.name,
+          },
+        ],
+        agentLoopMessages: [],
+      });
+    },
+  );
 });
 
 describe('sendLearningScenarioMessage', () => {
@@ -237,15 +289,25 @@ describe('sendLearningScenarioMessage', () => {
       learningScenarioId: learningScenario.id,
       inviteCode: 'invite-code',
       messages,
-      modelId: model.id,
     });
 
     await collectStream(result.stream);
 
+    expect(mocks.getModelAndApiKeyWithResultMock).toHaveBeenCalledWith({
+      modelId: learningScenario.modelId,
+      federalStateId: teacherUserAndContext.federalState.id,
+    });
     expect(mocks.ingestWebContentMock).toHaveBeenCalledWith({
       urls: ['https://scenario.example/context'],
       federalStateId: teacherUserAndContext.federalState.id,
     });
+    expect(mocks.buildToolsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user: expect.objectContaining({
+          federalState: expect.objectContaining({ featureToggles: { isCalculatorEnabled: true } }),
+        }),
+      }),
+    );
   });
 
   it('anonymizes all incoming user messages when the toggle is enabled', async () => {
@@ -267,7 +329,6 @@ describe('sendLearningScenarioMessage', () => {
       learningScenarioId: learningScenario.id,
       inviteCode: 'invite-code',
       messages,
-      modelId: model.id,
     });
     await collectStream(result.stream);
 
@@ -281,7 +342,6 @@ describe('sendLearningScenarioMessage', () => {
       learningScenarioId: learningScenario.id,
       inviteCode: 'invite-code',
       messages,
-      modelId: model.id,
       fileIds: ['file-1', 'file-2'],
       sharedSessionId: 'session-1',
     });
@@ -289,9 +349,6 @@ describe('sendLearningScenarioMessage', () => {
     expect(mocks.combineSharedRelatedFilesMock).toHaveBeenCalledWith({
       relatedFileEntities: [],
       fileIds: ['file-1', 'file-2'],
-      inviteCode: 'invite-code',
-      entityType: 'learningScenario',
-      entityId: learningScenario.id,
       sharedSessionId: 'session-1',
       userMessageId: 'message-1',
     });
@@ -303,28 +360,22 @@ describe('sendLearningScenarioMessage', () => {
       ...teacherUserAndContext,
       federalState: {
         ...teacherUserAndContext.federalState,
-        featureToggles: {
-          ...teacherUserAndContext.federalState.featureToggles,
-          isAgenticChatEnabled: true,
-        },
       },
     });
     mocks.isWebSearchEnabledForEntityMock.mockReturnValue(false);
-    mocks.buildToolsMock.mockResolvedValue({ toolRegistry: {} });
+    mocks.buildToolsMock.mockReturnValue({ toolRegistry: {} });
 
     await sendLearningScenarioMessage({
       learningScenarioId: learningScenario.id,
       inviteCode: 'invite-code',
       messages,
-      modelId: model.id,
     });
 
-    expect(mocks.isWebSearchEnabledForEntityMock).toHaveBeenCalledWith({
-      featureToggles: expect.objectContaining({
-        isAgenticChatEnabled: true,
+    expect(mocks.isWebSearchEnabledForEntityMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entity: expect.objectContaining({ id: learningScenario.id }),
       }),
-      entity: learningScenario,
-    });
+    );
     expect(mocks.buildToolsMock).toHaveBeenCalledWith(
       expect.objectContaining({
         allowWebTools: false,

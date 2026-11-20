@@ -1,13 +1,14 @@
 import { expect, test } from '@playwright/test';
-import { login } from '../../utils/login';
 import { db } from '@shared/db';
+import type { FederalStateFeatureToggles } from '@shared/db/schema';
 import { chunkTable, federalStateTable, fileTable } from '@shared/db/schema';
 import { desc, eq } from 'drizzle-orm';
-import { E2E_FEDERAL_STATE } from '../../utils/const';
-import { sendMessage, uploadFile } from '../../utils/chat';
-import { configureCharacter, createCharacter, deleteCharacter } from '../../utils/character';
 import { nanoid } from 'nanoid';
-import type { FederalStateFeatureToggles } from '@shared/db/schema';
+
+import { configureCharacter, createCharacter, deleteCharacter } from '../../utils/character';
+import { sendMessage, uploadFile } from '../../utils/chat';
+import { E2E_FEDERAL_STATE } from '../../utils/const';
+import { login } from '../../utils/login';
 
 const featureToggleDefaults = {
   isStudentAccessEnabled: true,

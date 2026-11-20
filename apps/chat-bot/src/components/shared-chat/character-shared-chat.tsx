@@ -1,14 +1,16 @@
 'use client';
 
-import { useCharacterChat, type ChatMessage } from '@/hooks/use-chat-hooks';
-import { useTranslations } from 'next-intl';
 import { CharacterWithShareDataModel } from '@shared/db/schema';
-import useBreakpoints from '../hooks/use-breakpoints';
-import { AssistantIcon } from '../chat/assistant-icon';
-import GenericSharedChat from './generic-shared-chat';
-import { reductionBreakpoint } from '@/utils/tailwind/layout';
-import { loadSharedChat } from '@/utils/shared-chat-storage';
+import { useTranslations } from 'next-intl';
 import { z } from 'zod';
+
+import { type ChatMessage, useCharacterChat } from '@/hooks/use-chat-hooks';
+import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
+import { reductionBreakpoint } from '@/utils/tailwind/layout';
+
+import { AssistantIcon } from '../chat/assistant-icon';
+import useBreakpoints from '../hooks/use-breakpoints';
+import GenericSharedChat from './generic-shared-chat';
 
 /**
  * This component is used if a character is shared via invite code.
@@ -16,24 +18,20 @@ import { z } from 'zod';
 export default function CharacterSharedChat({
   avatarPictureUrl,
   showAnonymizationHint,
+  isSpeechModelEnabled,
   ...character
 }: CharacterWithShareDataModel & {
   inviteCode: string;
   avatarPictureUrl?: string;
   showAnonymizationHint?: boolean;
+  isSpeechModelEnabled: boolean;
 }) {
   const t = useTranslations('characters.shared');
   const { id, inviteCode, modelId } = character;
 
-  const initialMessages: ChatMessage[] =
-    loadSharedChat(inviteCode)?.messages.map((message) => ({
-      id: message.id,
-      role: message.role,
-      content: message.content,
-    })) ??
-    (character.initialMessage
-      ? [{ id: 'initial-message', role: 'assistant', content: character.initialMessage }]
-      : []);
+  const initialMessages: ChatMessage[] = character.initialMessage
+    ? [{ id: 'initial-message', role: 'assistant', content: character.initialMessage }]
+    : [];
 
   const chat = useCharacterChat({
     characterId: id,
@@ -77,32 +75,16 @@ export default function CharacterSharedChat({
     };
   }
 
-  async function getSignedUrlForSharedCharacterFile(
-    fileId: string,
-    sharedSessionId: string,
-  ): Promise<string> {
-    const response = await fetch('/api/v1/shared-chat/files/signed-url', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        inviteCode,
-        entityType: 'character',
-        entityId: id,
-        fileId,
-        sharedSessionId,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Could not read file');
-    }
-
-    const json = await response.json();
-    const parsed = z.object({ signedUrl: z.string() }).parse(json);
-
-    return parsed.signedUrl;
+  async function generateSharedCharacterSpeechStream(
+    text: string,
+    _isInitialMessage: boolean,
+    { signal }: { signal: AbortSignal },
+  ): Promise<ReadableStream<Uint8Array>> {
+    return fetchSpeechStream(
+      '/api/v1/shared-chat/speech/stream',
+      { text, inviteCode, entityType: 'character', entityId: id },
+      signal,
+    );
   }
 
   return (
@@ -111,12 +93,17 @@ export default function CharacterSharedChat({
       headerT={t}
       entity={character}
       inviteCode={inviteCode}
+      initialMessages={initialMessages}
+      sharedEntityType="character"
       avatarPictureUrl={avatarPictureUrl}
       chat={chat}
       dialogStartMode="derived"
+      showActivityDialog
       assistantIcon={assistantIcon}
       uploadFileFn={uploadSharedCharacterFile}
-      getSignedUrlFn={getSignedUrlForSharedCharacterFile}
+      isSpeechModelEnabled={isSpeechModelEnabled}
+      speechOnly={character.speechOnly}
+      generateSpeechStreamFn={generateSharedCharacterSpeechStream}
     />
   );
 }

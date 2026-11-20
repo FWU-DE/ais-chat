@@ -1,6 +1,6 @@
-import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { Slot } from 'radix-ui';
+import * as React from 'react';
 
 import { cn } from '../lib/utils';
 
@@ -16,7 +16,7 @@ const buttonVariants = cva(
         secondary:
           'bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground',
         ghost:
-          'text-primary hover:bg-muted hover:text-primary dark:hover:bg-muted/50 aria-expanded:bg-muted aria-expanded:text-foreground disabled:text-gray-400 disabled:bg-transparent',
+          'text-primary hover:bg-muted hover:text-primary dark:hover:bg-muted/50 disabled:text-gray-400 disabled:bg-transparent',
         toggle:
           'hover:bg-muted hover:text-primary dark:hover:bg-muted/50 disabled:text-gray-400 disabled:bg-transparent',
         destructive:
@@ -27,7 +27,7 @@ const buttonVariants = cva(
         default:
           'h-10 text-base font-normal gap-2 px-4 rounded-full has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
         xs: "h-6 gap-1 rounded-full px-2 text-xs in-data-[slot=button-group]:rounded-full has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 rounded-full px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-full has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
+        sm: "h-8 gap-1.5 font-normal rounded-full pl-2.5 pr-3.5 text-[0.875rem] in-data-[slot=button-group]:rounded-full has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
         lg: 'h-9 gap-1.5 px-2.5 rounded-full has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3',
         xl: 'h-12.5 text-base font-normal gap-2 px-4 rounded-full has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
         icon: 'size-8',

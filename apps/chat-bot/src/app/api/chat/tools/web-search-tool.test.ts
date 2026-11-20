@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { UserAndContext } from '@/auth/types';
+
 import type { WebSearchConfig } from '../websearch';
 
 const mocks = vi.hoisted(() => ({
@@ -37,7 +39,6 @@ const user = {
       isSharedChatEnabled: true,
       isCustomGptEnabled: true,
       isShareTemplateWithSchoolEnabled: true,
-      isAgenticChatEnabled: true,
       isImageGenerationEnabled: true,
       isWebSearchEnabled: false,
     },
@@ -46,16 +47,16 @@ const user = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.resolveWebSearchConfigMock.mockResolvedValue(disabledConfig);
+  mocks.resolveWebSearchConfigMock.mockReturnValue(disabledConfig);
   mocks.searchWebMock.mockResolvedValue([]);
 });
 
 describe('buildWebSearchTool', () => {
   it('returns null when web search is disabled', async () => {
-    mocks.resolveWebSearchConfigMock.mockResolvedValue(disabledConfig);
+    mocks.resolveWebSearchConfigMock.mockReturnValue(disabledConfig);
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const result = await buildWebSearchTool({
+    const result = buildWebSearchTool({
       user,
       conversationId: 'conversation-1',
     });
@@ -64,7 +65,7 @@ describe('buildWebSearchTool', () => {
   });
 
   it('adds a web search tool and returns search results as JSON', async () => {
-    mocks.resolveWebSearchConfigMock.mockResolvedValue(allWebConfig);
+    mocks.resolveWebSearchConfigMock.mockReturnValue(allWebConfig);
     mocks.searchWebMock.mockResolvedValue([
       {
         name: 'Beispielartikel',
@@ -75,7 +76,7 @@ describe('buildWebSearchTool', () => {
 
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const tool = await buildWebSearchTool({
+    const tool = buildWebSearchTool({
       user,
       conversationId: 'conversation-1',
     });
@@ -99,7 +100,7 @@ describe('buildWebSearchTool', () => {
         userId: 'user-1',
       }),
     );
-    expect(JSON.parse(result)).toEqual({
+    expect(result).toEqual({
       results: [
         {
           title: 'Beispielartikel',
@@ -107,42 +108,11 @@ describe('buildWebSearchTool', () => {
           content: 'Kurzer Auszug aus dem Suchergebnis.',
         },
       ],
-      error: null,
     });
-  });
-
-  it('calls onWebSearchResults callback when provided', async () => {
-    mocks.resolveWebSearchConfigMock.mockResolvedValue(allWebConfig);
-    mocks.searchWebMock.mockResolvedValue([
-      {
-        name: 'Test',
-        url: 'https://example.com',
-        content: 'Content',
-      },
-    ]);
-
-    const { buildWebSearchTool } = await import('./web-search-tool');
-
-    const onWebSearchResults = vi.fn();
-    const tool = await buildWebSearchTool({
-      user,
-      conversationId: 'conversation-1',
-      onWebSearchResults,
-    });
-
-    await tool!.handler({ query: 'test' });
-
-    expect(onWebSearchResults).toHaveBeenCalledWith([
-      {
-        name: 'Test',
-        url: 'https://example.com',
-        content: 'Content',
-      },
-    ]);
   });
 
   it('forwards includedDomains to searchWeb when scope is included-domains', async () => {
-    mocks.resolveWebSearchConfigMock.mockResolvedValue({
+    mocks.resolveWebSearchConfigMock.mockReturnValue({
       enabled: true,
       scope: 'included-domains',
       includedDomains: ['example.com', 'foo.de'],
@@ -150,7 +120,7 @@ describe('buildWebSearchTool', () => {
 
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const tool = await buildWebSearchTool({
+    const tool = buildWebSearchTool({
       user,
       characterId: 'character-uuid',
       conversationId: 'conversation-1',
@@ -165,12 +135,60 @@ describe('buildWebSearchTool', () => {
     );
   });
 
-  it('does not forward includedDomains when scope is all-web', async () => {
-    mocks.resolveWebSearchConfigMock.mockResolvedValue(allWebConfig);
+  it('forwards includedDomains for learning scenarios when scope is included-domains', async () => {
+    mocks.resolveWebSearchConfigMock.mockReturnValue({
+      enabled: true,
+      scope: 'included-domains',
+      includedDomains: ['example.com', 'foo.de'],
+    } satisfies WebSearchConfig);
 
     const { buildWebSearchTool } = await import('./web-search-tool');
 
-    const tool = await buildWebSearchTool({
+    const tool = buildWebSearchTool({
+      user,
+      learningScenarioId: 'learning-scenario-uuid',
+      conversationId: 'conversation-1',
+    });
+
+    await tool!.handler({ query: 'aktuelle information' });
+
+    expect(mocks.searchWebMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        includedDomains: ['example.com', 'foo.de'],
+      }),
+    );
+  });
+
+  it('forwards includedDomains for assistants when scope is included-domains', async () => {
+    mocks.resolveWebSearchConfigMock.mockReturnValue({
+      enabled: true,
+      scope: 'included-domains',
+      includedDomains: ['example.com', 'foo.de'],
+    } satisfies WebSearchConfig);
+
+    const { buildWebSearchTool } = await import('./web-search-tool');
+
+    const tool = buildWebSearchTool({
+      user,
+      assistantId: 'assistant-uuid',
+      conversationId: 'conversation-1',
+    });
+
+    await tool!.handler({ query: 'aktuelle information' });
+
+    expect(mocks.searchWebMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        includedDomains: ['example.com', 'foo.de'],
+      }),
+    );
+  });
+
+  it('does not forward includedDomains when scope is all-web', async () => {
+    mocks.resolveWebSearchConfigMock.mockReturnValue(allWebConfig);
+
+    const { buildWebSearchTool } = await import('./web-search-tool');
+
+    const tool = buildWebSearchTool({
       user,
       conversationId: 'conversation-1',
     });
@@ -181,5 +199,101 @@ describe('buildWebSearchTool', () => {
     expect(mocks.searchWebMock.mock.calls[0]![0]).toMatchObject({
       includedDomains: undefined,
     });
+  });
+
+  it('returns a generic error without leaking internal details when searchWeb throws', async () => {
+    mocks.resolveWebSearchConfigMock.mockReturnValue(allWebConfig);
+    mocks.searchWebMock.mockRejectedValue(new Error('Linkup is down'));
+
+    const { buildWebSearchTool } = await import('./web-search-tool');
+
+    const tool = await buildWebSearchTool({
+      user,
+      conversationId: 'conversation-1',
+    });
+
+    const result = await tool!.handler({ query: 'current information' });
+
+    expect(result).toEqual({ error: 'Web search failed.' });
+  });
+
+  it('returns an error for an empty query without calling searchWeb', async () => {
+    mocks.resolveWebSearchConfigMock.mockReturnValue(allWebConfig);
+
+    const { buildWebSearchTool } = await import('./web-search-tool');
+
+    const tool = await buildWebSearchTool({
+      user,
+      conversationId: 'conversation-1',
+    });
+
+    const result = await tool!.handler({ query: '   ' });
+
+    expect(result).toEqual({ error: 'Missing search query.' });
+    expect(mocks.searchWebMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('webSearchActivity', () => {
+  it('createStep sets detail to the parsed query for valid arguments', async () => {
+    const { webSearchActivity } = await import('./web-search-tool');
+
+    const step = webSearchActivity.createStep({
+      id: 'call-1',
+      name: 'web_search',
+      arguments: JSON.stringify({ query: 'aktuelle information' }),
+    });
+
+    expect(step).toEqual({
+      kind: 'tool',
+      id: 'call-1',
+      tool: 'web_search',
+      detail: 'aktuelle information',
+    });
+  });
+
+  it('createStep leaves detail undefined for invalid arguments', async () => {
+    const { webSearchActivity } = await import('./web-search-tool');
+
+    const step = webSearchActivity.createStep({
+      id: 'call-1',
+      name: 'web_search',
+      arguments: JSON.stringify({ query: '' }),
+    });
+
+    expect(step.detail).toBeUndefined();
+  });
+
+  it('applyResult adds links derived from the results', async () => {
+    const { webSearchActivity } = await import('./web-search-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'web_search' } as const;
+    const result = webSearchActivity.applyResult!(step, {
+      results: [
+        { title: 'Beispielartikel', url: 'https://example.com/search-result', content: null },
+      ],
+    });
+
+    expect(result.links).toEqual([
+      { title: 'Beispielartikel', url: 'https://example.com/search-result' },
+    ]);
+  });
+
+  it('applyResult leaves the step unchanged when no links can be derived', async () => {
+    const { webSearchActivity } = await import('./web-search-tool');
+
+    const step = { kind: 'tool', id: 'call-1', tool: 'web_search' } as const;
+    const result = webSearchActivity.applyResult!(step, { results: [] });
+
+    expect(result).toEqual(step);
+  });
+
+  it('parsePersistedResult passes a persisted success result through unchanged', async () => {
+    const { webSearchActivity } = await import('./web-search-tool');
+
+    const raw = {
+      results: [{ title: 'Beispielartikel', url: 'https://example.com', content: null }],
+    };
+    expect(webSearchActivity.parsePersistedResult(raw)).toEqual(raw);
   });
 });

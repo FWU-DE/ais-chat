@@ -1,9 +1,10 @@
 'use server';
 
-import { requireAuth } from '@/auth/requireAuth';
 import { dbVerifyFileOwnership } from '@shared/db/functions/files';
 import { ForbiddenError } from '@shared/error';
 import { getReadOnlySignedUrl } from '@shared/s3';
+
+import { requireAuth } from '@/auth/requireAuth';
 
 const MESSAGE_ATTACHMENTS_PREFIX = 'message_attachments/';
 

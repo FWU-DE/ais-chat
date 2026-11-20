@@ -1,11 +1,21 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
 import { handleAiCoreError } from './errors';
 
 // Mock the error classes from @ais-chat/ai-core/errors
 vi.mock('@ais-chat/ai-core/errors', () => ({
+  ApiKeyQuotaExceededError: {
+    is: (e: unknown) => e instanceof Error && e.message === 'ApiKeyQuotaExceeded',
+  },
+  ApiKeyUnusableError: {
+    is: (e: unknown) => e instanceof Error && e.message === 'ApiKeyUnusable',
+  },
+  InvalidSpeechVoiceError: {
+    is: (e: unknown) => e instanceof Error && e.message === 'InvalidSpeechVoice',
+  },
   InvalidModelError: { is: (e: unknown) => e instanceof Error && e.message === 'InvalidModel' },
-  RateLimitExceededError: {
-    is: (e: unknown) => e instanceof Error && e.message === 'RateLimitExceeded',
+  ProviderRateLimitExceededError: {
+    is: (e: unknown) => e instanceof Error && e.message === 'ProviderRateLimitExceeded',
   },
   ResponsibleAIError: {
     is: (e: unknown) => e instanceof Error && e.message === 'ResponsibleAI',
@@ -45,11 +55,36 @@ describe('handleAiCoreError', () => {
     expect(reply.statusCode).toBe(404);
   });
 
-  it('handles RateLimitExceededError with 429', () => {
+  it('handles InvalidSpeechVoiceError with 400', () => {
     const reply = createMockReply();
-    const handled = handleAiCoreError(reply as never, new Error('RateLimitExceeded'));
+    const handled = handleAiCoreError(reply as never, new Error('InvalidSpeechVoice'));
+    expect(handled).toBe(true);
+    expect(reply.statusCode).toBe(400);
+  });
+
+  it('handles ApiKeyUnusableError with 403', () => {
+    const reply = createMockReply();
+    const handled = handleAiCoreError(reply as never, new Error('ApiKeyUnusable'));
+    expect(handled).toBe(true);
+    expect(reply.statusCode).toBe(403);
+  });
+
+  it('handles ApiKeyQuotaExceededError with 429 and a quota message', () => {
+    const reply = createMockReply();
+    const handled = handleAiCoreError(reply as never, new Error('ApiKeyQuotaExceeded'));
     expect(handled).toBe(true);
     expect(reply.statusCode).toBe(429);
+    expect(reply.body).toEqual({ error: 'You have reached the price limit' });
+  });
+
+  it('handles ProviderRateLimitExceededError with 429 and a retry message', () => {
+    const reply = createMockReply();
+    const handled = handleAiCoreError(reply as never, new Error('ProviderRateLimitExceeded'));
+    expect(handled).toBe(true);
+    expect(reply.statusCode).toBe(429);
+    expect(reply.body).toEqual({
+      error: 'The provider is currently rate limited. Please try again later.',
+    });
   });
 
   it('handles ResponsibleAIError with 400', () => {
@@ -64,16 +99,6 @@ describe('handleAiCoreError', () => {
     const handled = handleAiCoreError(reply as never, new Error('ProviderConfig'));
     expect(handled).toBe(true);
     expect(reply.statusCode).toBe(500);
-  });
-
-  it('handles AiGenerationError with quota message as 429', () => {
-    const reply = createMockReply();
-    const handled = handleAiCoreError(
-      reply as never,
-      new Error('AiGeneration: exceeded its monthly quota'),
-    );
-    expect(handled).toBe(true);
-    expect(reply.statusCode).toBe(429);
   });
 
   it('handles generic AiGenerationError with 500', () => {

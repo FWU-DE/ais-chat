@@ -1,15 +1,18 @@
 'use server';
-import { requireAdminAuth } from '@/auth/requireAdminAuth';
-import { TemplateToFederalStateMapping, TemplateTypes } from '@shared/templates/template';
 import {
   getFederalStatesWithMappings,
   getTemplateById,
   updateAuthorOfTemplate,
+  updateTemplateDeletedState,
   updateTemplateMappings,
 } from '@ais-chat/shared/templates/template-service';
+import { runServerAction } from '@shared/actions/run-server-action';
+import { TemplateToFederalStateMapping, TemplateTypes } from '@shared/templates/template';
+
+import { requireAdminOrEditorAuth } from '@/auth/requireAdminAuth';
 
 export async function getTemplateByIdAction(templateType: TemplateTypes, templateId: string) {
-  await requireAdminAuth();
+  await requireAdminOrEditorAuth();
 
   return getTemplateById(templateType, templateId);
 }
@@ -19,16 +22,34 @@ export async function updateAuthorOfTemplateAction(
   templateId: string,
   newAuthor: string,
 ) {
-  await requireAdminAuth();
+  await requireAdminOrEditorAuth();
 
-  return updateAuthorOfTemplate(templateType, templateId, newAuthor);
+  return runServerAction('updateAuthorOfTemplateAction', updateAuthorOfTemplate)(
+    templateType,
+    templateId,
+    newAuthor,
+  );
+}
+
+export async function updateTemplateDeletedStateAction(
+  templateType: TemplateTypes,
+  templateId: string,
+  isDeleted: boolean,
+) {
+  await requireAdminOrEditorAuth();
+
+  return runServerAction('updateTemplateDeletedStateAction', updateTemplateDeletedState)(
+    templateType,
+    templateId,
+    isDeleted,
+  );
 }
 
 export async function getFederalStatesWithMappingsAction(
   templateType: TemplateTypes,
   templateId: string,
 ) {
-  await requireAdminAuth();
+  await requireAdminOrEditorAuth();
 
   return getFederalStatesWithMappings(templateType, templateId);
 }
@@ -38,7 +59,7 @@ export async function updateTemplateMappingsAction(
   templateId: string,
   mappings: TemplateToFederalStateMapping[],
 ) {
-  await requireAdminAuth();
+  await requireAdminOrEditorAuth();
 
   return updateTemplateMappings(templateType, templateId, mappings);
 }

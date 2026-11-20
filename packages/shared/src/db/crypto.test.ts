@@ -1,5 +1,6 @@
-import { encrypt, decrypt } from './crypto';
-import { describe, test, expect } from 'vitest';
+import { describe, expect, test } from 'vitest';
+
+import { decrypt, encrypt } from './crypto';
 
 describe('Encryption/Decryption functions', () => {
   const plainText = 'Hello, world!';

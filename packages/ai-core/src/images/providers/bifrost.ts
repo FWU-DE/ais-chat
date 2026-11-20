@@ -1,10 +1,10 @@
-import { instrumentOpenAiClient } from '@sentry/core';
-import OpenAI from 'openai';
-import type { AiModel, ImageGenerationFn } from '../types';
-import { AiGenerationError, ProviderConfigurationError } from '../../errors';
-import { env } from '../../env';
+import { instrumentOpenAiClient } from '@sentry/server-utils';
+import OpenAI, { toFile } from 'openai';
 
-type BifrostUpstreamProvider = 'azure' | 'openai' | 'ionos' | 'vertex';
+import { extractBifrostFieldsFromHeaders, stripBifrostProviderPrefix } from '../../bifrost-headers';
+import { env } from '../../env';
+import { AiGenerationError, ProviderConfigurationError } from '../../errors';
+import type { AiModel, ImageGenerationFn, ImageResponse } from '../types';
 
 function createBifrostClient(model: AiModel): {
   client: OpenAI;
@@ -18,66 +18,86 @@ function createBifrostClient(model: AiModel): {
     throw new ProviderConfigurationError('BIFROST_BASE_URL is not configured');
   }
 
-  const provider = getBifrostUpstreamProvider(model);
-
   return {
     client: instrumentOpenAiClient(
       new OpenAI({
         apiKey: env.bifrostApiKey ?? 'not-needed',
         baseURL: env.bifrostBaseUrl,
+        ...(env.bifrostApiKey ? { defaultHeaders: { 'x-bf-vk': env.bifrostApiKey } } : {}),
       }),
     ),
-    modelName: `${provider}/${provider === 'vertex' ? stripAnthropicPrefix(model.name) : model.name}`,
+    modelName: model.name,
   };
 }
 
-function getBifrostUpstreamProvider(model: AiModel): BifrostUpstreamProvider {
-  const settingProvider = model.setting.provider;
-  if (settingProvider === 'azure') return 'azure';
-  if (settingProvider === 'openai') return 'openai';
-  if (settingProvider === 'ionos') return 'ionos';
-  if (settingProvider === 'google') return 'vertex';
+function mapBifrostResult(result: OpenAI.Images.ImagesResponse, headers: Headers): ImageResponse {
+  if (!result.data || result.data.length === 0) {
+    throw new AiGenerationError('No image data received from Bifrost');
+  }
 
-  throw new ProviderConfigurationError('Unsupported Bifrost upstream provider');
-}
+  const data = result.data
+    .map((item) => item.b64_json)
+    .filter((item): item is string => item !== undefined);
 
-function stripAnthropicPrefix(modelName: string): string {
-  return modelName.replace(/^anthropic\//, '');
+  if (data.length === 0) {
+    throw new AiGenerationError('No image data received from Bifrost');
+  }
+
+  const fields = extractBifrostFieldsFromHeaders(headers);
+  const deployment = fields.resolved_model_used ?? fields.original_model_requested;
+
+  return {
+    data,
+    output_format: result.output_format,
+    // Bifrost can return an empty usage object (e.g. for a custom provider it has no pricing
+    // rule for), so every field here is defaulted rather than assumed present.
+    usage: result.usage
+      ? {
+          input_text_tokens: result.usage.input_tokens_details?.text_tokens ?? 0,
+          input_image_tokens: result.usage.input_tokens_details?.image_tokens ?? 0,
+          output_text_tokens: result.usage.output_tokens_details?.text_tokens,
+          output_image_tokens: result.usage.output_tokens_details?.image_tokens ?? 0,
+        }
+      : undefined,
+    provider: fields.provider,
+    modelName: stripBifrostProviderPrefix(deployment, fields.provider),
+  };
 }
 
 export function constructBifrostImageGenerationFn(model: AiModel): ImageGenerationFn {
   const { client, modelName } = createBifrostClient(model);
 
-  return async function getBifrostImageGeneration({ prompt }) {
-    const result = await client.images.generate({
-      model: modelName,
-      prompt,
-      n: 1,
-      size: '1024x1024',
-    });
+  return async function getBifrostImageGeneration({ prompt, options }) {
+    const size = options?.size ?? 'auto';
+    const inputImages = options?.inputImages ?? [];
 
-    if (!result.data || result.data.length === 0) {
-      throw new AiGenerationError('No image data received from Bifrost');
+    if (inputImages.length > 0) {
+      const uploadables = await Promise.all(
+        inputImages.map((img) => toFile(img.data, img.filename, { type: img.mimeType })),
+      );
+      const { data: editResult, response: httpResponse } = await client.images
+        .edit({
+          model: modelName,
+          prompt,
+          n: 1,
+          size,
+          quality: 'medium',
+          image: uploadables,
+        })
+        .withResponse();
+
+      return mapBifrostResult(editResult, httpResponse.headers);
     }
 
-    const data = result.data
-      .map((item) => item.b64_json)
-      .filter((item): item is string => item !== undefined);
-
-    if (data.length === 0) {
-      throw new AiGenerationError('No image data received from Bifrost');
-    }
-
-    return {
-      data,
-      output_format: result.output_format,
-      usage: result.usage
-        ? {
-            input_text_tokens: result.usage.input_tokens,
-            output_text_tokens: result.usage.output_tokens_details?.text_tokens,
-            output_image_tokens: result.usage.output_tokens_details?.image_tokens ?? 0,
-          }
-        : undefined,
-    };
+    const { data: result, response: httpResponse } = await client.images
+      .generate({
+        model: modelName,
+        prompt,
+        n: 1,
+        size,
+        quality: 'medium',
+      })
+      .withResponse();
+    return mapBifrostResult(result, httpResponse.headers);
   };
 }

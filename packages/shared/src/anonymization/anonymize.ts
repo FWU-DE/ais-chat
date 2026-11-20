@@ -1,5 +1,5 @@
-import { recognizePiiEntities } from './recognizers';
 import { analyzeWithPresidio } from './presidio';
+import { recognizePiiEntities } from './recognizers';
 import type { AnonymizationMode, PiiEntity } from './types';
 
 const PLACEHOLDERS: Record<string, string> = {

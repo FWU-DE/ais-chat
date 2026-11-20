@@ -1,33 +1,45 @@
 'use client';
 
-import { useMainChat, type ChatMessage } from '@/hooks/use-chat-hooks';
-import React, { ReactNode, SyntheticEvent, useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
-import { useLlmModels } from '../providers/llm-model-provider';
-import { type CharacterSelectModel, type AssistantSelectModel, FileModel } from '@shared/db/schema';
-import { type LearningScenarioSelectModel } from '@shared/db/schema';
-import PromptSuggestions from './prompt-suggestions';
-import MarkdownDisplay from './markdown-display';
-import { navigateWithoutRefresh } from '@/utils/navigation/router';
-import { useQueryClient } from '@tanstack/react-query';
-import RobotIcon from '../icons/robot';
-import { LocalFileState } from './send-message-form';
-import { deepCopy } from '@/utils/object';
-import { getFileExtension, isImageFile } from '@/utils/files/generic';
-import { refetchFileMapping } from '@/app/(authed)/(chat-bot)/actions';
-import { InitialChatContentDisplay } from './initial-content-display';
 import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
-import { ChatInputBox } from './chat-input-box';
-import { ErrorChatPlaceholder } from './error-chat-placeholder';
-import { logError, logDebug, logWarning } from '@shared/logging';
-import { useSession } from 'next-auth/react';
-import { AssistantIcon } from './assistant-icon';
-import { useAutoScroll } from '@/hooks/use-auto-scroll';
-import { getConversationPath } from '@/utils/chat/path';
-import { Messages, type PendingFileModel } from './messages';
+import {
+  type AssistantSelectModel,
+  type CharacterSelectModel,
+  FileModel,
+  type LearningScenarioSelectModel,
+} from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
-import { FloatingText } from './floating-text';
+import { logDebug, logError, logWarning } from '@shared/logging';
+import { isToolRelatedMessage } from '@shared/utils/tool-related-message';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
+import React, { ReactNode, SyntheticEvent, useEffect, useState } from 'react';
+
+import { refetchFileMapping } from '@/app/(authed)/(chat-bot)/actions';
+import { fetchClientSideConversations } from '@/app/(authed)/(chat-bot)/utils';
 import { getErrorMessageByType } from '@/error/get-error-message-by-type';
+import { useAutoScroll } from '@/hooks/use-auto-scroll';
+import { type ChatMessage, useMainChat } from '@/hooks/use-chat-hooks';
+import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
+import { getConversationPath } from '@/utils/chat/path';
+import { getFileExtension, isImageFile } from '@/utils/files/generic';
+import { navigateWithoutRefresh } from '@/utils/navigation/router';
+import { deepCopy } from '@/utils/object';
+
+import { LocalFileState } from '../file-upload/upload-file';
+import RobotIcon from '../icons/robot';
+import { useFederalState } from '../providers/federal-state-provider';
+import { useLlmModels } from '../providers/llm-model-provider';
+import { useUserSettings } from '../providers/user-settings-provider';
+import { AssistantIcon } from './assistant-icon';
+import { ChatInputBox } from './chat-input-box';
+import { useConversationDownload } from './conversation-download-context';
+import { ErrorChatPlaceholder } from './error-chat-placeholder';
+import { FloatingText } from './floating-text';
+import { InitialChatContentDisplay } from './initial-content-display';
+import MarkdownDisplay from './markdown-display';
+import { type MessageFileModel, Messages } from './messages';
+import PromptSuggestions from './prompt-suggestions';
 
 type ChatProps = {
   id: string;
@@ -62,7 +74,31 @@ export default function Chat({
   const tCommon = useTranslations('common');
   const tLearningScenarioShared = useTranslations('learning-scenarios.shared');
 
-  const { selectedModel, setDownloadConversationEnabled } = useLlmModels();
+  const federalState = useFederalState();
+  const { models, selectedModel, setDownloadConversationEnabled } = useLlmModels();
+  const { settings } = useUserSettings();
+  const { setData: setConversationDownloadData } = useConversationDownload();
+  const { data: conversations } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: fetchClientSideConversations,
+  });
+  const conversation = conversations?.find((conversation) => conversation.id === id);
+  const [chatInitialMessages] = useState(() =>
+    initialMessages.map((message) => ({
+      ...message,
+      modelName:
+        models.find((model) => model.name === message.modelName)?.displayName ?? message.modelName,
+    })),
+  );
+  const entitySpeechEnabled =
+    assistant?.isSpeechEnabled ?? character?.isSpeechEnabled ?? learningScenario?.isSpeechEnabled;
+  const entitySpeechOnly =
+    assistant?.speechOnly ?? character?.speechOnly ?? learningScenario?.speechOnly;
+  const isSpeechModelEnabled =
+    federalState?.featureToggles?.isSpeechModelEnabled === true && (entitySpeechEnabled ?? true);
+  const speechOnly = entitySpeechOnly ?? settings.defaultIsSpeechOnly ?? false;
+  const speechVoice =
+    assistant?.voice ?? character?.voice ?? learningScenario?.voice ?? settings.defaultSpeechVoice;
   const conversationPath = getConversationPath({
     customGptId: assistant?.id,
     characterId: character?.id,
@@ -72,11 +108,12 @@ export default function Chat({
   const [fileMapping, setFileMapping] = useState<Map<string, FileModel[]>>(
     initialFileMapping ?? new Map(),
   );
-  // pendingFileMapping stores files for messages that haven't been persisted to DB yet
+  // messageFileMapping stores files associated with messages, including local preview URLs
   // This allows immediate display of attachments while the server processes the message
-  const [pendingFileMapping, setPendingFileMapping] = useState<Map<string, PendingFileModel[]>>(
+  const [messageFileMapping, setMessageFileMapping] = useState<Map<string, MessageFileModel[]>>(
     new Map(),
   );
+  const messageFileMappingRef = React.useRef(messageFileMapping);
   const [files, setFiles] = useState<Map<string, LocalFileState>>(new Map());
   const [countOfFilesInChat, setCountOfFilesInChat] = useState(0);
   const queryClient = useQueryClient();
@@ -87,7 +124,7 @@ export default function Chat({
   }
 
   // Ref to hold pending files that will be associated with the next user message
-  const pendingFilesRef = React.useRef<PendingFileModel[]>([]);
+  const pendingFilesRef = React.useRef<MessageFileModel[]>([]);
 
   // Tracks whether this is the first user message in the conversation (used to trigger
   // URL update and sidebar refetch). For character chats with an initial assistant message,
@@ -104,19 +141,21 @@ export default function Chat({
     reload,
     stop,
     status,
+    activitySteps,
     error,
   } = useMainChat({
     conversationId: id,
-    initialMessages: initialMessages,
+    initialMessages: chatInitialMessages,
     modelId: selectedModel?.id,
+    modelName: selectedModel?.displayName,
     characterId: character?.id,
     learningScenarioId: learningScenario?.id,
     assistantId: assistant?.id,
     onMessageCreated: (messageId) => {
-      // Associate pending files with the message ID immediately when the message is created
+      // Associate files waiting for a message ID as soon as the message is created
       const filesToAssociate = pendingFilesRef.current;
       if (filesToAssociate.length > 0) {
-        setPendingFileMapping((prev) => {
+        setMessageFileMapping((prev) => {
           const newMap = new Map(prev);
           newMap.set(messageId, filesToAssociate);
           return newMap;
@@ -159,29 +198,48 @@ export default function Chat({
     const fetchData = async () => {
       const result = await refetchFileMapping(id);
       if (!result.success) return;
-      const newFileMapping = result.value;
-      setFileMapping(newFileMapping);
-
-      // Clean up pending files that now have DB entries
-      // This also revokes blob URLs to prevent memory leaks
-      setPendingFileMapping((prev) => {
-        const updated = new Map(prev);
-        for (const [messageId, files] of prev) {
-          if (newFileMapping.has(messageId)) {
-            // Revoke blob URLs before removing
-            for (const file of files) {
-              if (file.localUrl) {
-                URL.revokeObjectURL(file.localUrl);
-              }
-            }
-            updated.delete(messageId);
-          }
-        }
-        return updated;
-      });
+      setFileMapping(result.value);
     };
     void fetchData();
   }, [countOfFilesInChat, id, messages.length]);
+
+  useEffect(() => {
+    messageFileMappingRef.current = messageFileMapping;
+  }, [messageFileMapping]);
+
+  useEffect(() => {
+    const downloadFileMapping = new Map(fileMapping);
+    for (const [messageId, files] of messageFileMapping) {
+      downloadFileMapping.set(messageId, files);
+    }
+
+    if (conversation === undefined) {
+      setConversationDownloadData(undefined);
+      return;
+    }
+
+    setConversationDownloadData({
+      messages: messages.filter((message) => !isToolRelatedMessage(message)),
+      fileMapping: downloadFileMapping,
+      createdAt: conversation.createdAt,
+      conversationTitle: conversation.name ?? undefined,
+    });
+  }, [conversation, fileMapping, messages, messageFileMapping, setConversationDownloadData]);
+
+  // Blob URLs stay usable for the whole session, so they are kept once the files are persisted
+  // and only revoked on unmount.
+  useEffect(
+    () => () => {
+      for (const files of messageFileMappingRef.current.values()) {
+        for (const file of files) {
+          if (file.localUrl !== undefined) {
+            URL.revokeObjectURL(file.localUrl);
+          }
+        }
+      }
+    },
+    [],
+  );
 
   async function customHandleSubmit(e: SyntheticEvent) {
     e.preventDefault();
@@ -259,6 +317,18 @@ export default function Chat({
     });
   }
 
+  async function generateSpeechStream(
+    text: string,
+    isInitialMessage: boolean,
+    options: { signal: AbortSignal },
+  ): Promise<ReadableStream<Uint8Array>> {
+    return fetchSpeechStream(
+      '/api/v1/speech/stream',
+      { conversationId: isInitialMessage ? undefined : id, text, voice: speechVoice },
+      options.signal,
+    );
+  }
+
   let placeholderElement: ReactNode;
 
   if (character !== undefined) {
@@ -313,6 +383,7 @@ export default function Chat({
   });
 
   const isLoading = status === 'submitted';
+  const isGenerating = status === 'submitted' || status === 'streaming';
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
@@ -343,8 +414,14 @@ export default function Chat({
               assistantIcon={assistantIcon}
               containerClassName="flex flex-col gap-2 mx-auto p-4"
               fileMapping={fileMapping}
-              pendingFileMapping={pendingFileMapping}
+              messageFileMapping={messageFileMapping}
               webSourceMapping={webSourceMapping}
+              activitySteps={activitySteps}
+              showActivityDialog={character !== undefined}
+              generateSpeechStreamFn={generateSpeechStream}
+              speechVoice={speechVoice}
+              isSpeechModelEnabled={isSpeechModelEnabled}
+              speechOnly={speechOnly}
             />
           )}
           {error && (
@@ -354,7 +431,7 @@ export default function Chat({
             />
           )}
         </div>
-        <div className="w-full pb-4 px-4 mx-auto">
+        <div className="p-4">
           <div className="relative flex flex-col">
             {input.length === 0 && messages.length === 0 && (
               <PromptSuggestions
@@ -371,7 +448,7 @@ export default function Chat({
               handleDeattachFile={handleDeattachFile}
               handleInputChange={handleInputChange}
               input={input}
-              isLoading={isLoading}
+              isGenerating={isGenerating}
               showAnonymizationHint={showAnonymizationHint}
             />
           </div>

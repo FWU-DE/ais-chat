@@ -1,4 +1,5 @@
 import exec from 'k6/execution';
+
 import { SharedCharacterProxy } from './utils/shared-character-proxy';
 
 /**

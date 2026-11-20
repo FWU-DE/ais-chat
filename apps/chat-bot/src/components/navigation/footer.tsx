@@ -1,4 +1,5 @@
 import Link from 'next/link';
+
 import { IMPRESSUM_URL, PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from './const';
 
 type FooterProps = {

@@ -1,11 +1,13 @@
-import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions.js';
-import type OpenAI from 'openai';
+import type { SafetyMessage, TokenUsage } from '@ais-chat/ai-core';
 import {
+  checkInputSafety,
   generateTextByNameWithBilling,
   generateTextStreamByNameWithBilling,
 } from '@ais-chat/ai-core';
-import type { TokenUsage } from '@ais-chat/ai-core';
 import { ResponsibleAIError } from '@ais-chat/ai-core/errors';
+import type OpenAI from 'openai';
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions.js';
+
 import { convertToAiCoreMessages } from './messages';
 
 /**
@@ -17,18 +19,29 @@ export async function chatCompletion({
   apiKeyId,
   maxTokens,
   temperature,
+  safetyModelName,
 }: {
   modelName: string;
   messages: ChatCompletionMessageParam[];
   apiKeyId: string;
   maxTokens?: number | null;
   temperature?: number;
+  safetyModelName?: string;
 }): Promise<OpenAI.Chat.Completions.ChatCompletion> {
   const aiCoreMessages = convertToAiCoreMessages(messages);
-  const result = await generateTextByNameWithBilling(modelName, aiCoreMessages, apiKeyId, {
+  if (safetyModelName) {
+    await checkAdapterInputSafety(aiCoreMessages, apiKeyId, safetyModelName);
+  }
+  const generationOptions = {
     maxTokens: maxTokens ?? undefined,
     temperature,
-  });
+  };
+  const result = await generateTextByNameWithBilling(
+    modelName,
+    aiCoreMessages,
+    apiKeyId,
+    generationOptions,
+  );
 
   return {
     id: `chatcmpl-${crypto.randomUUID()}`,
@@ -61,14 +74,19 @@ export async function chatCompletionStream({
   apiKeyId,
   maxTokens,
   temperature,
+  safetyModelName,
 }: {
   modelName: string;
   messages: ChatCompletionMessageParam[];
   apiKeyId: string;
   maxTokens?: number | null;
   temperature?: number;
+  safetyModelName?: string;
 }): Promise<ReadableStream<Uint8Array>> {
   const aiCoreMessages = convertToAiCoreMessages(messages);
+  if (safetyModelName) {
+    await checkAdapterInputSafety(aiCoreMessages, apiKeyId, safetyModelName);
+  }
 
   const { stream, model } = await generateTextStreamByNameWithBilling(
     modelName,
@@ -168,6 +186,21 @@ export async function chatCompletionStream({
       }
     },
   });
+}
+
+async function checkAdapterInputSafety(
+  messages: ReturnType<typeof convertToAiCoreMessages>,
+  apiKeyId: string,
+  safetyModelName: string,
+): Promise<void> {
+  const safetyMessages: SafetyMessage[] = messages
+    .filter((message) => message.role === 'user' || message.role === 'assistant')
+    .map((message) => ({
+      role: message.role === 'user' ? 'user' : 'assistant',
+      content: message.content,
+      images: message.attachments,
+    }));
+  await checkInputSafety(safetyModelName, safetyMessages, apiKeyId);
 }
 
 function tokenUsageToOpenAI(usage: TokenUsage): OpenAI.Completions.CompletionUsage {

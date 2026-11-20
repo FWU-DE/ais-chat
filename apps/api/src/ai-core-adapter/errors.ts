@@ -1,9 +1,12 @@
 import {
   AiGenerationError,
+  ApiKeyQuotaExceededError,
+  ApiKeyUnusableError,
   InvalidModelError,
-  RateLimitExceededError,
-  ResponsibleAIError,
+  InvalidSpeechVoiceError,
   ProviderConfigurationError,
+  ProviderRateLimitExceededError,
+  ResponsibleAIError,
 } from '@ais-chat/ai-core/errors';
 import type { FastifyReply } from 'fastify';
 
@@ -19,9 +22,26 @@ export function handleAiCoreError(reply: FastifyReply, error: unknown): boolean 
     return true;
   }
 
-  if (RateLimitExceededError.is(error)) {
+  if (InvalidSpeechVoiceError.is(error)) {
+    reply.status(400).send({ error: error.message });
+    return true;
+  }
+
+  if (ApiKeyUnusableError.is(error)) {
+    reply.status(403).send({ error: error.message });
+    return true;
+  }
+
+  if (ApiKeyQuotaExceededError.is(error)) {
     reply.status(429).send({
       error: 'You have reached the price limit',
+    });
+    return true;
+  }
+
+  if (ProviderRateLimitExceededError.is(error)) {
+    reply.status(429).send({
+      error: 'The provider is currently rate limited. Please try again later.',
     });
     return true;
   }
@@ -44,15 +64,6 @@ export function handleAiCoreError(reply: FastifyReply, error: unknown): boolean 
 
   if (AiGenerationError.is(error)) {
     reply.log.error(error, 'AI generation error');
-
-    // Check for quota exceeded message (thrown as AiGenerationError in billing checks)
-    if (error.message.includes('exceeded its monthly quota')) {
-      reply.status(429).send({
-        error: 'You have reached the price limit',
-      });
-      return true;
-    }
-
     reply.status(500).send({
       error: 'An error occurred',
       details: error.message,

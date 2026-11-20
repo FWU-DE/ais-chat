@@ -9,7 +9,7 @@ const costsInCentSchema = z.union([z.string(), z.number()]).transform((value, ct
 
   if (normalizedValue === '') {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'Bitte geben Sie einen Preis in Cent ein.',
     });
     return z.NEVER;
@@ -20,7 +20,7 @@ const costsInCentSchema = z.union([z.string(), z.number()]).transform((value, ct
 
   if (!Number.isFinite(parsedValue)) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'Bitte geben Sie einen gültigen Preis ab 0 Cent ein.',
     });
     return z.NEVER;
@@ -28,7 +28,7 @@ const costsInCentSchema = z.union([z.string(), z.number()]).transform((value, ct
 
   if (parsedValue < 0) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'Bitte geben Sie einen Wert ab 0 Cent ein.',
     });
     return z.NEVER;

@@ -1,5 +1,6 @@
 import { anonymizeText } from '@shared/anonymization/anonymize';
 import type { AnonymizationMode } from '@shared/anonymization/types';
+
 import { env } from '@/env';
 import type { ChatMessage } from '@/types/chat';
 

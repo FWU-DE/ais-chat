@@ -1,13 +1,16 @@
 'use client';
 
-import React from 'react';
-import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import Image from 'next/image';
-import { CompressionOptions, getCroppedImageBlob } from '@/utils/files/image-utils';
-import { useTranslations } from 'next-intl';
-import { Card, CardContent, CardHeader, CardTitle } from '@ui/components/card';
+
 import { Button } from '@ui/components/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@ui/components/card';
+import Image from 'next/image';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+import ReactCrop, { centerCrop, Crop, makeAspectCrop, PixelCrop } from 'react-image-crop';
+
+import { CompressionOptions, getCroppedImageBlob } from '@/utils/files/image-utils';
+
 import { useToast } from '../common/toast';
 
 type AvatarCropModalProps = {

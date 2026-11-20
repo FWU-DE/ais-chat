@@ -1,11 +1,13 @@
 'use client';
 
-import CheckIcon from '../icons/check';
-import React from 'react';
-import ClipboardLightIcon from '../icons/clipboard-light';
+import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
 import type { ComponentProps, ReactNode } from 'react';
+import React from 'react';
+
+import { cn } from '@/utils/tailwind';
+
 import { useToast } from './toast';
 
 type CopyToClipboardButtonProps = {
@@ -15,6 +17,7 @@ type CopyToClipboardButtonProps = {
   variant?: ComponentProps<typeof Button>['variant'];
   size?: ComponentProps<typeof Button>['size'];
   'aria-label'?: string;
+  title?: string;
   defaultIcons?: boolean;
 };
 
@@ -25,6 +28,7 @@ export default function CopyToClipboardButton({
   variant = 'ghost',
   size = 'icon-round',
   'aria-label': ariaLabel,
+  title,
   defaultIcons = true,
 }: CopyToClipboardButtonProps) {
   const toast = useToast();
@@ -62,15 +66,16 @@ export default function CopyToClipboardButton({
       variant={variant}
       size={size}
       aria-label={ariaLabel ?? t('copy-clipboard')}
+      title={title}
       data-testid="copy-to-clipboard"
       onClick={handleCopy}
       className="text-primary"
     >
       {defaultIcons &&
         (isCopied ? (
-          <CheckIcon className={className} />
+          <CheckIcon className={cn('size-4', className)} aria-hidden="true" />
         ) : (
-          <ClipboardLightIcon className={className} />
+          <CopyIcon className={cn('size-4', className)} aria-hidden="true" />
         ))}
       {children}
     </Button>

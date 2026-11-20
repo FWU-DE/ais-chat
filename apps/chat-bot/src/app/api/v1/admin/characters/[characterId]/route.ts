@@ -1,5 +1,3 @@
-import { handleErrorInRoute } from '@/error/handle-error-in-route';
-import { validateApiKeyByHeaders } from '@/utils/validation';
 import {
   deleteCharacter,
   shareCharacter,
@@ -9,6 +7,9 @@ import { dbGetCharacterById } from '@shared/db/functions/character';
 import { dbGetUserById } from '@shared/db/functions/user';
 import { NextRequest } from 'next/server';
 import z from 'zod';
+
+import { handleErrorInRoute } from '@/error/handle-error-in-route';
+import { validateApiKeyByHeaders } from '@/utils/validation';
 
 // GET /api/v1/characters/[characterId]
 export async function GET(
@@ -20,7 +21,7 @@ export async function GET(
 
     const { characterId } = await params;
 
-    const character = await dbGetCharacterById({ characterId });
+    const character = await dbGetCharacterById({ characterId, includeDeleted: true });
     return Response.json(character);
   } catch (error) {
     return handleErrorInRoute(error);

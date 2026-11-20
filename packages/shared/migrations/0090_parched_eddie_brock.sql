@@ -1,0 +1,2 @@
+ALTER TABLE "conversation_message_file_mapping" DROP CONSTRAINT "conversation_message_file_mapping_conversationId_fileId_unique";--> statement-breakpoint
+ALTER TABLE "conversation_message_file_mapping" ADD CONSTRAINT "conversation_message_file_mapping_message_id_file_id_unique" UNIQUE("conversationMessageId","fileId");

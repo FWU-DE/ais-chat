@@ -1,9 +1,5 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import { useState } from 'react';
-import { Checkbox } from '@ui/components/checkbox';
-import MarkdownDisplay from '@/components/chat/markdown-display';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,6 +10,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@ui/components/alert-dialog';
+import { Checkbox } from '@ui/components/checkbox';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
+
+import MarkdownDisplay from '@/components/chat/markdown-display';
 
 const CHECKLIST_SECTIONS = [
   {
@@ -128,6 +129,7 @@ export function CustomShareConfirmationDialog({
                     <label key={item.key} htmlFor={checkboxId} className="flex items-start gap-3">
                       <Checkbox
                         id={checkboxId}
+                        data-testid={checkboxId}
                         className="mt-1"
                         checked={checklistState[item.key]}
                         onCheckedChange={(checked) => updateChecklist(item.key, checked === true)}
@@ -157,6 +159,7 @@ export function CustomShareConfirmationDialog({
 
         <AlertDialogFooter className="mt-4 sm:pt-0">
           <AlertDialogCancel
+            data-testid="community-confirmation-cancel"
             onClick={() => {
               onOpenChange(false);
               resetChecklist();
@@ -165,6 +168,7 @@ export function CustomShareConfirmationDialog({
             {t('community-confirmation.cancel')}
           </AlertDialogCancel>
           <AlertDialogAction
+            data-testid="community-confirmation-accept"
             disabled={!allChecklistItemsChecked}
             onClick={() => {
               onAccept();

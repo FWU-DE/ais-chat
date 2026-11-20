@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
 import { WarningIcon } from '@phosphor-icons/react';
+import React from 'react';
 
 interface ImageGenerationErrorProps {
   message: string;

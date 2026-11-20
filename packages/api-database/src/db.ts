@@ -1,6 +1,8 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
+
 import { env } from './env';
+import { MemoryCache } from './memory-cache';
 
 const globalState = global as unknown as {
   apiDbPool?: Pool;
@@ -18,7 +20,10 @@ if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
   globalState.apiDbPool = pool;
 }
 
-export const db = drizzle({ client: pool });
+export const db = drizzle({
+  client: pool,
+  cache: env.dbCacheTtlSeconds ? new MemoryCache({ ex: env.dbCacheTtlSeconds }) : undefined,
+});
 
 export async function shutdownDatabase() {
   console.log('[shutdown] Closing database connection pool...');

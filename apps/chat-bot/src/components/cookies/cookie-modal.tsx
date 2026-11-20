@@ -1,9 +1,11 @@
 'use client';
 
-import { buttonPrimaryClassName, buttonSecondaryClassName } from '@/utils/tailwind/button';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React from 'react';
+
+import { buttonPrimaryClassName, buttonSecondaryClassName } from '@/utils/tailwind/button';
+
 import { CookieConsent, NOT_ASK_PATHS, useCookieContext } from '../providers/cookie-provider';
 
 export default function CookieModal() {

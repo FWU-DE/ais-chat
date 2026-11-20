@@ -1,7 +1,6 @@
 export { BusinessError } from './business-error';
-export { ForbiddenError, isForbiddenError } from './forbidden-error';
-export { NotFoundError, isNotFoundError } from './not-found-error';
-export { UnauthenticatedError, isUnauthenticatedError } from './unauthenticated-error';
-export { InvalidArgumentError, isInvalidArgumentError } from './invalid-argument-error';
-
 export { checkParameterUUID } from './check-parameter-uuid';
+export { ForbiddenError, isForbiddenError } from './forbidden-error';
+export { InvalidArgumentError, isInvalidArgumentError } from './invalid-argument-error';
+export { isNotFoundError, NotFoundError } from './not-found-error';
+export { isUnauthenticatedError, UnauthenticatedError } from './unauthenticated-error';

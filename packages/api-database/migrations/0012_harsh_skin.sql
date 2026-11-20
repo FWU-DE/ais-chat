@@ -1,0 +1,1 @@
+ALTER TABLE "llm_model" ADD COLUMN "use_bifrost" boolean DEFAULT true NOT NULL;

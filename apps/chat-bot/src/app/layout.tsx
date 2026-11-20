@@ -1,20 +1,23 @@
-import { type Metadata } from 'next';
-import React from 'react';
-import { Barlow } from 'next/font/google';
-import Script from 'next/script';
-import ClientProvider from './client-provider';
-import { getMaybeSession, getMaybeUser } from '@/auth/utils';
-import { NextIntlClientProvider } from 'next-intl';
-import { getLocale, getMessages } from 'next-intl/server';
 import '@ui/styles/globals.css';
 import './scrollbar.css';
-import { DEFAULT_DESIGN_CONFIGURATION } from '@/db/const';
+
 import { dbGetFederalStateByIdWithResult } from '@shared/db/functions/federal-state';
-import { buildPublicConfig } from '@shared/sentry/public-config';
-import { cn } from '@/utils/tailwind';
 import { getReadOnlySignedUrl } from '@shared/s3';
 import { SEVEN_DAYS } from '@shared/s3/const';
+import { buildPublicConfig } from '@shared/sentry/public-config';
+import { type Metadata } from 'next';
+import { Barlow } from 'next/font/google';
+import Script from 'next/script';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages } from 'next-intl/server';
+import React from 'react';
+
 import appleTouchIcon from '@/assets/apple-touch-icon.png';
+import { getMaybeSession, getMaybeUser } from '@/auth/utils';
+import { DEFAULT_DESIGN_CONFIGURATION } from '@/db/const';
+import { cn } from '@/utils/tailwind';
+
+import ClientProvider from './client-provider';
 
 const barlow = Barlow({
   weight: ['400', '500', '600', '700'],

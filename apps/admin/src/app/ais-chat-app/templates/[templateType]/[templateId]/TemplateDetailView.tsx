@@ -1,21 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import {
-  getFederalStatesWithMappingsAction,
-  getTemplateByIdAction,
-  updateTemplateMappingsAction,
-} from './actions';
+import { FormFieldCheckbox } from '@ais-chat/ui/components/form/form-field-checkbox';
 import {
   TemplateModel,
   TemplateToFederalStateMapping,
   TemplateTypes,
 } from '@shared/templates/template';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { Button } from '@ui/components/button';
-import { FormFieldCheckbox } from '@ais-chat/ui/components/form/form-field-checkbox';
-import { toast } from 'sonner';
-import { TemplateInfoCard } from './TemplateInfoCard';
 import {
   Card,
   CardAction,
@@ -24,6 +15,16 @@ import {
   CardHeader,
   CardTitle,
 } from '@ui/components/card';
+import { useEffect, useState } from 'react';
+import { useFieldArray, useForm, useWatch } from 'react-hook-form';
+import { toast } from 'sonner';
+
+import {
+  getFederalStatesWithMappingsAction,
+  getTemplateByIdAction,
+  updateTemplateMappingsAction,
+} from './actions';
+import { TemplateInfoCard } from './TemplateInfoCard';
 
 export type TemplateDetailViewProps = {
   templateType: TemplateTypes;

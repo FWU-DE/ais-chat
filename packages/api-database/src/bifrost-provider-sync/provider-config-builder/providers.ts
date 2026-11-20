@@ -1,206 +1,153 @@
-import { LlmModel } from '../../schema';
-import { DEFAULT_IONOS_BASE_URL, DEFAULT_OPENAI_BASE_URL } from '../../llm-model';
-import { BifrostProviderSyncError } from '../error';
-import { BifrostProviderConfig } from '../types';
+import type { LlmProviderKeyWithModels } from '../../functions';
+import { DEFAULT_OPENAI_BASE_URL, isBifrostNativeSettings, isLlmProvider } from '../../llm-model';
+import type {
+  BifrostKey,
+  BifrostKeyAlias,
+  BifrostPromptCacheConfig,
+  BifrostProviderConfig,
+} from '../types';
 import {
-  buildAzureAliases,
-  buildBifrostKey,
-  buildSingleKeyProviderConfigs,
-  getOrigin,
-  parseAzureBaseUrl,
-} from './utils';
+  buildCustomOpenAiProviderId,
+  buildOpenAiCompatibleProviderConfig,
+} from './openai-compatible';
+import { buildKey, getBifrostModelName, getOrigin } from './utils';
 
-function stripAnthropicPrefix(modelName: string): string {
-  return modelName.replace(/^anthropic\//, '');
-}
-
-function stringifyAuthCredentials(authCredentials: unknown): string {
-  if (typeof authCredentials === 'string') return authCredentials;
-  if (authCredentials === undefined) return '';
-  return stableStringify(authCredentials);
-}
-
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-  if (value && typeof value === 'object') {
-    return `{${Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableStringify(entryValue)}`)
-      .join(',')}}`;
-  }
-
-  return JSON.stringify(value);
-}
-
-function getVertexAuthCredentials(groupedModels: LlmModel[]): unknown {
-  for (const model of groupedModels) {
-    if (model.setting.provider !== 'google') continue;
-    if (model.setting.authCredentials === undefined) continue;
-    return model.setting.authCredentials;
-  }
-
-  return undefined;
-}
-
-function getVertexUniqueValue(projectId: string, authCredentials: string): string {
-  return authCredentials ? `${projectId}:${authCredentials}` : projectId;
-}
-
-export function buildAzureProviderConfigs(models: LlmModel[]): BifrostProviderConfig[] {
-  return buildSingleKeyProviderConfigs({
-    provider: 'azure',
-    models,
-    getGroupKey: (setting) => {
-      if (setting.provider !== 'azure') return undefined;
-      const azureUrl = parseAzureBaseUrl(setting.baseUrl);
-      if (!azureUrl) return undefined;
-      return `${setting.apiKey}:${azureUrl.endpoint}`;
-    },
-    buildKey: (setting, groupedModels) => {
-      if (setting.provider !== 'azure') throw new BifrostProviderSyncError();
-      const azureUrl = parseAzureBaseUrl(setting.baseUrl);
-      if (!azureUrl) throw new BifrostProviderSyncError();
-
-      return buildBifrostKey({
-        provider: 'azure',
-        readableValue: azureUrl.endpoint,
-        uniqueValue: setting.apiKey,
-        value: setting.apiKey,
-        groupedModels,
-        extra: {
-          aliases: buildAzureAliases(groupedModels),
-          azure_key_config: { endpoint: azureUrl.endpoint },
-        },
-      });
-    },
-  });
-}
-
-export function buildOpenAiProviderConfigs(models: LlmModel[]): BifrostProviderConfig[] {
-  return buildSingleKeyProviderConfigs({
-    provider: 'openai',
-    models,
-    getGroupKey: (setting) => {
-      if (setting.provider !== 'openai') return undefined;
-      return `${setting.apiKey}:${setting.baseUrl}`;
-    },
-    buildConfig: (setting) => {
-      if (setting.provider !== 'openai') throw new BifrostProviderSyncError();
-      if (isMockLlmBaseUrl(setting.baseUrl)) {
-        return {
-          network_config: {
-            base_url: setting.baseUrl,
-            allow_private_network: true,
-          },
-        };
-      }
-
-      return setting.baseUrl !== DEFAULT_OPENAI_BASE_URL
-        ? { network_config: { base_url: setting.baseUrl } }
-        : {};
-    },
-    buildKey: (setting, groupedModels) => {
-      if (setting.provider !== 'openai') throw new BifrostProviderSyncError();
-      return buildBifrostKey({
-        provider: 'openai',
-        readableValue: setting.baseUrl,
-        uniqueValue: setting.apiKey,
-        value: setting.apiKey,
-        groupedModels,
-      });
-    },
-  });
-}
-
-function isMockLlmBaseUrl(baseUrl: string): boolean {
-  try {
-    const url = new URL(baseUrl);
-    return url.port === '6556';
-  } catch {
-    return false;
-  }
-}
-
-export function buildIonosProviderConfigs(models: LlmModel[]): BifrostProviderConfig[] {
-  return buildSingleKeyProviderConfigs({
-    provider: 'ionos',
-    models,
-    getGroupKey: (setting) => {
-      if (setting.provider !== 'ionos') return undefined;
-      return `${setting.apiKey}:${setting.baseUrl}`;
-    },
-    buildConfig: (setting) => {
-      if (setting.provider !== 'ionos') throw new BifrostProviderSyncError();
-      return {
-        network_config: {
-          base_url: getOrigin(setting.baseUrl) ?? getOrigin(DEFAULT_IONOS_BASE_URL),
-        },
-        custom_provider_config: {
-          base_provider_type: 'openai',
-          allowed_requests: {
-            list_models: true,
-            chat_completion: true,
-            chat_completion_stream: true,
-            embedding: true,
-            image_generation: true,
-          },
-        },
-      };
-    },
-    buildKey: (setting, groupedModels) => {
-      if (setting.provider !== 'ionos') throw new BifrostProviderSyncError();
-      return buildBifrostKey({
-        provider: 'ionos',
-        readableValue: setting.baseUrl,
-        uniqueValue: setting.apiKey,
-        value: setting.apiKey,
-        groupedModels,
-      });
-    },
-  });
-}
-
-export function buildVertexProviderConfigs(models: LlmModel[]): BifrostProviderConfig[] {
-  return buildSingleKeyProviderConfigs({
-    provider: 'vertex',
-    models: models.filter(hasVertexAuthCredentials),
-    getGroupKey: (setting) => {
-      if (setting.provider !== 'google') return undefined;
-      const authCredentials = stringifyAuthCredentials(setting.authCredentials);
-      return `${setting.projectId}:${setting.location}:${authCredentials}`;
-    },
-    buildKey: (setting, groupedModels) => {
-      if (setting.provider !== 'google') throw new BifrostProviderSyncError();
-      const modelNames = [
-        ...new Set(groupedModels.map((model) => stripAnthropicPrefix(model.name))),
-      ].sort();
-      const authCredentials = getVertexAuthCredentials(groupedModels);
-      return buildBifrostKey({
-        provider: 'vertex',
-        readableValue: `${setting.projectId}-${setting.location}`,
-        uniqueValue: getVertexUniqueValue(
-          setting.projectId,
-          stringifyAuthCredentials(authCredentials),
-        ),
-        value: '',
-        groupedModels,
-        extra: {
-          vertex_key_config: {
-            project_id: setting.projectId,
-            region: setting.location,
-            auth_credentials: stringifyAuthCredentials(authCredentials),
-          },
-          models: modelNames,
-        },
-      });
-    },
-  });
-}
-
-function hasVertexAuthCredentials(model: LlmModel): boolean {
-  return (
-    model.setting.provider !== 'google' ||
-    (model.setting.authCredentials !== undefined &&
-      stringifyAuthCredentials(model.setting.authCredentials).trim() !== '')
+/**
+ * Azure AI Speech speaks SSML at `{endpoint}/tts/cognitiveservices/v1`, not the Azure OpenAI
+ * deployment path. Azure OpenAI TTS deployments are speech models too, so the route is only
+ * switched for models that explicitly opt in via `modelConfig.useAzureSpeechEndpoint`.
+ */
+function withSpeechEndpointAliases(
+  key: BifrostKey,
+  providerKey: LlmProviderKeyWithModels,
+): BifrostKey {
+  const azureSpeechModelNames = new Set(
+    providerKey.models
+      .filter(({ model }) => model.modelConfig?.useAzureSpeechEndpoint === true)
+      .map(({ model }) => getBifrostModelName(model.name)),
   );
+  if (azureSpeechModelNames.size === 0 || !key.aliases) return key;
+
+  const aliases: Record<string, BifrostKeyAlias> = {};
+  for (const [name, alias] of Object.entries(key.aliases)) {
+    aliases[name] =
+      azureSpeechModelNames.has(name) && typeof alias === 'string'
+        ? { model_id: alias, use_speech_endpoints: true }
+        : alias;
+  }
+  return { ...key, aliases };
+}
+
+export function buildAzureProviderConfig(
+  providerKey: LlmProviderKeyWithModels,
+): BifrostProviderConfig | undefined {
+  if (!isLlmProvider(providerKey.settings, 'azure')) return undefined;
+  const settings = providerKey.settings;
+  const endpoint = getOrigin(settings.baseUrl);
+  if (!endpoint) return undefined;
+  return {
+    provider: 'azure',
+    keys: [
+      withSpeechEndpointAliases(
+        buildKey('azure', providerKey, settings.apiKey, {
+          azure_key_config: { endpoint },
+        }),
+        providerKey,
+      ),
+    ],
+  };
+}
+
+export function buildOpenAiProviderConfig(
+  providerKey: LlmProviderKeyWithModels,
+): BifrostProviderConfig | undefined {
+  if (!isLlmProvider(providerKey.settings, 'openai')) return undefined;
+  const settings = providerKey.settings;
+  if (settings.baseUrl === DEFAULT_OPENAI_BASE_URL) {
+    return {
+      provider: 'openai',
+      keys: [buildKey('openai', providerKey, settings.apiKey)],
+    };
+  }
+  return buildOpenAiCompatibleProviderConfig(
+    buildCustomOpenAiProviderId(providerKey.name),
+    providerKey,
+    settings.apiKey,
+    settings.baseUrl,
+  );
+}
+
+export function buildIonosProviderConfig(
+  providerKey: LlmProviderKeyWithModels,
+): BifrostProviderConfig | undefined {
+  if (!isLlmProvider(providerKey.settings, 'ionos')) return undefined;
+  const settings = providerKey.settings;
+  return buildOpenAiCompatibleProviderConfig(
+    'ionos',
+    providerKey,
+    settings.apiKey,
+    settings.baseUrl,
+    // Ionos doesn't support the Responses API.
+    {
+      list_models: true,
+      chat_completion: true,
+      chat_completion_stream: true,
+      responses: false,
+      responses_stream: false,
+      embedding: true,
+      image_generation: true,
+    },
+  );
+}
+
+// Caches the system prompt and everything up to the latest user message for the next turn.
+// Bifrost only injects markers for Claude models; Gemini on Vertex is left untouched.
+const VERTEX_PROMPT_CACHE: BifrostPromptCacheConfig = {
+  auto_inject: true,
+  cache_control_injection_points: [
+    { location: 'message', role: 'system' },
+    { location: 'message', role: 'user', index: -1 },
+  ],
+};
+
+export function buildVertexProviderConfig(
+  providerKey: LlmProviderKeyWithModels,
+): BifrostProviderConfig | undefined {
+  if (!isLlmProvider(providerKey.settings, 'google')) return undefined;
+  const settings = providerKey.settings;
+  if (settings.authCredentials === undefined) return undefined;
+  const authCredentials =
+    typeof settings.authCredentials === 'string'
+      ? settings.authCredentials
+      : JSON.stringify(settings.authCredentials);
+  return {
+    provider: 'vertex',
+    prompt_cache: VERTEX_PROMPT_CACHE,
+    keys: [
+      buildKey('vertex', providerKey, '', {
+        vertex_key_config: {
+          project_id: settings.projectId,
+          region: settings.location,
+          auth_credentials: authCredentials,
+        },
+      }),
+    ],
+  };
+}
+
+// Registers an arbitrary Bifrost-native provider using its exact id, with no custom-provider
+// wrapper. Used for provider keys whose `settings.provider` isn't one of our reserved values.
+export function buildBifrostNativeProviderConfig(
+  providerKey: LlmProviderKeyWithModels,
+): BifrostProviderConfig | undefined {
+  if (!isBifrostNativeSettings(providerKey.settings)) return undefined;
+  const settings = providerKey.settings;
+  return {
+    provider: settings.provider,
+    // Always present (even with `base_url: undefined`, dropped by `JSON.stringify`), so an update
+    // explicitly clears a previously-configured base URL instead of the sync falling back to
+    // Bifrost's existing network_config for this provider (see `getUpdateProviderPayload`).
+    network_config: { base_url: settings.baseUrl },
+    keys: [buildKey(settings.provider, providerKey, settings.apiKey)],
+  };
 }
