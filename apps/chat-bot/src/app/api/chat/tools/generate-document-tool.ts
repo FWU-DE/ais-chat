@@ -8,7 +8,7 @@ import {
   GENERATED_DOCUMENT_FORMATS,
   type GeneratedDocumentFormat,
   MAX_FILE_NAME_LENGTH,
-} from '@/utils/files/generated-document';
+} from '@/utils/files/generated-document-format';
 
 import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
 import type { ToolActivity, ToolDefinition, ToolRegistration } from './types';

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { GENERATED_DOCUMENT_FORMATS } from '@/utils/files/generated-document';
+import { GENERATED_DOCUMENT_FORMATS } from '@/utils/files/generated-document-format';
 
 import { TOOL_NAMES } from './tool-names';
 

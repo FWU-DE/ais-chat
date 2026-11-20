@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createGeneratedDocumentBlob, createGeneratedDocumentFileName } from './generated-document';
+import { createGeneratedDocumentBlob } from './generated-document';
+import { createGeneratedDocumentFileName } from './generated-document-format';
 
 const MARKDOWN = `# Arbeitsblatt Bruchrechnen
 

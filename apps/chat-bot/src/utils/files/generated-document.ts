@@ -1,25 +1,5 @@
 import type { DocumentImageReferences } from './document-images';
-
-export const GENERATED_DOCUMENT_FORMATS = ['docx'] as const;
-
-export type GeneratedDocumentFormat = (typeof GENERATED_DOCUMENT_FORMATS)[number];
-
-export const MAX_FILE_NAME_LENGTH = 80;
-
-export function createGeneratedDocumentFileName(
-  title: string | undefined,
-  format: GeneratedDocumentFormat,
-  fallbackTitle: string,
-) {
-  const filename = (title ?? '')
-    .replace(/[\\/:*?"<>|\u0000-\u001f]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, MAX_FILE_NAME_LENGTH)
-    .replace(/^[.\s]+|[.\s]+$/g, '');
-
-  return `${filename || fallbackTitle}.${format}`;
-}
+import type { GeneratedDocumentFormat } from './generated-document-format';
 
 export async function createGeneratedDocumentBlob(
   markdown: string,
