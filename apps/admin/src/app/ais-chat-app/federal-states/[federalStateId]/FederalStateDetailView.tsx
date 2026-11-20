@@ -75,6 +75,7 @@ function transformToFederalStateEditForm(federalState: FederalStateModel): Feder
       isCalculatorEnabled: federalState.featureToggles.isCalculatorEnabled ?? false,
       isSpeechModelEnabled: federalState.featureToggles.isSpeechModelEnabled ?? false,
       isJsxGraphEnabled: federalState.featureToggles.isJsxGraphEnabled ?? false,
+      isImageAssistantEnabled: federalState.featureToggles.isImageAssistantEnabled ?? false,
       isSharedPageLocaleDetectionEnabled:
         federalState.featureToggles.isSharedPageLocaleDetectionEnabled ?? true,
     },
@@ -294,6 +295,12 @@ export function FederalStateView(props: FederalStateViewProps) {
             name="featureToggles.isImageGenerationEnabled"
             label="Bildgenerierung aktivieren"
             description="Erlaubt die Nutzung der Bildgenerierungsfunktion."
+            control={control}
+          />
+          <FormFieldCheckbox
+            name="featureToggles.isImageAssistantEnabled"
+            label="Bildassistent aktivieren"
+            description="Zeigt den geführten Bildprompt-Assistenten in der Bildgenerierungsansicht an."
             control={control}
           />
           <FormFieldCheckbox

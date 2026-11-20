@@ -1,13 +1,16 @@
 'use client';
 
+import { MagicWandIcon } from '@phosphor-icons/react';
 import { FileModel } from '@shared/db/schema';
 import { ConversationMessageModel } from '@shared/db/types';
 import { logError } from '@shared/logging';
+import { Button } from '@ui/components/button';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import React, { useEffect, useRef, useState } from 'react';
 
 import aiBadge from '@/assets/ai-badge.png';
+import { useImageAssistant } from '@/components/providers/image-assistant-provider';
 import { IMAGE_GENERATION_INPUT_LIMIT } from '@/configuration-text-inputs/const';
 import { bakeAiBadge } from '@/utils/images/bake-ai-badge';
 
@@ -17,6 +20,8 @@ import { useImageModels } from '../providers/image-model-provider';
 import { useImageStyle } from '../providers/image-style-provider';
 import { ImageActionButtons } from './image-action-buttons';
 import { useImageAspectRatio } from './image-aspect-ratio-provider';
+import { ImageAssistant } from './image-assistant';
+import { ImageEditAssistant } from './image-edit-assistant';
 import { ImageGenerationError } from './image-generation-error';
 import { ImageGenerationInputBox } from './image-generation-input-box';
 import { ImageGenerationResult } from './image-generation-result';
@@ -43,6 +48,13 @@ export default function ImageGenerationChat({
 
   const { versions, selectedIndex, selectedVersion, setSelectedIndex, appendVersion } =
     useImageVersions({ initialMessages, fileMapping });
+
+  const {
+    isOpen: assistantOpen,
+    setIsOpen: setAssistantOpen,
+    isEnabled: isAssistantEnabled,
+  } = useImageAssistant();
+  const [editAssistantOpen, setEditAssistantOpen] = useState(false);
 
   const [input, setInput] = useState('');
   const [files, setFiles] = useState<Map<string, LocalFileState>>(new Map());
@@ -127,14 +139,12 @@ export default function ImageGenerationChat({
     });
   }
 
-  async function customHandleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-
-    if (!input.trim() || !selectedModel || isGenerating) {
+  async function submitPrompt(rawPrompt: string) {
+    if (!rawPrompt.trim() || !selectedModel || isGenerating) {
       return;
     }
 
-    const prompt = input.trim();
+    const prompt = rawPrompt.trim();
     setInput('');
     setFiles(new Map());
 
@@ -174,6 +184,11 @@ export default function ImageGenerationChat({
     }
   }
 
+  async function customHandleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await submitPrompt(input);
+  }
+
   const inputBox = (
     <>
       <ImageGenerationInputBox
@@ -192,11 +207,44 @@ export default function ImageGenerationChat({
       {files.size > 0 && !modelSupportsImageInput && (
         <ImageGenerationWarning message={tImageGeneration('input-images-not-supported-warning')} />
       )}
+      {isAssistantEnabled && (
+        <div className="flex justify-end mt-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setAssistantOpen(true)}
+            className="gap-1.5 text-muted-foreground hover:text-foreground"
+          >
+            <MagicWandIcon className="size-4" weight="duotone" />
+            {tImageGeneration('assistant-hint-button')}
+          </Button>
+        </div>
+      )}
     </>
   );
 
   return (
     <div className="flex flex-col h-full w-full">
+      {isAssistantEnabled && (
+        <>
+          <ImageAssistant
+            open={assistantOpen}
+            onOpenChange={setAssistantOpen}
+            onPromptGenerated={(prompt) => setInput(prompt)}
+            onSubmitPrompt={(prompt) => void submitPrompt(prompt)}
+            onInsertPrompt={(prompt) => setInput(prompt)}
+            initialPrompt={input}
+          />
+          <ImageEditAssistant
+            open={editAssistantOpen}
+            onOpenChange={setEditAssistantOpen}
+            onPromptGenerated={(prompt) => setInput(prompt)}
+            originalPrompt={selectedVersion?.prompt ?? ''}
+            imageUrl={selectedVersion?.imageUrl}
+          />
+        </>
+      )}
       <div className="flex-1 flex flex-col justify-start p-6 w-full mx-auto">
         {versions.length > 1 && (
           <div className="mb-3 w-3/4 mx-auto">
@@ -250,6 +298,20 @@ export default function ImageGenerationChat({
                 showAiBadge={showAiBadge}
                 onShowAiBadgeChange={setShowAiBadge}
               />
+              {isAssistantEnabled && showInputBox && (
+                <div className="flex justify-end mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditAssistantOpen(true)}
+                    className="gap-1.5 shrink-0"
+                  >
+                    <MagicWandIcon className="size-4" weight="duotone" />
+                    {tImageGeneration('edit-assistant-button')}
+                  </Button>
+                </div>
+              )}
             </ImageGenerationResult>
           )}
           {showInputBoxBelowImage && <div className="mt-6">{inputBox}</div>}
