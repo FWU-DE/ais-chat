@@ -4,6 +4,7 @@ import { runServerAction } from '@shared/actions/run-server-action';
 import {
   type PersonalContextActor,
   setConversationPersonalContextForUser,
+  setPersonalContextAutoUpdateEnabledForUser,
   setPersonalContextEnabledForUser,
   updatePersonalContextForUser,
 } from '@shared/personal-context/personal-context-service';
@@ -43,6 +44,18 @@ export async function setPersonalContextEnabledAction({ enabled }: { enabled: bo
   return runServerAction(
     'setPersonalContextEnabledAction',
     setPersonalContextEnabledForUser,
+  )({
+    actor: toPersonalContextActor({ user, federalState }),
+    enabled,
+  });
+}
+
+export async function setPersonalContextAutoUpdateEnabledAction({ enabled }: { enabled: boolean }) {
+  const { user, federalState } = await requireAuth();
+
+  return runServerAction(
+    'setPersonalContextAutoUpdateEnabledAction',
+    setPersonalContextAutoUpdateEnabledForUser,
   )({
     actor: toPersonalContextActor({ user, federalState }),
     enabled,

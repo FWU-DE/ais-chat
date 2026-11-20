@@ -996,6 +996,8 @@
     "description": "Hier stehen Informationen, die AIS.chat in Chats über Sie berücksichtigt. AIS.chat ergänzt den Text automatisch aus Ihren Gesprächen. Sie können ihn jederzeit selbst bearbeiten oder löschen.",
     "toggle-label": "Persönlichen Kontext verwenden",
     "toggle-description": "Ist die Option ausgeschaltet, wird der Text weder in Chats einbezogen noch automatisch ergänzt.",
+    "auto-update-toggle-label": "Automatisch ergänzen lassen",
+    "auto-update-toggle-description": "Ist die Option ausgeschaltet, ergänzt AIS.chat den Text nicht mehr automatisch aus Ihren Gesprächen. Der bestehende Text bleibt weiterhin in Chats verfügbar, Sie können ihn aber nur noch selbst bearbeiten.",
     "editor-label": "Inhalt",
     "editor-description": "Der Text ist Markdown. Angaben werden als Aufzählungspunkte unter Überschriften gepflegt.",
     "editor-placeholder": "## Über mich\n- Unterrichtet Mathematik in der Sekundarstufe I",

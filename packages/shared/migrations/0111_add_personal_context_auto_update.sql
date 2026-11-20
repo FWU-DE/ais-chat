@@ -1,0 +1,1 @@
+ALTER TABLE "personal_context" ADD COLUMN "auto_update_enabled" boolean DEFAULT true NOT NULL;

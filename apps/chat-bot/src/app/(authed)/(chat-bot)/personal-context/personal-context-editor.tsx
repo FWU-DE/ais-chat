@@ -10,14 +10,20 @@ import { useState, useTransition } from 'react';
 
 import { useToast } from '@/components/common/toast';
 
-import { setPersonalContextEnabledAction, updatePersonalContextAction } from './actions';
+import {
+  setPersonalContextAutoUpdateEnabledAction,
+  setPersonalContextEnabledAction,
+  updatePersonalContextAction,
+} from './actions';
 
 export function PersonalContextEditor({
   initialContent,
   initialEnabled,
+  initialAutoUpdateEnabled,
 }: {
   initialContent: string;
   initialEnabled: boolean;
+  initialAutoUpdateEnabled: boolean;
 }) {
   const t = useTranslations('personal-context');
   const toast = useToast();
@@ -25,6 +31,7 @@ export function PersonalContextEditor({
   const [content, setContent] = useState(initialContent);
   const [savedContent, setSavedContent] = useState(initialContent);
   const [enabled, setEnabled] = useState(initialEnabled);
+  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(initialAutoUpdateEnabled);
   const [isSaving, startSaving] = useTransition();
 
   const isDirty = content !== savedContent;
@@ -61,6 +68,20 @@ export function PersonalContextEditor({
     setContent('');
   }
 
+  function handleAutoUpdateToggle(checked: boolean) {
+    const previous = autoUpdateEnabled;
+    setAutoUpdateEnabled(checked);
+
+    startSaving(async () => {
+      const result = await setPersonalContextAutoUpdateEnabledAction({ enabled: checked });
+
+      if (!result.success) {
+        setAutoUpdateEnabled(previous);
+        toast.error(t('toasts.save-error'));
+      }
+    });
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
@@ -79,6 +100,21 @@ export function PersonalContextEditor({
             <span className="font-medium">{t('toggle-label')}</span>
           </div>
           <p className="text-sm text-muted-foreground">{t('toggle-description')}</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={autoUpdateEnabled}
+              onCheckedChange={handleAutoUpdateToggle}
+              disabled={!enabled}
+              aria-label={t('auto-update-toggle-label')}
+            />
+            <span className="font-medium">{t('auto-update-toggle-label')}</span>
+          </div>
+          <p className="text-sm text-muted-foreground">{t('auto-update-toggle-description')}</p>
         </CardContent>
       </Card>
 

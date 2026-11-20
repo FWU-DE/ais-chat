@@ -50,6 +50,25 @@ export async function dbSetPersonalContextEnabled({
   return personalContext;
 }
 
+export async function dbSetPersonalContextAutoUpdateEnabled({
+  userId,
+  enabled,
+}: {
+  userId: string;
+  enabled: boolean;
+}) {
+  const [personalContext] = await db
+    .insert(personalContextTable)
+    .values({ userId, autoUpdateEnabled: enabled })
+    .onConflictDoUpdate({
+      target: personalContextTable.userId,
+      set: { autoUpdateEnabled: enabled, updatedAt: new Date() },
+    })
+    .returning();
+
+  return personalContext;
+}
+
 export async function dbSetConversationPersonalContextEnabled({
   conversationId,
   userId,

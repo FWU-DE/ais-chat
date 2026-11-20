@@ -1,6 +1,7 @@
 import {
   dbGetPersonalContextByUserId,
   dbSetConversationPersonalContextEnabled,
+  dbSetPersonalContextAutoUpdateEnabled,
   dbSetPersonalContextEnabled,
   dbUpsertPersonalContent,
 } from '../db/functions/personal-context';
@@ -70,6 +71,7 @@ export async function getPersonalContextForUser({ actor }: { actor: PersonalCont
   return {
     content: personalContext?.content ?? '',
     enabled: personalContext?.enabled ?? true,
+    autoUpdateEnabled: personalContext?.autoUpdateEnabled ?? true,
     updatedAt: personalContext?.updatedAt ?? null,
   };
 }
@@ -96,6 +98,18 @@ export async function setPersonalContextEnabledForUser({
   requirePersonalContextAvailable(actor);
 
   return dbSetPersonalContextEnabled({ userId: actor.userId, enabled });
+}
+
+export async function setPersonalContextAutoUpdateEnabledForUser({
+  actor,
+  enabled,
+}: {
+  actor: PersonalContextActor;
+  enabled: boolean;
+}) {
+  requirePersonalContextAvailable(actor);
+
+  return dbSetPersonalContextAutoUpdateEnabled({ userId: actor.userId, enabled });
 }
 
 export async function setConversationPersonalContextForUser({

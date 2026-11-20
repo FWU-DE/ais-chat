@@ -94,6 +94,10 @@ export const personalContextTable = pgTable('personal_context', {
     .unique(),
   content: text('content').notNull().default(''),
   enabled: boolean('enabled').notNull().default(true),
+  // Whether AIS.chat may derive add/update/remove operations from conversations.
+  // Independent from `enabled`: a teacher can keep the profile in use while
+  // maintaining it by hand only.
+  autoUpdateEnabled: boolean('auto_update_enabled').notNull().default(true),
   createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
     .defaultNow()

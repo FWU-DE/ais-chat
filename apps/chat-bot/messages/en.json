@@ -81,6 +81,8 @@
     "description": "Information that AIS.chat takes into account about you in chats. AIS.chat adds to this text automatically based on your conversations. You can edit or delete it at any time.",
     "toggle-label": "Use personal context",
     "toggle-description": "When switched off, the text is neither included in chats nor extended automatically.",
+    "auto-update-toggle-label": "Update automatically",
+    "auto-update-toggle-description": "When switched off, AIS.chat stops adding to the text automatically from your conversations. The existing text stays available in chats, but you can only edit it yourself from then on.",
     "editor-label": "Content",
     "editor-description": "The text is Markdown. Entries are kept as bullet points under headings.",
     "editor-placeholder": "## About me\n- Teaches mathematics in lower secondary education",

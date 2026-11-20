@@ -159,7 +159,10 @@ export async function updatePersonalContextFromConversation({
   try {
     const personalContext = await dbGetPersonalContextByUserId({ userId });
 
-    if (personalContext !== undefined && !personalContext.enabled) {
+    if (
+      personalContext !== undefined &&
+      (!personalContext.enabled || !personalContext.autoUpdateEnabled)
+    ) {
       return;
     }
 

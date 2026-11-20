@@ -1,10 +1,26 @@
-import { describe, expect, it } from 'vitest';
+import { generateTextWithBilling } from '@ais-chat/ai-core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { dbGetPersonalContextByUserId } from '../db/functions/personal-context';
 import {
   buildExtractionWindow,
   PERSONAL_CONTEXT_EXCHANGE_INTERVAL,
   shouldRunPersonalContextExtraction,
+  updatePersonalContextFromConversation,
 } from './personal-context-extraction';
+import { savePersonalContextContent } from './personal-context-service';
+
+vi.mock('@ais-chat/ai-core', () => ({
+  generateTextWithBilling: vi.fn(),
+}));
+
+vi.mock('../db/functions/personal-context', () => ({
+  dbGetPersonalContextByUserId: vi.fn(),
+}));
+
+vi.mock('./personal-context-service', () => ({
+  savePersonalContextContent: vi.fn(),
+}));
 
 describe('shouldRunPersonalContextExtraction', () => {
   it('does not run before the first interval is complete', () => {
@@ -105,5 +121,59 @@ describe('buildExtractionWindow', () => {
 
   it('returns an empty string when there is nothing usable', () => {
     expect(buildExtractionWindow({ messages: [{ role: 'tool', content: 'x' }] })).toBe('');
+  });
+});
+
+describe('updatePersonalContextFromConversation', () => {
+  const args = {
+    userId: 'user-1',
+    conversationWindow: 'Lehrkraft: Ich unterrichte Mathematik in Klasse 8',
+    modelId: 'aux-model',
+    apiKeyId: 'api-key-1',
+  };
+
+  beforeEach(() => {
+    vi.mocked(dbGetPersonalContextByUserId).mockReset();
+    vi.mocked(generateTextWithBilling).mockReset();
+    vi.mocked(savePersonalContextContent).mockReset();
+  });
+
+  it('skips extraction when personal context usage is disabled', async () => {
+    vi.mocked(dbGetPersonalContextByUserId).mockResolvedValue({
+      enabled: false,
+      autoUpdateEnabled: true,
+      content: '',
+    } as Awaited<ReturnType<typeof dbGetPersonalContextByUserId>>);
+
+    await updatePersonalContextFromConversation(args);
+
+    expect(generateTextWithBilling).not.toHaveBeenCalled();
+  });
+
+  it('skips extraction when automatic updates are opted out, even while usage stays enabled', async () => {
+    vi.mocked(dbGetPersonalContextByUserId).mockResolvedValue({
+      enabled: true,
+      autoUpdateEnabled: false,
+      content: '',
+    } as Awaited<ReturnType<typeof dbGetPersonalContextByUserId>>);
+
+    await updatePersonalContextFromConversation(args);
+
+    expect(generateTextWithBilling).not.toHaveBeenCalled();
+  });
+
+  it('runs extraction when both usage and automatic updates are enabled', async () => {
+    vi.mocked(dbGetPersonalContextByUserId).mockResolvedValue({
+      enabled: true,
+      autoUpdateEnabled: true,
+      content: '',
+    } as Awaited<ReturnType<typeof dbGetPersonalContextByUserId>>);
+    vi.mocked(generateTextWithBilling).mockResolvedValue({
+      text: '[]',
+    } as Awaited<ReturnType<typeof generateTextWithBilling>>);
+
+    await updatePersonalContextFromConversation(args);
+
+    expect(generateTextWithBilling).toHaveBeenCalled();
   });
 });

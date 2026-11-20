@@ -81,6 +81,8 @@
     "description": "Informations qu'AIS.chat prend en compte à votre sujet dans les conversations. AIS.chat complète ce texte automatiquement à partir de vos échanges. Vous pouvez le modifier ou le supprimer à tout moment.",
     "toggle-label": "Utiliser le contexte personnel",
     "toggle-description": "Lorsque l'option est désactivée, le texte n'est ni utilisé dans les conversations ni complété automatiquement.",
+    "auto-update-toggle-label": "Compléter automatiquement",
+    "auto-update-toggle-description": "Lorsque l'option est désactivée, AIS.chat ne complète plus le texte automatiquement à partir de vos échanges. Le texte existant reste utilisé dans les conversations, mais vous ne pouvez plus le modifier que vous-même.",
     "editor-label": "Contenu",
     "editor-description": "Le texte est au format Markdown. Les informations sont organisées en puces sous des titres.",
     "editor-placeholder": "## À propos de moi\n- Enseigne les mathématiques au collège",

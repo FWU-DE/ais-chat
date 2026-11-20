@@ -81,6 +81,8 @@
     "description": "Informazioni che AIS.chat considera sul suo conto nelle chat. AIS.chat integra questo testo automaticamente a partire dalle sue conversazioni. Può modificarlo o eliminarlo in qualsiasi momento.",
     "toggle-label": "Utilizzare il contesto personale",
     "toggle-description": "Se l'opzione è disattivata, il testo non viene né utilizzato nelle chat né integrato automaticamente.",
+    "auto-update-toggle-label": "Integrare automaticamente",
+    "auto-update-toggle-description": "Se l'opzione è disattivata, AIS.chat non integra più automaticamente il testo dalle sue conversazioni. Il testo esistente resta comunque utilizzato nelle chat, ma potrà modificarlo solo manualmente.",
     "editor-label": "Contenuto",
     "editor-description": "Il testo è in formato Markdown. Le informazioni sono organizzate in elenchi puntati sotto i titoli.",
     "editor-placeholder": "## Su di me\n- Insegna matematica nella scuola secondaria di primo grado",
