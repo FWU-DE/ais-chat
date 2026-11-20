@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { isDefined, isNotNull, getDefinedOrThrow } from './guard';
+import { describe, expect, it } from 'vitest';
+
+import { getDefinedOrThrow, isDefined, isNotNull } from './guard';
 
 describe('isDefined', () => {
   it('should return true if the value is defined', () => {

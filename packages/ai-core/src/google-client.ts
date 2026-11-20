@@ -1,7 +1,15 @@
-import type { LlmModel } from '@ais-chat/api-database';
+import type { SensitiveLlmModel } from '@ais-chat/api-database';
+import { isLlmProvider } from '@ais-chat/api-database/llm-model';
 import { GoogleGenAI } from '@google/genai';
+import { instrumentGoogleGenAIClient } from '@sentry/server-utils';
+import { createHash } from 'crypto';
+import { GoogleAuth, type GoogleAuthOptions } from 'google-auth-library';
+
 import { ProviderConfigurationError } from './errors';
-import { instrumentGoogleGenAIClient } from '@sentry/core';
+
+type GoogleGenAIAuthOptions = NonNullable<
+  NonNullable<ConstructorParameters<typeof GoogleGenAI>[0]>['googleAuthOptions']
+>;
 
 const GOOGLE_API_VERSION = 'v1';
 const GOOGLE_CLOUD_PLATFORM_SCOPE = 'https://www.googleapis.com/auth/cloud-platform';
@@ -19,13 +27,64 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export function createGoogleClient(model: LlmModel): GoogleClientConfig {
-  if (model.setting.provider !== 'google') {
+export function getGoogleAuthOptions(
+  settings: Extract<SensitiveLlmModel['setting'], { provider: 'google' }>,
+  requireCredentials = false,
+): GoogleAuthOptions {
+  const authCredentials = settings.authCredentials;
+  if (authCredentials === undefined) {
+    if (requireCredentials) {
+      throw new ProviderConfigurationError('Google requires inline credentials');
+    }
+
+    return { scopes: [GOOGLE_CLOUD_PLATFORM_SCOPE] };
+  }
+
+  if (typeof authCredentials !== 'string') {
+    return { credentials: authCredentials, scopes: [GOOGLE_CLOUD_PLATFORM_SCOPE] };
+  }
+
+  try {
+    const credentials = JSON.parse(authCredentials) as unknown;
+    if (!isRecord(credentials)) {
+      throw new ProviderConfigurationError('Google credentials must be a JSON object');
+    }
+
+    return { credentials, scopes: [GOOGLE_CLOUD_PLATFORM_SCOPE] };
+  } catch (error) {
+    if (error instanceof ProviderConfigurationError) {
+      throw error;
+    }
+
+    throw new ProviderConfigurationError('Google credentials must be valid JSON');
+  }
+}
+
+export function createGoogleAuth(model: SensitiveLlmModel): GoogleAuth {
+  if (!isLlmProvider(model.setting, 'google')) {
     throw new ProviderConfigurationError('Invalid model configuration for Google');
   }
 
-  const { projectId, location } = model.setting;
-  const cacheKey = `${projectId}-${location}` as const;
+  return new GoogleAuth(getGoogleAuthOptions(model.setting, true));
+}
+
+function getCredentialsFingerprint(
+  authCredentials: Extract<SensitiveLlmModel['setting'], { provider: 'google' }>['authCredentials'],
+): string {
+  if (authCredentials === undefined) return 'adc';
+  const normalized =
+    typeof authCredentials === 'string' ? authCredentials : JSON.stringify(authCredentials);
+  return createHash('sha256').update(normalized).digest('hex');
+}
+
+export function createGoogleClient(model: SensitiveLlmModel): GoogleClientConfig {
+  if (!isLlmProvider(model.setting, 'google')) {
+    throw new ProviderConfigurationError('Invalid model configuration for Google');
+  }
+
+  const { projectId, location, authCredentials } = model.setting;
+  const cacheKey =
+    `${projectId}-${location}-${getCredentialsFingerprint(authCredentials)}` as const;
 
   const cachedClient = googleClientCache.get(cacheKey);
   if (cachedClient) {
@@ -38,9 +97,7 @@ export function createGoogleClient(model: LlmModel): GoogleClientConfig {
       project: projectId,
       location,
       apiVersion: GOOGLE_API_VERSION,
-      googleAuthOptions: {
-        scopes: [GOOGLE_CLOUD_PLATFORM_SCOPE],
-      },
+      googleAuthOptions: getGoogleAuthOptions(model.setting) as unknown as GoogleGenAIAuthOptions,
     }),
   );
 

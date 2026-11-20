@@ -1,10 +1,5 @@
-import {
-  type Voucher,
-  type CreateVoucherParams,
-  createVoucherSchema,
-  revokeVoucherSchema,
-  voucherSelectSchema,
-} from './voucher';
+import { VoucherInsertModel, VoucherUpdateModel } from '@shared/db/schema';
+
 import {
   dbGetVoucherByCode,
   dbGetVouchersByFederalStateId,
@@ -12,10 +7,16 @@ import {
   dbRedeemVoucher,
   dbUpdateVoucher,
 } from '../db/functions/voucher';
-import { VoucherInsertModel, VoucherUpdateModel } from '@shared/db/schema';
-import { cnanoid } from '../random/randomService';
-import { NotFoundError } from '../error/not-found-error';
 import { InvalidArgumentError } from '../error';
+import { NotFoundError } from '../error/not-found-error';
+import { cnanoid } from '../random/randomService';
+import {
+  type CreateVoucherParams,
+  createVoucherSchema,
+  revokeVoucherSchema,
+  type Voucher,
+  voucherSelectSchema,
+} from './voucher';
 
 const VOUCHER_VALIDITY_YEARS = 2;
 

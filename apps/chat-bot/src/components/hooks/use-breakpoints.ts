@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 // That is original definition of breakpoints with tailwindcss v3.
 // In future we should use helper variables from tailwind directly and get rid of this file.

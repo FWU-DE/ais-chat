@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { hasAccessToModel } from './model-access';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { AiModel } from '../images/types';
+import { hasAccessToModel } from './model-access';
 
 // Mock the api-database functions
 vi.mock('@ais-chat/api-database', () => ({

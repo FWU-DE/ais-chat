@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { convertToAiCoreMessages } from './messages';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions.js';
+import { describe, expect, it } from 'vitest';
+
+import { convertToAiCoreMessages } from './messages';
 
 describe('convertToAiCoreMessages', () => {
   it('converts simple string-content messages', () => {

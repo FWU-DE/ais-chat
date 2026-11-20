@@ -3,16 +3,19 @@ name: ais-chat-local
 services:
   # Keycloak for authentication (PRIMARY NETWORK HOST)
   # Containers share this network namespace via network_mode: "service:keycloak"
-  # This is required to access keycloak using the same URL from within the container and the browser
+  # so that a service is reachable under the same URL from within a container and
+  # from the browser
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.0
+    image: quay.io/keycloak/keycloak:26.8.2-3
     restart: unless-stopped
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       CLIENT_NAME: ais-chat-dev-client
       CLIENT_SECRET: ClientSecret
-    entrypoint: /opt/keycloak/data/import/entrypoint.sh
+      # ais-chat-app shares keycloak's netns (network_mode: service:keycloak), so it's accessible on localhost.
+      BACKCHANNEL_LOGOUT_URL: http://localhost:3000/api/auth/backchannel-logout
+    command: start-dev --import-realm --db dev-file
     volumes:
       - keycloak_data:/opt/keycloak/data/h2
       - ./keycloak:/opt/keycloak/data/import
@@ -21,14 +24,15 @@ services:
       - '3001:3001' # ais-chat-admin
       - '3002:3002' # ais-chat-api
       - '8080:8080' # keycloak
-      - '8089:8089' # bifrost
+      - '9000:9000' # rustfs
+      - '9001:9001' # rustfs console
     depends_on:
       fix-keycloak-volume-ownership:
         condition: service_completed_successfully
 
   # Fix keycloak volume permissions (runs with uid 1000)
   fix-keycloak-volume-ownership:
-    image: alpine
+    image: alpine:3.24.4
     restart: no
     entrypoint: /bin/sh -c "chown 1000 /keycloak"
     volumes:
@@ -57,7 +61,7 @@ services:
 
   # Valkey (Redis-compatible) for session storage
   valkey:
-    image: ghcr.io/valkey-io/valkey:9.1.1-alpine
+    image: ghcr.io/valkey-io/valkey:9.2.0-alpine
     restart: unless-stopped
     volumes:
       - valkey_data:/data
@@ -69,25 +73,9 @@ services:
       timeout: 5s
       retries: 5
 
-  # RabbitMQ for async messaging and reporting
-  rabbitmq:
-    image: rabbitmq:4-management
-    restart: unless-stopped
-    environment:
-      RABBITMQ_DEFAULT_USER: user
-      RABBITMQ_DEFAULT_PASS: password
-    ports:
-      - '5672:5672'
-      - '15672:15672'
-    healthcheck:
-      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
   # Crawl4AI for web scraping capabilities
   crawl4ai:
-    image: unclecode/crawl4ai:0.9.2
+    image: unclecode/crawl4ai:0.9.5
     environment:
       CRAWL4AI_API_TOKEN: ais-chat-crawl4ai-token
     restart: unless-stopped
@@ -109,12 +97,16 @@ services:
 
   # Xberg text extraction service
   xberg:
-    image: ghcr.io/xberg-io/xberg:1.0.0-rc.29-core
+    image: ghcr.io/xberg-io/xberg:1.4.2-core
     restart: unless-stopped
     environment:
-      XBERG_MAX_UPLOAD_SIZE_MB: '50'
+      XBERG_MAX_REQUEST_BODY_BYTES: '26214400'
+      XBERG_MAX_MULTIPART_FIELD_BYTES: '26214400'
     ports:
       - '8000:8000'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev
     volumes:
       - xberg_cache:/app/.xberg
     healthcheck:
@@ -124,40 +116,75 @@ services:
       retries: 3
 
   # RustFS - S3-compatible object storage
+  # Shares keycloak's netns so presigned URLs signed for http://localhost:9000 are
+  # reachable both from the app containers and from the browser on the host.
   rustfs:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:1.0.4
     restart: unless-stopped
     environment:
       RUSTFS_ADDRESS: 0.0.0.0:9000
       RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
       RUSTFS_CONSOLE_ENABLE: 'true'
       RUSTFS_ACCESS_KEY: rustfsadmin
-      RUSTFS_SECRET_KEY: rustfsadmin123
+      RUSTFS_SECRET_KEY: RustFS-Admin-123456
       RUSTFS_VOLUMES: /data
+      RUSTFS_CORS_ALLOWED_ORIGINS: 'http://localhost:3000'
     volumes:
       - rustfs_data:/data
-    ports:
-      - '9000:9000'
-      - '9001:9001'
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://127.0.0.1:9000/health']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  bifrost:
-    image: maximhq/bifrost:v1.6.5
-    restart: unless-stopped
-    environment:
-      APP_HOST: 0.0.0.0
-      APP_PORT: '8089'
-    volumes:
-      - bifrost_data:/app/data
+      interval: 2s
+      timeout: 2s
+      retries: 10
+      start_period: 2s
     network_mode: service:keycloak
     depends_on:
       keycloak:
         condition: service_started
+
+  bifrost:
+    image: ghcr.io/maximhq/bifrost:v2.6.0
+    restart: unless-stopped
+    environment:
+      BIFROST_ADMIN_USERNAME: admin
+      BIFROST_ADMIN_PASSWORD: admin
+      BIFROST_API_KEY: sk-bf-example-key
+    volumes:
+      - ./bifrost/config.json:/app/data/config.json:ro
+      - bifrost_data:/app/data
+    ports:
+      - '8089:8080'
+
+  # Sandboxed arithmetic service backed by libqalculate.
+  calculator:
+    image: ghcr.io/fwu-de/ais-chat-calculator:latest
+    restart: unless-stopped
+    expose:
+      - '8080'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8080/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # AIS.chat API - OpenAI compatible API service
   ais-chat-api:
@@ -168,7 +195,6 @@ services:
       DATABASE_URL: postgresql://admin:test1234@postgres:5432/api_db
 
       # API Configuration
-      API_NAME: ais-chat
       API_KEY: ais-chat-api_api-key
       PORT: 3002
 
@@ -182,11 +208,19 @@ services:
       LLM_GPT4OMINI_BASE_URL: PLACEHOLDER_BASE_URL
       LLM_GPT5NANO_API_KEY: API_KEY_PLACEHOLDER
       LLM_GPT5NANO_BASE_URL: PLACEHOLDER_BASE_URL
+      LLM_GPT_IMAGE_API_KEY: API_KEY_PLACEHOLDER
+      LLM_GPT_IMAGE_BASE_URL: PLACEHOLDER_BASE_URL
+
+      # Bifrost LLM proxy
+      BIFROST_BASE_URL: http://bifrost:8080/openai/v1
+      BIFROST_API_KEY: sk-bf-example-key
     network_mode: service:keycloak
     depends_on:
       postgres:
         condition: service_healthy
       keycloak:
+        condition: service_started
+      bifrost:
         condition: service_started
 
   # AIS.chat App - Main user-facing application
@@ -209,6 +243,8 @@ services:
       VIDIS_CLIENT_SECRET: ClientSecret
       VIDIS_BASE_URI: http://localhost:8080/realms/ais-chat-local
       VIDIS_ISSUER_URI: http://localhost:8080/realms/ais-chat-local
+      # Local keycloak is served over plain HTTP
+      VIDIS_ALLOW_INSECURE_DISCOVERY: true
 
       # Databases
       DATABASE_URL: postgresql://admin:test1234@postgres:5432/app_db
@@ -217,9 +253,6 @@ services:
 
       # Valkey (Redis) for sessions
       VALKEY_URL: redis://valkey:6379/0
-
-      # RabbitMQ for reporting
-      RABBITMQ_URI: amqp://user:password@rabbitmq:5672
 
       # AIS.chat API connection
       API_URL: http://localhost:3002
@@ -231,28 +264,35 @@ services:
       # Xberg text extraction
       XBERG_URL: http://xberg:8000
 
+      # Calculator arithmetic service
+      CALCULATOR_URL: http://calculator:8080
+
+      # Bifrost LLM proxy
+      BIFROST_BASE_URL: http://bifrost:8080/openai/v1
+      BIFROST_API_KEY: sk-bf-example-key
+
       # S3 Object Storage for file uploads and image generation
-      # Note: must be changed to a publicly accessible S3 storage, when LLM should have file access (e.g., uploading pictures and asking about content)
-      OTC_SECRET_ACCESS_KEY: rustfsadmin123
+      # RustFS shares keycloak's netns, so localhost:9000 resolves to it both inside
+      # the container and in the browser that loads the presigned URLs.
+      # IMAGE_ATTACHMENT_MODE=base64 is still required because the LLM provider
+      # (not the browser) cannot reach localhost:9000.
+      OTC_SECRET_ACCESS_KEY: RustFS-Admin-123456
       OTC_ACCESS_KEY_ID: rustfsadmin
-      OTC_S3_HOSTNAME: http://rustfs:9000
+      OTC_S3_HOSTNAME: http://localhost:9000
+      OTC_S3_REGION: eu-de
       OTC_BUCKET_NAME: ais-chat
+      IMAGE_ATTACHMENT_MODE: base64
 
       # Encryption key for sensitive data (IMPORTANT: Change in production!)
       ENCRYPTION_KEY: default-encryption-key-change-in-production
-
-      # Google Vertex AI (optional - for image generation)
-      GOOGLE_APPLICATION_CREDENTIALS: ''
-
       # Logging
+      LOG_TO_STDOUT: true
       NEXT_PUBLIC_SENTRY_LOG_LEVEL: debug
     network_mode: service:keycloak
     depends_on:
       postgres:
         condition: service_healthy
       valkey:
-        condition: service_healthy
-      rabbitmq:
         condition: service_healthy
       crawl4ai:
         condition: service_healthy
@@ -262,6 +302,27 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_started
+      bifrost:
+        condition: service_started
+      calculator:
+        condition: service_healthy
+
+  # Periodic admin calls (popularity refresh, cleanup), see scheduled-tasks.sh
+  scheduled-tasks:
+    image: curlimages/curl:8.23.0
+    restart: unless-stopped
+    environment:
+      APP_HOSTNAME: localhost
+      PORT: 3000
+      API_KEY: ais-chat-app_api-key
+    # Shares keycloak's netns like ais-chat-app, so the app is reachable on localhost:3000
+    network_mode: service:keycloak
+    entrypoint: ['/bin/sh', '/scheduled-tasks.sh']
+    volumes:
+      - ./scheduled-tasks.sh:/scheduled-tasks.sh:ro
+    depends_on:
+      ais-chat-app:
+        condition: service_healthy
 
   # AIS.chat Admin - Administration interface
   ais-chat-admin:
@@ -277,9 +338,9 @@ services:
       AUTH_SECRET: ais-chat-default-secret-please-change-in-production-use-openssl-rand-base64-32
 
       # Keycloak
-      KEYCLOAK_CLIENT_ID: ais-chat-dev-client
+      KEYCLOAK_CLIENT_ID: ais-chat-admin-dev-client
       KEYCLOAK_CLIENT_SECRET: ClientSecret
-      KEYCLOAK_ISSUER: http://localhost:8080/realms/ais-chat-local
+      KEYCLOAK_ISSUER: http://localhost:8080/realms/ais-chat-admin-local
 
       # AIS.chat app
       DATABASE_URL: postgresql://admin:test1234@postgres:5432/app_db
@@ -291,7 +352,20 @@ services:
       API_URL: http://localhost:3002
       # Note: DB_CACHE_TTL_SECONDS should NOT be set in admin app
 
+      # Bifrost LLM proxy
+      BIFROST_ADMIN_URL: http://bifrost:8080
+      BIFROST_ADMIN_USERNAME: admin
+      BIFROST_ADMIN_PASSWORD: admin
+
+      # S3 Object Storage for file uploads
+      OTC_SECRET_ACCESS_KEY: RustFS-Admin-123456
+      OTC_ACCESS_KEY_ID: rustfsadmin
+      OTC_S3_HOSTNAME: http://localhost:9000
+      OTC_S3_REGION: eu-de
+      OTC_BUCKET_NAME: ais-chat
+
       # Monitoring (optional, leave empty to disable)
+      LOG_TO_STDOUT: true
       NEXT_PUBLIC_SENTRY_LOG_LEVEL: info
     network_mode: service:keycloak
     depends_on:
@@ -299,10 +373,12 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_started
+      bifrost:
+        condition: service_started
 
   # Initialization container
   ais-chat-init:
-    image: alpine:3.24.1
+    image: alpine:3.24.4
     restart: no
     environment:
       # Database URLs for both databases
@@ -316,6 +392,8 @@ services:
       LLM_GPT4OMINI_BASE_URL: PLACEHOLDER_BASE_URL
       LLM_GPT5NANO_API_KEY: API_KEY_PLACEHOLDER
       LLM_GPT5NANO_BASE_URL: PLACEHOLDER_BASE_URL
+      LLM_GPT5IMAGE_API_KEY: API_KEY_PLACEHOLDER
+      LLM_GPT5IMAGE_BASE_URL: PLACEHOLDER_BASE_URL
     command: >
       sh -c "
         echo '=== Starting AIS.chat Initialization ==='
@@ -324,12 +402,9 @@ services:
         apk add --no-cache s3cmd
 
         echo '=== Creating S3 bucket: ais-chat ==='
-        s3cmd --access_key=rustfsadmin --secret_key=rustfsadmin123 --host=rustfs:9000 --host-bucket='rustfs:9000/%(bucket)' --region=us-east-1 --no-ssl --no-check-certificate mb s3://ais-chat
+        s3cmd --access_key=rustfsadmin --secret_key=RustFS-Admin-123456 --host=localhost:9000 --host-bucket='localhost:9000/%(bucket)' --region=eu-de --no-ssl --no-check-certificate mb s3://ais-chat
 
-        echo '=== Seeding api_db ==='
-        apk add --no-cache postgresql-client
-        PGPASSWORD=test1234 psql -h postgres -U admin -d api_db -c \"INSERT INTO organization (name) SELECT 'LOCAL' WHERE NOT EXISTS (SELECT 1 FROM organization);\"
-        # Remaining seeding is done manually via ais-chat-admin interface
+        # Models, provider keys and projects are configured manually via ais-chat-admin interface
 
         echo '=== AIS.chat initialization completed successfully ==='
       "

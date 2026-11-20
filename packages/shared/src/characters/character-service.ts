@@ -1,33 +1,44 @@
+import { computeBlobHash } from '@ais-chat/shared-core/crypto/blob-hash';
+import {
+  filterCommunitySharedByAssociatedSchool,
+  filterReadableCustomChats,
+  requireTeacherRole,
+  verifyReadAccess,
+  verifySuspensionState,
+  verifyWriteAccess,
+} from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
+import { verifyCommunitySharingInactive } from '@shared/community-templates/community-template-service';
 import { db } from '@shared/db';
 import {
   dbCreateCharacterShare,
   dbDeleteCharacterByIdAndUser,
-  dbExtendSharedCharacterConversationExpiration,
+  dbExtendSharedCharacterExpiration,
   dbGetAllAccessibleCharacters,
   dbGetAllCharactersByUser,
   dbGetCharacterById,
-  dbGetCharacterByIdOptionalShareData,
-  dbGetCharacterByIdWithShareData,
-  dbGetCommunityCharacters,
+  dbGetCharacterByIdForConversation,
+  dbGetCharacterByIdWithManageableShare,
   dbGetCharacters,
   dbGetCharactersByAssociatedSchools,
-  dbGetCharactersByUser,
+  dbGetCharactersByIdsOptionalShareData,
+  dbGetCharactersByUserFavorite,
+  dbGetCommunityCharacters,
   dbGetGlobalCharacters,
   dbGetLatestManageableCharacterShare,
   dbStopCharacterShare,
   dbUpdateCharacterShareTokenPointsLimit,
 } from '@shared/db/functions/character';
-import { dbGetFileForCharacter, dbGetRelatedCharacterFiles } from '@shared/db/functions/files';
+import {
+  dbDeleteFileIfUnreferenced,
+  dbGetFileForCharacter,
+  dbGetRelatedCharacterFiles,
+  dbVerifyFileOwner,
+} from '@shared/db/functions/files';
 import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
-import { FederalStateModel } from '@shared/federal-states/types';
+import { dbGetSharedCharacterChatUsageInCentByCharacterId } from '@shared/db/functions/token-points';
+import { dbIsUserFavorite } from '@shared/db/functions/user-favorites';
 import {
-  getUsedBudgetInCentByUser,
-  getMaxBudgetInCentByUser,
-} from '@shared/users/user-budget-service';
-import {
-  AccessLevel,
-  accessLevelSchema,
   CharacterFileMapping,
   CharacterOptionalShareDataModel,
   CharacterSelectModel,
@@ -35,49 +46,37 @@ import {
   characterUpdateSchema,
   CharacterWithShareDataModel,
   FileModel,
-  fileTable,
 } from '@shared/db/schema';
 import { checkParameterUUID, ForbiddenError, InvalidArgumentError } from '@shared/error';
 import { NotFoundError } from '@shared/error/not-found-error';
+import { FederalStateModel } from '@shared/federal-states/types';
 import {
   deleteAvatarPicture,
   deleteMessageAttachments,
   getAvatarPictureUrl,
 } from '@shared/files/fileService';
-import { buildCharacterPictureKey } from '@shared/utils/picture-key';
+import { OverviewFilter } from '@shared/overview-filter';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
+import { MAX_SHARE_USAGE_TIME_LIMIT_IN_MINUTES } from '@shared/sharing/const';
 import { generateInviteCode } from '@shared/sharing/generate-invite-code';
+import { copyCharacter, copyRelatedTemplateFiles } from '@shared/templates/template-service';
+import { sharedCharacterChatHasReachedTokenPointsLimit } from '@shared/users/usage';
 import {
-  MAX_SHARE_USAGE_TIME_LIMIT_IN_MINUTES,
-  SHARE_EXTENSION_WINDOW_MS,
-} from '@shared/sharing/const';
-import {
-  copyCharacter,
-  copyEntityPictureIfExists,
-  copyRelatedTemplateFiles,
-} from '@shared/templates/template-service';
-import { OverviewFilter } from '@shared/overview-filter';
-import { removeNullishValues } from '@shared/utils/remove-nullish-values';
+  getMaxBudgetInCentByUser,
+  getUsedBudgetInCentByUser,
+} from '@shared/users/user-budget-service';
+import { getUserSettings } from '@shared/users/user-settings-service';
+import { uniqueById } from '@shared/utils/arrays';
+import { buildCharacterPictureKey } from '@shared/utils/picture-key';
 import {
   getChangedKeys,
   getPreservedUpdatedAtForExemptedKeys,
 } from '@shared/utils/preserve-updated-at';
+import { removeNullishValues } from '@shared/utils/remove-nullish-values';
 import { generateUUID } from '@shared/utils/uuid';
 import { and, eq } from 'drizzle-orm';
 import z from 'zod';
-import { computeBlobHash } from '@ais-chat/shared-core/crypto/blob-hash';
-import {
-  requireTeacherRole,
-  verifySuspensionState,
-  verifyReadAccess,
-  verifyWriteAccess,
-  filterCommunitySharedByAssociatedSchool,
-  filterReadableCustomChats,
-} from '@shared/auth/authorization-service';
-import { dbGetSharedCharacterChatUsageInCentByCharacterId } from '@shared/db/functions/token-points';
-import { sharedCharacterChatHasReachedTokenPointsLimit } from '@shared/users/usage';
-import { isShareWithinGraceWindow } from '@shared/sharing/is-share-within-grace-window';
 
 function buildAvatarFilename(hash: string) {
   return `avatar_${hash}`;
@@ -112,41 +111,15 @@ export const createNewCharacter = async ({
     });
     verifySuspensionState({ item: sourceCharacter });
 
-    let insertedCharacter = await copyCharacter(
-      templateId,
-      'private',
-      user,
-      duplicateCharacterName,
-    );
+    const insertedCharacter = await copyCharacter(templateId, false, user, duplicateCharacterName);
 
-    const copyOfTemplatePicture = await copyEntityPictureIfExists({
-      sourcePictureId: insertedCharacter.pictureId,
-      newEntityId: insertedCharacter.id,
-      buildPictureKey: buildCharacterPictureKey,
-    });
-
-    if (copyOfTemplatePicture) {
-      // Update the character with the new picture
-      const [updatedCharacter] = await db
-        .update(characterTable)
-        .set({ pictureId: copyOfTemplatePicture })
-        .where(eq(characterTable.id, insertedCharacter.id))
-        .returning();
-
-      if (updatedCharacter) {
-        insertedCharacter = {
-          ...updatedCharacter,
-          ownerSchoolIds: user.schoolIds,
-        } as typeof insertedCharacter;
-      }
-    }
-
-    await copyRelatedTemplateFiles('character', templateId, insertedCharacter.id);
+    await copyRelatedTemplateFiles('character', templateId, insertedCharacter.id, user.id);
     return insertedCharacter;
   }
 
   // Generate uuid beforehand to avoid two db transactions for create and immediate update
   const characterId = generateUUID();
+  const userSettings = await getUserSettings({ userId: user.id });
   const llmModels = await dbGetLlmModelsByFederalStateId({
     federalStateId: federalStateId,
   });
@@ -166,6 +139,8 @@ export const createNewCharacter = async ({
       name: '',
       userId: user.id,
       modelId: model.id,
+      voice: userSettings?.defaultSpeechVoice,
+      speechOnly: userSettings?.defaultIsSpeechOnly,
     })
     .returning();
 
@@ -196,14 +171,29 @@ export const deleteFileMappingAndEntity = async ({
   const { character } = await getCharacterInfo(characterId, user.id);
   verifyWriteAccess({ item: character, user });
 
-  // Delete the mapping and the file entry
-  await db.transaction(async (tx) => {
-    await tx.delete(CharacterFileMapping).where(eq(CharacterFileMapping.fileId, fileId));
-    await tx.delete(fileTable).where(eq(fileTable.id, fileId));
+  if (
+    (await dbGetFileForCharacter({ characterId, fileId })) === undefined ||
+    !(await dbVerifyFileOwner({ fileId, userId: user.id }))
+  ) {
+    throw new ForbiddenError('Not authorized to delete this file');
+  }
+
+  // Delete the mapping and remove the file only when it has no other references.
+  const fileWasDeleted = await db.transaction(async (tx) => {
+    await tx
+      .delete(CharacterFileMapping)
+      .where(
+        and(
+          eq(CharacterFileMapping.characterId, characterId),
+          eq(CharacterFileMapping.fileId, fileId),
+        ),
+      );
+    return dbDeleteFileIfUnreferenced(tx, fileId);
   });
 
-  // Delete the file from S3
-  await deleteMessageAttachments([fileId]);
+  if (fileWasDeleted) {
+    await deleteMessageAttachments([fileId]);
+  }
 };
 
 /**
@@ -251,6 +241,10 @@ export const linkFileToCharacter = async ({
   const { character } = await getCharacterInfo(characterId, user.id);
   verifyWriteAccess({ item: character, user });
 
+  if (!(await dbVerifyFileOwner({ fileId, userId: user.id }))) {
+    throw new ForbiddenError('Not authorized to link this file');
+  }
+
   // create a new file mapping
   const [insertedFileMapping] = await db
     .insert(CharacterFileMapping)
@@ -262,49 +256,50 @@ export const linkFileToCharacter = async ({
 };
 
 /**
- * User can share a character he owns with the school or community
- * or unshare it (access level = private).
- * User is not allowed to set the access level to global.
+ * User can share a character he owns with the school, or unshare it (private).
+ * Community sharing is handled separately via the community-template-request workflow;
+ * this function is not authorized to change it.
  */
-export const updateCharacterAccessLevel = async ({
+export const updateCharacterSchoolSharing = async ({
   characterId,
-  accessLevel,
+  isSchoolShared,
   user,
 }: {
   characterId: string;
-  accessLevel: AccessLevel;
+  isSchoolShared: boolean;
   user: Pick<UserModel, 'id'>;
 }) => {
   checkParameterUUID(characterId);
-  accessLevelSchema.parse(accessLevel);
-
-  if (accessLevel === 'global') {
-    throw new ForbiddenError('Not authorized to set the access level to global');
-  }
 
   const { character } = await getCharacterInfo(characterId, user.id);
   verifyWriteAccess({ item: character, user });
   verifySuspensionState({ item: character });
 
-  if (character.accessLevel === accessLevel) {
+  if (character.isSchoolShared === isSchoolShared) {
     return character;
+  }
+
+  if (!isSchoolShared) {
+    await verifyCommunitySharingInactive({
+      entityRef: { entityType: 'character', entityId: characterId },
+      isCommunityShared: character.isCommunityShared,
+    });
   }
 
   const preservedUpdatedAt = getPreservedUpdatedAtForExemptedKeys({
     entity: character,
-    values: { accessLevel },
-    exemptedKeys: ['accessLevel'],
+    values: { isSchoolShared },
+    exemptedKeys: ['isSchoolShared'],
   });
 
-  // Update the access level in database
   const [updatedCharacter] = await db
     .update(characterTable)
-    .set({ accessLevel, ...(preservedUpdatedAt ? { updatedAt: preservedUpdatedAt } : {}) })
+    .set({ isSchoolShared, ...(preservedUpdatedAt ? { updatedAt: preservedUpdatedAt } : {}) })
     .where(and(eq(characterTable.id, characterId), eq(characterTable.userId, user.id)))
     .returning();
 
   if (updatedCharacter === undefined) {
-    throw new Error('Could not update the access level of the character');
+    throw new Error('Could not update the school sharing state of the character');
   }
 
   return updatedCharacter;
@@ -314,7 +309,9 @@ export const updateCharacterAccessLevel = async ({
  * Schema for updating character details that are allowed to be changed by the user.
  */
 const updateCharacterSchema = characterUpdateSchema.omit({
-  accessLevel: true,
+  isSchoolShared: true,
+  isCommunityShared: true,
+  isGlobal: true,
   isDeleted: true,
   originalCharacterId: true,
   pictureId: true,
@@ -346,6 +343,13 @@ export const updateCharacter = async ({
 
   if (changedKeys.length === 0) {
     return existingCharacter;
+  }
+
+  if (changedKeys.includes('hasLinkAccess') && !parsedCharacterValues.hasLinkAccess) {
+    await verifyCommunitySharingInactive({
+      entityRef: { entityType: 'character', entityId: character.id },
+      isCommunityShared: existingCharacter.isCommunityShared,
+    });
   }
 
   const preservedUpdatedAt = getPreservedUpdatedAtForExemptedKeys({
@@ -385,16 +389,17 @@ export const deleteCharacter = async ({
   const { character } = await getCharacterInfo(characterId, user.id);
   verifyWriteAccess({ item: character, user });
 
-  const relatedFiles = await dbGetRelatedCharacterFiles(characterId);
-
   // delete character from db
-  const deletedCharacter = await dbDeleteCharacterByIdAndUser({ characterId, user });
+  const { deletedCharacter, deletedFileIds } = await dbDeleteCharacterByIdAndUser({
+    characterId,
+    user,
+  });
 
   // delete avatar picture from S3
   await deleteAvatarPicture(character.pictureId);
 
   // delete all related files linked to this character
-  await deleteMessageAttachments(relatedFiles.map((file) => file.id));
+  await deleteMessageAttachments(deletedFileIds);
 
   return deletedCharacter;
 };
@@ -611,7 +616,7 @@ export const extendCharacterShareExpiration = async ({
     throw new InvalidArgumentError('total usage time limit must not exceed 130 days');
   }
 
-  const updatedShare = await dbExtendSharedCharacterConversationExpiration({
+  const updatedShare = await dbExtendSharedCharacterExpiration({
     share: currentShare,
     additionalTimeInMinutes,
   });
@@ -702,6 +707,30 @@ export const getCharacterForChatSession = async ({
   return character;
 };
 
+export const getCharacterForExistingConversation = async ({
+  characterId,
+  conversationId,
+  user,
+}: {
+  characterId: string;
+  conversationId: string;
+  user: Pick<UserModel, 'id' | 'schoolIds'>;
+}) => {
+  checkParameterUUID(characterId, conversationId);
+  const character = await dbGetCharacterByIdForConversation({
+    characterId,
+    conversationId,
+    userId: user.id,
+  });
+  if (!character) throw new NotFoundError('Character not found');
+  verifyReadAccess({
+    item: character,
+    user,
+  });
+
+  return character;
+};
+
 /**
  * Loads character for edit view.
  * Throws if the user is not authorized to access the character:
@@ -728,12 +757,21 @@ export const getCharacterForEditView = async ({
   maxBudget: number | null;
   usedBudget: number;
   budgetUsedBySharedChat: number;
+  isFavorite: boolean;
 }> => {
   checkParameterUUID(characterId);
   requireTeacherRole(user.userRole);
-  const character = await dbGetCharacterByIdOptionalShareData({ characterId, user });
+  const [character] = await dbGetCharactersByIdsOptionalShareData({
+    characterIds: [characterId],
+    user,
+  });
   if (!character) throw new NotFoundError('Character not found');
   verifyReadAccess({ item: character, user });
+
+  const isFavorite = await dbIsUserFavorite({
+    userId: user.id,
+    entityRef: { entityType: 'character', entityId: characterId },
+  });
 
   const relatedFiles = await fetchFileMappings({
     characterId,
@@ -770,6 +808,7 @@ export const getCharacterForEditView = async ({
     maxBudget,
     usedBudget,
     budgetUsedBySharedChat,
+    isFavorite,
   };
 };
 
@@ -792,13 +831,12 @@ export const getSharedCharacter = async ({
   userId: string;
 }): Promise<CharacterWithShareDataModel> => {
   checkParameterUUID(characterId);
-  const character = await dbGetCharacterByIdWithShareData({ characterId, user: { id: userId } });
+  const character = await dbGetCharacterByIdWithManageableShare({
+    characterId,
+    user: { id: userId },
+  });
 
-  if (!character || character.manuallyStoppedAt !== null) {
-    throw new NotFoundError('Character not found');
-  }
-
-  if (!isShareWithinGraceWindow(character.expiredAt, SHARE_EXTENSION_WINDOW_MS)) {
+  if (!character) {
     throw new NotFoundError('Character not found');
   }
 
@@ -825,35 +863,6 @@ export async function getCharacters({
  * Returns the list of available characters that the user can access
  * based on userId, schools associated with the user, federalStateId and access level.
  */
-export async function getCharacterByAccessLevel({
-  accessLevel,
-  user,
-}: {
-  accessLevel: AccessLevel;
-  user: Pick<UserModel, 'id' | 'schoolIds' | 'federalStateId'>;
-}): Promise<CharacterOptionalShareDataModel[]> {
-  let characters: CharacterOptionalShareDataModel[];
-
-  switch (accessLevel) {
-    case 'community':
-      characters = await dbGetCommunityCharacters({ user });
-      break;
-    case 'global':
-      characters = await dbGetGlobalCharacters({ user });
-      break;
-    case 'school':
-      characters = await dbGetCharactersByAssociatedSchools({ user });
-      break;
-    case 'private':
-      characters = await dbGetCharactersByUser({ user });
-      break;
-    default:
-      return [];
-  }
-
-  return filterReadableCustomChats({ items: characters, user });
-}
-
 export async function getCharactersByOverviewFilter({
   filter,
   user,
@@ -881,10 +890,14 @@ export async function getCharactersByOverviewFilter({
         dbGetCharactersByAssociatedSchools({ user }),
         dbGetCommunityCharacters({ user }),
       ]);
-      characters = [
+      characters = uniqueById([
         ...schoolCharacters,
         ...filterCommunitySharedByAssociatedSchool({ items: communityCharacters, user }),
-      ];
+      ]);
+      break;
+    }
+    case 'favorites': {
+      characters = await dbGetCharactersByUserFavorite({ user });
       break;
     }
     default:
@@ -911,7 +924,7 @@ export const getCharacterInfo = async (
 
   return {
     isOwner: character?.userId === userId,
-    isPrivate: character?.accessLevel === 'private',
+    isPrivate: !character?.isSchoolShared && !character?.isCommunityShared && !character?.isGlobal,
     character,
   };
 };

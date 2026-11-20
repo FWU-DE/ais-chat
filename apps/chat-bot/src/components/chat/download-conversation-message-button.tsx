@@ -1,57 +1,72 @@
 'use client';
 
-import React from 'react';
-import Spinner from '@/components/icons/spinner';
-import { useToast } from '@/components/common/toast';
-import { useTranslations } from 'next-intl';
-import { Button } from '@ui/components/button';
 import { DownloadSimpleIcon } from '@phosphor-icons/react';
-import { downloadFileFromBlob, extractFilenameFromResponse } from '@/utils/files/blob-download';
+import { Button } from '@ui/components/button';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
+import { useToast } from '@/components/common/toast';
+import Spinner from '@/components/icons/spinner';
+import type { ChatMessage } from '@/types/chat';
+import { downloadFileFromBlob } from '@/utils/files/blob-download';
+import {
+  createConversationExportMessages,
+  formatConversationExport,
+  markdownToDocxBlob,
+} from '@/utils/files/markdown-docx';
+
+import type { ConversationDownloadFile } from './conversation-download-context';
+import { useConversationDownload } from './conversation-download-context';
 
 type DownloadConversationMessageButtonProps = {
-  conversationId: string;
-  messageId: string;
+  message: ChatMessage;
+  files: ConversationDownloadFile[];
   characterName?: string;
 };
 
 type DownloadConversationMessageParams = {
-  conversationId: string;
-  messageId: string;
+  message: DownloadConversationMessageButtonProps['message'];
+  files: ConversationDownloadFile[];
   characterName?: string;
+  modelName?: string;
+  conversationTitle?: string;
 };
 
 export async function fetchConversationMessageDownload({
-  conversationId,
-  messageId,
+  message,
+  files,
   characterName,
+  modelName,
+  conversationTitle,
 }: DownloadConversationMessageParams) {
-  const searchParams = new URLSearchParams({
-    conversationId,
-    messageId,
+  if (message.createdAt === undefined) {
+    throw new Error('Cannot export a message without a creation timestamp');
+  }
+  const createdAt = message.createdAt.toISOString();
+  const exportMessages = createConversationExportMessages({
+    messages: [message],
+    fileMapping: new Map([[message.id, files]]),
   });
-
-  if (characterName !== undefined) {
-    searchParams.append('enterpriseGptName', characterName);
-  }
-
-  const response = await fetch(`/api/download-conversation?${searchParams.toString()}`);
-  const fileName = extractFilenameFromResponse(response, `Nachricht_${messageId}.docx`);
-
-  if (!response.ok) {
-    throw new Error('Failed to download the document');
-  }
-
+  const gptName = characterName ?? 'AIS.chat';
+  const conversationName = conversationTitle ?? 'Konversation';
   return {
-    blob: await response.blob(),
-    fileName,
+    blob: await markdownToDocxBlob(
+      formatConversationExport({
+        messages: exportMessages,
+        createdAt,
+        modelName: modelName ?? 'AIS.chat',
+      }),
+    ),
+    fileName: `${createdAt.slice(0, 10)} ${gptName} Antwort aus ${conversationName}.docx`,
   };
 }
 
 export default function DownloadConversationMessageButton({
-  conversationId,
-  messageId,
+  message,
+  files,
   characterName,
 }: DownloadConversationMessageButtonProps) {
+  const { data: conversationDownloadData } = useConversationDownload();
   const [isLoading, setIsLoading] = React.useState(false);
   const toast = useToast();
   const tCommon = useTranslations('common');
@@ -61,9 +76,11 @@ export default function DownloadConversationMessageButton({
       setIsLoading(true);
 
       const { blob, fileName } = await fetchConversationMessageDownload({
-        conversationId,
-        messageId,
+        message,
+        files,
         characterName,
+        conversationTitle: conversationDownloadData?.conversationTitle,
+        modelName: message.modelName,
       });
 
       downloadFileFromBlob(blob, fileName);
@@ -89,7 +106,7 @@ export default function DownloadConversationMessageButton({
       {isLoading ? (
         <Spinner className="p-1 size-5" />
       ) : (
-        <DownloadSimpleIcon className="size-5 text-primary" />
+        <DownloadSimpleIcon className="size-4 text-primary" />
       )}
     </Button>
   );

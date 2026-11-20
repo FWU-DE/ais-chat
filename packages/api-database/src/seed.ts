@@ -1,40 +1,54 @@
+import { isDeepStrictEqual } from 'node:util';
+
+import { and, eq, inArray, ne } from 'drizzle-orm';
+
 import { createApiKeyRecord, db } from './index';
 import {
   type ApiKeyInsertModel,
   apiKeyTable,
   type LlmInsertModel,
-  type LlmModel,
   llmModelApiKeyMappingTable,
+  llmModelProviderKeyMappingTable,
   llmModelTable,
-  type OrganizationInsertModel,
-  organizationTable,
+  llmProviderKeyTable,
   type ProjectInsertModel,
   projectTable,
 } from './schema';
-import { and, eq, inArray } from 'drizzle-orm';
-import { normalizeSeedModelsForBifrost, syncSeedModelsToBifrost } from './seed-bifrost';
+import {
+  normalizeSeedModelsForBifrost,
+  seedProviderKeysForModels,
+  syncSeedModelsToBifrost,
+} from './seed-bifrost';
 
-const ORGANIZATION_ID = 'cfeb82c6-396a-4c2d-954b-53e77acbbe7e';
 const PROJECT_ID = 'DE-TEST';
 const API_KEY_NAME = 'Test API Key';
 
-// LLM provider keys: use real values from env (CI) or placeholders (local dev)
-const ionosApiKey = process.env.LLM_IONOS_API_KEY ?? 'API_KEY_PLACEHOLDER';
-const ionosBaseUrl = process.env.LLM_IONOS_BASE_URL ?? 'PLACEHOLDER_BASE_URL';
-const gpt4oMiniApiKey = process.env.LLM_GPT4OMINI_API_KEY ?? 'API_KEY_PLACEHOLDER';
-const gpt4oMiniBaseUrl = process.env.LLM_GPT4OMINI_BASE_URL ?? 'PLACEHOLDER_BASE_URL';
-const gpt5nanoApiKey = process.env.LLM_GPT5NANO_API_KEY ?? 'API_KEY_PLACEHOLDER';
-const gpt5nanoBaseUrl = process.env.LLM_GPT5NANO_BASE_URL ?? 'PLACEHOLDER_BASE_URL';
-const gpt5miniApiKey = process.env.LLM_GPT5MINI_API_KEY ?? 'API_KEY_PLACEHOLDER';
-const gpt5miniBaseUrl = process.env.LLM_GPT5MINI_BASE_URL ?? 'PLACEHOLDER_BASE_URL';
+// LLM provider keys: real values from env (CI) or undefined (local dev, forked PRs). Models
+// without both an API key and a base URL are filtered out below instead of being seeded with
+// placeholder credentials, which Bifrost would reject.
+const ionosApiKey = process.env.LLM_IONOS_API_KEY ?? '';
+const ionosBaseUrl = process.env.LLM_IONOS_BASE_URL ?? '';
+const gpt4oMiniApiKey = process.env.LLM_GPT4OMINI_API_KEY ?? '';
+const gpt4oMiniBaseUrl = process.env.LLM_GPT4OMINI_BASE_URL ?? '';
+const gpt5nanoApiKey = process.env.LLM_GPT5NANO_API_KEY ?? '';
+const gpt5nanoBaseUrl = process.env.LLM_GPT5NANO_BASE_URL ?? '';
+const gptImageApiKey = process.env.LLM_GPT_IMAGE_API_KEY ?? '';
+const gptImageBaseUrl = process.env.LLM_GPT_IMAGE_BASE_URL ?? '';
+const gpt5miniApiKey = process.env.LLM_GPT5MINI_API_KEY ?? '';
+const gpt5miniBaseUrl = process.env.LLM_GPT5MINI_BASE_URL ?? '';
 const mockLlmApiKey = process.env.LLM_MOCK_API_KEY ?? 'API_KEY_PLACEHOLDER';
 const mockLlmBaseUrl = process.env.LLM_MOCK_BASE_URL ?? 'http://mock-llm:6556';
+const seedEnv = process.env as Record<string, string | undefined>;
+const googleProjectId = seedEnv.LLM_GOOGLE_PROJECT_ID;
+const googleLocation = seedEnv.LLM_GOOGLE_LOCATION;
+const googleAuthCredentials = seedEnv.LLM_GOOGLE_AUTH_CREDENTIALS;
+const llamaGuardEndpointId = seedEnv.LLM_LLAMA_GUARD_ENDPOINT_ID;
+const llamaGuardEndpointHost = seedEnv.LLM_LLAMA_GUARD_ENDPOINT_HOST;
 
 // Mock LLM: OpenAI Responses-compatible server used as the default model in e2e tests.
 // Echoes prompts or drives deterministic tool calls — no real API calls.
-// See devops/docker/mock-llm/ for the server implementation.
+// See services/mock-llm/ for the server implementation.
 const mockLlm: LlmInsertModel = {
-  organizationId: ORGANIZATION_ID,
   provider: 'bifrost',
   name: 'mock-echo',
   displayName: 'Mock LLM',
@@ -49,29 +63,106 @@ const mockLlm: LlmInsertModel = {
     promptTokenPrice: 0,
     completionTokenPrice: 0,
   },
+  supportedImageFormats: ['jpeg', 'jpg', 'png', 'webp'],
 };
+
+const mockSpeech: LlmInsertModel = {
+  id: 'f53e4a77-1a3e-4d62-a3b6-6b74e7f4a1f0',
+  provider: 'google',
+  name: 'mock-speech',
+  displayName: 'Mock Speech',
+  description: 'Mock speech model for e2e settings tests',
+  setting: {
+    provider: 'google',
+    projectId: googleProjectId ?? 'e2e-test-project',
+    location: googleLocation ?? 'e2e-test-location',
+  },
+  priceMetadata: {
+    type: 'speech',
+    priceInCentPer1MillionCharacters: 0,
+  },
+  modelConfig: {
+    voices: [{ name: 'alloy', displayName: 'Alloy' }],
+  },
+  isDeleted: false,
+};
+
+const isRealEmbeddingModelAvailable = !!ionosApiKey && !!ionosBaseUrl;
 
 // All prices are rough estimates, probably outdated and just for mocking purposes
 // Static ids are used to ensure that the models are not created again
 // the ids are taken from the staging/production database for interoperability to be able to connect to local AIS.chat api or staging
-const DEFAULT_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
+//
+// Only models with both an API key and a base URL configured are actually seeded — e.g. on
+// forked PRs the LLM_* secrets aren't available, so this keeps us to the mock LLM instead of
+// pushing empty credentials to Bifrost, which would reject them and fail the whole seed step.
+const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
   // Mock LLMs
   {
     ...mockLlm,
     id: 'a0a46b60-41d5-4843-856d-c6d8172f0fca',
     name: 'mock-echo-1',
     displayName: process.env.E2E_TEXT_MODEL_1 ?? 'Mock LLM',
+    safetyFilterEnabled: false,
   },
   {
     ...mockLlm,
     id: '689342a5-89ed-4d43-bc8c-a1a00f464184',
     name: 'mock-echo-2',
     displayName: process.env.E2E_TEXT_MODEL_2 ?? 'Mock LLM (2)',
+    safetyFilterEnabled: false,
   },
+  // Mock image model: always available regardless of real credentials, so that
+  // `initializeStaticModelConfigurations` (packages/shared) can always resolve a `default-image`
+  // model — the mock LLM server generates a solid-color placeholder image for it.
+  {
+    id: 'd3f8a8e2-5c1a-4b7a-9f2e-3a6b8c4d9e1f',
+    provider: 'bifrost',
+    name: 'mock-image',
+    displayName: 'Mock LLM (Image)',
+    description: 'Mock LLM for e2e testing — returns a solid-color placeholder image',
+    setting: {
+      provider: 'openai',
+      apiKey: mockLlmApiKey,
+      baseUrl: mockLlmBaseUrl,
+    },
+    priceMetadata: {
+      type: 'image',
+      // The mock LLM always reports usage, so billing uses the token-based path (all zeroed).
+      inputTextTokenPrice: 0,
+      inputImageTokenPrice: 0,
+      outputTextTokenPrice: 0,
+      outputImageTokenPrice: 0,
+    },
+    supportedImageFormats: ['jpg', 'jpeg', 'png'],
+    safetyFilterEnabled: false,
+  },
+  // Mock embedding model: only seeded when the real `BAAI/bge-m3` model below is unavailable
+  // (e.g. on forked PRs without LLM_IONOS_* secrets), so that `getEmbeddingModel()` in e2e tests
+  // always has a model to resolve. Returns a static 1024-entry vector regardless of input.
+  ...(isRealEmbeddingModelAvailable
+    ? []
+    : [
+        {
+          id: '2d6a6f8e-6a3f-4a2a-9c3d-7f1b2e8a4c5d',
+          provider: 'bifrost',
+          name: 'BAAI/bge-m3',
+          displayName: 'Mock Embedding Model',
+          description: 'Mock LLM for e2e testing — returns a static embedding vector',
+          setting: {
+            provider: 'openai',
+            apiKey: mockLlmApiKey,
+            baseUrl: mockLlmBaseUrl,
+          },
+          priceMetadata: {
+            type: 'embedding',
+            promptTokenPrice: 0,
+          },
+        } satisfies LlmInsertModel,
+      ]),
   // Realm LLMs
   {
     id: 'b870b74d-7458-4dcf-99f6-ace83ef514f4',
-    organizationId: ORGANIZATION_ID,
     provider: 'ionos',
     name: 'BAAI/bge-m3',
     displayName: 'Standard Embedding Model',
@@ -86,60 +177,7 @@ const DEFAULT_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     },
   },
   {
-    id: '7dcb063f-5241-4846-b11f-a621ea1dd4a9',
-    organizationId: ORGANIZATION_ID,
-    provider: 'ionos',
-    name: 'black-forest-labs/FLUX.1-schnell',
-    displayName: 'FLUX.1',
-    setting: {
-      provider: 'ionos',
-      apiKey: ionosApiKey,
-      baseUrl: ionosBaseUrl,
-    },
-    priceMetadata: {
-      type: 'image',
-      pricePerImageInCent: 2.88,
-    },
-  },
-  {
-    id: '9578ed80-b0c2-4968-b253-d897576e5512',
-    organizationId: ORGANIZATION_ID,
-    provider: 'ionos',
-    name: 'meta-llama/Meta-Llama-3.1-8B-Instruct',
-    displayName: 'Llama-3.1-8B',
-    description: 'Efficient for lighter tasks',
-    setting: {
-      provider: 'ionos',
-      apiKey: ionosApiKey,
-      baseUrl: ionosBaseUrl,
-    },
-    priceMetadata: {
-      type: 'text',
-      promptTokenPrice: 170,
-      completionTokenPrice: 280,
-    },
-  },
-  {
-    id: '038ac4d1-c8c9-49a1-a2f9-c269b07961aa',
-    organizationId: ORGANIZATION_ID,
-    provider: 'ionos',
-    name: 'mistralai/Mistral-Nemo-Instruct-2407',
-    displayName: 'Mistral Nemo Instruct',
-    description: 'Multilingual, open source and efficient',
-    setting: {
-      provider: 'ionos',
-      apiKey: ionosApiKey,
-      baseUrl: ionosBaseUrl,
-    },
-    priceMetadata: {
-      type: 'text',
-      promptTokenPrice: 150,
-      completionTokenPrice: 150,
-    },
-  },
-  {
     id: '4f8a2c1e-93d7-4b6a-a5e0-d2f1c8b7e3a9',
-    organizationId: ORGANIZATION_ID,
     provider: 'azure',
     name: 'gpt-4o-mini',
     displayName: 'GPT-4o-mini',
@@ -158,7 +196,6 @@ const DEFAULT_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
   },
   {
     id: 'e7b3d9f2-1a4c-4e8b-b6d5-f0c2a9e8d1b7',
-    organizationId: ORGANIZATION_ID,
     provider: 'azure',
     name: 'gpt-5-nano',
     displayName: 'GPT-5 nano',
@@ -176,14 +213,33 @@ const DEFAULT_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     additionalParameters: {
       reasoning: {
         effort: 'minimal',
-        summary: null,
+        summary: 'auto',
       },
     },
     supportedImageFormats: ['jpg', 'jpeg', 'png', 'webp'],
   },
   {
+    id: '1a3d7a04-351d-4a09-a490-db256994a1b8',
+    provider: 'azure',
+    name: 'gpt-image-1.5',
+    displayName: 'GPT-Image-1.5',
+    description: 'GPT-Image model for testing',
+    setting: {
+      provider: 'azure',
+      apiKey: gptImageApiKey,
+      baseUrl: gptImageBaseUrl,
+    },
+    priceMetadata: {
+      type: 'image',
+      inputTextTokenPrice: 414,
+      inputImageTokenPrice: 635,
+      outputTextTokenPrice: 828,
+      outputImageTokenPrice: 2648,
+    },
+    supportedImageFormats: ['jpg', 'jpeg', 'png'],
+  },
+  {
     id: 'f1c2d3e4-5b6a-7c8d-9e0f-1a2b3c4d5e6f',
-    organizationId: ORGANIZATION_ID,
     provider: 'azure',
     name: 'gpt-5-mini',
     displayName: 'GPT-5 mini',
@@ -201,40 +257,68 @@ const DEFAULT_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     additionalParameters: {
       reasoning: {
         effort: 'low',
-        summary: null,
+        summary: 'auto',
       },
     },
     supportedImageFormats: ['jpg', 'jpeg', 'png', 'webp'],
   },
-]);
+]).filter(
+  (model) =>
+    'apiKey' in model.setting && model.setting.apiKey !== '' && model.setting.baseUrl !== '',
+);
+
+const llamaGuardModel: LlmInsertModel | undefined =
+  googleProjectId !== undefined &&
+  googleProjectId.trim().length > 0 &&
+  googleLocation !== undefined &&
+  googleLocation.trim().length > 0 &&
+  googleAuthCredentials !== undefined &&
+  googleAuthCredentials.trim().length > 0 &&
+  llamaGuardEndpointId !== undefined &&
+  llamaGuardEndpointId.trim().length > 0 &&
+  llamaGuardEndpointHost !== undefined &&
+  llamaGuardEndpointHost.trim().length > 0
+    ? {
+        id: '08e5d73f-e582-44fe-a6e0-75350f8b1617',
+        provider: 'google',
+        name: 'meta-llama/Llama-Guard-4-12B',
+        displayName: 'Llama Guard',
+        description: 'Llama Guard safety model for conversation moderation',
+        setting: {
+          provider: 'google',
+          projectId: googleProjectId,
+          location: googleLocation,
+          authCredentials: googleAuthCredentials,
+        },
+        priceMetadata: {
+          type: 'safety',
+          promptTokenPrice: 0,
+        },
+        additionalParameters: {
+          endpointId: llamaGuardEndpointId,
+          endpointHost: llamaGuardEndpointHost,
+        },
+      }
+    : undefined;
+
+const DEFAULT_MODELS: LlmInsertModel[] = [...BIFROST_MODELS];
+const SPEECH_MODELS: LlmInsertModel[] = [mockSpeech];
 
 export async function seedDatabase() {
-  console.log('Starting database seeding...');
+  console.log('Starting api database seeding...');
 
   try {
-    // 1. Create/update test organization
-    // Since there's no unique constraint on name, we'll check if one exists first
-    await db
-      .insert(organizationTable)
-      .values({
-        id: ORGANIZATION_ID,
-        name: 'Test Organization',
-      } satisfies OrganizationInsertModel)
-      .onConflictDoNothing()
-      .returning();
-
-    // 2. Create/update test project (using primary key for upsert)
+    // 1. Create/update test project (using primary key for upsert)
     await db
       .insert(projectTable)
       .values({
         id: PROJECT_ID,
         name: 'Test Project',
-        organizationId: ORGANIZATION_ID,
       } satisfies ProjectInsertModel)
       .onConflictDoNothing()
       .returning();
 
-    // 3. Create/update test API key
+    // 2. Create/update test API key
     // Since keyId doesn't have a unique constraint, we'll check first
 
     let apiKey;
@@ -279,19 +363,55 @@ export async function seedDatabase() {
     }
 
     // 5. Create/update API key to model mapping
-    const seededModels: LlmModel[] = [];
     await db.delete(llmModelApiKeyMappingTable).where(
       and(
         eq(llmModelApiKeyMappingTable.apiKeyId, apiKey.id),
         inArray(
           llmModelApiKeyMappingTable.llmModelId,
-          DEFAULT_MODELS.map((model) => model.id!),
+          [...DEFAULT_MODELS, ...SPEECH_MODELS].map((model) => model.id!),
         ),
       ),
     );
 
     for (const model of DEFAULT_MODELS) {
-      const [seededModel] = await db
+      await db
+        .insert(llmModelTable)
+        .values({
+          ...model,
+          provider: 'bifrost',
+          setting: { provider: 'bifrost' },
+          useBifrost: true,
+        })
+        .onConflictDoUpdate({
+          target: llmModelTable.id,
+          set: {
+            provider: 'bifrost',
+            name: model.name,
+            displayName: model.displayName,
+            description: model.description,
+            setting: { provider: 'bifrost' },
+            priceMetadata: model.priceMetadata,
+            supportedImageFormats: model.supportedImageFormats,
+            imageGenerationConfig: model.imageGenerationConfig,
+            additionalParameters: model.additionalParameters,
+            isNew: model.isNew,
+            isDeleted: model.isDeleted,
+            safetyFilterEnabled: model.safetyFilterEnabled,
+            useBifrost: true,
+          },
+        });
+
+      await db
+        .insert(llmModelApiKeyMappingTable)
+        .values({
+          llmModelId: model.id!,
+          apiKeyId: apiKey.id,
+        })
+        .onConflictDoNothing();
+    }
+
+    for (const model of SPEECH_MODELS) {
+      await db
         .insert(llmModelTable)
         .values(model)
         .onConflictDoUpdate({
@@ -303,15 +423,13 @@ export async function seedDatabase() {
             description: model.description,
             setting: model.setting,
             priceMetadata: model.priceMetadata,
-            supportedImageFormats: model.supportedImageFormats,
-            additionalParameters: model.additionalParameters,
+            modelConfig: model.modelConfig,
             isNew: model.isNew,
             isDeleted: model.isDeleted,
+            safetyFilterEnabled: model.safetyFilterEnabled,
+            useBifrost: false,
           },
-        })
-        .returning();
-
-      if (seededModel) seededModels.push(seededModel);
+        });
 
       await db
         .insert(llmModelApiKeyMappingTable)
@@ -322,9 +440,102 @@ export async function seedDatabase() {
         .onConflictDoNothing();
     }
 
-    const modelsToSync =
-      seededModels.length > 0 ? seededModels : await db.select().from(llmModelTable);
-    await syncSeedModelsToBifrost(modelsToSync);
+    if (llamaGuardModel !== undefined) {
+      await db
+        .insert(llmModelTable)
+        .values({
+          ...llamaGuardModel,
+          provider: 'google',
+          setting: llamaGuardModel.setting,
+          useBifrost: false,
+        })
+        .onConflictDoUpdate({
+          target: llmModelTable.id,
+          set: {
+            provider: 'google',
+            name: llamaGuardModel.name,
+            displayName: llamaGuardModel.displayName,
+            description: llamaGuardModel.description,
+            setting: llamaGuardModel.setting,
+            priceMetadata: llamaGuardModel.priceMetadata,
+            additionalParameters: llamaGuardModel.additionalParameters,
+            isNew: llamaGuardModel.isNew,
+            isDeleted: llamaGuardModel.isDeleted,
+            safetyFilterEnabled: llamaGuardModel.safetyFilterEnabled,
+            useBifrost: false,
+          },
+        });
+
+      const seedProjectApiKeys = await db
+        .select({ id: apiKeyTable.id })
+        .from(apiKeyTable)
+        .innerJoin(projectTable, eq(apiKeyTable.projectId, projectTable.id))
+        .where(and(eq(apiKeyTable.projectId, PROJECT_ID), ne(apiKeyTable.state, 'deleted')));
+
+      await db
+        .delete(llmModelApiKeyMappingTable)
+        .where(eq(llmModelApiKeyMappingTable.llmModelId, llamaGuardModel.id!));
+
+      if (seedProjectApiKeys.length > 0) {
+        await db.insert(llmModelApiKeyMappingTable).values(
+          seedProjectApiKeys.map(({ id }) => ({
+            llmModelId: llamaGuardModel.id!,
+            apiKeyId: id,
+          })),
+        );
+      }
+    }
+
+    const seedModels =
+      llamaGuardModel === undefined ? DEFAULT_MODELS : [...DEFAULT_MODELS, llamaGuardModel];
+    await seedProviderKeysForModels(seedModels);
+
+    if (llamaGuardModel !== undefined) {
+      const safetyProviderKeyMappings = await db
+        .select({
+          providerKeyId: llmModelProviderKeyMappingTable.providerKeyId,
+          provider: llmProviderKeyTable.provider,
+          settings: llmProviderKeyTable.settings,
+          isEnabled: llmProviderKeyTable.isEnabled,
+        })
+        .from(llmModelProviderKeyMappingTable)
+        .innerJoin(
+          llmProviderKeyTable,
+          eq(llmModelProviderKeyMappingTable.providerKeyId, llmProviderKeyTable.id),
+        )
+        .where(eq(llmModelProviderKeyMappingTable.llmModelId, llamaGuardModel.id!));
+      const safetyProviderKeyMapping = safetyProviderKeyMappings.find(
+        (mapping) =>
+          mapping.provider === 'google' &&
+          isDeepStrictEqual(mapping.settings, llamaGuardModel.setting),
+      );
+
+      if (safetyProviderKeyMapping === undefined) {
+        throw new Error('Failed to seed the enabled Google provider key for Llama Guard');
+      }
+
+      await db
+        .update(llmProviderKeyTable)
+        .set({ isEnabled: true })
+        .where(eq(llmProviderKeyTable.id, safetyProviderKeyMapping.providerKeyId));
+
+      for (const mapping of safetyProviderKeyMappings) {
+        if (mapping.providerKeyId === safetyProviderKeyMapping.providerKeyId) {
+          continue;
+        }
+
+        await db
+          .delete(llmModelProviderKeyMappingTable)
+          .where(
+            and(
+              eq(llmModelProviderKeyMappingTable.llmModelId, llamaGuardModel.id!),
+              eq(llmModelProviderKeyMappingTable.providerKeyId, mapping.providerKeyId),
+            ),
+          );
+      }
+    }
+
+    await syncSeedModelsToBifrost();
 
     // Print API key in a format parseable by CI (e.g. DE_TEST_API_KEY=sk_...)
     const apiKeyEnvVar = `${PROJECT_ID.replace('-', '_')}_API_KEY`;
@@ -333,26 +544,25 @@ export async function seedDatabase() {
     // Summary
     console.log('Database seeding completed successfully!');
     console.log('\nSummary:');
-    console.log(`   Organization: Test Organization`);
     console.log(`   Project: Test Project (ID: ${PROJECT_ID})`);
     console.log(`   LLM Models: ${DEFAULT_MODELS.map((m) => m.name).join(', ')}`);
     console.log(`   Model-Key Mapping: configured`);
 
     return {
       apiKey,
-      models: DEFAULT_MODELS,
+      models: seedModels,
     };
   } catch (error) {
-    console.error('Error seeding database:', error);
+    console.error('Error seeding api database:', error);
     throw error;
   }
 }
 
 try {
   await seedDatabase();
-  console.log('Seeding completed');
+  console.log('Seeding api database completed');
   process.exit(0);
 } catch (error) {
-  console.error('Seeding failed:', error);
+  console.error('Seeding api database failed:', error);
   process.exit(1);
 }

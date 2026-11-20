@@ -1,10 +1,9 @@
+import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { UserAndContext } from '@/auth/types';
 
 const mocks = vi.hoisted(() => ({
-  dbGetAssistantByIdMock: vi.fn(),
-  dbGetCharacterByIdMock: vi.fn(),
-  dbGetLearningScenarioByIdMock: vi.fn(),
   dbInsertConversationToolCallUsageMock: vi.fn(),
   dbUpdateTokenUsageByCharacterChatIdMock: vi.fn(),
   dbUpdateTokenUsageBySharedLearningScenarioIdMock: vi.fn(),
@@ -19,17 +18,11 @@ vi.mock('./env', () => ({
   },
 }));
 
-vi.mock('@shared/db/functions/assistants', () => ({
-  dbGetAssistantById: mocks.dbGetAssistantByIdMock,
-}));
-
 vi.mock('@shared/db/functions/character', () => ({
-  dbGetCharacterById: mocks.dbGetCharacterByIdMock,
   dbUpdateTokenUsageByCharacterChatId: mocks.dbUpdateTokenUsageByCharacterChatIdMock,
 }));
 
 vi.mock('@shared/db/functions/learning-scenario', () => ({
-  dbGetLearningScenarioById: mocks.dbGetLearningScenarioByIdMock,
   dbUpdateTokenUsageBySharedLearningScenarioId:
     mocks.dbUpdateTokenUsageBySharedLearningScenarioIdMock,
 }));
@@ -61,12 +54,34 @@ describe('searchWeb', () => {
     mocks.searchMock.mockResolvedValue({
       results: [
         {
+          type: 'text',
           name: 'Result',
           url: 'https://example.com',
           content: 'content',
+          favicon: 'https://example.com/favicon.ico',
         },
       ],
     });
+  });
+
+  it('returns the text search results from Linkup', async () => {
+    const { searchWeb } = await import('./websearch');
+
+    const results = await searchWeb({
+      query: 'aktuelles thema',
+      conversationId: 'conversation-1',
+      userId: 'user-1',
+    });
+
+    expect(results).toEqual([
+      {
+        type: 'text',
+        name: 'Result',
+        url: 'https://example.com',
+        content: 'content',
+        favicon: 'https://example.com/favicon.ico',
+      },
+    ]);
   });
 
   it('records normal chat tool call usage in conversation usage tracking', async () => {
@@ -196,6 +211,19 @@ describe('searchWeb', () => {
     expect(mocks.searchMock).toHaveBeenCalledTimes(1);
     expect(mocks.searchMock.mock.calls[0]![0]).not.toHaveProperty('includeDomains');
   });
+
+  it('propagates errors from the Linkup client instead of swallowing them', async () => {
+    mocks.searchMock.mockRejectedValue(new Error('Linkup is down'));
+    const { searchWeb } = await import('./websearch');
+
+    await expect(
+      searchWeb({
+        query: 'current topic',
+        conversationId: 'conversation-1',
+        userId: 'user-1',
+      }),
+    ).rejects.toThrow('Linkup is down');
+  });
 });
 
 describe('resolveWebSearchConfig', () => {
@@ -209,18 +237,16 @@ describe('resolveWebSearchConfig', () => {
     vi.clearAllMocks();
   });
 
-  it('trims and drops empty domain entries from a character', async () => {
-    mocks.dbGetCharacterByIdMock.mockResolvedValue({
-      isWebSearchEnabled: true,
-      webSearchScope: 'included-domains',
-      webSearchIncludedDomains: ['  example.com  ', '', '   ', 'foo.de'],
-    });
-
+  it('trims and drops empty domain entries from the given settings', async () => {
     const { resolveWebSearchConfig } = await import('./websearch');
 
-    const config = await resolveWebSearchConfig({
+    const config = resolveWebSearchConfig({
       user,
-      characterId: 'character-uuid',
+      webSearchSettings: {
+        isWebSearchEnabled: true,
+        webSearchScope: 'included-domains',
+        webSearchIncludedDomains: ['  example.com  ', '', '   ', 'foo.de'],
+      },
     });
 
     expect(config).toEqual({
@@ -230,24 +256,54 @@ describe('resolveWebSearchConfig', () => {
     });
   });
 
-  it('trims and drops empty domain entries from a learning scenario', async () => {
-    mocks.dbGetLearningScenarioByIdMock.mockResolvedValue({
-      isWebSearchEnabled: true,
-      webSearchScope: 'included-domains',
-      webSearchIncludedDomains: ['  example.com  ', '', '   ', 'foo.de'],
-    });
-
+  it('returns disabled config when the given settings have web search disabled', async () => {
     const { resolveWebSearchConfig } = await import('./websearch');
 
-    const config = await resolveWebSearchConfig({
+    const config = resolveWebSearchConfig({
       user,
-      learningScenarioId: 'learning-scenario-uuid',
+      webSearchSettings: {
+        isWebSearchEnabled: false,
+        webSearchScope: 'all-web',
+        webSearchIncludedDomains: [],
+      },
     });
 
     expect(config).toEqual({
+      enabled: false,
+      scope: 'all-web',
+      includedDomains: [],
+    });
+  });
+
+  it('enables an unrestricted web search for a plain chat without custom chat settings', async () => {
+    const { resolveWebSearchConfig } = await import('./websearch');
+
+    const config = resolveWebSearchConfig({ user });
+
+    expect(config).toEqual({
       enabled: true,
-      scope: 'included-domains',
-      includedDomains: ['example.com', 'foo.de'],
+      scope: 'all-web',
+      includedDomains: [],
+    });
+  });
+
+  it('returns disabled config for the help mode assistant even when its settings enable web search', async () => {
+    const { resolveWebSearchConfig } = await import('./websearch');
+
+    const config = resolveWebSearchConfig({
+      user,
+      assistantId: HELP_MODE_ASSISTANT_ID,
+      webSearchSettings: {
+        isWebSearchEnabled: true,
+        webSearchScope: 'all-web',
+        webSearchIncludedDomains: [],
+      },
+    });
+
+    expect(config).toEqual({
+      enabled: false,
+      scope: 'all-web',
+      includedDomains: [],
     });
   });
 });

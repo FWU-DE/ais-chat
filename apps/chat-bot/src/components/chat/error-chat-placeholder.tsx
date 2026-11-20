@@ -1,5 +1,6 @@
-import React from 'react';
 import { useTranslations } from 'next-intl';
+import React from 'react';
+
 import ReloadIcon from '../icons/reload';
 
 export function ErrorChatPlaceholder({
@@ -12,7 +13,7 @@ export function ErrorChatPlaceholder({
   const t = useTranslations('common');
 
   return (
-    <div className="p-4 gap-2 text-sm rounded-2xl bg-red-100 text-red-500 border border-red-500 text-right mt-8 mx-auto">
+    <div className="p-4 gap-2 text-sm rounded-2xl bg-red-100 text-red-500 border border-red-500 text-right mt-8 mx-4">
       <div className="flex justify-between items-center px-2">
         <div className="text-left flex-1">
           <div>{errorMessage}</div>

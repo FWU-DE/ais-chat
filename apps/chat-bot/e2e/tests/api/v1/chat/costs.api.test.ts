@@ -1,18 +1,23 @@
 import test, { expect } from '@playwright/test';
 import { db } from '@shared/db';
 import {
+  dbGetLearningScenarioChatUsageInCentByLearningScenarioId,
+  dbGetSharedCharacterChatUsageInCentByCharacterId,
+} from '@shared/db/functions/token-points';
+import {
   CharacterWithShareDataModel,
   conversationUsageTracking,
   LearningScenarioWithShareDataModel,
-  llmModelTable,
   sharedCharacterChatUsageTrackingTable,
   sharedLearningScenarioUsageTracking,
   userTable,
 } from '@shared/db/schema';
 import {
-  dbGetSharedCharacterChatUsageInCentByCharacterId,
-  dbGetLearningScenarioChatUsageInCentByLearningScenarioId,
-} from '@shared/db/functions/token-points';
+  sharedCharacterChatHasReachedTokenPointsLimit,
+  sharedLearningScenarioChatHasReachedTokenPointsLimit,
+} from '@shared/users/usage';
+import { getUsedBudgetInCentByUser } from '@shared/users/user-budget-service';
+
 import {
   mockCharacter,
   mockConversationUsage,
@@ -23,18 +28,12 @@ import {
   mockUserAndContext,
 } from '../../../../utils/mock';
 import { generateRandomString } from '../../../../utils/random';
-import { getUsedBudgetInCentByUser } from '@shared/users/user-budget-service';
-import {
-  sharedCharacterChatHasReachedTokenPointsLimit,
-  sharedLearningScenarioChatHasReachedTokenPointsLimit,
-} from '@shared/users/usage';
 
 test.describe('costs', () => {
   test('should calculate total price from all three usage tracking tables', async () => {
     const user = mockUserAndContext();
 
     const model = mockLlmModel();
-    await db.insert(llmModelTable).values(model);
 
     for (let i = 0; i < 2; i++) {
       const conversationUsage = {
@@ -101,7 +100,6 @@ test.describe('costs', () => {
     user = { ...user, id: insertedUser.id, userRole: 'teacher' };
 
     const model = mockLlmModel();
-    await db.insert(llmModelTable).values(model);
 
     // create shared learning scenario
     const startedAt = new Date();
@@ -191,14 +189,15 @@ test.describe('costs', () => {
     user = { ...user, id: insertedUser.id, userRole: 'teacher' };
 
     const model = mockLlmModel();
-    await db.insert(llmModelTable).values(model);
 
     const startedAt = new Date();
     const character: CharacterWithShareDataModel = {
       ...mockCharacter(),
       userId: user.id,
       modelId: model.id,
-      accessLevel: 'private' as const,
+      isSchoolShared: false,
+      isCommunityShared: false,
+      isGlobal: false,
       startedAt,
       expiredAt: new Date(startedAt.getTime() + maxUsageTimeLimit * 60 * 1000),
       manuallyStoppedAt: null,

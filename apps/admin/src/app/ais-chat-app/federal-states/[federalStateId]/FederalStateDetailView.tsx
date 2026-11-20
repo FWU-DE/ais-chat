@@ -1,30 +1,38 @@
 'use client';
-import { Button } from '@ui/components/button';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { updateFederalStateAction } from './actions';
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@ui/components/card';
-import { FormField } from '@ui/components/form/form-field';
 import { FormFieldCheckbox } from '@ais-chat/ui/components/form/form-field-checkbox';
-import { FormFieldArray } from '@/components/form/FormFieldArray';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { TrashSimpleIcon } from '@phosphor-icons/react';
+import { federalStatePictureUrlsSchema } from '@shared/db/schema';
+import { FederalStateModel, federalStateSchema } from '@shared/federal-states/types';
+import { logError } from '@shared/logging';
+import { ConfirmAlertDialog, useConfirmAlertDialog } from '@ui/components/alert-dialog';
+import { Button } from '@ui/components/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/components/card';
+import { Field, FieldDescription, FieldError, FieldLabel } from '@ui/components/field';
+import { FormField } from '@ui/components/form/form-field';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@ui/components/select';
+import { DesignConfigurationSchema } from '@ui/types/design-configuration';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import z from 'zod';
-import { FederalStateModel, federalStateSchema } from '@shared/federal-states/types';
-import { DesignConfigurationSchema } from '@ui/types/design-configuration';
-import { logError } from '@shared/logging';
-import { useEffect } from 'react';
+
+import { FormFieldArray } from '@/components/form/FormFieldArray';
 import { FormErrorDisplay } from '@/components/FormErrorDisplay';
-import { federalStatePictureUrlsSchema } from '@shared/db/schema';
+import { ROUTES } from '@/consts/routes';
+
+import { deleteFederalStateAction, updateFederalStateAction } from './actions';
 
 export type FederalStateViewProps = {
   federalState: FederalStateModel;
+  apiKeys: { id: string; name: string }[];
 };
 
 // Form-specific schema that extends the base schema with UI adaptations
@@ -57,13 +65,18 @@ function transformToFederalStateEditForm(federalState: FederalStateModel): Feder
   return {
     ...federalState,
     // Only transform the fields that need UI-specific formatting
+    appName: federalState.appName ?? '',
+    trainingLink: federalState.trainingLink ?? '',
+    mandatoryCertificationTeacher: federalState.mandatoryCertificationTeacher ?? false,
     featureToggles: {
       ...federalState.featureToggles,
       isImageGenerationEnabled: federalState.featureToggles.isImageGenerationEnabled ?? false,
       isWebSearchEnabled: federalState.featureToggles.isWebSearchEnabled ?? false,
+      isCalculatorEnabled: federalState.featureToggles.isCalculatorEnabled ?? false,
+      isSpeechModelEnabled: federalState.featureToggles.isSpeechModelEnabled ?? false,
+      isJsxGraphEnabled: federalState.featureToggles.isJsxGraphEnabled ?? false,
       isSharedPageLocaleDetectionEnabled:
         federalState.featureToggles.isSharedPageLocaleDetectionEnabled ?? true,
-      isAgenticChatEnabled: federalState.featureToggles.isAgenticChatEnabled ?? false,
     },
     supportContacts: federalState.supportContacts?.map((s) => ({ value: s })) ?? [],
     designConfiguration: federalState.designConfiguration
@@ -74,7 +87,9 @@ function transformToFederalStateEditForm(federalState: FederalStateModel): Feder
 }
 
 export function FederalStateView(props: FederalStateViewProps) {
-  const { federalState } = props;
+  const { federalState, apiKeys } = props;
+  const router = useRouter();
+  const { dialogProps: deleteDialogProps, confirm: confirmDelete } = useConfirmAlertDialog();
 
   // Destructuring is necessary, otherwise formState is not updated correctly
   // https://www.react-hook-form.com/api/useform/formstate/
@@ -118,6 +133,8 @@ export function FederalStateView(props: FederalStateViewProps) {
       // Update existing federal state
       await updateFederalStateAction({
         ...data,
+        appName: data.appName || null,
+        trainingLink: data.trainingLink || null,
         supportContacts:
           data.supportContacts.length > 0 ? data.supportContacts.map((s) => s.value) : [],
         designConfiguration: parsedDesignConfiguration,
@@ -133,6 +150,16 @@ export function FederalStateView(props: FederalStateViewProps) {
   useEffect(() => {
     reset(transformToFederalStateEditForm(federalState));
   }, [federalState, reset]);
+
+  async function handleDelete() {
+    const result = await deleteFederalStateAction(federalState.id);
+    if (result.success) {
+      toast.success('Bundesland erfolgreich gelöscht');
+      router.push(ROUTES.app.federalStates);
+    } else {
+      toast.error(result.error.message);
+    }
+  }
 
   return (
     <Card>
@@ -161,18 +188,31 @@ export function FederalStateView(props: FederalStateViewProps) {
             control={control}
             disabled
           />
-          <FormFieldCheckbox
-            name="hasApiKeyAssigned"
-            label="API Key vorhanden?"
-            description="Zeigt an ob bereits ein API Key erstellt wurde. Dieser ist zwingend für die Kommunikation mit ais-chat-api erforderlich."
-            control={control}
-            disabled
-          />
-          <FormField
+          <Controller
             name="apiKeyId"
-            label="API Key ID"
-            description="UUID des API keys aus ais-chat-api für Kostenmanagement und Billing."
             control={control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="apiKeyId">API Key</FieldLabel>
+                <FieldDescription>
+                  API Key aus dem ais-chat-api Projekt {federalState.id}. Darüber werden verfügbare
+                  Modelle, Zugriff und Abrechnung gesteuert.
+                </FieldDescription>
+                <Select value={field.value ?? ''} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-full" id="apiKeyId">
+                    <SelectValue placeholder="API Key auswählen" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" align="start">
+                    {apiKeys.map((apiKey) => (
+                      <SelectItem key={apiKey.id} value={apiKey.id}>
+                        {apiKey.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldError errors={[fieldState.error]} />
+              </Field>
+            )}
           />
           <FormField
             name="appName"
@@ -263,15 +303,27 @@ export function FederalStateView(props: FederalStateViewProps) {
             control={control}
           />
           <FormFieldCheckbox
-            name="featureToggles.isSharedPageLocaleDetectionEnabled"
-            label="Spracherkennung für geteilte Seiten aktivieren"
-            description="Ermittelt und setzt automatisch die Sprache für geteilte Seiten."
+            name="featureToggles.isCalculatorEnabled"
+            label="Taschenrechner aktivieren"
+            description="Erlaubt die Nutzung des Taschenrechners."
             control={control}
           />
           <FormFieldCheckbox
-            name="featureToggles.isAgenticChatEnabled"
-            label="Agentic Chat aktivieren"
-            description="Erlaubt die Nutzung des neuen agentic loop im Chat."
+            name="featureToggles.isSpeechModelEnabled"
+            label="Sprachausgabe aktivieren"
+            description="Erlaubt die Nutzung der Sprachausgabe."
+            control={control}
+          />
+          <FormFieldCheckbox
+            name="featureToggles.isJsxGraphEnabled"
+            label="Graphen aktivieren"
+            description="Erlaubt die Darstellung von JSXGraph-Plots im Chat."
+            control={control}
+          />
+          <FormFieldCheckbox
+            name="featureToggles.isSharedPageLocaleDetectionEnabled"
+            label="Spracherkennung für geteilte Seiten aktivieren"
+            description="Ermittelt und setzt automatisch die Sprache für geteilte Seiten."
             control={control}
           />
           <FormField
@@ -288,13 +340,23 @@ export function FederalStateView(props: FederalStateViewProps) {
             control={control}
             type="textArea"
           />
-          <CardAction>
-            <Button type="submit" disabled={!isDirty}>
+          <div className="flex gap-3 pt-4">
+            <Button type="button" variant="destructive" onClick={() => confirmDelete(handleDelete)}>
+              <TrashSimpleIcon /> Löschen
+            </Button>
+            <Button type="submit" disabled={!isDirty || isSubmitting}>
               Speichern
             </Button>
-          </CardAction>
+          </div>
         </form>
       </CardContent>
+      <ConfirmAlertDialog
+        title="Bundesland löschen"
+        description="Möchten Sie dieses Bundesland wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        {...deleteDialogProps}
+      />
     </Card>
   );
 }

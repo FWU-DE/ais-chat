@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from './locales';
 
 const mocks = vi.hoisted(() => ({
@@ -8,8 +9,8 @@ const mocks = vi.hoisted(() => ({
   dbUpdateCharacterFilterGroupMock: vi.fn(),
   dbGetLearningScenarioByIdMock: vi.fn(),
   dbUpdateLearningScenarioFilterGroupMock: vi.fn(),
+  dbGetFederalStateByUserIdMock: vi.fn(),
   getMaybeUserMock: vi.fn(),
-  getUserAndContextByUserIdMock: vi.fn(),
   getModelAndApiKeyWithResultMock: vi.fn(),
   getStrongAuxiliaryModelMock: vi.fn(),
   constructCharacterLanguageSystemPromptMock: vi.fn(),
@@ -34,9 +35,12 @@ vi.mock('@shared/db/functions/learning-scenario', () => ({
   dbUpdateLearningScenarioFilterGroup: mocks.dbUpdateLearningScenarioFilterGroupMock,
 }));
 
+vi.mock('@shared/db/functions/school', () => ({
+  dbGetFederalStateByUserId: mocks.dbGetFederalStateByUserIdMock,
+}));
+
 vi.mock('@/auth/utils', () => ({
   getMaybeUser: mocks.getMaybeUserMock,
-  getUserAndContextByUserId: mocks.getUserAndContextByUserIdMock,
 }));
 
 vi.mock('@/app/api/utils/utils', () => ({
@@ -53,12 +57,10 @@ vi.mock('@/app/api/learning-scenario/system-prompt', () => ({
     mocks.constructLearningScenarioLanguageSystemPromptMock,
 }));
 
-const teacherUserAndContext = {
-  federalState: {
-    id: 'federal-state-1',
-    featureToggles: {
-      isSharedPageLocaleDetectionEnabled: true,
-    },
+const sharingFederalState = {
+  id: 'federal-state-1',
+  featureToggles: {
+    isSharedPageLocaleDetectionEnabled: true,
   },
 };
 
@@ -74,11 +76,13 @@ const modelAndApiKey = {
 const customChatCharacter = {
   customChatVariant: 'character' as const,
   customChatId: 'character-1',
+  sharingUserId: 'sharing-user-1',
 };
 
 const customChatLearningScenario = {
   customChatVariant: 'learning-scenario' as const,
   customChatId: 'scenario-1',
+  sharingUserId: 'sharing-user-1',
 };
 
 beforeEach(() => {
@@ -95,7 +99,7 @@ beforeEach(() => {
     filterGroup: {},
   });
   mocks.getMaybeUserMock.mockResolvedValue({ id: 'teacher-1' });
-  mocks.getUserAndContextByUserIdMock.mockResolvedValue(teacherUserAndContext);
+  mocks.dbGetFederalStateByUserIdMock.mockResolvedValue(sharingFederalState);
   mocks.getStrongAuxiliaryModelMock.mockResolvedValue(auxiliaryModel);
   mocks.getModelAndApiKeyWithResultMock.mockResolvedValue([null, modelAndApiKey]);
   mocks.constructCharacterLanguageSystemPromptMock.mockReturnValue('character-system-prompt');
@@ -126,7 +130,7 @@ describe('resolveSharingLocale', () => {
     const locale = await resolveSharingLocale(customChatCharacter);
 
     expect(locale).toBe('en');
-    expect(mocks.getUserAndContextByUserIdMock).not.toHaveBeenCalled();
+    expect(mocks.dbGetFederalStateByUserIdMock).not.toHaveBeenCalled();
     expect(mocks.generateTextWithBillingMock).not.toHaveBeenCalled();
   });
 
@@ -148,18 +152,16 @@ describe('resolveSharingLocale', () => {
     const locale = await resolveSharingLocale(customChatCharacter);
 
     expect(locale).toBe('de');
-    expect(mocks.getUserAndContextByUserIdMock).not.toHaveBeenCalled();
+    expect(mocks.dbGetFederalStateByUserIdMock).not.toHaveBeenCalled();
     expect(mocks.generateTextWithBillingMock).not.toHaveBeenCalled();
   });
 
   it('returns default locale when character locale detection toggle is disabled', async () => {
     const { resolveSharingLocale } = await import('./sharing-locale');
-    mocks.getUserAndContextByUserIdMock.mockResolvedValue({
-      federalState: {
-        id: 'federal-state-1',
-        featureToggles: {
-          isSharedPageLocaleDetectionEnabled: false,
-        },
+    mocks.dbGetFederalStateByUserIdMock.mockResolvedValue({
+      id: 'federal-state-1',
+      featureToggles: {
+        isSharedPageLocaleDetectionEnabled: false,
       },
     });
 
@@ -171,13 +173,32 @@ describe('resolveSharingLocale', () => {
     expect(mocks.generateTextWithBillingMock).not.toHaveBeenCalled();
   });
 
+  it('resolves the federal state from the sharing user, not the character owner', async () => {
+    const { resolveSharingLocale } = await import('./sharing-locale');
+
+    await resolveSharingLocale(customChatCharacter);
+
+    expect(mocks.dbGetFederalStateByUserIdMock).toHaveBeenCalledWith({
+      userId: 'sharing-user-1',
+    });
+  });
+
+  it('returns default locale when the sharing user has no federal state', async () => {
+    const { resolveSharingLocale } = await import('./sharing-locale');
+    mocks.dbGetFederalStateByUserIdMock.mockResolvedValue(undefined);
+
+    const locale = await resolveSharingLocale(customChatCharacter);
+
+    expect(locale).toBe('de');
+    expect(mocks.getStrongAuxiliaryModelMock).not.toHaveBeenCalled();
+    expect(mocks.generateTextWithBillingMock).not.toHaveBeenCalled();
+  });
+
   it('treats undefined character locale detection toggle as enabled and persists detected language', async () => {
     const { resolveSharingLocale } = await import('./sharing-locale');
-    mocks.getUserAndContextByUserIdMock.mockResolvedValue({
-      federalState: {
-        id: 'federal-state-1',
-        featureToggles: {},
-      },
+    mocks.dbGetFederalStateByUserIdMock.mockResolvedValue({
+      id: 'federal-state-1',
+      featureToggles: {},
     });
     mocks.generateTextWithBillingMock.mockResolvedValue({ text: 'english' });
 
@@ -236,17 +257,15 @@ describe('resolveSharingLocale', () => {
     const locale = await resolveSharingLocale(customChatCharacter);
 
     expect(locale).toBe('de');
-    expect(mocks.getUserAndContextByUserIdMock).not.toHaveBeenCalled();
+    expect(mocks.dbGetFederalStateByUserIdMock).not.toHaveBeenCalled();
   });
 
   it('returns default locale when learning scenario locale detection toggle is disabled', async () => {
     const { resolveSharingLocale } = await import('./sharing-locale');
-    mocks.getUserAndContextByUserIdMock.mockResolvedValue({
-      federalState: {
-        id: 'federal-state-1',
-        featureToggles: {
-          isSharedPageLocaleDetectionEnabled: false,
-        },
+    mocks.dbGetFederalStateByUserIdMock.mockResolvedValue({
+      id: 'federal-state-1',
+      featureToggles: {
+        isSharedPageLocaleDetectionEnabled: false,
       },
     });
 

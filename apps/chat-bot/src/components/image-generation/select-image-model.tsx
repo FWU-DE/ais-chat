@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
 import { useTranslations } from 'next-intl';
-import { useImageModels } from '../providers/image-model-provider';
+import React from 'react';
+
 import ModelSelect from '../common/model-select';
+import { useImageModels } from '../providers/image-model-provider';
 
 export default function SelectImageModel() {
   const { models, selectedModel, setSelectedModel } = useImageModels();

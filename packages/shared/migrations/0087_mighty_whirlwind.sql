@@ -1,0 +1,2 @@
+ALTER TABLE "assistant" ADD COLUMN "web_search_scope" "web_search_scope" DEFAULT 'all-web' NOT NULL;--> statement-breakpoint
+ALTER TABLE "assistant" ADD COLUMN "web_search_included_domains" text[] DEFAULT '{}'::text[] NOT NULL;

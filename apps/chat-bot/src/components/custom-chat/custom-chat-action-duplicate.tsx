@@ -1,6 +1,7 @@
 import { CopyIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
 import { useTranslations } from 'next-intl';
+
 import { ConfirmationDialog } from '../common/dialog';
 
 export function CustomChatActionDuplicate({ onClick }: { onClick: () => void }) {

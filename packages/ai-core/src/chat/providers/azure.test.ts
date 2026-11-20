@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { constructAzureResponsesGenerationFn, constructAzureResponsesStreamFn } from './azure';
+
 import type { AiModel } from '../types';
+import { constructAzureResponsesGenerationFn, constructAzureResponsesStreamFn } from './azure';
 
 const { responsesCreateMock, openAiConstructorMock, instrumentOpenAiClientMock, MockOpenAI } =
   vi.hoisted(() => {
@@ -30,7 +31,7 @@ vi.mock('openai', () => ({
   default: MockOpenAI,
 }));
 
-vi.mock('@sentry/core', () => ({
+vi.mock('@sentry/server-utils', () => ({
   instrumentOpenAiClient: instrumentOpenAiClientMock,
 }));
 
@@ -60,64 +61,67 @@ describe('Azure Responses chat providers', () => {
     vi.clearAllMocks();
   });
 
-  it('streams Azure Responses output and maps usage without forwarding temperature', async () => {
-    responsesCreateMock.mockResolvedValue({
-      [Symbol.asyncIterator]: async function* () {
-        yield { type: 'response.output_text.delta', delta: 'Hello' };
-        yield { type: 'response.output_text.delta', delta: ' world' };
-        yield {
-          type: 'response.completed',
-          response: {
-            usage: {
-              input_tokens: 10,
-              output_tokens: 20,
-              total_tokens: 30,
+  it.each(['response.completed', 'response.incomplete', 'response.failed'] as const)(
+    'streams Azure Responses output and captures usage from a %s event',
+    async (eventType) => {
+      responsesCreateMock.mockResolvedValue({
+        [Symbol.asyncIterator]: async function* () {
+          yield { type: 'response.output_text.delta', delta: 'Hello' };
+          yield { type: 'response.output_text.delta', delta: ' world' };
+          yield {
+            type: eventType,
+            response: {
+              usage: {
+                input_tokens: 10,
+                output_tokens: 20,
+                total_tokens: 30,
+              },
             },
-          },
-        };
-      },
-    });
+          };
+        },
+      });
 
-    const model = createAzureModel({
-      reasoning: { effort: 'low' },
-    });
-    const streamText = constructAzureResponsesStreamFn(model);
-    const onComplete = vi.fn();
-    const chunks: string[] = [];
-
-    for await (const chunk of streamText(
-      {
-        messages: [{ role: 'user', content: 'Hello there' }],
-        model: model.name,
-        maxTokens: 128,
-      },
-      onComplete,
-    )) {
-      chunks.push(chunk);
-    }
-
-    expect(chunks).toEqual(['Hello', ' world']);
-    expect(responsesCreateMock).toHaveBeenCalledTimes(1);
-    expect(responsesCreateMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        model: 'chat-deploy',
-        stream: true,
-        max_output_tokens: 128,
+      const model = createAzureModel({
         reasoning: { effort: 'low' },
-      }),
-      {
-        path: '/openai/responses',
-      },
-    );
+      });
+      const streamText = constructAzureResponsesStreamFn(model);
+      const onComplete = vi.fn();
+      const chunks: string[] = [];
 
-    const requestPayload = responsesCreateMock.mock.calls[0]?.[0] as Record<string, unknown>;
-    expect(requestPayload).not.toHaveProperty('temperature');
-    expect(onComplete).toHaveBeenCalledWith({
-      promptTokens: 10,
-      completionTokens: 20,
-      totalTokens: 30,
-    });
-  });
+      for await (const chunk of streamText(
+        {
+          messages: [{ role: 'user', content: 'Hello there' }],
+          model: model.name,
+          maxTokens: 128,
+        },
+        onComplete,
+      )) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toEqual(['Hello', ' world']);
+      expect(responsesCreateMock).toHaveBeenCalledTimes(1);
+      expect(responsesCreateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: 'chat-deploy',
+          stream: true,
+          max_output_tokens: 128,
+          reasoning: { effort: 'low' },
+        }),
+        {
+          path: '/openai/responses',
+        },
+      );
+
+      const requestPayload = responsesCreateMock.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(requestPayload).not.toHaveProperty('temperature');
+      expect(onComplete).toHaveBeenCalledWith({
+        promptTokens: 10,
+        completionTokens: 20,
+        totalTokens: 30,
+      });
+    },
+  );
 
   it('generates Azure Responses text and usage without forwarding temperature', async () => {
     responsesCreateMock.mockResolvedValue({
@@ -173,7 +177,7 @@ describe('Azure Responses chat providers', () => {
       apiKey: 'azure-api-key',
       baseURL: 'https://example.openai.azure.com',
       defaultQuery: {
-        'api-version': '2024-02-15-preview',
+        'api-version': '2025-04-01-preview',
       },
     });
   });

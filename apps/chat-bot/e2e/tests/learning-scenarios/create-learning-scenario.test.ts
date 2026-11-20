@@ -1,14 +1,18 @@
-import { expect, test, type Page } from '@playwright/test';
-import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
-import { waitForAutosave, waitForToast, waitForToastDisappear } from '../../utils/utils';
+import type { Page } from '@playwright/test';
+import { nanoid } from 'nanoid';
+
+import { expect, test } from '../../fixtures/test';
 import { sendMessage } from '../../utils/chat';
+import { AUTH_FILES, MOCK_LLM_COMMANDS } from '../../utils/const';
+import { verifyDidacticCommentary } from '../../utils/didactic-commentary';
 import {
   configureLearningScenario,
   createLearningScenario,
   deleteLearningScenario,
   deleteLearningScenarioFromDetailPage,
 } from '../../utils/learning-scenario';
-import { nanoid } from 'nanoid';
+import { verifyLicenseInformation } from '../../utils/license-information';
+import { waitForAutosave, waitForToast, waitForToastDisappear } from '../../utils/utils';
 
 test.use({ storageState: AUTH_FILES.teacher });
 
@@ -86,59 +90,64 @@ test.describe('create, share, chat, delete', () => {
     await page.waitForURL('/ua/learning-scenarios/**/dialog?inviteCode=*');
   });
 
-  test('teacher can login and create learning scenario, student can join and restart chat', async ({
-    page,
-  }) => {
-    await createLearningScenario(page);
+  test(
+    'teacher can login and create learning scenario, student can join and restart chat',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      await createLearningScenario(page);
 
-    // configure form
-    await configureLearningScenario(page, data);
+      // configure form
+      await configureLearningScenario(page, data);
 
-    // Still on the editor page after autosave
-    await stopSharingIfActive(page);
-    // test share page
-    await page.getByTestId('token-points-select').click();
-    await page.getByTestId('token-points-option-25').click();
-    await page.getByTestId('usage-time-select').click();
-    await page.getByTestId('usage-time-option-30').click();
-    await page.getByTestId('start-share-button').click();
+      // Still on the editor page after autosave
+      await stopSharingIfActive(page);
+      // test share page
+      await page.getByTestId('token-points-select').click();
+      await page.getByTestId('token-points-option-25').click();
+      await page.getByTestId('usage-time-select').click();
+      await page.getByTestId('usage-time-option-30').click();
+      await page.getByTestId('start-share-button').click();
 
-    // get code
-    await page.waitForURL('/learning-scenarios/**/share');
-    const code = await page.getByTestId('join-code').textContent();
+      // get code
+      await page.waitForURL('/learning-scenarios/**/share');
+      const code = await page.getByTestId('join-code').textContent();
 
-    // join chat as student
-    await page.goto('/logout');
-    await page.waitForURL('/login');
+      // join chat as student
+      await page.goto('/logout');
+      await page.waitForURL('/login');
 
-    await page.locator('#login-invite-code').fill(code ?? '');
+      await page.locator('#login-invite-code').fill(code ?? '');
 
-    const loginButton = page.getByRole('button', { name: 'Zum Dialog' });
-    await expect(loginButton).toBeVisible();
-    await loginButton.click();
+      const loginButton = page.getByRole('button', { name: 'Zum Dialog' });
+      await expect(loginButton).toBeVisible();
+      await loginButton.click();
 
-    await page.waitForURL('/ua/learning-scenarios/**/dialog?inviteCode=*');
+      await page.waitForURL('/ua/learning-scenarios/**/dialog?inviteCode=*');
 
-    // send first message
-    const startButton = page.getByTestId('start-dialog-button');
-    await expect(startButton).toBeVisible();
-    await startButton.click();
+      // send first message
+      const startButton = page.getByTestId('start-dialog-button');
+      await expect(startButton).toBeVisible();
+      await startButton.click();
 
-    await sendMessage(page, `${MOCK_LLM_COMMANDS.RETURN_SYSTEM_PROMPT} Über wen lernen wir hier?`);
+      await sendMessage(
+        page,
+        `${MOCK_LLM_COMMANDS.RETURN_SYSTEM_PROMPT} Über wen lernen wir hier?`,
+      );
 
-    // 'Ludwig XIV' is set in the learning scenario's additional instructions and description,
-    // which are included in the system prompt; the mock LLM echoes the system prompt back.
-    await expect(page.getByLabel('assistant message 1')).toContainText('Ludwig XIV');
+      // 'Ludwig XIV' is set in the learning scenario's additional instructions and description,
+      // which are included in the system prompt; the mock LLM echoes the system prompt back.
+      await expect(page.getByLabel('assistant message 1')).toContainText('Ludwig XIV');
 
-    // new chat
-    const newChatButton = page.getByTestId('custom-chat-delete-button').first();
-    await expect(newChatButton).toBeVisible();
-    await newChatButton.click();
+      // new chat
+      const newChatButton = page.getByTestId('custom-chat-delete-button').first();
+      await expect(newChatButton).toBeVisible();
+      await newChatButton.click();
 
-    const deleteConfirmButton = page.getByTestId('confirm-alert-dialog-confirm-button');
-    await expect(deleteConfirmButton).toBeVisible();
-    await deleteConfirmButton.click();
-  });
+      const deleteConfirmButton = page.getByTestId('confirm-alert-dialog-confirm-button');
+      await expect(deleteConfirmButton).toBeVisible();
+      await deleteConfirmButton.click();
+    },
+  );
 
   test('teacher can delete learning scenario', async ({ page }) => {
     // create learning scenario
@@ -225,7 +234,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Title
   await page.getByRole('textbox', { name: 'Name des Lernszenarios' }).fill('');
   await page.getByRole('textbox', { name: 'Name des Lernszenarios' }).fill('New Title');
-  await page.getByRole('textbox', { name: 'Name des Lernszenarios' }).press('Tab');
+  await page.getByRole('textbox', { name: 'Name des Lernszenarios' }).blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Name des Lernszenarios' })).toHaveValue(
@@ -235,7 +244,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Description
   await page.getByRole('textbox', { name: 'Kurzbeschreibung' }).fill('');
   await page.getByRole('textbox', { name: 'Kurzbeschreibung' }).fill('New Description');
-  await page.getByRole('textbox', { name: 'Kurzbeschreibung' }).press('Tab');
+  await page.getByRole('textbox', { name: 'Kurzbeschreibung' }).blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Kurzbeschreibung' })).toHaveValue(
@@ -245,7 +254,7 @@ test('data is autosaved on blur', async ({ page }) => {
   // Instructions
   await page.getByRole('textbox', { name: 'Instruktionen' }).fill('');
   await page.getByRole('textbox', { name: 'Instruktionen' }).fill('New Instructions');
-  await page.getByRole('textbox', { name: 'Instruktionen' }).press('Tab');
+  await page.getByRole('textbox', { name: 'Instruktionen' }).blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Instruktionen' })).toHaveValue(
@@ -255,10 +264,18 @@ test('data is autosaved on blur', async ({ page }) => {
   // Student Exercise
   await page.getByRole('textbox', { name: 'Arbeitsauftrag' }).fill('');
   await page.getByRole('textbox', { name: 'Arbeitsauftrag' }).fill('New Exercise');
-  await page.getByRole('textbox', { name: 'Arbeitsauftrag' }).press('Tab');
+  await page.getByRole('textbox', { name: 'Arbeitsauftrag' }).blur();
   await waitForAutosave(page);
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Arbeitsauftrag' })).toHaveValue('New Exercise');
+
+  // License information
+  await verifyDidacticCommentary(
+    page,
+    '/learning-scenarios',
+    'Hier können Hinweise an andere Lehrkräfte gegeben werden, wie dieses Lernszenario eingesetzt werden kann.',
+  );
+  await verifyLicenseInformation(page, '/learning-scenarios');
 
   // cleanup
   await deleteLearningScenarioFromDetailPage(page);

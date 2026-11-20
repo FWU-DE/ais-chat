@@ -1,4 +1,3 @@
-import { eq } from 'drizzle-orm';
 import { db } from '@shared/db';
 import {
   AssistantFileMapping,
@@ -7,6 +6,7 @@ import {
   fileTable,
   LearningScenarioFileMapping,
 } from '@shared/db/schema';
+import { logError } from '@shared/logging';
 import {
   copyFileInS3,
   deleteFileFromS3,
@@ -14,8 +14,9 @@ import {
   getReadOnlySignedUrl,
   uploadFileToS3,
 } from '@shared/s3';
+import { eq } from 'drizzle-orm';
+
 import { cnanoid } from '../random/randomService';
-import { logError } from '@shared/logging';
 
 const MESSAGE_ATTACHMENTS_FOLDER_NAME = 'message_attachments';
 
@@ -25,9 +26,13 @@ const MESSAGE_ATTACHMENTS_FOLDER_NAME = 'message_attachments';
  * a clean copy with a new file ID.
  *
  * @param originalFileId - The ID of the original file to duplicate
+ * @param userId - The owner of the duplicated file
  * @returns Promise with the new file ID
  */
-export async function duplicateFileWithEmbeddings(originalFileId: string): Promise<string> {
+export async function duplicateFileWithEmbeddings(
+  originalFileId: string,
+  userId: string,
+): Promise<string> {
   const newFileId = `file_${cnanoid()}`;
 
   try {
@@ -58,6 +63,7 @@ export async function duplicateFileWithEmbeddings(originalFileId: string): Promi
       await tx.insert(fileTable).values({
         ...originalFile,
         id: newFileId,
+        userId,
       });
 
       // Copy all chunks with new file ID (remove id to let DB generate new ones)

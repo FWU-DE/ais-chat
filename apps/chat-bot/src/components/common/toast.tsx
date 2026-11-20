@@ -1,8 +1,11 @@
 'use client';
-import React from 'react';
-import * as Toast from '@radix-ui/react-toast';
-import { cn } from '@/utils/tailwind';
 import './toast.css';
+
+import * as Toast from '@radix-ui/react-toast';
+import React from 'react';
+
+import { cn } from '@/utils/tailwind';
+
 import CheckIcon from '../icons/check';
 import DangerIcon from '../icons/danger';
 
@@ -10,6 +13,8 @@ export type ToastContextType = {
   success: (message: string) => void;
   error: (message: string) => void;
 };
+
+export const TOAST_DURATION_MS = 8000;
 
 const ToastContext = React.createContext<ToastContextType | undefined>(undefined);
 
@@ -36,7 +41,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     );
     setOpen(true);
     window.clearTimeout(timerRef.current);
-    timerRef.current = window.setTimeout(() => setOpen(false), 3000);
+    timerRef.current = window.setTimeout(() => setOpen(false), TOAST_DURATION_MS);
   };
 
   const toast = {
@@ -45,8 +50,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ToastContext.Provider value={toast}>
-      <Toast.Provider swipeDirection="right">
+    <ToastContext value={toast}>
+      <Toast.Provider swipeDirection="right" duration={TOAST_DURATION_MS}>
         {children}
         <Toast.Root
           open={open}
@@ -63,6 +68,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         </Toast.Root>
         <Toast.Viewport className="fixed top-0 right-0 z-2147483647 m-0 flex w-[390px] max-w-[100vw] list-none flex-col gap-2.5 p-(--viewport-padding) outline-hidden [--viewport-padding:25px]" />
       </Toast.Provider>
-    </ToastContext.Provider>
+    </ToastContext>
   );
 }

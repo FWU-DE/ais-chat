@@ -1,7 +1,7 @@
 import * as React from 'react';
+import { forwardRef, useState } from 'react';
 
 import { cn } from '../lib/utils';
-import { useState, forwardRef } from 'react';
 
 type InputProps = React.ComponentProps<'input'> & {
   showCharacterCount?: boolean;

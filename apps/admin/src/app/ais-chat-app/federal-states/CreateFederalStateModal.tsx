@@ -1,16 +1,18 @@
 'use client';
-import { Button } from '@ui/components/button';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createFederalStateAction } from './[federalStateId]/actions';
+import { logError } from '@shared/logging';
+import { Button } from '@ui/components/button';
 import { FormField } from '@ui/components/form/form-field';
-import { toast } from 'sonner';
-import z from 'zod';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect } from 'react';
-import { ROUTES } from '@/consts/routes';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import z from 'zod';
+
 import { FormErrorDisplay } from '@/components/FormErrorDisplay';
-import { logError } from '@shared/logging';
+import { ROUTES } from '@/consts/routes';
+
+import { createFederalStateAction } from './[federalStateId]/actions';
 
 export type CreateFederalStateModalProps = {
   isOpen: boolean;
@@ -21,7 +23,6 @@ export type CreateFederalStateModalProps = {
 // Minimal form schema - only mandatory fields without defaults
 export const createFederalStateFormSchema = z.object({
   id: z.string().min(1, 'ID ist erforderlich'),
-  plainApiKey: z.string().optional().default(''), // Optional but useful for setup
 });
 
 export type CreateFederalStateForm = z.infer<typeof createFederalStateFormSchema>;
@@ -46,12 +47,9 @@ export function CreateFederalStateModal(props: CreateFederalStateModalProps) {
     }
 
     try {
-      await createFederalStateAction(
-        {
-          id: data.id,
-        },
-        data.plainApiKey.trim(),
-      );
+      await createFederalStateAction({
+        id: data.id,
+      });
 
       toast.success('Bundesland erfolgreich erstellt');
       reset();
@@ -112,14 +110,6 @@ export function CreateFederalStateModal(props: CreateFederalStateModalProps) {
             control={control}
             required
             autoFocusWhenEmpty
-          />
-
-          <FormField
-            name="plainApiKey"
-            label="API Key (Optional)"
-            description="API Key für die Kommunikation mit ais-chat-api. Kann auch später hinzugefügt werden."
-            control={control}
-            type="password"
           />
 
           <div className="flex gap-2 justify-end">

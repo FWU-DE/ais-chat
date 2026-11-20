@@ -2,25 +2,35 @@
 
 import { CharacterOptionalShareDataModel, FileModel } from '@shared/db/schema';
 import { WebSource } from '@shared/db/types';
-import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
-
-import { useLlmModels } from '@/components/providers/llm-model-provider';
-import { getDefaultModel } from '@shared/llm-models/llm-model-service';
-import { BackButton } from '@/components/common/back-button';
-import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
-import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
-import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
-import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
-import { CustomChatHeading2 } from '@/components/custom-chat/custom-chat-heading2';
-import { CustomChatLastUpdate } from '@/components/custom-chat/custom-chat-last-update';
-import { CustomChatFieldInfo } from '@/components/custom-chat/custom-chat-field-info';
-import { CustomChatAvatarImage } from '@/components/custom-chat/custom-chat-avatar-image';
-import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
-import { CustomChatWebSearch } from '@/components/custom-chat/custom-chat-web-search';
 import { Card, CardContent } from '@ui/components/card';
 import { FieldGroup } from '@ui/components/field';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+
+import { BackButton } from '@/components/common/back-button';
 import { useToast } from '@/components/common/toast';
+import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
+import { CustomChatActionFavorite } from '@/components/custom-chat/custom-chat-action-favorite';
+import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
+import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
+import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-author-info';
+import { CustomChatAvatarImage } from '@/components/custom-chat/custom-chat-avatar-image';
+import { CustomChatCreateSuspensionRequestButton } from '@/components/custom-chat/custom-chat-create-suspension-request-button';
+import { CustomChatFieldInfo } from '@/components/custom-chat/custom-chat-field-info';
+import { CustomChatHeading2 } from '@/components/custom-chat/custom-chat-heading2';
+import { CustomChatLastUpdate } from '@/components/custom-chat/custom-chat-last-update';
+import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
+import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
+import { CustomChatDidacticCommentaryView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-view';
+import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
+import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-chat-filter-display-section';
+import { extractFilterValues } from '@/components/custom-chat/filter/custom-chat-filter-utils';
+import { CustomChatLicenseInformationView } from '@/components/custom-chat/license-information/custom-chat-license-information-view';
+import { CustomChatShareWithLearners } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners';
+import { CustomChatSpeechView } from '@/components/custom-chat/speech/custom-chat-speech-view';
+import { CustomChatWebSearchView } from '@/components/custom-chat/web-search/custom-chat-web-search-view';
+import { useLlmModels } from '@/components/providers/llm-model-provider';
+
 import { createNewCharacterAction } from '../actions';
 import {
   downloadFileFromCharacterAction,
@@ -30,12 +40,6 @@ import {
   unshareCharacterAction,
   updateCharacterShareTokenPointsLimitAction,
 } from '../editor/[characterId]/actions';
-import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
-import { CustomChatShareWithLearners } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners';
-import { CustomChatCreateSuspensionRequestButton } from '@/components/custom-chat/custom-chat-create-suspension-request-button';
-import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-author-info';
-import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-chat-filter-display-section';
-import { extractFilterValues } from '@/components/custom-chat/filter/custom-chat-filter-utils';
 
 export function CharacterView({
   character,
@@ -46,6 +50,8 @@ export function CharacterView({
   maxBudget,
   budgetUsedBySharedChat,
   isWebSearchAvailable,
+  isSpeechAvailable,
+  initialIsFavorite,
 }: {
   character: CharacterOptionalShareDataModel;
   relatedFiles: FileModel[];
@@ -55,13 +61,15 @@ export function CharacterView({
   maxBudget: number;
   budgetUsedBySharedChat: number;
   isWebSearchAvailable: boolean;
+  isSpeechAvailable: boolean;
+  initialIsFavorite: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
   const t = useTranslations('characters');
   const tChat = useTranslations('custom-chat');
-  const { models } = useLlmModels();
-  const maybeDefaultModelId = getDefaultModel(models)?.id;
+  const { models, defaultModel } = useLlmModels();
+  const maybeDefaultModelId = defaultModel?.id;
   const isModelAvailable = character.modelId && models.some((m) => m.id === character.modelId);
   const selectedModelId = isModelAvailable ? character.modelId : maybeDefaultModelId;
   const selectedModel = models.find((m) => m.id === selectedModelId);
@@ -99,6 +107,10 @@ export function CharacterView({
       <CustomChatActions>
         <CustomChatActionUse onClick={handleUseChat} />
         <CustomChatActionDuplicate onClick={handleDuplicateCharacter} />
+        <CustomChatActionFavorite
+          entityRef={{ entityType: 'character', entityId: character.id }}
+          initialIsFavorite={initialIsFavorite}
+        />
         <CustomChatLastUpdate date={character.updatedAt} />
       </CustomChatActions>
 
@@ -159,7 +171,7 @@ export function CharacterView({
           </CardContent>
         </Card>
 
-        {character.accessLevel === 'global' && (
+        {character.isGlobal && (
           <CustomChatAuthorInfo
             authorLabel={t('author-label')}
             authorText={character.author !== '' ? character.author : t('author-text')}
@@ -171,6 +183,10 @@ export function CharacterView({
             <FieldGroup>
               <CustomChatFieldInfo label={t('name-label')} value={character.name} />
               <CustomChatFieldInfo label={t('description-label')} value={character.description} />
+              <CustomChatDidacticCommentaryView
+                didacticCommentary={character.didacticCommentary}
+                tooltip={tChat('didactic-commentary.heading-tooltip-character')}
+              />
               {selectedModel && (
                 <CustomChatFieldInfo
                   label={tChat('model.label')}
@@ -183,6 +199,7 @@ export function CharacterView({
                 value={character.initialMessage}
               />
               <FilterDisplaySection values={filterValues} />
+              <CustomChatLicenseInformationView licenseInformation={character.licenseInformation} />
             </FieldGroup>
           </CardContent>
         </Card>
@@ -193,9 +210,10 @@ export function CharacterView({
           onDownloadFile={handleDownloadFile}
         />
       </div>
-      {character.isWebSearchEnabled && isWebSearchAvailable && <CustomChatWebSearch readonly />}
+      {isWebSearchAvailable && <CustomChatWebSearchView {...character} />}
+      {isSpeechAvailable && <CustomChatSpeechView {...character} />}
 
-      {(character.hasLinkAccess || character.accessLevel === 'community') && (
+      {(character.hasLinkAccess || character.isCommunityShared) && (
         <CustomChatCreateSuspensionRequestButton
           entityRef={{ entityType: 'character', entityId: character.id }}
         />

@@ -1,12 +1,13 @@
 'use client';
 
+import React from 'react';
+
 import {
   SMALL_TEXT_INPUT_FIELDS_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT,
 } from '@/configuration-text-inputs/const';
 import { cn } from '@/utils/tailwind';
 import { inputFieldClassName, labelClassName } from '@/utils/tailwind/input';
-import React from 'react';
 
 export type TextInputType = 'text' | 'textarea';
 

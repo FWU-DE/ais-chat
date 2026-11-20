@@ -1,5 +1,14 @@
-import { instrumentOpenAiClient } from '@sentry/core';
+import { dbGetModelIdByProviderAndUpstreamName } from '@ais-chat/api-database';
+import { instrumentOpenAiClient } from '@sentry/server-utils';
 import OpenAI from 'openai';
+
+import {
+  type BifrostExtraFields,
+  extractBifrostFieldsFromHeaders,
+  stripBifrostProviderPrefix,
+} from '../../bifrost-headers';
+import { env } from '../../env';
+import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import type {
   AgenticStreamFn,
   AiModel,
@@ -7,12 +16,8 @@ import type {
   TextStreamFn,
   TokenUsage,
 } from '../types';
-import { AiGenerationError, ProviderConfigurationError } from '../../errors';
 import { toOpenAIResponsesInput } from '../utils';
 import { streamOpenAICompatibleAgenticResponse } from './openai-compatible';
-import { env } from '../../env';
-
-type BifrostUpstreamProvider = 'azure' | 'openai' | 'ionos' | 'vertex';
 
 function createBifrostClient(model: AiModel): { client: OpenAI; modelName: string } {
   if (model.provider !== 'bifrost') {
@@ -23,59 +28,112 @@ function createBifrostClient(model: AiModel): { client: OpenAI; modelName: strin
     throw new ProviderConfigurationError('BIFROST_BASE_URL is not configured');
   }
 
-  const provider = getBifrostUpstreamProvider(model);
-  const modelName = provider === 'vertex' ? stripAnthropicPrefix(model.name) : model.name;
-
   return {
     client: instrumentOpenAiClient(
       new OpenAI({
         apiKey: env.bifrostApiKey ?? 'not-needed',
         baseURL: env.bifrostBaseUrl,
+        ...(env.bifrostApiKey ? { defaultHeaders: { 'x-bf-vk': env.bifrostApiKey } } : {}),
       }),
     ),
-    modelName: `${provider}/${modelName}`,
+    modelName: getBifrostModelName(model),
   };
 }
 
-function getBifrostUpstreamProvider(model: AiModel): BifrostUpstreamProvider {
-  const settingProvider = model.setting.provider;
-  if (settingProvider === 'azure') return 'azure';
-  if (settingProvider === 'openai') return 'openai';
-  if (settingProvider === 'ionos') return 'ionos';
-  if (settingProvider === 'google') return 'vertex';
-
-  throw new ProviderConfigurationError('Unsupported Bifrost upstream provider');
+// Temporary until the other provider paths are removed and all requests use Bifrost.
+function getBifrostModelName(model: AiModel): string {
+  return model.name.replace(/^anthropic\//, '');
 }
 
-function stripAnthropicPrefix(modelName: string): string {
-  return modelName.replace(/^anthropic\//, '');
+type BifrostUsageInfo = {
+  modelId?: string;
+  /** The real upstream provider that served the request, as reported by Bifrost. */
+  provider?: string;
+  /** The real upstream model name that served the request, as reported by Bifrost. */
+  modelName?: string;
+};
+
+async function resolveBifrostUsageInfo(
+  fields: BifrostExtraFields,
+  models: AiModel[],
+): Promise<BifrostUsageInfo> {
+  // The deployment identifies the model that actually served the request (it may differ from
+  // the one requested when a fallback kicked in), so prefer it over the requested model name.
+  const deployment = fields.resolved_model_used ?? fields.original_model_requested;
+  const modelName = stripBifrostProviderPrefix(deployment, fields.provider);
+
+  // Only fall back to the requested name when Bifrost did not report a resolved model at all;
+  // otherwise a resolved name that fails to match here would incorrectly match the primary
+  // model via `original_model_requested`, even though a fallback deployment served the request.
+  const returnedNames = fields.resolved_model_used
+    ? [fields.resolved_model_used]
+    : typeof fields.original_model_requested === 'string'
+      ? [fields.original_model_requested]
+      : [];
+  for (const returnedName of returnedNames) {
+    const matchingModel = models.find((candidate) => {
+      const candidateName = getBifrostModelName(candidate);
+      return returnedName === candidateName || returnedName.endsWith(`/${candidateName}`);
+    });
+    if (matchingModel) return { modelId: matchingModel.id, provider: fields.provider, modelName };
+  }
+  if (fields.provider && fields.resolved_model_used) {
+    const upstreamModelName = fields.resolved_model_used.replace(`${fields.provider}/`, '');
+    const modelId = await dbGetModelIdByProviderAndUpstreamName({
+      modelIds: models.map(({ id }) => id),
+      provider: fields.provider,
+      upstreamModelName,
+    });
+    return { modelId, provider: fields.provider, modelName };
+  }
+  return { provider: fields.provider, modelName };
 }
 
 export function constructBifrostTextStreamFn(model: AiModel): TextStreamFn {
   const { client, modelName } = createBifrostClient(model);
 
-  return async function* getBifrostTextStream({ messages, maxTokens }, onComplete) {
-    const response = await client.responses.create({
-      model: modelName,
-      input: toOpenAIResponsesInput(messages),
-      stream: true,
-      max_output_tokens: maxTokens,
-      ...model.additionalParameters,
-    });
+  return async function* getBifrostTextStream(
+    { messages, maxTokens, fallbackModels, abortSignal },
+    onComplete,
+  ) {
+    const { data: stream, response: httpResponse } = await client.responses
+      .create(
+        {
+          model: modelName,
+          input: toOpenAIResponsesInput(messages),
+          stream: true,
+          max_output_tokens: maxTokens,
+          ...model.additionalParameters,
+          ...(fallbackModels?.length ? { fallbacks: fallbackModels.map(getBifrostModelName) } : {}),
+        },
+        { signal: abortSignal },
+      )
+      .withResponse();
+    const headerFields = extractBifrostFieldsFromHeaders(httpResponse.headers);
 
     let usage: TokenUsage | undefined;
+    let modelId: string | undefined;
 
-    for await (const event of response) {
+    for await (const event of stream) {
       if (event.type === 'response.output_text.delta') {
         yield event.delta;
       }
 
-      if (event.type === 'response.completed' && event.response.usage) {
+      if (
+        (event.type === 'response.completed' ||
+          event.type === 'response.incomplete' ||
+          event.type === 'response.failed') &&
+        event.response.usage
+      ) {
         usage = {
           completionTokens: event.response.usage.output_tokens,
           promptTokens: event.response.usage.input_tokens,
           totalTokens: event.response.usage.total_tokens,
         };
+        ({ modelId } = await resolveBifrostUsageInfo(headerFields, [
+          model,
+          ...(fallbackModels ?? []),
+        ]));
       }
     }
 
@@ -84,7 +142,11 @@ export function constructBifrostTextStreamFn(model: AiModel): TextStreamFn {
     }
 
     if (onComplete) {
-      await onComplete(usage);
+      if (modelId) {
+        await onComplete(usage, modelId);
+      } else {
+        await onComplete(usage);
+      }
     }
   };
 }
@@ -92,7 +154,14 @@ export function constructBifrostTextStreamFn(model: AiModel): TextStreamFn {
 export function constructBifrostAgenticStreamFn(model: AiModel): AgenticStreamFn {
   const { client, modelName } = createBifrostClient(model);
 
-  return async function* getBifrostAgenticStream({ messages, maxTokens, tools, toolChoice }) {
+  return async function* getBifrostAgenticStream({
+    messages,
+    maxTokens,
+    tools,
+    toolChoice,
+    abortSignal,
+    fallbackModels,
+  }) {
     yield* streamOpenAICompatibleAgenticResponse({
       client,
       messages,
@@ -100,8 +169,17 @@ export function constructBifrostAgenticStreamFn(model: AiModel): AgenticStreamFn
       maxTokens,
       tools,
       toolChoice,
+      abortSignal,
       providerName: 'Bifrost',
-      additionalParameters: model.additionalParameters as Record<string, unknown>,
+      additionalParameters: {
+        ...(model.additionalParameters as Record<string, unknown>),
+        ...(fallbackModels?.length ? { fallbacks: fallbackModels.map(getBifrostModelName) } : {}),
+      },
+      getUsageInfo: (headers) =>
+        resolveBifrostUsageInfo(extractBifrostFieldsFromHeaders(headers), [
+          model,
+          ...(fallbackModels ?? []),
+        ]),
     });
   };
 }
@@ -109,14 +187,25 @@ export function constructBifrostAgenticStreamFn(model: AiModel): AgenticStreamFn
 export function constructBifrostTextGenerationFn(model: AiModel): TextGenerationFn {
   const { client, modelName } = createBifrostClient(model);
 
-  return async function getBifrostTextGeneration({ messages, maxTokens }) {
-    const response = await client.responses.create({
-      model: modelName,
-      input: toOpenAIResponsesInput(messages),
-      stream: false,
-      max_output_tokens: maxTokens,
-      ...model.additionalParameters,
-    });
+  return async function getBifrostTextGeneration({
+    messages,
+    maxTokens,
+    fallbackModels,
+    abortSignal,
+  }) {
+    const { data: response, response: httpResponse } = await client.responses
+      .create(
+        {
+          model: modelName,
+          input: toOpenAIResponsesInput(messages),
+          stream: false,
+          max_output_tokens: maxTokens,
+          ...model.additionalParameters,
+          ...(fallbackModels?.length ? { fallbacks: fallbackModels.map(getBifrostModelName) } : {}),
+        },
+        { signal: abortSignal },
+      )
+      .withResponse();
 
     const textOutput = response.output.find((item) => item.type === 'message');
     const text =
@@ -133,6 +222,12 @@ export function constructBifrostTextGenerationFn(model: AiModel): TextGeneration
       throw new AiGenerationError('No usage data returned from Bifrost');
     }
 
+    const headerFields = extractBifrostFieldsFromHeaders(httpResponse.headers);
+    const usageInfo = await resolveBifrostUsageInfo(headerFields, [
+      model,
+      ...(fallbackModels ?? []),
+    ]);
+
     return {
       text,
       usage: {
@@ -140,6 +235,9 @@ export function constructBifrostTextGenerationFn(model: AiModel): TextGeneration
         promptTokens: usage.input_tokens,
         totalTokens: usage.total_tokens,
       },
+      modelId: usageInfo.modelId,
+      provider: usageInfo.provider,
+      modelName: usageInfo.modelName,
     };
   };
 }

@@ -1,4 +1,5 @@
 import { generateImageByNameWithBilling } from '@ais-chat/ai-core';
+import { ImageGenerationRequestOptions } from '@ais-chat/ai-core/images/types';
 import type OpenAI from 'openai';
 
 /**
@@ -8,12 +9,14 @@ export async function createImage({
   modelName,
   prompt,
   apiKeyId,
+  options,
 }: {
   modelName: string;
   prompt: string;
   apiKeyId: string;
+  options?: ImageGenerationRequestOptions;
 }): Promise<OpenAI.Images.ImagesResponse> {
-  const result = await generateImageByNameWithBilling(modelName, prompt, apiKeyId);
+  const result = await generateImageByNameWithBilling(modelName, prompt, apiKeyId, options);
 
   return {
     created: Math.floor(Date.now() / 1000),

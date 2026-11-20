@@ -1,35 +1,61 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { UserAndContext } from '@/auth/types';
 import type { FileModel } from '@shared/db/schema';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { UserAndContext } from '@/auth/types';
 
 const mocks = vi.hoisted(() => ({
   buildWebSearchToolMock: vi.fn(),
   buildWebScraperToolMock: vi.fn(),
   buildRetrieveEntireFileToolMock: vi.fn(),
   buildRetrieveTextChunksToolMock: vi.fn(),
+  buildMundoSearchToolMock: vi.fn(),
+  buildMathCalculateToolMock: vi.fn(),
+  buildJsxgraphToolMock: vi.fn(),
 }));
 
 vi.mock('./tools/web-search-tool', () => ({
   buildWebSearchTool: mocks.buildWebSearchToolMock,
+  webSearchActivity: { createStep: vi.fn() },
 }));
 
 vi.mock('./tools/web-scraper-tool', () => ({
   buildWebScraperTool: mocks.buildWebScraperToolMock,
+  webScraperActivity: { createStep: vi.fn() },
 }));
 
 vi.mock('./tools/retrieve-entire-file-tool', () => ({
   buildRetrieveEntireFileTool: mocks.buildRetrieveEntireFileToolMock,
+  retrieveEntireFileActivity: { createStep: vi.fn() },
 }));
 
 vi.mock('./tools/retrieve-text-chunks-tool', () => ({
   buildRetrieveTextChunksTool: mocks.buildRetrieveTextChunksToolMock,
+  retrieveTextChunksActivity: { createStep: vi.fn() },
 }));
+
+vi.mock('./tools/mundo-search-tool', () => ({
+  buildMundoSearchTool: mocks.buildMundoSearchToolMock,
+  mundoSearchActivity: { createStep: vi.fn() },
+}));
+
+vi.mock('./tools/math-calculate-tool', () => ({
+  buildMathCalculateTool: mocks.buildMathCalculateToolMock,
+  mathCalculateActivity: { createStep: vi.fn() },
+}));
+
+vi.mock('./tools/jsxgraph-tool', () => ({
+  buildJsxgraphTool: mocks.buildJsxgraphToolMock,
+  createPlotActivity: { createStep: vi.fn() },
+}));
+
+const modelSelection = { modelIds: ['model-1'] as [string, ...string[]], modelName: 'model-1' };
 
 const user = {
   id: 'user-1',
   userRole: 'teacher',
   federalState: {
     id: 'federal-state-1',
+    featureToggles: {},
   },
 } as UserAndContext;
 
@@ -41,17 +67,20 @@ const relatedFileEntities = [
   },
 ] as FileModel[];
 
+const createActivity = () => ({ createStep: vi.fn() });
+
 beforeEach(() => {
   vi.clearAllMocks();
 
   // Default mock implementations - return tool-like objects
-  mocks.buildWebSearchToolMock.mockResolvedValue({
+  mocks.buildWebSearchToolMock.mockReturnValue({
     definition: {
       name: 'web_search',
       description: 'Search the web',
       parameters: { type: 'object', properties: {} },
     },
     handler: vi.fn(),
+    activity: createActivity(),
   });
 
   mocks.buildWebScraperToolMock.mockReturnValue({
@@ -61,6 +90,7 @@ beforeEach(() => {
       parameters: { type: 'object', properties: {} },
     },
     handler: vi.fn(),
+    activity: createActivity(),
   });
 
   mocks.buildRetrieveEntireFileToolMock.mockReturnValue({
@@ -70,6 +100,7 @@ beforeEach(() => {
       parameters: { type: 'object', properties: {} },
     },
     handler: vi.fn(),
+    activity: createActivity(),
   });
 
   mocks.buildRetrieveTextChunksToolMock.mockReturnValue({
@@ -79,6 +110,36 @@ beforeEach(() => {
       parameters: { type: 'object', properties: {} },
     },
     handler: vi.fn(),
+    activity: createActivity(),
+  });
+
+  mocks.buildMundoSearchToolMock.mockReturnValue({
+    definition: {
+      name: 'mundo_search',
+      description: 'Search MUNDO',
+      parameters: { type: 'object', properties: {} },
+    },
+    handler: vi.fn(),
+    activity: createActivity(),
+  });
+
+  mocks.buildMathCalculateToolMock.mockReturnValue({
+    definition: {
+      name: 'math_calculate',
+      description: 'Calculate',
+      parameters: { type: 'object' },
+    },
+    handler: vi.fn(),
+    activity: createActivity(),
+  });
+
+  mocks.buildJsxgraphToolMock.mockReturnValue({
+    definition: {
+      name: 'create_plot',
+      description: 'Create a plot',
+      parameters: { type: 'object' },
+    },
+    handler: vi.fn(),
   });
 });
 
@@ -86,69 +147,151 @@ describe('buildTools', () => {
   it('builds toolRegistry with all enabled tools', async () => {
     const { buildTools } = await import('./build-tools');
 
-    const { toolRegistry } = await buildTools({
-      user,
+    const { toolRegistry } = buildTools({
+      user: {
+        ...user,
+        federalState: { ...user.federalState, featureToggles: { isCalculatorEnabled: true } },
+      } as UserAndContext,
       conversationId: 'conv-1',
       relatedFileEntities,
       allowWebTools: true,
+      modelSelection,
+      apiKeyId: 'api-key-1',
     });
 
     expect(Object.keys(toolRegistry)).toEqual([
+      'math_calculate',
       'web_search',
       'web_scraper',
       'retrieve_entire_file',
       'retrieve_text_chunks',
+      'generate_document',
     ]);
   });
 
+  it('returns no calculator tool when disabled', async () => {
+    const { buildTools } = await import('./build-tools');
+    const { toolRegistry } = buildTools({
+      user,
+      relatedFileEntities,
+      allowWebTools: false,
+      modelSelection,
+      apiKeyId: 'api-key-1',
+    });
+    expect(toolRegistry).not.toHaveProperty('math_calculate');
+    expect(mocks.buildMathCalculateToolMock).not.toHaveBeenCalled();
+  });
+
   it('skips tools that return null', async () => {
-    mocks.buildWebSearchToolMock.mockResolvedValue(null);
+    mocks.buildWebSearchToolMock.mockReturnValue(null);
     mocks.buildWebScraperToolMock.mockReturnValue(null);
 
     const { buildTools } = await import('./build-tools');
 
-    const { toolRegistry } = await buildTools({
+    const { toolRegistry } = buildTools({
       user,
       conversationId: 'conv-1',
       relatedFileEntities,
       allowWebTools: true,
+      modelSelection,
+      apiKeyId: 'api-key-1',
     });
 
-    expect(Object.keys(toolRegistry)).toEqual(['retrieve_entire_file', 'retrieve_text_chunks']);
-  });
-
-  it('passes onWebSearchResults callback to web search tool', async () => {
-    const { buildTools } = await import('./build-tools');
-
-    const onWebSearchResults = vi.fn();
-
-    await buildTools({
-      user,
-      conversationId: 'conv-1',
-      relatedFileEntities,
-      allowWebTools: true,
-      onWebSearchResults,
-    });
-
-    expect(mocks.buildWebSearchToolMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        onWebSearchResults,
-      }),
-    );
+    expect(Object.keys(toolRegistry)).toEqual([
+      'retrieve_entire_file',
+      'retrieve_text_chunks',
+      'generate_document',
+    ]);
   });
 
   it('does not build web tools when allowWebTools is false', async () => {
     const { buildTools } = await import('./build-tools');
 
-    const { toolRegistry } = await buildTools({
+    const { toolRegistry } = buildTools({
       user,
       conversationId: 'conv-1',
       relatedFileEntities,
       allowWebTools: false,
+      modelSelection,
+      apiKeyId: 'api-key-1',
     });
 
-    expect(Object.keys(toolRegistry)).toEqual(['retrieve_entire_file', 'retrieve_text_chunks']);
+    expect(Object.keys(toolRegistry)).toEqual([
+      'retrieve_entire_file',
+      'retrieve_text_chunks',
+      'generate_document',
+    ]);
     expect(mocks.buildWebSearchToolMock).not.toHaveBeenCalled();
     expect(mocks.buildWebScraperToolMock).not.toHaveBeenCalled();
+  });
+
+  it('does not add mundo_search when allowMundoSearch is not set', async () => {
+    const { buildTools } = await import('./build-tools');
+
+    const { toolRegistry } = buildTools({
+      user,
+      conversationId: 'conv-1',
+      relatedFileEntities,
+      allowWebTools: true,
+      allowMundoSearch: false,
+      modelSelection,
+      apiKeyId: 'api-key-1',
+    });
+
+    expect(Object.keys(toolRegistry)).not.toContain('mundo_search');
+    expect(mocks.buildMundoSearchToolMock).not.toHaveBeenCalled();
+  });
+
+  it('adds mundo_search when allowMundoSearch is true', async () => {
+    const { buildTools } = await import('./build-tools');
+
+    const { toolRegistry } = buildTools({
+      user,
+      conversationId: 'conv-1',
+      relatedFileEntities,
+      allowWebTools: true,
+      allowMundoSearch: true,
+      modelSelection,
+      apiKeyId: 'api-key-1',
+    });
+
+    expect(Object.keys(toolRegistry)).toContain('mundo_search');
+    expect(mocks.buildMundoSearchToolMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not add create_plot when isJsxGraphEnabled is not set', async () => {
+    const { buildTools } = await import('./build-tools');
+
+    const { toolRegistry } = buildTools({
+      user,
+      relatedFileEntities,
+      allowWebTools: false,
+      modelSelection,
+      apiKeyId: 'api-key-1',
+    });
+
+    expect(toolRegistry).not.toHaveProperty('create_plot');
+    expect(mocks.buildJsxgraphToolMock).not.toHaveBeenCalled();
+  });
+
+  it('adds create_plot with the current model and API key when isJsxGraphEnabled is true', async () => {
+    const { buildTools } = await import('./build-tools');
+
+    const { toolRegistry } = buildTools({
+      user: {
+        ...user,
+        federalState: { ...user.federalState, featureToggles: { isJsxGraphEnabled: true } },
+      } as UserAndContext,
+      relatedFileEntities,
+      allowWebTools: false,
+      modelSelection,
+      apiKeyId: 'api-key-1',
+    });
+
+    expect(toolRegistry).toHaveProperty('create_plot');
+    expect(mocks.buildJsxgraphToolMock).toHaveBeenCalledWith({
+      modelSelection,
+      apiKeyId: 'api-key-1',
+    });
   });
 });

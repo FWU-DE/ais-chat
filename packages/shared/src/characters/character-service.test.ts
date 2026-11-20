@@ -1,4 +1,34 @@
+import { dbGetSharedCharacterChatUsageInCentByCharacterId } from '@shared/db/functions/token-points';
+import { CharacterSelectModel, CharacterWithShareDataModel } from '@shared/db/schema';
+import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/error';
+import { FederalStateModel } from '@shared/federal-states/types';
+import { getUserSettings } from '@shared/users/user-settings-service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  dbCreateCharacterShare,
+  dbExtendSharedCharacterExpiration,
+  dbGetAllAccessibleCharacters,
+  dbGetAllCharactersByUser,
+  dbGetCharacterById,
+  dbGetCharacterByIdForConversation,
+  dbGetCharacterByIdWithManageableShare,
+  dbGetCharactersByAssociatedSchools,
+  dbGetCharactersByIdsOptionalShareData,
+  dbGetCharactersByUserFavorite,
+  dbGetCommunityCharacters,
+  dbGetGlobalCharacters,
+  dbGetLatestManageableCharacterShare,
+  dbStopCharacterShare,
+  dbUpdateCharacterShareTokenPointsLimit,
+} from '../db/functions/character';
+import { dbGetRelatedCharacterFiles } from '../db/functions/files';
+import { dbGetLlmModelsByFederalStateId } from '../db/functions/llm-model';
+import { getAvatarPictureUrl } from '../files/fileService';
+import { getReadOnlySignedUrl, uploadFileToS3 } from '../s3';
+import { copyCharacter, copyRelatedTemplateFiles } from '../templates/template-service';
+import { getMaxBudgetInCentByUser, getUsedBudgetInCentByUser } from '../users/user-budget-service';
+import { generateUUID } from '../utils/uuid';
 import {
   createNewCharacter,
   deleteCharacter,
@@ -7,58 +37,28 @@ import {
   extendCharacterShareExpiration,
   fetchFileMappings,
   getActiveCharacterShareData,
-  getCharacterByAccessLevel,
   getCharacterForChatSession,
   getCharacterForEditView,
+  getCharacterForExistingConversation,
   getCharactersByOverviewFilter,
   getSharedCharacter,
   linkFileToCharacter,
   shareCharacter,
   unshareCharacter,
   updateCharacter,
-  updateCharacterAccessLevel,
+  updateCharacterSchoolSharing,
   updateCharacterShareTokenPointsLimit,
   uploadAvatarPictureForCharacter,
 } from './character-service';
-import {
-  dbCreateCharacterShare,
-  dbExtendSharedCharacterConversationExpiration,
-  dbGetAllAccessibleCharacters,
-  dbGetAllCharactersByUser,
-  dbGetCharacterById,
-  dbGetCharacterByIdOptionalShareData,
-  dbGetCharacterByIdWithShareData,
-  dbGetCharactersByAssociatedSchools,
-  dbGetCommunityCharacters,
-  dbGetCharactersByUser,
-  dbGetGlobalCharacters,
-  dbGetLatestManageableCharacterShare,
-  dbStopCharacterShare,
-  dbUpdateCharacterShareTokenPointsLimit,
-} from '../db/functions/character';
-import { dbGetRelatedCharacterFiles } from '../db/functions/files';
-import { getReadOnlySignedUrl, uploadFileToS3 } from '../s3';
-import { getAvatarPictureUrl } from '../files/fileService';
-import { generateUUID } from '../utils/uuid';
-import { getMaxBudgetInCentByUser, getUsedBudgetInCentByUser } from '../users/user-budget-service';
-import { CharacterSelectModel, CharacterWithShareDataModel } from '@shared/db/schema';
-import { SHARE_EXTENSION_WINDOW_MS } from '../sharing/const';
-import { FederalStateModel } from '@shared/federal-states/types';
-import { ForbiddenError, InvalidArgumentError, NotFoundError } from '@shared/error';
-import { dbGetSharedCharacterChatUsageInCentByCharacterId } from '@shared/db/functions/token-points';
-import {
-  copyCharacter,
-  copyEntityPictureIfExists,
-  copyRelatedTemplateFiles,
-} from '../templates/template-service';
 
 vi.mock('../db/functions/character', () => ({
+  dbGetCharactersByIdsOptionalShareData: vi.fn(),
+  dbGetCharactersByUserFavorite: vi.fn(),
   dbGetAllAccessibleCharacters: vi.fn(),
   dbGetAllCharactersByUser: vi.fn(),
   dbGetCharacterById: vi.fn(),
-  dbGetCharacterByIdAndUserId: vi.fn(),
-  dbGetCharacterByIdOptionalShareData: vi.fn(),
-  dbGetCharacterByIdWithShareData: vi.fn(),
+  dbGetCharacterByIdForConversation: vi.fn(),
+  dbGetCharacterByIdWithManageableShare: vi.fn(),
   dbDeleteCharacterByIdAndUser: vi.fn(),
   dbGetCharactersByAssociatedSchools: vi.fn(),
   dbGetCommunityCharacters: vi.fn(),
@@ -67,11 +67,14 @@ vi.mock('../db/functions/character', () => ({
   dbGetLatestManageableCharacterShare: vi.fn(),
   dbCreateCharacterShare: vi.fn(),
   dbStopCharacterShare: vi.fn(),
-  dbExtendSharedCharacterConversationExpiration: vi.fn(),
+  dbExtendSharedCharacterExpiration: vi.fn(),
   dbUpdateCharacterShareTokenPointsLimit: vi.fn(),
 }));
 vi.mock('../db/functions/files', () => ({
   dbGetRelatedCharacterFiles: vi.fn(),
+}));
+vi.mock('@shared/db/functions/user-favorites', () => ({
+  dbIsUserFavorite: vi.fn().mockResolvedValue(false),
 }));
 vi.mock('../s3', () => ({
   getReadOnlySignedUrl: vi.fn(),
@@ -89,25 +92,36 @@ vi.mock('../files/fileService', () => ({
 }));
 vi.mock('../templates/template-service', () => ({
   copyCharacter: vi.fn(),
-  copyEntityPictureIfExists: vi.fn(),
   copyRelatedTemplateFiles: vi.fn(),
+}));
+vi.mock('@shared/users/user-settings-service', () => ({
+  getUserSettings: vi.fn(),
+}));
+vi.mock('../db/functions/llm-model', () => ({
+  dbGetLlmModelsByFederalStateId: vi.fn(),
 }));
 vi.mock('@shared/db/functions/token-points', () => ({
   dbGetSharedCharacterChatUsageInCentByCharacterId: vi.fn(),
 }));
-const { mockDbReturning, mockDbSet, mockDbUpdate } = vi.hoisted(() => {
-  const mockDbReturning = vi.fn();
-  const mockDbWhere = vi.fn(() => ({ returning: mockDbReturning }));
-  const mockDbSet = vi.fn(() => ({ where: mockDbWhere }));
-  const mockDbUpdate = vi.fn(() => ({ set: mockDbSet }));
+const { mockDbReturning, mockDbSet, mockDbUpdate, mockDbInsert, mockDbInsertValues } = vi.hoisted(
+  () => {
+    const mockDbReturning = vi.fn();
+    const mockDbInsertValues = vi.fn(() => ({ returning: mockDbReturning }));
+    const mockDbInsert = vi.fn(() => ({ values: mockDbInsertValues }));
+    const mockDbWhere = vi.fn(() => ({ returning: mockDbReturning }));
+    const mockDbSet = vi.fn(() => ({ where: mockDbWhere }));
+    const mockDbUpdate = vi.fn(() => ({ set: mockDbSet }));
 
-  return {
-    mockDbReturning,
-    mockDbSet,
-    mockDbUpdate,
-  };
-});
-vi.mock('@shared/db', () => ({ db: { update: mockDbUpdate } }));
+    return {
+      mockDbReturning,
+      mockDbSet,
+      mockDbUpdate,
+      mockDbInsert,
+      mockDbInsertValues,
+    };
+  },
+);
+vi.mock('@shared/db', () => ({ db: { insert: mockDbInsert, update: mockDbUpdate } }));
 
 const mockUser = (userRole: 'student' | 'teacher' = 'teacher') => ({
   id: generateUUID(),
@@ -158,7 +172,7 @@ describe('character-service', () => {
     ])(
       'should throw NotFoundError when character does not exist - $functionName',
       async ({ testFunction }) => {
-        vi.mocked(dbGetCharacterByIdWithShareData).mockResolvedValue(null as never);
+        vi.mocked(dbGetCharacterByIdWithManageableShare).mockResolvedValue(null as never);
 
         await expect(testFunction()).rejects.toThrow(NotFoundError);
       },
@@ -175,21 +189,62 @@ describe('character-service', () => {
         }),
       ).rejects.toThrow(NotFoundError);
     });
+  });
 
-    it('should throw NotFoundError when character has no invite code - getSharedCharacter', async () => {
-      const userId = generateUUID();
-      const mockCharacter: Partial<CharacterSelectModel> = {
-        userId: userId,
+  describe('getCharacterForExistingConversation', () => {
+    const characterId = generateUUID();
+    const conversationId = generateUUID();
+
+    it('returns the character when it is linked to the given conversation', async () => {
+      const user = mockUser();
+      const mockCharacter = {
+        id: characterId,
+        userId: user.id,
+        hasLinkAccess: false,
       };
+      vi.mocked(dbGetCharacterByIdForConversation).mockResolvedValue(mockCharacter as never);
 
-      vi.mocked(dbGetCharacterByIdWithShareData).mockResolvedValue(mockCharacter as never);
+      const result = await getCharacterForExistingConversation({
+        characterId,
+        conversationId,
+        user,
+      });
+
+      expect(result).toBe(mockCharacter);
+      expect(dbGetCharacterByIdForConversation).toHaveBeenCalledWith({
+        characterId,
+        conversationId,
+        userId: user.id,
+      });
+    });
+
+    it('throws NotFoundError when the character is not linked to the conversation', async () => {
+      vi.mocked(dbGetCharacterByIdForConversation).mockResolvedValue(undefined);
 
       await expect(
-        getSharedCharacter({
-          characterId: generateUUID(),
-          userId: 'user-id',
+        getCharacterForExistingConversation({
+          characterId,
+          conversationId,
+          user: mockUser(),
         }),
       ).rejects.toThrow(NotFoundError);
+    });
+
+    it('throws ForbiddenError when the user is not authorized to read the character', async () => {
+      const mockCharacter = {
+        id: characterId,
+        userId: generateUUID(),
+        hasLinkAccess: false,
+      };
+      vi.mocked(dbGetCharacterByIdForConversation).mockResolvedValue(mockCharacter as never);
+
+      await expect(
+        getCharacterForExistingConversation({
+          characterId,
+          conversationId,
+          user: mockUser(),
+        }),
+      ).rejects.toThrow(ForbiddenError);
     });
   });
 
@@ -197,7 +252,6 @@ describe('character-service', () => {
     const userId = generateUUID();
     const mockCharacter: Partial<CharacterSelectModel> = {
       userId: userId,
-      accessLevel: 'private',
     };
 
     beforeEach(() => {
@@ -258,38 +312,19 @@ describe('character-service', () => {
   });
 
   describe('ForbiddenError scenarios - access restrictions', () => {
-    it('should throw ForbiddenError when setting access level to global - updateCharacterAccessLevel', async () => {
+    it('should throw ForbiddenError when user is not owner - updateCharacterSchoolSharing', async () => {
       const userId = generateUUID();
       const mockCharacter: Partial<CharacterSelectModel> = {
         userId: userId,
-        accessLevel: 'private',
       };
 
       vi.mocked(dbGetCharacterById).mockResolvedValue(mockCharacter as never);
 
       await expect(
-        updateCharacterAccessLevel({
-          characterId: generateUUID(),
-          user: { id: userId },
-          accessLevel: 'global',
-        }),
-      ).rejects.toThrow(ForbiddenError);
-    });
-
-    it('should throw ForbiddenError when user is not owner - updateCharacterAccessLevel', async () => {
-      const userId = generateUUID();
-      const mockCharacter: Partial<CharacterSelectModel> = {
-        userId: userId,
-        accessLevel: 'private',
-      };
-
-      vi.mocked(dbGetCharacterById).mockResolvedValue(mockCharacter as never);
-
-      await expect(
-        updateCharacterAccessLevel({
+        updateCharacterSchoolSharing({
           characterId: generateUUID(),
           user: { id: 'different-user-id' },
-          accessLevel: 'school',
+          isSchoolShared: true,
         }),
       ).rejects.toThrow(ForbiddenError);
     });
@@ -298,7 +333,6 @@ describe('character-service', () => {
       const userId = generateUUID();
       const mockCharacter: Partial<CharacterSelectModel> = {
         userId: userId,
-        accessLevel: 'private',
       };
 
       vi.mocked(dbGetCharacterById).mockResolvedValue(mockCharacter as never);
@@ -311,11 +345,11 @@ describe('character-service', () => {
       ).rejects.toThrow(ForbiddenError);
     });
 
-    it('should throw ForbiddenError when character access level is school and user is from different school - fetchFileMappings', async () => {
+    it('should throw ForbiddenError when character is school-shared and user is from different school - fetchFileMappings', async () => {
       const userId = generateUUID();
       const mockCharacter: Partial<CharacterSelectModel> = {
         userId: userId,
-        accessLevel: 'school',
+        isSchoolShared: true,
       };
 
       vi.mocked(dbGetCharacterById).mockResolvedValue(mockCharacter as never);
@@ -327,13 +361,13 @@ describe('character-service', () => {
         }),
       ).rejects.toThrow(ForbiddenError);
     });
-    it('should allow access when character access level is school and users share school - fetchFileMappings', async () => {
+    it('should allow access when character is school-shared and users share school - fetchFileMappings', async () => {
       const characterId = generateUUID();
       const ownerUserId = generateUUID();
 
       const mockCharacter: Partial<CharacterSelectModel> = {
         userId: ownerUserId,
-        accessLevel: 'school',
+        isSchoolShared: true,
         ownerSchoolIds: ['shared-school-id'],
       };
 
@@ -351,30 +385,29 @@ describe('character-service', () => {
   });
 
   describe('sharing updates preserve updatedAt', () => {
-    it('preserves updatedAt when only accessLevel changes', async () => {
+    it('preserves updatedAt when only isSchoolShared changes', async () => {
       const userId = generateUUID();
       const characterId = generateUUID();
       const updatedAt = new Date('2026-06-01T10:00:00.000Z');
       const character = {
         id: characterId,
         userId,
-        accessLevel: 'private',
         hasLinkAccess: false,
         updatedAt,
       } as Partial<CharacterSelectModel>;
 
       vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
       mockDbReturning.mockResolvedValue([
-        { ...character, accessLevel: 'school' } as CharacterSelectModel,
+        { ...character, isSchoolShared: true } as CharacterSelectModel,
       ]);
 
-      await updateCharacterAccessLevel({
+      await updateCharacterSchoolSharing({
         characterId,
         user: { id: userId },
-        accessLevel: 'school',
+        isSchoolShared: true,
       });
 
-      expect(mockDbSet).toHaveBeenCalledWith({ accessLevel: 'school', updatedAt });
+      expect(mockDbSet).toHaveBeenCalledWith({ isSchoolShared: true, updatedAt });
     });
 
     it('preserves updatedAt when only hasLinkAccess changes', async () => {
@@ -397,6 +430,25 @@ describe('character-service', () => {
 
       expect(mockDbSet).toHaveBeenCalledWith({ id: characterId, hasLinkAccess: true, updatedAt });
     });
+
+    it('ignores a popularity value sent by the owner', async () => {
+      const userId = generateUUID();
+      const characterId = generateUUID();
+      const character = { id: characterId, userId, name: 'old', popularity: 3 };
+
+      vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
+      mockDbReturning.mockResolvedValue([{ ...character, name: 'new' }]);
+
+      await updateCharacter({
+        id: characterId,
+        user: { id: userId },
+        name: 'new',
+        popularity: 999,
+      } as never);
+
+      expect(mockDbSet).toHaveBeenCalledTimes(1);
+      expect(mockDbSet).toHaveBeenCalledWith({ id: characterId, name: 'new' });
+    });
   });
 
   describe('ForbiddenError scenarios - role restrictions', () => {
@@ -404,7 +456,6 @@ describe('character-service', () => {
       const userId = generateUUID();
       const mockCharacter: Partial<CharacterSelectModel> = {
         userId: userId,
-        accessLevel: 'private',
       };
 
       vi.mocked(dbGetCharacterById).mockResolvedValue(mockCharacter as never);
@@ -446,11 +497,11 @@ describe('character-service', () => {
       ).rejects.toThrow(ForbiddenError);
     });
 
-    it('should throw ForbiddenError when character access level is school and user is from different school - shareCharacter', async () => {
+    it('should throw ForbiddenError when character is school-shared and user is from different school - shareCharacter', async () => {
       const userId = generateUUID();
       const mockCharacter: Partial<CharacterSelectModel> = {
         userId: userId,
-        accessLevel: 'school',
+        isSchoolShared: true,
       };
 
       vi.mocked(dbGetCharacterById).mockResolvedValue(mockCharacter as never);
@@ -496,7 +547,6 @@ describe('character-service', () => {
       const mockCharacter: Partial<CharacterSelectModel> = {
         id: characterId,
         userId,
-        accessLevel: 'private',
       };
       vi.mocked(dbGetCharacterById).mockResolvedValue(mockCharacter as never);
       vi.mocked(dbGetLatestManageableCharacterShare).mockResolvedValue(existingShare as never);
@@ -521,7 +571,6 @@ describe('character-service', () => {
     const mockCharacter: Partial<CharacterSelectModel> = {
       id: characterId,
       userId,
-      accessLevel: 'private',
       hasLinkAccess: false,
     };
 
@@ -572,7 +621,6 @@ describe('character-service', () => {
     const mockCharacter: Partial<CharacterSelectModel> = {
       id: characterId,
       userId,
-      accessLevel: 'private',
       hasLinkAccess: false,
     };
     const updatedShare = {
@@ -593,9 +641,7 @@ describe('character-service', () => {
     beforeEach(() => {
       vi.mocked(dbGetCharacterById).mockResolvedValue(mockCharacter as never);
       vi.mocked(dbGetLatestManageableCharacterShare).mockResolvedValue(currentShare as never);
-      vi.mocked(dbExtendSharedCharacterConversationExpiration).mockResolvedValue(
-        updatedShare as never,
-      );
+      vi.mocked(dbExtendSharedCharacterExpiration).mockResolvedValue(updatedShare as never);
     });
 
     it('returns the updated share when the expiration is extended', async () => {
@@ -605,7 +651,7 @@ describe('character-service', () => {
         user,
       });
 
-      expect(dbExtendSharedCharacterConversationExpiration).toHaveBeenCalledWith({
+      expect(dbExtendSharedCharacterExpiration).toHaveBeenCalledWith({
         share: currentShare,
         additionalTimeInMinutes: 30,
       });
@@ -623,7 +669,7 @@ describe('character-service', () => {
           }),
         ).rejects.toThrow(InvalidArgumentError);
 
-        expect(dbExtendSharedCharacterConversationExpiration).not.toHaveBeenCalled();
+        expect(dbExtendSharedCharacterExpiration).not.toHaveBeenCalled();
       },
     );
 
@@ -645,11 +691,11 @@ describe('character-service', () => {
         }),
       ).rejects.toThrow('total usage time limit must not exceed 130 days');
 
-      expect(dbExtendSharedCharacterConversationExpiration).not.toHaveBeenCalled();
+      expect(dbExtendSharedCharacterExpiration).not.toHaveBeenCalled();
     });
 
     it('throws InvalidArgumentError when there is no active share to extend', async () => {
-      vi.mocked(dbExtendSharedCharacterConversationExpiration).mockResolvedValue(null as never);
+      vi.mocked(dbExtendSharedCharacterExpiration).mockResolvedValue(null as never);
 
       await expect(
         extendCharacterShareExpiration({
@@ -668,7 +714,6 @@ describe('character-service', () => {
     const mockCharacter: Partial<CharacterSelectModel> = {
       id: characterId,
       userId,
-      accessLevel: 'private',
       hasLinkAccess: false,
     };
     const currentShare = {
@@ -769,7 +814,7 @@ describe('character-service', () => {
       id: templateId,
       name: 'Template Character',
       userId: generateUUID(),
-      accessLevel: 'global',
+      isGlobal: true,
       hasLinkAccess: false,
       suspended: false,
       ownerSchoolIds: [],
@@ -781,6 +826,26 @@ describe('character-service', () => {
       vi.mocked(dbGetCharacterById).mockResolvedValue(templateCharacter() as never);
     });
 
+    it('applies user speech defaults when creating an empty character', async () => {
+      const user = mockUser('teacher');
+      const modelId = generateUUID();
+      vi.mocked(getUserSettings).mockResolvedValue({
+        defaultSpeechVoice: 'voice-b',
+        defaultIsSpeechOnly: true,
+      });
+      vi.mocked(dbGetLlmModelsByFederalStateId).mockResolvedValue([{ id: modelId }] as never);
+      mockDbReturning.mockResolvedValue([{ id: generateUUID() }]);
+
+      await createNewCharacter({ federalStateId, user });
+
+      expect(mockDbInsertValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          voice: 'voice-b',
+          speechOnly: true,
+        }),
+      );
+    });
+
     it('should pass duplicateCharacterName to copyCharacter when creating from template', async () => {
       const user = mockUser('teacher');
       const insertedCharacter = {
@@ -789,11 +854,10 @@ describe('character-service', () => {
       } as CharacterSelectModel;
 
       vi.mocked(dbGetCharacterById).mockResolvedValue(
-        templateCharacter({ userId: user.id, accessLevel: 'private' }) as never,
+        templateCharacter({ userId: user.id, isGlobal: false }) as never,
       );
 
       vi.mocked(copyCharacter).mockResolvedValue(insertedCharacter as never);
-      vi.mocked(copyEntityPictureIfExists).mockResolvedValue(undefined as never);
 
       const result = await createNewCharacter({
         federalStateId,
@@ -804,56 +868,42 @@ describe('character-service', () => {
 
       expect(copyCharacter).toHaveBeenCalledWith(
         templateId,
-        'private',
+        false,
         expect.objectContaining({ id: expect.any(String) }),
         duplicateCharacterName,
       );
-      expect(copyEntityPictureIfExists).toHaveBeenCalledWith({
-        sourcePictureId: null,
-        newEntityId: insertedCharacter.id,
-        buildPictureKey: expect.any(Function),
-      });
       expect(copyRelatedTemplateFiles).toHaveBeenCalledWith(
         'character',
         templateId,
         insertedCharacter.id,
+        user.id,
       );
       expect(result).toBe(insertedCharacter);
     });
 
-    it('should update character picture when template picture is copied', async () => {
+    it('should return the character from copyCharacter as-is, without copying its picture again', async () => {
       const user = mockUser('teacher');
       const insertedCharacter = {
         id: generateUUID(),
-        pictureId: 'characters/template-id/original.png',
-      } as CharacterSelectModel;
-      const copiedPictureKey = `characters/${insertedCharacter.id}/original.png`;
-      const updatedCharacter = {
-        ...insertedCharacter,
-        pictureId: copiedPictureKey,
+        pictureId: 'characters/already-scoped-id/avatar_abc123',
       } as CharacterSelectModel;
 
       vi.mocked(dbGetCharacterById).mockResolvedValue(
-        templateCharacter({ userId: user.id, accessLevel: 'private' }) as never,
+        templateCharacter({ userId: user.id, isGlobal: false }) as never,
       );
-
       vi.mocked(copyCharacter).mockResolvedValue(insertedCharacter as never);
-      vi.mocked(copyEntityPictureIfExists).mockResolvedValue(copiedPictureKey as never);
-      mockDbReturning.mockResolvedValue([updatedCharacter]);
 
-      const result = await createNewCharacter({
-        federalStateId,
-        templateId,
-        user,
-      });
+      const result = await createNewCharacter({ federalStateId, templateId, user });
 
-      expect(result).toEqual({ ...updatedCharacter, ownerSchoolIds: expect.any(Array) });
+      // copyCharacter already duplicates the picture; createNewCharacter must not attempt to
+      // copy it again (which would be a no-op S3 self-copy at best, an error at worst).
+      expect(result).toBe(insertedCharacter);
     });
 
     it('should throw ForbiddenError when template is suspended', async () => {
       const user = mockUser('teacher');
       vi.mocked(dbGetCharacterById).mockResolvedValue(
-        templateCharacter({ userId: user.id, accessLevel: 'private', suspended: true }) as never,
+        templateCharacter({ userId: user.id, isGlobal: false, suspended: true }) as never,
       );
 
       await expect(
@@ -945,18 +995,18 @@ describe('character-service', () => {
     describe('should allow access when hasLinkAccess is true - bypassing normal restrictions', () => {
       it.each([
         {
-          accessLevel: 'private' as const,
+          isSchoolShared: false,
           description: 'private character with link sharing enabled',
         },
         {
-          accessLevel: 'school' as const,
+          isSchoolShared: true,
           description: 'school character with link sharing enabled (different school)',
         },
-      ])('getCharacterForChatSession - $description', async ({ accessLevel }) => {
+      ])('getCharacterForChatSession - $description', async ({ isSchoolShared }) => {
         const mockCharacter = {
           id: characterId,
           userId: ownerUserId,
-          accessLevel,
+          isSchoolShared,
           hasLinkAccess: true,
         };
 
@@ -973,22 +1023,24 @@ describe('character-service', () => {
 
       it.each([
         {
-          accessLevel: 'private' as const,
+          isSchoolShared: false,
           description: 'private character with link sharing enabled',
         },
         {
-          accessLevel: 'school' as const,
+          isSchoolShared: true,
           description: 'school character with link sharing enabled (different school)',
         },
-      ])('getCharacterForEditView - $description', async ({ accessLevel }) => {
+      ])('getCharacterForEditView - $description', async ({ isSchoolShared }) => {
         const mockCharacter = {
           id: characterId,
           userId: ownerUserId,
-          accessLevel,
+          isSchoolShared,
           hasLinkAccess: true,
         };
 
-        vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(mockCharacter as never);
+        vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([
+          mockCharacter,
+        ] as never);
         // Also mock dbGetCharacterById because fetchFileMappings -> getCharacterInfo uses it
         vi.mocked(dbGetCharacterById).mockResolvedValue(mockCharacter as never);
         vi.mocked(dbGetRelatedCharacterFiles).mockResolvedValue([]);
@@ -1007,7 +1059,7 @@ describe('character-service', () => {
         const mockCharacter = {
           id: characterId,
           userId: ownerUserId,
-          accessLevel: 'school' as const,
+          isSchoolShared: true,
           hasLinkAccess: false,
           ownerSchoolIds: ['shared-school-id'],
         };
@@ -1023,17 +1075,17 @@ describe('character-service', () => {
       });
       it.each([
         {
-          accessLevel: 'private' as const,
+          isSchoolShared: false,
           description: 'private character with link sharing enabled',
         },
         {
-          accessLevel: 'school' as const,
+          isSchoolShared: true,
           description: 'school character with link sharing enabled (different school)',
         },
-      ])('fetchFileMappings - $description', async ({ accessLevel }) => {
+      ])('fetchFileMappings - $description', async ({ isSchoolShared }) => {
         const mockCharacter: Partial<CharacterSelectModel> = {
           userId: ownerUserId,
-          accessLevel,
+          isSchoolShared,
           hasLinkAccess: true,
         };
 
@@ -1055,7 +1107,6 @@ describe('character-service', () => {
         const mockCharacter = {
           id: characterId,
           userId: ownerUserId,
-          accessLevel: 'private' as const,
           hasLinkAccess: false,
         };
 
@@ -1073,11 +1124,12 @@ describe('character-service', () => {
         const mockCharacter = {
           id: characterId,
           userId: ownerUserId,
-          accessLevel: 'private' as const,
           hasLinkAccess: false,
         };
 
-        vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(mockCharacter as never);
+        vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([
+          mockCharacter,
+        ] as never);
 
         await expect(
           getCharacterForEditView({
@@ -1091,7 +1143,6 @@ describe('character-service', () => {
       it('fetchFileMappings - private character without link sharing', async () => {
         const mockCharacter: Partial<CharacterSelectModel> = {
           userId: ownerUserId,
-          accessLevel: 'private',
           hasLinkAccess: false,
         };
 
@@ -1114,11 +1165,10 @@ describe('character-service', () => {
       const character = {
         id: characterId,
         userId: user.id,
-        accessLevel: 'private',
         hasLinkAccess: false,
       } as unknown as CharacterSelectModel;
 
-      vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(character as never);
+      vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([character] as never);
       vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
       vi.mocked(dbGetRelatedCharacterFiles).mockResolvedValue([] as never);
       vi.mocked(getReadOnlySignedUrl).mockResolvedValue('');
@@ -1141,13 +1191,12 @@ describe('character-service', () => {
       const character = {
         id: characterId,
         userId: user.id,
-        accessLevel: 'private',
         hasLinkAccess: false,
         startedAt,
         expiredAt,
       } as unknown as CharacterSelectModel;
 
-      vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(character as never);
+      vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([character] as never);
       vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
       vi.mocked(dbGetRelatedCharacterFiles).mockResolvedValue([] as never);
       vi.mocked(getReadOnlySignedUrl).mockResolvedValue('');
@@ -1176,7 +1225,6 @@ describe('character-service', () => {
       const character = {
         id: characterId,
         userId: user.id,
-        accessLevel: 'private',
         hasLinkAccess: false,
       } as unknown as CharacterSelectModel;
 
@@ -1207,7 +1255,6 @@ describe('character-service', () => {
       const character = {
         id: characterId,
         userId: user.id,
-        accessLevel: 'private',
         hasLinkAccess: false,
       } as unknown as CharacterSelectModel;
       const share = {
@@ -1263,7 +1310,6 @@ describe('character-service', () => {
       {
         id: generateUUID(),
         userId: user.id,
-        accessLevel: 'private',
         hasLinkAccess: false,
         suspended: false,
         ownerSchoolIds: user.schoolIds,
@@ -1273,7 +1319,7 @@ describe('character-service', () => {
       const visibleCharacter = {
         id: generateUUID(),
         userId: generateUUID(),
-        accessLevel: 'global',
+        isGlobal: true,
         hasLinkAccess: false,
         suspended: false,
         ownerSchoolIds: [],
@@ -1298,7 +1344,6 @@ describe('character-service', () => {
       const ownSuspendedCharacter = {
         id: generateUUID(),
         userId: user.id,
-        accessLevel: 'private',
         hasLinkAccess: false,
         suspended: true,
         ownerSchoolIds: user.schoolIds,
@@ -1309,44 +1354,6 @@ describe('character-service', () => {
       const result = await getCharactersByOverviewFilter({ filter: 'mine', user });
 
       expect(result).toEqual([ownSuspendedCharacter]);
-    });
-
-    it.each([
-      {
-        accessLevel: 'community' as const,
-        expectedMock: dbGetCommunityCharacters,
-      },
-      {
-        accessLevel: 'global' as const,
-        expectedMock: dbGetGlobalCharacters,
-      },
-      {
-        accessLevel: 'school' as const,
-        expectedMock: dbGetCharactersByAssociatedSchools,
-      },
-      {
-        accessLevel: 'private' as const,
-        expectedMock: dbGetCharactersByUser,
-      },
-    ])(
-      'routes accessLevel=$accessLevel to the correct db function',
-      async ({ accessLevel, expectedMock }) => {
-        vi.mocked(expectedMock).mockResolvedValue(characters as never);
-
-        const result = await getCharacterByAccessLevel({ accessLevel, user });
-
-        expect(result).toEqual(characters);
-        expect(expectedMock).toHaveBeenCalledWith({ user });
-      },
-    );
-
-    it('returns an empty list for unsupported access levels', async () => {
-      const result = await getCharacterByAccessLevel({
-        accessLevel: 'invalid' as never,
-        user,
-      });
-
-      expect(result).toEqual([]);
     });
 
     it('routes filter=all to dbGetAllAccessibleCharacters', async () => {
@@ -1383,7 +1390,7 @@ describe('character-service', () => {
       const schoolCharacter = {
         id: generateUUID(),
         userId: generateUUID(),
-        accessLevel: 'school',
+        isSchoolShared: true,
         hasLinkAccess: false,
         suspended: false,
         ownerSchoolIds: user.schoolIds,
@@ -1391,7 +1398,7 @@ describe('character-service', () => {
       const communityCharacter = {
         id: generateUUID(),
         userId: generateUUID(),
-        accessLevel: 'community',
+        isCommunityShared: true,
         hasLinkAccess: false,
         suspended: false,
         ownerSchoolIds: user.schoolIds,
@@ -1399,7 +1406,7 @@ describe('character-service', () => {
       const otherSchoolCommunityCharacter = {
         id: generateUUID(),
         userId: generateUUID(),
-        accessLevel: 'community',
+        isCommunityShared: true,
         hasLinkAccess: false,
         suspended: false,
         ownerSchoolIds: [],
@@ -1416,6 +1423,58 @@ describe('character-service', () => {
       expect(result).toEqual([schoolCharacter, communityCharacter]);
       expect(dbGetCharactersByAssociatedSchools).toHaveBeenCalledWith({ user });
       expect(dbGetCommunityCharacters).toHaveBeenCalledWith({ user });
+    });
+
+    it('does not duplicate school- and community-shared characters for filter=school', async () => {
+      const schoolAndCommunityCharacter = {
+        id: generateUUID(),
+        userId: generateUUID(),
+        isSchoolShared: true,
+        isCommunityShared: true,
+        hasLinkAccess: false,
+        suspended: false,
+        ownerSchoolIds: user.schoolIds,
+      } as unknown as CharacterSelectModel;
+
+      vi.mocked(dbGetCharactersByAssociatedSchools).mockResolvedValue([
+        schoolAndCommunityCharacter,
+      ] as never);
+      vi.mocked(dbGetCommunityCharacters).mockResolvedValue([schoolAndCommunityCharacter] as never);
+
+      const result = await getCharactersByOverviewFilter({ filter: 'school', user });
+
+      expect(result).toEqual([schoolAndCommunityCharacter]);
+    });
+
+    it('routes filter=favorites to the favorite characters that are still readable', async () => {
+      const readableCharacter = {
+        id: generateUUID(),
+        userId: generateUUID(),
+        isCommunityShared: true,
+        hasLinkAccess: false,
+        suspended: false,
+        ownerSchoolIds: [],
+      } as unknown as CharacterSelectModel;
+      const noLongerSharedCharacter = {
+        ...readableCharacter,
+        id: generateUUID(),
+        isCommunityShared: false,
+      } as CharacterSelectModel;
+      const suspendedCharacter = {
+        ...readableCharacter,
+        id: generateUUID(),
+        suspended: true,
+      } as CharacterSelectModel;
+      vi.mocked(dbGetCharactersByUserFavorite).mockResolvedValue([
+        readableCharacter,
+        noLongerSharedCharacter,
+        suspendedCharacter,
+      ] as never);
+
+      const result = await getCharactersByOverviewFilter({ filter: 'favorites', user });
+
+      expect(dbGetCharactersByUserFavorite).toHaveBeenCalledWith({ user });
+      expect(result).toEqual([readableCharacter]);
     });
 
     it('returns an empty list for unsupported overview filters', async () => {
@@ -1436,7 +1495,6 @@ describe('character-service', () => {
       const mockCharacter: Partial<CharacterSelectModel> = {
         id: characterId,
         userId,
-        accessLevel: 'private',
         pictureId: null,
       };
       vi.mocked(dbGetCharacterById).mockResolvedValue(mockCharacter as never);
@@ -1486,19 +1544,27 @@ describe('character-service', () => {
           federal_states: [],
           languages: [],
         },
-        accessLevel: 'private' as const,
+        isSchoolShared: false,
+        isCommunityShared: false,
+        isGlobal: false,
         hasLinkAccess: false,
         isWebSearchEnabled: false,
+        isSpeechEnabled: true,
+        voice: '',
+        speechOnly: false,
         createdAt: NOW,
         updatedAt: NOW,
         attachedLinks: [],
         suspended: false,
+        popularity: 0,
         isDeleted: false,
         ownerSchoolIds: [],
         specifications: null,
         restrictions: null,
         pictureId: null,
         initialMessage: null,
+        licenseInformation: '',
+        didacticCommentary: '',
         originalCharacterId: null,
         tokenPointsLimit: 50,
         maxUsageTimeLimit: 60,
@@ -1530,7 +1596,7 @@ describe('character-service', () => {
         userId,
         expiredAt: new Date(NOW.getTime() + 60 * 60 * 1000),
       });
-      vi.mocked(dbGetCharacterByIdWithShareData).mockResolvedValue(character as never);
+      vi.mocked(dbGetCharacterByIdWithManageableShare).mockResolvedValue(character as never);
 
       const result = await getSharedCharacter({ characterId, userId });
 
@@ -1545,36 +1611,17 @@ describe('character-service', () => {
         userId,
         expiredAt: new Date(NOW.getTime() - 60 * 60 * 1000), // expired 1 hour ago, within 2-hour grace window
       });
-      vi.mocked(dbGetCharacterByIdWithShareData).mockResolvedValue(character as never);
+      vi.mocked(dbGetCharacterByIdWithManageableShare).mockResolvedValue(character as never);
 
       const result = await getSharedCharacter({ characterId, userId });
 
       expect(result).toBe(character);
     });
 
-    it('throws NotFoundError when the share has expired beyond the grace window', async () => {
+    it('throws NotFoundError when no manageable share exists', async () => {
       const characterId = generateUUID();
       const userId = generateUUID();
-      const character = mockCharacterWithShareData({
-        id: characterId,
-        userId,
-        expiredAt: new Date(NOW.getTime() - SHARE_EXTENSION_WINDOW_MS - 1000), // expired 2 hours and 1 second ago
-      });
-      vi.mocked(dbGetCharacterByIdWithShareData).mockResolvedValue(character as never);
-
-      await expect(getSharedCharacter({ characterId, userId })).rejects.toThrow(NotFoundError);
-    });
-
-    it('throws NotFoundError when the share was manually stopped', async () => {
-      const characterId = generateUUID();
-      const userId = generateUUID();
-      const character = mockCharacterWithShareData({
-        id: characterId,
-        userId,
-        expiredAt: new Date(NOW.getTime() + 60 * 60 * 1000), // still active time-wise
-        manuallyStoppedAt: new Date(NOW.getTime() - 30 * 60 * 1000), // but manually stopped 30 min ago
-      });
-      vi.mocked(dbGetCharacterByIdWithShareData).mockResolvedValue(character as never);
+      vi.mocked(dbGetCharacterByIdWithManageableShare).mockResolvedValue(undefined);
 
       await expect(getSharedCharacter({ characterId, userId })).rejects.toThrow(NotFoundError);
     });

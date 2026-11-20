@@ -1,4 +1,8 @@
-export type BifrostProvider = 'azure' | 'openai' | 'vertex' | 'ionos';
+export const BIFROST_PROVIDERS = ['azure', 'openai', 'vertex', 'ionos'] as const;
+
+// Bifrost's native providers, plus arbitrary custom provider ids we derive for openai-compatible
+// upstreams with a non-default base URL (see `buildCustomOpenAiProviderId`).
+export type BifrostProvider = (typeof BIFROST_PROVIDERS)[number] | (string & {});
 
 export type BifrostSecret =
   | string
@@ -8,13 +12,19 @@ export type BifrostSecret =
       from_env?: boolean;
     };
 
+/**
+ * A Bifrost key alias: the upstream model id, or Azure's object form, which can additionally
+ * route this one model to Azure AI Speech instead of an Azure OpenAI deployment.
+ */
+export type BifrostKeyAlias = string | { model_id: string; use_speech_endpoints?: boolean };
+
 export type BifrostKey = {
   id?: string;
   name: string;
   value: BifrostSecret;
   models: string[];
   weight: number;
-  aliases?: Record<string, string>;
+  aliases?: Record<string, BifrostKeyAlias>;
   azure_key_config?: {
     endpoint: BifrostSecret;
   };
@@ -26,8 +36,24 @@ export type BifrostKey = {
   enabled?: boolean;
 };
 
+/**
+ * Bifrost injects prompt-cache breakpoints (`cache_control`) for models that support explicit
+ * caching (e.g. Claude on Vertex) when the request carries none.
+ * https://docs.getbifrost.ai/features/prompt-caching
+ */
+export type BifrostPromptCacheConfig = {
+  auto_inject: boolean;
+  ttl?: '1h';
+  cache_control_injection_points?: {
+    location: 'message';
+    role?: 'system' | 'developer' | 'user' | 'assistant';
+    index?: number;
+  }[];
+};
+
 export type BifrostProviderConfig = {
   provider: BifrostProvider;
+  prompt_cache?: BifrostPromptCacheConfig;
   network_config?: {
     base_url?: string;
     allow_private_network?: boolean;
@@ -38,10 +64,12 @@ export type BifrostProviderConfig = {
     // https://docs.getbifrost.ai/providers/custom-providers#allowed-request-types
     // Bifrost's officially supported provider endpoint matrix:
     // https://docs.getbifrost.ai/providers/supported-providers/overview
-    allowed_requests: {
+    allowed_requests?: {
       list_models: boolean;
       chat_completion: boolean;
       chat_completion_stream: boolean;
+      responses: boolean;
+      responses_stream: boolean;
       embedding: boolean;
       image_generation: boolean;
     };
@@ -49,10 +77,8 @@ export type BifrostProviderConfig = {
   keys: BifrostKey[];
 };
 
-export type BifrostProviderConfigFields = Omit<BifrostProviderConfig, 'provider' | 'keys'>;
-
 export type BifrostProviderResponse = Omit<BifrostProviderConfig, 'provider' | 'keys'> & {
-  name?: BifrostProvider;
+  name?: string;
   concurrency_and_buffer_size?: {
     concurrency?: number;
     buffer_size?: number;
@@ -71,6 +97,31 @@ export type BifrostProviderSyncLogger = {
 
 export type BifrostProviderSyncOptions = {
   bifrostAdminUrl?: string;
-  bifrostManagementApiKey?: string;
+  bifrostAdminUsername?: string;
+  bifrostAdminPassword?: string;
   logger?: BifrostProviderSyncLogger;
+};
+
+/**
+ * Provider access configuration for a Bifrost virtual key.
+ *
+ * `provider` is a plain string (not `BifrostProvider`) because virtual keys read from Bifrost
+ * may include provider configs for providers outside `BIFROST_PROVIDERS`, which this codebase
+ * leaves untouched here. `budgets` and `rate_limit` are treated as opaque - we only ever read
+ * and re-send them unchanged for provider configs we didn't add ourselves.
+ */
+export type BifrostVirtualKeyProviderConfig = {
+  id?: number;
+  provider: string;
+  allowed_models: string[];
+  blacklisted_models?: string[];
+  key_ids?: string[];
+  weight?: number | null;
+  budgets?: unknown[];
+  rate_limit?: unknown;
+};
+
+export type BifrostVirtualKey = {
+  id: string;
+  provider_configs: BifrostVirtualKeyProviderConfig[];
 };

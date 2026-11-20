@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { isUUID } from './uuid';
 
 describe('isUUID', () => {

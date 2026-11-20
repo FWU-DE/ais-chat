@@ -4,71 +4,110 @@ import {
   index,
   integer,
   json,
+  jsonb,
   pgEnum,
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { LlmModelPriceMetadata } from './types';
-import { LlmModelProviderSettings } from './llm-model';
 import { createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 
-export const organizationTable = pgTable('organization', {
-  id: uuid('id').primaryKey().defaultRandom(),
+import { LlmModelProviderSettings, LlmProviderKeySettings } from './llm-model';
+import { ImageGenerationConfig, LlmModelPriceMetadata, SpeechConfig } from './types';
+
+export const projectTable = pgTable('project', {
+  id: text('id').primaryKey(),
   name: text('name').notNull(),
   createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
 });
-export type OrganizationInsertModel = typeof organizationTable.$inferInsert;
-export type OrganizationModel = typeof organizationTable.$inferSelect;
-
-export const projectTable = pgTable(
-  'project',
-  {
-    id: text('id').primaryKey(),
-    name: text('name').notNull(),
-    organizationId: uuid('organization_id').notNull(),
-    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [index().on(table.organizationId)],
-);
 export const projectInsertSchema = createInsertSchema(projectTable);
 export type ProjectInsertModel = typeof projectTable.$inferInsert;
 export type ProjectModel = typeof projectTable.$inferSelect;
 export const projectUpdateSchema = createUpdateSchema(projectTable);
 
-export const llmModelTable = pgTable(
-  'llm_model',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    provider: text('provider').notNull(),
-    name: text('name').notNull(),
-    displayName: text('display_name').notNull(),
-    description: text('description').notNull().default(''),
-    setting: json('settings').$type<LlmModelProviderSettings>().notNull(),
-    priceMetadata: json('price_metada').$type<LlmModelPriceMetadata>().notNull(),
-    organizationId: uuid('organization_id')
-      .references(() => organizationTable.id)
-      .notNull(),
-    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-    supportedImageFormats: json('supported_image_formats').$type<string[]>().notNull().default([]),
-    additionalParameters: json('additional_parameters')
-      .$type<Record<string, unknown>>()
-      .notNull()
-      .default({}),
-    isNew: boolean('is_new').notNull().default(false),
-    isDeleted: boolean('is_deleted').notNull().default(false),
-  },
-  (table) => [index().on(table.organizationId)],
-);
+export const llmModelTable = pgTable('llm_model', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  provider: text('provider').notNull().default('bifrost'),
+  name: text('name').notNull(),
+  displayName: text('display_name').notNull(),
+  description: text('description').notNull().default(''),
+  setting: json('settings').$type<LlmModelProviderSettings>().notNull(),
+  useBifrost: boolean('use_bifrost').notNull().default(true),
+  priceMetadata: jsonb('price_metadata').$type<LlmModelPriceMetadata>().notNull(),
+  createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  supportedImageFormats: json('supported_image_formats').$type<string[]>().notNull().default([]),
+  imageGenerationConfig: jsonb('image_generation_config').$type<ImageGenerationConfig>(),
+  modelConfig: jsonb('model_config').$type<SpeechConfig>(),
+  additionalParameters: json('additional_parameters')
+    .$type<Record<string, unknown>>()
+    .notNull()
+    .default({}),
+  isNew: boolean('is_new').notNull().default(false),
+  isDeleted: boolean('is_deleted').notNull().default(false),
+  safetyFilterEnabled: boolean('safety_filter_enabled').notNull().default(true),
+});
 export const llmInsertModelSchema = createInsertSchema(llmModelTable);
 export const llmUpdateModelSchema = createUpdateSchema(llmModelTable).omit({
   id: true,
-  organizationId: true,
   createdAt: true,
 });
 export type LlmInsertModel = typeof llmModelTable.$inferInsert;
-export type LlmModel = typeof llmModelTable.$inferSelect;
+// Contains provider credentials and parameters; must never be exposed to ais-chat-app.
+export type SensitiveLlmModel = typeof llmModelTable.$inferSelect;
+export type LlmModel = Omit<
+  SensitiveLlmModel,
+  'setting' | 'useBifrost' | 'additionalParameters' | 'safetyFilterEnabled'
+>;
+
+export const llmProviderKeyTable = pgTable(
+  'llm_provider_key',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    provider: text('provider').notNull(),
+    settings: json('settings').$type<LlmProviderKeySettings>().notNull(),
+    weight: doublePrecision('weight').notNull().default(1),
+    isEnabled: boolean('is_enabled').notNull().default(true),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex('llm_provider_key_name_unique').on(table.name)],
+);
+export const llmProviderKeyInsertSchema = createInsertSchema(llmProviderKeyTable);
+export const llmProviderKeyUpdateSchema = createUpdateSchema(llmProviderKeyTable).omit({
+  id: true,
+  createdAt: true,
+});
+export type LlmProviderKeyInsertModel = typeof llmProviderKeyTable.$inferInsert;
+export type LlmProviderKeyModel = typeof llmProviderKeyTable.$inferSelect;
+
+export const llmModelProviderKeyMappingTable = pgTable(
+  'llm_model_provider_key_mapping',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    llmModelId: uuid('llm_model_id')
+      .notNull()
+      .references(() => llmModelTable.id),
+    providerKeyId: uuid('provider_key_id')
+      .notNull()
+      .references(() => llmProviderKeyTable.id),
+    upstreamModelName: text('upstream_model_name').notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index().on(table.llmModelId),
+    index().on(table.providerKeyId),
+    uniqueIndex('llm_model_provider_key_mapping_model_key_unique').on(
+      table.llmModelId,
+      table.providerKeyId,
+    ),
+  ],
+);
+export const llmModelProviderKeyMappingInsertSchema = createInsertSchema(
+  llmModelProviderKeyMappingTable,
+);
+export type LlmModelProviderKeyMappingModel = typeof llmModelProviderKeyMappingTable.$inferSelect;
 
 export const apiKeyStateEnum = pgEnum('api_key_state', ['active', 'inactive', 'deleted']);
 

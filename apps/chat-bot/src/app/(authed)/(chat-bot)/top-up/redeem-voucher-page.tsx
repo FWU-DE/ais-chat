@@ -1,10 +1,12 @@
 'use client';
-import SimpleTextInput from '@/components/common/simple-text-input';
-import { useToast } from '@/components/common/toast';
-import { redeemVoucherAction } from './actions';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import z from 'zod';
+
+import SimpleTextInput from '@/components/common/simple-text-input';
+import { useToast } from '@/components/common/toast';
+
+import { redeemVoucherAction } from './actions';
 
 export default function RedeemVoucherPage() {
   const t = useTranslations('top-up');
@@ -15,7 +17,7 @@ export default function RedeemVoucherPage() {
   const voucherSchema = z.string().length(16);
 
   const handleRedeem = async () => {
-    if (voucherSchema.safeParse(voucherCode).success) {
+    if (voucherSchema.validate(voucherCode)) {
       const result = await redeemVoucherAction(voucherCode);
       if (!result.success) {
         toast.error(tToast('redeem-invalid'));
@@ -45,7 +47,7 @@ export default function RedeemVoucherPage() {
           className="bg-primary text-white px-4 rounded-enterprise-md"
           type="button"
           onClick={handleRedeem}
-          disabled={!voucherSchema.safeParse(voucherCode).success}
+          disabled={!voucherSchema.validate(voucherCode)}
         >
           {t('redeem-button')}
         </button>

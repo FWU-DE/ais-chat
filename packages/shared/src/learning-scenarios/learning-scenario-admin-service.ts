@@ -1,36 +1,33 @@
 /**
  * @description Service functions for learning scenarios without authorization checks.
  */
+import { UserModel } from '@shared/auth/user-model';
 import { db } from '@shared/db';
+import { dbGetLearningScenarioById } from '@shared/db/functions/learning-scenario';
 import {
-  AccessLevel,
   LearningScenarioInsertModel,
   learningScenarioInsertSchema,
   learningScenarioTable,
 } from '@shared/db/schema';
-import { dbGetLearningScenarioById } from '@shared/db/functions/learning-scenario';
 import { NotFoundError } from '@shared/error';
-import { generateUUID } from '@shared/utils/uuid';
-import { and, eq, lt } from 'drizzle-orm';
-import { addDays } from '@shared/utils/date';
 import {
   copyEntityPictureIfExists,
   copyRelatedTemplateFiles,
 } from '@shared/templates/template-service';
+import { addDays } from '@shared/utils/date';
 import { buildLearningScenarioPictureKey } from '@shared/utils/picture-key';
-import { UserModel } from '@shared/auth/user-model';
+import { generateUUID } from '@shared/utils/uuid';
+import { and, eq, lt } from 'drizzle-orm';
 
 /**
  * This function creates a duplicate of an existing learning scenario,
  * including copying the avatar picture and all related files.
  */
 export async function duplicateLearningScenario({
-  accessLevel,
   user,
   originalLearningScenarioId,
   duplicateLearningScenarioName,
 }: {
-  accessLevel: AccessLevel | undefined;
   originalLearningScenarioId: string;
   user: Pick<UserModel, 'id'>;
   duplicateLearningScenarioName?: string;
@@ -55,7 +52,9 @@ export async function duplicateLearningScenario({
 
   const copy: LearningScenarioInsertModel = {
     ...expectedValues,
-    accessLevel: accessLevel ?? 'private',
+    isSchoolShared: false,
+    isCommunityShared: false,
+    isGlobal: false,
     hasLinkAccess: false,
     id: learningScenarioId,
     isDeleted: false,
@@ -78,6 +77,7 @@ export async function duplicateLearningScenario({
     'learning-scenario',
     originalLearningScenarioId,
     learningScenarioId,
+    user.id,
   );
 
   return insertedLearningScenario;

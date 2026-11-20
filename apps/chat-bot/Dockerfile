@@ -6,32 +6,38 @@
 ARG APP_VERSION
 ARG CI=true
 
-# Alpine image
-FROM node:24.18.0-alpine AS base
+# Debian (glibc) build image, matching the distroless runtime
+FROM node:24.22.3-trixie-slim@sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc99615654f124a0 AS base
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV TURBO_TELEMETRY_DISABLED=1
 
+FROM base AS builder-base
+ENV PNPM_STORE_DIR=/pnpm/store
+
 # Prune projects
-FROM base AS pruner
+FROM builder-base AS pruner
 WORKDIR /app
 
 COPY . .
 
 # setup pnpm and pnpm install in order to install turbo in the correct version
 RUN corepack enable && corepack prepare
-RUN pnpm install --frozen-lockfile --dev
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --filter . --frozen-lockfile --dev --prefer-offline
 
-ARG CI=true
+ARG CI
 RUN CI=${CI} \
     pnpm turbo prune ais-chat-app --docker
 
 # Build the project
-FROM base AS builder
+FROM builder-base AS builder
 WORKDIR /app
 
 # Git is required for sentry
-RUN apk add --no-cache git
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy lockfile and package.json's of isolated subworkspace
 COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
@@ -40,7 +46,8 @@ COPY --from=pruner /app/out/json/ .
 
 # First install the dependencies (as they change less often)
 RUN corepack enable && corepack prepare
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prefer-offline
 
 # Copy source code of isolated subworkspace
 COPY --from=pruner /app/out/full/ .
@@ -48,7 +55,7 @@ COPY --from=pruner /app/out/full/ .
 # Copy git history, required for sentry to determine release name
 COPY .git ./.git
 
-ARG CI=true
+ARG CI
 ARG APP_VERSION
 
 RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN \
@@ -60,19 +67,18 @@ RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN \
     APP_VERSION=${APP_VERSION} \
     pnpm turbo build:envless
 
-# Final image
-FROM base AS runner
+# Final image: distroless, no shell, package manager or busybox
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:6abfcb367ebc291572c774c1592a986be2ab26a2486f73093401327495a5962a AS runner
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nodejs
-USER nodejs
+# distroless has no node on PATH; keeps `node` resolvable for exec hooks like preStop
+ENV PATH=/nodejs/bin:$PATH
 
 WORKDIR /app
 
 # copy nextjs application
-COPY --from=builder --chown=nodejs:nodejs /app/apps/chat-bot/.next/standalone ./
-COPY --from=builder --chown=nodejs:nodejs /app/apps/chat-bot/.next/static ./apps/chat-bot/.next/static
-COPY --from=builder --chown=nodejs:nodejs /app/apps/chat-bot/public ./apps/chat-bot/public
+COPY --from=builder --chown=nonroot:nonroot /app/apps/chat-bot/.next/standalone ./
+COPY --from=builder --chown=nonroot:nonroot /app/apps/chat-bot/.next/static ./apps/chat-bot/.next/static
+COPY --from=builder --chown=nonroot:nonroot /app/apps/chat-bot/public ./apps/chat-bot/public
 
 ARG APP_VERSION
 ARG PORT=3000
@@ -80,11 +86,12 @@ ARG PORT=3000
 ENV APP_VERSION=${APP_VERSION}
 ENV PORT=${PORT}
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 EXPOSE ${PORT}
 
 HEALTHCHECK --timeout=10s --start-period=5s \
-  CMD wget http://127.0.0.1:${PORT}/api/healthz -qO-
+  CMD ["node", "-e", "fetch('http://127.0.0.1:'+process.env.PORT+'/api/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
 
 # https://nextjs.org/docs/pages/api-reference/config/next-config-js/output
-CMD ["node", "./apps/chat-bot/server.js"]
+CMD ["./apps/chat-bot/server.js"]

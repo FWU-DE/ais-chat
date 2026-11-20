@@ -1,28 +1,40 @@
 'use client';
 
-import { BackButton } from '@/components/common/back-button';
-import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
-import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
-import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
-import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
-import { CustomChatLastUpdate } from '@/components/custom-chat/custom-chat-last-update';
-import { CustomChatAvatarImage } from '@/components/custom-chat/custom-chat-avatar-image';
-import { CustomChatFieldInfo } from '@/components/custom-chat/custom-chat-field-info';
-import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
-import { CustomChatWebSearch } from '@/components/custom-chat/custom-chat-web-search';
 import type { FileModel, LearningScenarioOptionalShareDataModel } from '@shared/db/schema';
 import type { WebSource } from '@shared/db/types';
+import { Card, CardContent } from '@ui/components/card';
+import { FieldGroup } from '@ui/components/field';
 import { useRouter } from 'next/navigation';
-import { useToast } from '@/components/common/toast';
 import { useTranslations } from 'next-intl';
+
+import { BackButton } from '@/components/common/back-button';
+import { useToast } from '@/components/common/toast';
+import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
+import { CustomChatActionFavorite } from '@/components/custom-chat/custom-chat-action-favorite';
+import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
+import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
+import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-author-info';
+import { CustomChatAvatarImage } from '@/components/custom-chat/custom-chat-avatar-image';
+import { CustomChatCreateSuspensionRequestButton } from '@/components/custom-chat/custom-chat-create-suspension-request-button';
+import { CustomChatFieldInfo } from '@/components/custom-chat/custom-chat-field-info';
+import { CustomChatHeading2 } from '@/components/custom-chat/custom-chat-heading2';
+import { CustomChatLastUpdate } from '@/components/custom-chat/custom-chat-last-update';
+import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
+import { CustomChatTitle } from '@/components/custom-chat/custom-chat-title';
+import { CustomChatDidacticCommentaryView } from '@/components/custom-chat/didactic-commentary/custom-chat-didactic-commentary-view';
+import { CustomChatFilesAndLinks } from '@/components/custom-chat/files-and-links/custom-chat-files-and-links';
+import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-chat-filter-display-section';
+import { extractFilterValues } from '@/components/custom-chat/filter/custom-chat-filter-utils';
+import { CustomChatLicenseInformationView } from '@/components/custom-chat/license-information/custom-chat-license-information-view';
+import { CustomChatShareWithLearners } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners';
+import { CustomChatSpeechView } from '@/components/custom-chat/speech/custom-chat-speech-view';
+import { CustomChatWebSearchView } from '@/components/custom-chat/web-search/custom-chat-web-search-view';
+import { useLlmModels } from '@/components/providers/llm-model-provider';
+
 import {
   createNewLearningScenarioFromTemplateAction,
   downloadFileFromLearningScenarioAction,
 } from '../actions';
-import { Card, CardContent } from '@ui/components/card';
-import { useLlmModels } from '@/components/providers/llm-model-provider';
-import { CustomChatHeading2 } from '@/components/custom-chat/custom-chat-heading2';
-import { CustomChatShareWithLearners } from '@/components/custom-chat/share-with-learners/custom-chat-share-with-learners';
 import {
   extendLearningScenarioShareExpirationAction,
   getLearningScenarioShareDataAction,
@@ -30,12 +42,6 @@ import {
   unshareLearningScenarioAction,
   updateLearningScenarioShareTokenPointsLimitAction,
 } from '../editor/[learningScenarioId]/actions';
-import { CustomChatCreateSuspensionRequestButton } from '@/components/custom-chat/custom-chat-create-suspension-request-button';
-import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-author-info';
-import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
-import { FilterDisplaySection } from '@/components/custom-chat/filter/custom-chat-filter-display-section';
-import { extractFilterValues } from '@/components/custom-chat/filter/custom-chat-filter-utils';
-import { FieldGroup } from '@ui/components/field';
 
 export function LearningScenarioView({
   learningScenario,
@@ -46,6 +52,8 @@ export function LearningScenarioView({
   maxBudget,
   budgetUsedBySharedChat,
   isWebSearchAvailable,
+  isSpeechAvailable,
+  initialIsFavorite,
 }: {
   learningScenario: LearningScenarioOptionalShareDataModel;
   fileMappings: FileModel[];
@@ -55,11 +63,14 @@ export function LearningScenarioView({
   maxBudget: number;
   budgetUsedBySharedChat: number;
   isWebSearchAvailable: boolean;
+  isSpeechAvailable: boolean;
+  initialIsFavorite: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
   const t = useTranslations('learning-scenarios');
   const tToast = useTranslations('learning-scenarios.toasts');
+  const tChat = useTranslations('custom-chat');
   const { models } = useLlmModels();
   const filterValues = extractFilterValues(learningScenario);
 
@@ -146,6 +157,10 @@ export function LearningScenarioView({
       <CustomChatActions>
         <CustomChatActionUse onClick={handleUseChat} />
         <CustomChatActionDuplicate onClick={handleDuplicateLearningScenario} />
+        <CustomChatActionFavorite
+          entityRef={{ entityType: 'learningScenario', entityId: learningScenario.id }}
+          initialIsFavorite={initialIsFavorite}
+        />
         <CustomChatLastUpdate date={learningScenario.updatedAt} />
       </CustomChatActions>
 
@@ -179,7 +194,7 @@ export function LearningScenarioView({
           </CardContent>
         </Card>
 
-        {learningScenario.accessLevel === 'global' && (
+        {learningScenario.isGlobal && (
           <CustomChatAuthorInfo
             authorLabel={t('author-label')}
             authorText={learningScenario.author !== '' ? learningScenario.author : t('author-text')}
@@ -194,6 +209,10 @@ export function LearningScenarioView({
                 label={t('description-label')}
                 value={learningScenario.description}
               />
+              <CustomChatDidacticCommentaryView
+                didacticCommentary={learningScenario.didacticCommentary}
+                tooltip={tChat('didactic-commentary.heading-tooltip-learning-scenario')}
+              />
               {modelDisplayName && (
                 <CustomChatFieldInfo label={t('form.model-label')} value={modelDisplayName} />
               )}
@@ -206,6 +225,9 @@ export function LearningScenarioView({
                 value={learningScenario.studentExercise}
               />
               <FilterDisplaySection values={filterValues} />
+              <CustomChatLicenseInformationView
+                licenseInformation={learningScenario.licenseInformation}
+              />
             </FieldGroup>
           </CardContent>
         </Card>
@@ -215,11 +237,10 @@ export function LearningScenarioView({
         initialLinks={initialLinks}
         onDownloadFile={handleDownloadFile}
       />
-      {learningScenario.isWebSearchEnabled && isWebSearchAvailable && (
-        <CustomChatWebSearch readonly />
-      )}
+      {isWebSearchAvailable && <CustomChatWebSearchView {...learningScenario} />}
+      {isSpeechAvailable && <CustomChatSpeechView {...learningScenario} />}
 
-      {(learningScenario.hasLinkAccess || learningScenario.accessLevel === 'community') && (
+      {(learningScenario.hasLinkAccess || learningScenario.isCommunityShared) && (
         <CustomChatCreateSuspensionRequestButton
           entityRef={{ entityType: 'learningScenario', entityId: learningScenario.id }}
         />

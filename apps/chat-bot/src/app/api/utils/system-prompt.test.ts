@@ -1,24 +1,30 @@
+import type { ToolDefinition } from '@ais-chat/ai-core';
 import { describe, expect, it } from 'vitest';
-import { constructRagContext } from './system-prompt';
 
-describe('constructRagContext', () => {
-  it('includes web search results in the context block', () => {
-    const context = constructRagContext(
-      [],
-      [],
-      [
-        {
-          type: 'text',
-          name: 'Example result',
-          url: 'https://example.com/article',
-          content: 'Current details from the web search.',
-          favicon: 'https://example.com/favicon.ico',
-        },
-      ],
-    );
+import { TOOL_NAMES } from '@/types/tool-names';
 
-    expect(context).toContain('### Websuche');
-    expect(context).toContain('https://example.com/article');
-    expect(context).toContain('Current details from the web search.');
+import { constructToolGuidelines } from './system-prompt';
+
+function tool(name: string): ToolDefinition {
+  return { name, description: '', parameters: {} };
+}
+
+const toolNames = Object.values(TOOL_NAMES);
+
+describe('constructToolGuidelines', () => {
+  const baseGuidelines = constructToolGuidelines([]);
+
+  it.each(toolNames)('adds a guideline section when %s is active', (toolName) => {
+    expect(constructToolGuidelines([tool(toolName)])).not.toEqual(baseGuidelines);
+  });
+
+  it('describes document generation with formulas and attachment references', () => {
+    const guidelines = constructToolGuidelines([tool(TOOL_NAMES.generateDocument)]);
+
+    expect(guidelines).toContain(TOOL_NAMES.generateDocument);
+    expect(guidelines).toContain('attachment://');
+    expect(guidelines).toContain('![Beschreibung](attachment://...)');
+    expect(guidelines).toContain('<img src="attachment://..." alt="Beschreibung">');
+    expect(guidelines).toContain('$');
   });
 });

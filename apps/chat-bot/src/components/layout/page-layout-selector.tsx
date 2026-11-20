@@ -1,16 +1,19 @@
 'use client';
 
+import { ReactNode } from 'react';
+
+import { ConversationDownloadProvider } from '@/components/chat/conversation-download-context';
+import { ChatHeaderBar } from '@/components/chat/header-bar';
 import CustomChatHeader from '@/components/custom-chat/custom-chat-header';
 import {
   CustomChatHeaderContentProvider,
   useCustomChatHeaderContent,
 } from '@/components/custom-chat/custom-chat-header-content';
-import { ChatHeaderBar } from '@/components/chat/header-bar';
+import SelectImageAspectRatio from '@/components/image-generation/select-image-aspect-ratio';
 import SelectImageModel from '@/components/image-generation/select-image-model';
 import SelectImageStyle from '@/components/image-generation/select-image-style';
 import { ApplicationHeaderContent } from '@/components/layout/application-header';
 import type { DefaultPageLayoutConfig } from '@/components/layout/default-page-layout';
-import { ReactNode } from 'react';
 
 function FormPageHeader() {
   const { formStateProps } = useCustomChatHeaderContent();
@@ -28,10 +31,11 @@ function FormPageHeader() {
 function ImagePageHeader() {
   return (
     <ApplicationHeaderContent>
-      <div className="flex w-full gap-4">
+      <>
         <SelectImageModel />
         <SelectImageStyle />
-      </div>
+        <SelectImageAspectRatio />
+      </>
     </ApplicationHeaderContent>
   );
 }
@@ -78,12 +82,14 @@ export function PageLayoutSelector({
     // `useCustomChatHeaderContent()` is guaranteed to have a provider in the tree,
     // regardless of which header layout branch is currently rendered.
     <CustomChatHeaderContentProvider>
-      {layoutType && <DefaultPageHeader layoutConfig={layoutType} />}
-      <div
-        className={`data-page-layout h-full max-w-5xl mx-auto px-6 ${layoutType?.layout === 'chat' ? 'pb-4' : 'pb-8'}`}
-      >
-        {children}
-      </div>
+      <ConversationDownloadProvider>
+        {layoutType && <DefaultPageHeader layoutConfig={layoutType} />}
+        <div
+          className={`data-page-layout h-full max-w-5xl mx-auto px-6 ${layoutType?.layout === 'chat' ? 'pb-4' : 'pb-8'}`}
+        >
+          {children}
+        </div>
+      </ConversationDownloadProvider>
     </CustomChatHeaderContentProvider>
   );
 }

@@ -1,49 +1,132 @@
 import * as Sentry from '@sentry/core';
-import type { Message as AiCoreMessage, TokenUsage, ToolCall, ToolRegistry } from './types';
 
-export const MAX_AGENTIC_ITERATIONS = 3;
-export const MAX_TOOL_CALLS_PER_ITERATION = 2;
+import { env } from '../env';
+import { EmptyResponseError } from '../errors';
+import { generateAgenticStreamWithBilling } from './agentic-stream';
+import { recordGenerationRssDelta } from './metrics/generation-rss-delta';
+import { recordToolCallDuration } from './metrics/tool-call-duration';
+import type {
+  Message as AiCoreMessage,
+  ModelSelection,
+  ModelUsage,
+  TokenUsage,
+  ToolCall,
+  ToolErrorResult,
+  ToolRegistry,
+  ToolResult,
+} from './types';
+
+export const MAX_AGENTIC_ITERATIONS = env.maxAgenticIterations;
+export const MAX_TOOL_CALLS_PER_ITERATION = env.maxToolCallsPerIteration;
 
 function logError(message: string, error: unknown) {
   console.error(message, error);
 }
 
+/** Derives the running totals from the recorded per-model usages, so they can never drift apart. */
+function sumModelUsages(modelUsages: ModelUsage[]): { usage: TokenUsage; priceInCents: number } {
+  return modelUsages.reduce(
+    (acc, { usage, priceInCents }) => ({
+      usage: {
+        promptTokens: acc.usage.promptTokens + usage.promptTokens,
+        completionTokens: acc.usage.completionTokens + usage.completionTokens,
+        totalTokens: acc.usage.totalTokens + usage.totalTokens,
+      },
+      priceInCents: acc.priceInCents + priceInCents,
+    }),
+    { usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, priceInCents: 0 },
+  );
+}
+
 type RunAgentLoopParams = {
-  modelId: string;
-  modelName: string;
+  modelSelection: ModelSelection;
   apiKeyId: string;
   messages: AiCoreMessage[];
   toolRegistry?: ToolRegistry;
   agentName: string;
+  /** Tears down the upstream provider stream when the client goes away or the generation times out. */
+  abortSignal?: AbortSignal;
   onTextChunk: (delta: string) => void;
+  onReasoningSummary?: (delta: string, part?: { itemId: string; summaryIndex: number }) => void;
+  onToolCalls?: (calls: ToolCall[]) => void;
+  onToolResult?: (result: {
+    toolCallId: string;
+    name: string;
+    result: ToolResult | ToolErrorResult;
+  }) => void;
   onComplete: (result: {
     fullText: string;
     usage: TokenUsage;
     priceInCents: number;
+    modelId: string;
+    modelUsages: ModelUsage[];
     agentLoopMessages: AiCoreMessage[];
   }) => void;
-  onError: (error: Error) => void;
+  /**
+   * Receives whatever was billed before the failure, so a partially completed generation is
+   * still accounted for.
+   */
+  onError: (
+    error: Error,
+    billedUsage: {
+      usage: TokenUsage;
+      priceInCents: number;
+      modelUsages: ModelUsage[];
+    },
+  ) => void;
 };
 
 export function runAgentLoop({
-  modelId,
-  modelName,
+  modelSelection,
   apiKeyId,
   messages,
   toolRegistry,
   agentName,
+  abortSignal,
   onTextChunk,
+  onReasoningSummary,
+  onToolCalls,
+  onToolResult,
   onComplete,
   onError,
 }: RunAgentLoopParams): void {
   void (async () => {
-    const { generateAgenticStreamWithBilling } = await import('./agentic-stream');
-
     let fullText = '';
-    let totalUsage: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
-    let totalPriceInCents = 0;
+    let lastModelId = modelSelection.modelIds[0];
+    const modelUsages: ModelUsage[] = [];
     const loopMessages = [...messages];
     const tools = toolRegistry ? Object.values(toolRegistry).map((entry) => entry.definition) : [];
+    const rssBefore = process.memoryUsage().rss;
+
+    // The histogram's own count series carries the per-outcome run count, so no extra counter.
+    const recordOutcome = (outcome: 'success' | 'error' | 'aborted', error?: Error) => {
+      recordGenerationRssDelta({
+        rssDelta: process.memoryUsage().rss - rssBefore,
+        outcome,
+        agentName,
+        modelName: modelSelection.modelName,
+        errorType: error?.name,
+      });
+    };
+
+    const complete = () => {
+      recordOutcome(abortSignal?.aborted ? 'aborted' : 'success');
+      onComplete({
+        fullText,
+        ...sumModelUsages(modelUsages),
+        modelId: lastModelId,
+        modelUsages,
+        agentLoopMessages: loopMessages.slice(messages.length),
+      });
+    };
+
+    const fail = (error: Error) => {
+      recordOutcome('error', error);
+      onError(error, {
+        ...sumModelUsages(modelUsages),
+        modelUsages,
+      });
+    };
 
     try {
       await Sentry.startSpan(
@@ -53,12 +136,16 @@ export function runAgentLoop({
           attributes: {
             'gen_ai.operation.name': 'invoke_agent',
             'gen_ai.operation.type': 'agent',
-            'gen_ai.request.model': modelName,
+            'gen_ai.request.model': modelSelection.modelName,
             'gen_ai.agent.name': agentName,
           },
         },
         async (agentSpan) => {
           for (let iteration = 0; iteration < MAX_AGENTIC_ITERATIONS; iteration++) {
+            if (abortSignal?.aborted) {
+              break;
+            }
+
             const pendingToolCalls: ToolCall[] = [];
             const overBudgetToolCalls: ToolCall[] = [];
             let iterationText = '';
@@ -71,40 +158,70 @@ export function runAgentLoop({
 
             const isLastIteration = iteration === MAX_AGENTIC_ITERATIONS - 1;
             const stream = generateAgenticStreamWithBilling(
-              modelId,
+              modelSelection,
               loopMessages,
               apiKeyId,
-              async ({ usage, priceInCents }) => {
-                totalUsage = {
-                  promptTokens: totalUsage.promptTokens + usage.promptTokens,
-                  completionTokens: totalUsage.completionTokens + usage.completionTokens,
-                  totalTokens: totalUsage.totalTokens + usage.totalTokens,
-                };
-                totalPriceInCents += priceInCents;
+              async ({ usage, priceInCents, modelId: usedModelId, provider, modelName }) => {
+                await modelSelection.onModelUsed?.(usedModelId);
+                lastModelId = usedModelId;
+                modelUsages.push({
+                  modelId: usedModelId,
+                  usage,
+                  priceInCents,
+                  provider,
+                  modelName,
+                });
+                if (usage.estimated) {
+                  agentSpan.setAttribute('gen_ai.usage.estimated', true);
+                }
               },
-              tools.length > 0 && !isLastIteration ? { tools, toolChoice: 'auto' } : undefined,
+              tools.length > 0 && !isLastIteration
+                ? { tools, toolChoice: 'auto', abortSignal }
+                : { abortSignal },
             );
 
-            for await (const event of stream) {
-              if (event.type === 'text') {
-                iterationText += event.delta;
-                onTextChunk(event.delta);
-              } else if (event.type === 'tool_call') {
-                if (pendingToolCalls.length < MAX_TOOL_CALLS_PER_ITERATION) {
-                  // On last iteration, tools are disabled but model might still emit tool calls
-                  if (!isLastIteration) {
-                    pendingToolCalls.push(event.call);
+            let streamCompleted = false;
+
+            try {
+              for await (const event of stream) {
+                if (event.type === 'text') {
+                  iterationText += event.delta;
+                  onTextChunk(event.delta);
+                } else if (event.type === 'reasoning_summary') {
+                  onReasoningSummary?.(event.delta, event.part);
+                } else if (event.type === 'tool_call') {
+                  if (pendingToolCalls.length < MAX_TOOL_CALLS_PER_ITERATION) {
+                    // On last iteration, tools are disabled but model might still emit tool calls
+                    if (!isLastIteration) {
+                      pendingToolCalls.push(event.call);
+                    }
+                  } else {
+                    overBudgetToolCalls.push(event.call);
                   }
-                } else {
-                  overBudgetToolCalls.push(event.call);
                 }
+              }
+              streamCompleted = true;
+            } finally {
+              if (!streamCompleted && iterationText.length > 0) {
+                // Preserve partial output when the provider stream is interrupted.
+                fullText += iterationText;
               }
             }
 
-            fullText += iterationText;
-
             if (pendingToolCalls.length === 0 && overBudgetToolCalls.length === 0) {
+              fullText += iterationText;
               break;
+            }
+
+            if (abortSignal?.aborted) {
+              if (iterationText.length > 0 && streamCompleted) {
+                fullText += iterationText;
+              }
+              break;
+            }
+
+            if (iterationText.length > 0) {
+              fullText += iterationText;
             }
 
             loopMessages.push({
@@ -112,6 +229,10 @@ export function runAgentLoop({
               content: iterationText,
               toolCalls: [...pendingToolCalls, ...overBudgetToolCalls],
             });
+
+            if (pendingToolCalls.length > 0) {
+              onToolCalls?.(pendingToolCalls);
+            }
 
             const toolResults = await Promise.all([
               ...pendingToolCalls.map((toolCall) =>
@@ -127,33 +248,64 @@ export function runAgentLoop({
                   },
                   async (toolSpan) => {
                     const registryEntry = toolRegistry?.[toolCall.name];
-                    let result: string;
+                    const startedAt = performance.now();
+                    let status = registryEntry ? 'success' : 'unknown_tool';
+                    let result: ToolResult | ToolErrorResult;
+                    let serializedResult: string;
 
-                    if (registryEntry) {
-                      try {
+                    try {
+                      if (registryEntry) {
                         const args = JSON.parse(toolCall.arguments) as Record<string, unknown>;
-                        result = await registryEntry.handler(args);
-                      } catch (error) {
-                        // TODO: see tech debt (refactoring of tool calls for error handling). The catch clause is usually never executed, because tool handlers return errors as plain string or in the 'error' key of a stringified json
-                        const message =
-                          error instanceof Error ? error.message : 'Tool execution failed';
+                        result = await registryEntry.handler(args, {
+                          abortSignal,
+                          reportUsage: (modelUsage) => {
+                            modelUsages.push(modelUsage);
+                          },
+                        });
+                      } else {
+                        const message = `Unknown tool "${toolCall.name}"`;
                         toolSpan.setStatus({ code: 2, message });
-                        logError(`Error executing tool ${toolCall.name}:`, error);
-                        result = `Error: ${message}`;
+                        result = { error: message };
                       }
-                    } else {
-                      const message = `Unknown tool "${toolCall.name}"`;
+
+                      // JSON.stringify can throw (e.g. circular references) or return undefined
+                      // (e.g. a result with a toJSON that returns undefined); both go through the
+                      // catch block below so a bad tool result becomes a structured tool error.
+                      const serialized = JSON.stringify(result);
+                      if (serialized === undefined) {
+                        throw new Error('Tool result could not be serialized as JSON');
+                      }
+                      serializedResult = serialized;
+                    } catch (error) {
+                      status = 'error';
+                      const message =
+                        error instanceof Error ? error.message : 'Tool execution failed';
                       toolSpan.setStatus({ code: 2, message });
-                      result = `Error: ${message}`;
+                      logError(`Error executing tool ${toolCall.name}:`, error);
+                      result = { error: message };
+                      serializedResult = JSON.stringify(result);
+                    } finally {
+                      recordToolCallDuration({
+                        durationMs: performance.now() - startedAt,
+                        toolName: registryEntry ? toolCall.name : 'unknown',
+                        status,
+                      });
                     }
 
-                    return { toolCallId: toolCall.id, result };
+                    onToolResult?.({ toolCallId: toolCall.id, name: toolCall.name, result });
+
+                    return {
+                      toolCallId: toolCall.id,
+                      result: serializedResult,
+                    };
                   },
                 ),
               ),
               ...overBudgetToolCalls.map(async (toolCall) => ({
                 toolCallId: toolCall.id,
-                result: `Error: Tool call budget exceeded. Maximum ${MAX_TOOL_CALLS_PER_ITERATION} tool calls per iteration. Do not mention this error to the user. Continue answering with the information you already have.`,
+                result: JSON.stringify({
+                  error: `Tool call budget exceeded. Maximum ${MAX_TOOL_CALLS_PER_ITERATION} tool calls per iteration. Do not mention this error to the user. Continue answering with the information you already have.`,
+                } satisfies ToolErrorResult),
               })),
             ]);
 
@@ -162,21 +314,41 @@ export function runAgentLoop({
             }
           }
 
+          const { usage: totalUsage } = sumModelUsages(modelUsages);
           agentSpan.setAttribute('gen_ai.usage.input_tokens', totalUsage.promptTokens);
           agentSpan.setAttribute('gen_ai.usage.output_tokens', totalUsage.completionTokens);
           agentSpan.setAttribute('gen_ai.usage.total_tokens', totalUsage.totalTokens);
         },
       );
 
-      onComplete({
-        fullText,
-        usage: totalUsage,
-        priceInCents: totalPriceInCents,
-        agentLoopMessages: loopMessages.slice(messages.length),
-      });
+      if (fullText.trim().length === 0) {
+        // An abort before any output is a teardown, not an empty-response failure.
+        if (!abortSignal?.aborted) {
+          fail(new EmptyResponseError({ modelId: lastModelId }));
+          return;
+        }
+
+        // Nothing was generated and nothing was billed, so there is nothing to report.
+        if (modelUsages.length === 0) {
+          recordOutcome('aborted');
+          return;
+        }
+      }
+
+      complete();
     } catch (error) {
+      // An aborted generation is an expected teardown, not a failure to report, but whatever
+      // was already generated must still reach the caller so it can be persisted and billed.
+      if (abortSignal?.aborted) {
+        if (fullText.trim().length > 0 || modelUsages.length > 0) {
+          complete();
+        } else {
+          recordOutcome('aborted');
+        }
+        return;
+      }
       logError('Error during agent loop:', error);
-      onError(error instanceof Error ? error : new Error('Unknown error'));
+      fail(error instanceof Error ? error : new Error('Unknown error'));
     }
   })();
 }

@@ -1,3 +1,5 @@
+import { LlmModelPriceMetadata } from '@ais-chat/shared/db/schema';
+
 export type LargeLanguageModel = {
   id: string;
   provider: string;
@@ -5,37 +7,46 @@ export type LargeLanguageModel = {
   displayName: string;
   description: string;
   setting: object;
-  priceMetadata: object;
-  organizationId: string;
+  priceMetadata: LlmModelPriceMetadata;
   createdAt: Date;
   supportedImageFormats: string[];
+  imageGenerationConfig: object | null;
+  modelConfig: object | null;
   additionalParameters: object;
   isNew: boolean;
   isDeleted: boolean;
+  useBifrost: boolean;
+  safetyFilterEnabled: boolean;
 };
 
 export type CreateLargeLanguageModel = {
   name: string;
   displayName: string;
-  provider: string;
   description?: string;
-  setting?: string;
-  priceMetadata?: string;
+  priceMetadata: string;
   supportedImageFormats?: string;
+  imageGenerationConfig?: string;
+  modelConfig?: string;
   additionalParameters?: string;
   isNew: boolean;
   isDeleted: boolean;
+  useBifrost: boolean;
+  safetyFilterEnabled: boolean;
+  providerKeys: Array<{ providerKeyId: string; upstreamModelName: string }>;
 };
 
 export type UpdateLargeLanguageModel = {
   name: string;
   displayName: string;
-  provider: string;
   description?: string;
-  setting?: string;
-  priceMetadata?: string;
+  priceMetadata: string;
   supportedImageFormats?: string;
+  imageGenerationConfig?: string;
+  modelConfig?: string;
   additionalParameters?: string;
   isNew: boolean;
   isDeleted: boolean;
+  useBifrost: boolean;
+  safetyFilterEnabled: boolean;
+  providerKeys: Array<{ providerKeyId: string; upstreamModelName: string }>;
 };

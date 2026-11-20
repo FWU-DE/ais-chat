@@ -2,7 +2,7 @@
   "recommendations": [
     "k6.k6",
     "esbenp.prettier-vscode",
-    "rvest.vs-code-prettier-eslint",
+    "dbaeumer.vscode-eslint",
     "bradlc.vscode-tailwindcss",
     "vitest.explorer",
     "ms-azuretools.vscode-docker",

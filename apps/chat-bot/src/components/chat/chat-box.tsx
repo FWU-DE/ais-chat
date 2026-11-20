@@ -1,83 +1,94 @@
 import { FileModel } from '@shared/db/schema';
-import DisplayUploadedFile from './display-uploaded-file';
-import DisplayUploadedImage, { type PendingFileModel } from './display-uploaded-image';
-import CopyToClipboardButton from '../common/clipboard-button';
-import ReloadIcon from '../icons/reload';
-import MarkdownDisplay from './markdown-display';
-import { cn } from '@/utils/tailwind';
-import { useTranslations } from 'next-intl';
-import Citation from './sources/citation';
-import { parseHyperlinks } from '@/utils/web-search/parsing';
-import { iconClassName } from '@/utils/tailwind/icon';
-import useBreakpoints from '../hooks/use-breakpoints';
-import { isImageFile } from '@/utils/files/generic';
-import { type UIMessage, type ChatStatus } from '@/types/chat';
-import { ReactNode } from 'react';
 import { WebSource } from '@shared/db/types';
-import {
-  WebSearchSourcesButton,
-  WebSearchSourcesPanel,
-  useWebSearchSourcesDisclosure,
-} from './sources/web-search-sources';
-import DownloadConversationMessageButton from './download-conversation-message-button';
+import { utils } from '@shared/utils';
+import { useTranslations } from 'next-intl';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+
+import { type ChatStatus, type UIMessage } from '@/types/chat';
+import { TOOL_NAMES } from '@/types/tool-names';
+import { replacePlotBlocks } from '@/utils/code-blocks';
+import { isImageFile } from '@/utils/files/generic';
+import { cn } from '@/utils/tailwind';
+
+import useBreakpoints from '../hooks/use-breakpoints';
+import { AiActivityPanel } from './activity/ai-activity';
+import DisplayFileAttachment from './display-file-attachment';
+import { GeneratedDocumentAttachment } from './document/generated-document-attachment';
+import MarkdownDisplay from './markdown-display';
+import { MessageActions } from './message-actions';
+import MessageImageAttachment, { type MessageFileModel } from './message-image-attachment';
+import { PlotStreamingContext } from './plot/plot-block';
+import Citation from './sources/citation';
+import AudioPlayer from './speech/audio-player';
+import { GenerateSpeechStreamFn } from './speech/types';
 
 // Re-export for consumers
-export type { PendingFileModel };
+export type { MessageFileModel };
 
 export function ChatBox({
   assistantIcon,
-  children,
+  message,
   fileMapping,
-  pendingFileMapping,
+  messageFileMapping: messageFileMapping,
   index,
   webSources,
   isLastNonUser,
   isLoading,
   regenerateMessage,
+  canRegenerateMessage,
   conversationId,
   characterName,
   status,
-  getSignedUrlFn,
+  showActivityDialog,
+  generateSpeechStreamFn,
+  speechVoice,
+  isSpeechModelEnabled,
+  speechOnly,
 }: {
   assistantIcon?: ReactNode;
-  children: UIMessage;
+  message: UIMessage;
   fileMapping?: Map<string, FileModel[]>;
-  pendingFileMapping?: Map<string, PendingFileModel[]>;
+  messageFileMapping?: Map<string, MessageFileModel[]>;
   index: number;
   webSources?: WebSource[];
   isLastNonUser: boolean;
   isLoading: boolean;
   regenerateMessage: () => void;
+  canRegenerateMessage: boolean;
   conversationId?: string;
   characterName?: string;
   status: ChatStatus;
-  getSignedUrlFn?: (fileId: string) => Promise<string>;
+  showActivityDialog?: boolean;
+  generateSpeechStreamFn: GenerateSpeechStreamFn;
+  speechVoice?: string;
+  isSpeechModelEnabled: boolean;
+  speechOnly: boolean;
 }) {
-  const tCommon = useTranslations('common');
   const { isAtLeast } = useBreakpoints();
-  const {
-    isOpen: isAssistantSourcesOpen,
-    panelRef,
-    openOrScrollIntoView,
-    toggleOpen,
-  } = useWebSearchSourcesDisclosure();
+  const tCommon = useTranslations('common');
+  const [isTextVisible, setIsTextVisible] = useState(false);
 
   const userClassName =
-    children.role === 'user'
+    message.role === 'user'
       ? 'w-fit p-4 rounded-2xl rounded-br-none self-end bg-secondary/30 max-w-[70%] wrap-break-word'
       : 'w-full min-w-0';
 
-  // Check both DB file mapping and pending files for this message
-  const dbFiles = fileMapping?.get(children.id);
-  const pendingFiles = pendingFileMapping?.get(children.id);
-  // Prefer DB files if available (they're persisted), otherwise use pending files
-  const allFiles = dbFiles ?? pendingFiles;
+  // Check both persisted files and message-associated files for this message
+  const dbFiles = fileMapping?.get(message.id);
+  const messageFiles = messageFileMapping?.get(message.id);
+  // Prefer persisted files, overlaying an existing preview URL when available.
+  // Fall back to message-associated files when no persisted entry exists.
+  const allFiles =
+    dbFiles?.map((file) => {
+      const localUrl = messageFiles?.find((messageFile) => messageFile.id === file.id)?.localUrl;
+      return localUrl === undefined ? file : { ...file, localUrl };
+    }) ?? messageFiles;
   const hasFiles = allFiles !== undefined && allFiles.length > 0;
 
-  const parsedUrls = children.role === 'user' ? (parseHyperlinks(children.content) ?? []) : [];
-  const userWebSources = children.role === 'user' ? [...(webSources ?? [])] : [];
-  const assistantWebSearchSources =
-    children.role === 'assistant' ? (children.webSearchResults ?? []) : [];
+  const parsedUrls =
+    message.role === 'user' ? (utils.url.parseHyperlinks(message.content) ?? []) : [];
+  const userWebSources = message.role === 'user' ? [...(webSources ?? [])] : [];
+  const activitySteps = message.role === 'assistant' ? (message.activitySteps ?? []) : [];
 
   for (const url of parsedUrls) {
     if (userWebSources.find((source) => source.link === url) === undefined) {
@@ -90,18 +101,17 @@ export function ChatBox({
   const nonImageFiles = allFiles?.filter((file) => !isImageFile(file.name)) ?? [];
 
   const maybeFileAttachment =
-    hasFiles && children.role === 'user' ? (
+    hasFiles && message.role === 'user' ? (
       <div className="flex w-full min-w-0 flex-col items-end gap-4 self-end pb-0 pt-0 mb-4">
         {/* Display images */}
         {imageFiles.length > 0 && (
           <div className="flex flex-row gap-2 overflow-auto">
             {imageFiles.map((file) => (
-              <DisplayUploadedImage
+              // The authenticated scaled-image fallback only works for files owned by the current user (fileMapping).
+              <MessageImageAttachment
                 file={file}
-                status="processed"
                 key={file.id}
-                showBanner={false}
-                getSignedUrl={getSignedUrlFn}
+                allowFallbackUrl={fileMapping !== undefined}
               />
             ))}
           </div>
@@ -110,7 +120,7 @@ export function ChatBox({
         {nonImageFiles.length > 0 && (
           <div className="flex w-fit max-w-full min-w-0 flex-row flex-wrap justify-end gap-2 overflow-hidden">
             {nonImageFiles.map((file) => (
-              <DisplayUploadedFile fileName={file.name} status="processed" key={file.id} />
+              <DisplayFileAttachment fileName={file.name} key={file.id} />
             ))}
           </div>
         )}
@@ -135,70 +145,138 @@ export function ChatBox({
       </div>
     ) : null;
 
-  const maybeAssistantWebSearchSources =
-    assistantWebSearchSources.length > 0 ? (
-      <WebSearchSourcesPanel
-        sources={assistantWebSearchSources}
-        isOpen={isAssistantSourcesOpen}
-        onToggle={toggleOpen}
-        panelId={`assistant-web-sources-${children.id}`}
-        panelRef={panelRef}
-      />
+  // Turn number within the conversation (1-based), shared by a user message and its assistant reply.
+  const assistantMessageNumber = Math.floor(index / 2 + 1);
+
+  const AiActivity =
+    activitySteps.length > 0 && !showActivityDialog ? (
+      <AiActivityPanel steps={activitySteps} messageIndex={assistantMessageNumber} />
     ) : null;
 
   const margin =
-    allFiles !== undefined || userWebSources.length > 0 || assistantWebSearchSources.length > 0
-      ? 'm-0 mt-4'
-      : 'm-4';
+    allFiles !== undefined || userWebSources.length > 0 || AiActivity !== null ? 'm-0 mt-4' : 'm-4';
 
-  const maybeShowMessageIcons =
-    isLastNonUser && status !== 'streaming' ? (
-      <div className="flex items-center gap-1 mt-1">
-        <CopyToClipboardButton text={children.content} className="size-5" />
-        {status === 'ready' &&
-          conversationId !== undefined &&
-          children.id !== 'initial-message' && (
-            <DownloadConversationMessageButton
-              conversationId={conversationId}
-              messageId={children.id}
-              characterName={characterName}
-            />
-          )}
-        <button
-          title={tCommon('regenerate-message')}
-          type="button"
-          onClick={() => regenerateMessage()}
-          aria-label="Reload"
-        >
-          <div className={cn('p-1.5 rounded-enterprise-sm', iconClassName)}>
-            <ReloadIcon className="w-5 h-5" />
-          </div>
-        </button>
-        {assistantWebSearchSources.length > 0 && (
-          <WebSearchSourcesButton
-            panelId={`assistant-web-sources-${children.id}`}
-            onClick={openOrScrollIntoView}
+  // Short description instead of the raw plot JSON for copy, read-aloud and audio.
+  const plainText = useMemo(
+    () =>
+      replacePlotBlocks(message.content, (title) =>
+        title ? tCommon('plot.description', { title }) : tCommon('plot.label'),
+      ),
+    [message.content, tCommon],
+  );
+
+  const isAssistantSpeechOnly = message.role === 'assistant' && speechOnly && isSpeechModelEnabled;
+  const isInitialMessage = message.id === 'initial-message';
+  const actionsVisible = message.role === 'assistant' && (!isLastNonUser || status !== 'streaming');
+
+  // The player is shown immediately in speech-only mode; otherwise it stays hidden until the user
+  // reveals it via `ShowAudioPlayerButton`.
+  const [showAudioPlayer, setShowAudioPlayer] = useState(isAssistantSpeechOnly);
+
+  // Starts playback automatically once the current (last) assistant message has just finished
+  // streaming. Uses a counter bumped exactly once per streaming-to-ready transition, so historical
+  // messages that are already complete when the page loads never auto-play. Aborted streams end in
+  // 'error' and must not be read aloud.
+  const [autoPlayTrigger, setAutoPlayTrigger] = useState(0);
+  const previousStatusRef = useRef(status);
+  useEffect(() => {
+    const previousStatus = previousStatusRef.current;
+    previousStatusRef.current = status;
+    if (
+      isAssistantSpeechOnly &&
+      isLastNonUser &&
+      previousStatus === 'streaming' &&
+      status === 'ready'
+    ) {
+      setAutoPlayTrigger((trigger) => trigger + 1);
+    }
+  }, [status, isAssistantSpeechOnly, isLastNonUser]);
+
+  const maybeShowMessageIcons = actionsVisible ? (
+    <MessageActions
+      message={message}
+      plainText={plainText}
+      status={status}
+      conversationId={conversationId}
+      characterName={characterName}
+      files={allFiles ?? []}
+      regenerateMessage={regenerateMessage}
+      canRegenerateMessage={canRegenerateMessage}
+      isSpeechModelEnabled={isSpeechModelEnabled}
+      showActivityDialog={showActivityDialog}
+      activitySteps={activitySteps}
+      isLastMessage={isLastNonUser}
+      speechOnly={isAssistantSpeechOnly}
+      isInitialMessage={isInitialMessage}
+      isTextVisible={isTextVisible}
+      onToggleText={() => setIsTextVisible((visible) => !visible)}
+      showAudioPlayer={showAudioPlayer}
+      onToggleAudioPlayer={() => setShowAudioPlayer((visible) => !visible)}
+    />
+  ) : null;
+
+  const maybeAudioPlayer =
+    message.role === 'assistant' ? (
+      <AudioPlayer
+        key={speechVoice ?? ''}
+        isSpeechModelEnabled={isSpeechModelEnabled}
+        text={plainText}
+        isInitialMessage={isInitialMessage}
+        isGenerating={isLastNonUser && status === 'streaming'}
+        generateSpeechStreamFn={generateSpeechStreamFn}
+        hidden={!showAudioPlayer}
+        autoPlayTrigger={autoPlayTrigger}
+        className="w-full"
+      />
+    ) : null;
+
+  const showMessageText = !isAssistantSpeechOnly || isTextVisible;
+
+  const messageContent = (
+    <PlotStreamingContext.Provider value={status === 'streaming' && isLastNonUser}>
+      <MarkdownDisplay>{message.content}</MarkdownDisplay>
+    </PlotStreamingContext.Provider>
+  );
+
+  const generatedDocuments = activitySteps.flatMap((step) =>
+    step.kind === 'tool' &&
+    step.tool === TOOL_NAMES.generateDocument &&
+    step.failed !== true &&
+    step.document !== undefined
+      ? [{ id: step.id, document: step.document }]
+      : [],
+  );
+  const maybeGeneratedDocuments =
+    generatedDocuments.length > 0 ? (
+      <div className="flex w-full min-w-0 flex-row flex-wrap gap-2">
+        {generatedDocuments.map(({ id, document }) => (
+          <GeneratedDocumentAttachment
+            key={id}
+            document={document}
+            fileMapping={fileMapping}
+            messageFileMapping={messageFileMapping}
           />
-        )}
+        ))}
       </div>
     ) : null;
 
-  const messageContent = <MarkdownDisplay>{children.content}</MarkdownDisplay>;
-
   return (
     <>
-      <div key={index} className={cn('w-full', userClassName, margin)}>
-        <div aria-label={`${children.role} message ${Math.floor(index / 2 + 1)}`}>
+      {AiActivity}
+      {/* Hover surface for the message actions revealed by MessageActions. */}
+      <div key={index} className={cn('w-full group/message', userClassName, margin)}>
+        <div aria-label={`${message.role} message ${assistantMessageNumber}`}>
           <div className={cn('flex min-w-0', isAtLeast.sm ? 'flex-row' : 'flex-col')}>
-            {children.role === 'assistant' && assistantIcon}
+            {message.role === 'assistant' && assistantIcon}
             <div
               className={cn(
                 'flex flex-col items-start gap-2',
-                children.role === 'assistant' && 'w-full min-w-0',
+                message.role === 'assistant' && 'w-full min-w-0',
               )}
             >
-              {maybeAssistantWebSearchSources}
-              {messageContent}
+              {showMessageText && messageContent}
+              {maybeGeneratedDocuments}
+              {maybeAudioPlayer}
               {maybeShowMessageIcons}
             </div>
           </div>

@@ -1,5 +1,5 @@
+import { logDebug } from '@shared/logging';
 import {
-  type SQL,
   and,
   asc,
   eq,
@@ -7,8 +7,11 @@ import {
   inArray,
   isNotNull,
   isNull,
+  notExists,
   or,
+  type SQL,
 } from 'drizzle-orm';
+
 import { db } from '..';
 import {
   AssistantFileMapping,
@@ -26,8 +29,8 @@ import {
   fileTable,
   LearningScenarioFileMapping,
   learningScenarioTable,
+  SharedChatConversationMessageFileMappingTable,
 } from '../schema';
-import { logDebug } from '@shared/logging';
 
 export async function linkFilesToConversation({
   conversationMessageId,
@@ -41,7 +44,54 @@ export async function linkFilesToConversation({
   if (fileIds.length === 0) return;
   await db
     .insert(ConversationMessageFileMappingTable)
-    .values(fileIds.map((fileId) => ({ conversationMessageId, fileId, conversationId })));
+    .values(fileIds.map((fileId) => ({ conversationMessageId, fileId, conversationId })))
+    .onConflictDoNothing({
+      target: [
+        ConversationMessageFileMappingTable.conversationMessageId,
+        ConversationMessageFileMappingTable.fileId,
+      ],
+    });
+}
+
+/** Ties an uploaded file to a shared chat conversation before it is attached to a message. */
+export async function linkFileToSharedChatConversation({
+  fileId,
+  conversationId,
+}: {
+  fileId: string;
+  conversationId: string;
+}) {
+  await db.insert(SharedChatConversationMessageFileMappingTable).values({ fileId, conversationId });
+}
+
+export async function linkFilesToSharedChatMessage({
+  conversationMessageId,
+  conversationId,
+  fileIds,
+}: {
+  conversationMessageId: string;
+  conversationId: string;
+  fileIds: string[];
+}) {
+  if (fileIds.length === 0) return;
+  await db
+    .update(SharedChatConversationMessageFileMappingTable)
+    .set({ conversationMessageId })
+    .where(
+      and(
+        eq(SharedChatConversationMessageFileMappingTable.conversationId, conversationId),
+        inArray(SharedChatConversationMessageFileMappingTable.fileId, fileIds),
+        isNull(SharedChatConversationMessageFileMappingTable.conversationMessageId),
+      ),
+    );
+}
+
+export async function dbDetachFilesFromConversationMessages(messageIds: string[]) {
+  if (messageIds.length === 0) return;
+
+  await db
+    .delete(ConversationMessageFileMappingTable)
+    .where(inArray(ConversationMessageFileMappingTable.conversationMessageId, messageIds));
 }
 
 export async function dbVerifyFileOwnership({
@@ -75,6 +125,62 @@ export async function dbVerifyFileOwnership({
     .where(and(eq(fileTable.id, fileId), eq(fileTable.userId, userId)))
     .limit(1);
   return fileResult.length > 0;
+}
+
+export async function dbVerifyFileOwner({
+  fileId,
+  userId,
+}: {
+  fileId: string;
+  userId: string;
+}): Promise<boolean> {
+  const [file] = await db
+    .select({ id: fileTable.id })
+    .from(fileTable)
+    .where(and(eq(fileTable.id, fileId), eq(fileTable.userId, userId)))
+    .limit(1);
+
+  return file !== undefined;
+}
+
+export async function dbDeleteFileIfUnreferenced(
+  tx: Pick<typeof db, 'delete' | 'select'>,
+  fileId: string,
+): Promise<boolean> {
+  const deletedFiles = await tx
+    .delete(fileTable)
+    .where(
+      and(
+        eq(fileTable.id, fileId),
+        notExists(
+          tx
+            .select({ id: CharacterFileMapping.id })
+            .from(CharacterFileMapping)
+            .where(eq(CharacterFileMapping.fileId, fileId)),
+        ),
+        notExists(
+          tx
+            .select({ id: AssistantFileMapping.id })
+            .from(AssistantFileMapping)
+            .where(eq(AssistantFileMapping.fileId, fileId)),
+        ),
+        notExists(
+          tx
+            .select({ id: LearningScenarioFileMapping.id })
+            .from(LearningScenarioFileMapping)
+            .where(eq(LearningScenarioFileMapping.fileId, fileId)),
+        ),
+        notExists(
+          tx
+            .select({ fileId: ConversationMessageFileMappingTable.fileId })
+            .from(ConversationMessageFileMappingTable)
+            .where(eq(ConversationMessageFileMappingTable.fileId, fileId)),
+        ),
+      ),
+    )
+    .returning({ id: fileTable.id });
+
+  return deletedFiles.length > 0;
 }
 
 export async function dbGetRelatedFiles(conversationId: string): Promise<Map<string, FileModel[]>> {
@@ -422,6 +528,11 @@ export async function dbDeleteFileAndDetachFromConversation(filesToDelete: strin
   });
 }
 
+export async function dbDeleteFilesByIds(ids: string[]) {
+  // chunks are deleted via delete cascade on files table
+  return db.delete(fileTable).where(inArray(fileTable.id, ids));
+}
+
 export async function dbDeleteDanglingFiles() {
   return await db.transaction(async (tx) => {
     const fileIds = await tx
@@ -434,12 +545,17 @@ export async function dbDeleteDanglingFiles() {
       .leftJoin(CharacterFileMapping, eq(fileTable.id, CharacterFileMapping.fileId))
       .leftJoin(AssistantFileMapping, eq(fileTable.id, AssistantFileMapping.fileId))
       .leftJoin(LearningScenarioFileMapping, eq(fileTable.id, LearningScenarioFileMapping.fileId))
+      .leftJoin(
+        SharedChatConversationMessageFileMappingTable,
+        eq(fileTable.id, SharedChatConversationMessageFileMappingTable.fileId),
+      )
       .where(
         and(
           isNull(ConversationMessageFileMappingTable.fileId),
           isNull(CharacterFileMapping.fileId),
           isNull(AssistantFileMapping.fileId),
           isNull(LearningScenarioFileMapping.fileId),
+          isNull(SharedChatConversationMessageFileMappingTable.fileId),
         ),
       );
     const fileIdsToDelete = fileIds.map((f) => f.fileId);

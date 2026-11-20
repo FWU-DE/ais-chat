@@ -1,0 +1,18 @@
+---
+name: code-review
+description: Guidelines for reviewing code in this repository. Apply when performing or assisting with code reviews.
+---
+
+# Code Review Guidelines
+
+## Next.js RSC → Client Component Serialization
+
+**Do NOT flag `Date` objects passed as props from Server Components to Client Components as a serialization bug.**
+
+React's RSC wire format (used by Next.js App Router) natively supports `Date` objects and reconstructs them as proper `Date` instances on the client.
+
+A real serialization concern only applies when data crosses a plain JSON boundary (e.g., a REST API response parsed with `JSON.parse`, `localStorage`, or `URLSearchParams`).
+
+## E2E Test Tags
+
+All newly added e2e tests must include `{ tag: '@smoke' }` so they run in the PR e2e pipeline. Flag any new e2e test missing this tag in review.

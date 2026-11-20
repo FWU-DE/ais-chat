@@ -4,13 +4,12 @@ import { TemplateModel } from '@shared/templates/template';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
 import { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@ui/components/button';
+import { DataTableFeatures } from '@ui/components/data-table';
 import { ArrowUpDownIcon } from 'lucide-react';
-import { getTemplateTypeName } from './templateTypeName';
-import { ROUTES } from '@/consts/routes';
-import Link from 'next/link';
-import { Search } from 'lucide-react';
 
-export const columns: ColumnDef<TemplateModel>[] = [
+import { getTemplateTypeName } from './templateTypeName';
+
+export const columns: ColumnDef<DataTableFeatures, TemplateModel>[] = [
   {
     accessorKey: 'id',
     header: ({ column }) => (
@@ -78,13 +77,5 @@ export const columns: ColumnDef<TemplateModel>[] = [
       </Button>
     ),
     cell: ({ row }) => formatDateToGermanTimestamp(row.original.createdAt),
-  },
-  {
-    id: 'actions',
-    cell: ({ row }) => (
-      <Link href={ROUTES.app.template(row.original.type, row.original.id)}>
-        <Search className="text-primary" />
-      </Link>
-    ),
   },
 ];

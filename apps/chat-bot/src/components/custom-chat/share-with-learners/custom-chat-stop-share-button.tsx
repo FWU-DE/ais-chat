@@ -1,10 +1,7 @@
 'use client';
 
-import React from 'react';
-import { useTranslations } from 'next-intl';
 import { TrashSimpleIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
-import { useToast } from '@/components/common/toast';
 import {
   Dialog,
   DialogClose,
@@ -15,6 +12,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@ui/components/dialog';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
+import { useToast } from '@/components/common/toast';
 
 type CustomChatStopShareButtonProps = {
   onUnshare: () => Promise<{ success: boolean }>;
@@ -61,11 +62,10 @@ export function CustomChatStopShareButton({
         <Button
           type="button"
           variant="destructive"
-          aria-label={t('button-stop')}
           data-testid="stop-share-button"
           className={className}
         >
-          <TrashSimpleIcon className="size-5" /> {t('button-close-session')}
+          <TrashSimpleIcon className="size-5" aria-hidden="true" /> {t('button-close-session')}
         </Button>
       </DialogTrigger>
       <DialogContent data-testid="stop-share-dialog">
