@@ -8,7 +8,7 @@ import { getPlotKey } from '@/components/chat/plot/rendered-plots';
 import { PLOT_LANGUAGE } from '@/utils/code-blocks';
 import { parsePlotSpec } from '@/utils/plot/plot-spec';
 
-import { type AllowedDocumentImages, loadDocumentImage } from './document-images';
+import { type DocumentImageReferences, loadDocumentImage } from './document-images';
 import type { SharedChatDocumentContext } from './generated-document';
 import { renderPlotImage, waitForPlotActivation } from './plot-image';
 
@@ -58,12 +58,12 @@ function getValidSpec(code: string) {
 
 export async function markdownToPdfBlob(
   markdown: string,
-  allowedImages: AllowedDocumentImages = new Map(),
+  imageReferences: DocumentImageReferences = new Map(),
   title = 'Generated document',
   sharedChat?: SharedChatDocumentContext,
 ): Promise<Blob> {
   const images = await Promise.all(
-    [...allowedImages.entries()].map(async ([source, url]) => {
+    [...imageReferences.entries()].map(async ([source, url]) => {
       const loadedImage = await loadDocumentImage(url);
       return { source, mimeType: loadedImage.mimeType, data: toBase64(loadedImage.data) };
     }),
