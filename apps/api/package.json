@@ -46,8 +46,8 @@
   "devDependencies": {
     "@ais-chat/eslint-config": "workspace:*",
     "@ais-chat/typescript-config": "workspace:*",
-    "@playwright/test": "1.65.0",
-    "@sentry/esbuild-plugin": "11.11.0",
+    "@playwright/test": "1.65.1",
+    "@sentry/esbuild-plugin": "11.12.0",
     "@types/node": "24.19.2",
     "@vitest/coverage-v8": "5.1.0",
     "eslint": "10.8.1",
