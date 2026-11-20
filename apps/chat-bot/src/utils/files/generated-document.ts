@@ -13,12 +13,11 @@ export async function createGeneratedDocumentBlob(
   content: string,
   format: GeneratedDocumentFormat,
   imageReferences?: DocumentImageReferences,
-  title?: string,
-  sharedChat?: SharedChatDocumentContext,
+  { title, sharedChat }: { title?: string; sharedChat?: SharedChatDocumentContext } = {},
 ): Promise<Blob> {
   if (format === 'pdf') {
     const { markdownToPdfBlob } = await import('./markdown-pdf');
-    return markdownToPdfBlob(content, imageReferences, title ?? 'Generated document', sharedChat);
+    return markdownToPdfBlob(content, imageReferences, title ?? 'Dokument', sharedChat);
   }
 
   if (format === 'html') {
