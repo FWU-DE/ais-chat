@@ -5,7 +5,6 @@ import { isImageFile } from '@/utils/files/generic';
 const MAX_DOCUMENT_IMAGE_SIZE = 240;
 
 export type DocumentImageReferences = ReadonlyMap<string, string>;
-export type AllowedDocumentImages = DocumentImageReferences;
 
 type UploadedFile = Pick<FileModel, 'id' | 'name'> & { localUrl?: string };
 type UploadedFiles = ReadonlyMap<string, readonly UploadedFile[]>;
@@ -14,13 +13,13 @@ export function getDocumentAttachmentReference(fileId: string) {
   return `attachment://${encodeURIComponent(fileId)}`;
 }
 
-export function collectUploadedImageUrls({
+export function collectDocumentImageReferences({
   fileMapping,
   messageFileMapping,
 }: {
   fileMapping?: UploadedFiles;
   messageFileMapping?: UploadedFiles;
-}): AllowedDocumentImages {
+}): DocumentImageReferences {
   const imageReferences = new Map<string, string>();
   for (const files of [fileMapping?.values(), messageFileMapping?.values()]) {
     for (const fileList of files ?? []) {

@@ -50,22 +50,15 @@ const sanitizeSchema: SanitizeSchema = {
 
 type PdfRequest = z.infer<typeof pdfRequestSchema>;
 
-function normalizeImageSource(source: string) {
-  return decodeURIComponent(source).replaceAll('\\', '/').split('/').at(-1)?.toLowerCase() ?? '';
-}
-
-function resolveUploadedImages(images: PdfRequest['images']) {
+function resolveImageReferences(images: PdfRequest['images']) {
   const imageMap = new Map(
-    images.map((image) => [
-      normalizeImageSource(image.source),
-      `data:${image.mimeType};base64,${image.data}`,
-    ]),
+    images.map((image) => [image.source, `data:${image.mimeType};base64,${image.data}`]),
   );
 
   return () => (tree: import('mdast').Root) => {
     visit(tree, 'image', (node, index, parent) => {
       if (parent === undefined || index === undefined) return;
-      const dataUrl = imageMap.get(normalizeImageSource(node.url));
+      const dataUrl = imageMap.get(node.url);
       if (dataUrl === undefined) {
         parent.children.splice(index, 1);
         return [SKIP, index];
@@ -127,7 +120,7 @@ async function markdownToPdfHtml({ markdown, title, images, plots }: PdfRequest)
       .use(remarkGfm)
       .use(remarkMath)
       .use(keepOnlyFillInLines)
-      .use(resolveUploadedImages(images))
+      .use(resolveImageReferences(images))
       .use(embedPlots(plots))
       .use(remarkRehype)
       .use(rehypeSanitize, sanitizeSchema)

@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { useToast } from '@/components/common/toast';
 import type { AiActivityDocument } from '@/types/ai-activity';
 import { downloadFileFromBlob } from '@/utils/files/blob-download';
-import { collectUploadedImageUrls } from '@/utils/files/document-images';
+import { collectDocumentImageReferences } from '@/utils/files/document-images';
 import {
   createGeneratedDocumentBlob,
   type SharedChatDocumentContext,
@@ -39,7 +39,7 @@ export function GeneratedDocumentAttachment({
         await createGeneratedDocumentBlob(
           document.content,
           document.format,
-          collectUploadedImageUrls({ fileMapping, messageFileMapping }),
+          collectDocumentImageReferences({ fileMapping, messageFileMapping }),
           document.fileName.replace(/\.[^.]+$/, ''),
           sharedChat,
         ),
