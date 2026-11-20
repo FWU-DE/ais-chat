@@ -1,6 +1,7 @@
 import { getAssistantByUser } from '@shared/assistants/assistant-service';
 import { getCommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
 import { getSpeechModelVoices } from '@shared/llm-models/llm-model-service';
+import { isPersonalContextAvailable } from '@shared/personal-context/personal-context-service';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
@@ -53,6 +54,10 @@ export default async function Page(props: PageProps<'/assistants/editor/[assista
         initialIsFavorite={initialIsFavorite}
         initialCommunityTemplateRequest={communityTemplateRequest}
         isWebSearchAvailable={isWebSearchAvailableForFederalState(federalState.featureToggles)}
+        isPersonalContextAvailable={isPersonalContextAvailable({
+          featureToggles: federalState.featureToggles,
+          userRole: user.userRole,
+        })}
         isSpeechAvailable={isSpeechAvailable}
         speechVoices={speechVoices}
       />

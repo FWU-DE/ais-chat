@@ -75,6 +75,7 @@ function transformToFederalStateEditForm(federalState: FederalStateModel): Feder
       isCalculatorEnabled: federalState.featureToggles.isCalculatorEnabled ?? false,
       isSpeechModelEnabled: federalState.featureToggles.isSpeechModelEnabled ?? false,
       isJsxGraphEnabled: federalState.featureToggles.isJsxGraphEnabled ?? false,
+      isPersonalContextEnabled: federalState.featureToggles.isPersonalContextEnabled ?? false,
       isSharedPageLocaleDetectionEnabled:
         federalState.featureToggles.isSharedPageLocaleDetectionEnabled ?? true,
     },
@@ -294,6 +295,12 @@ export function FederalStateView(props: FederalStateViewProps) {
             name="featureToggles.isImageGenerationEnabled"
             label="Bildgenerierung aktivieren"
             description="Erlaubt die Nutzung der Bildgenerierungsfunktion."
+            control={control}
+          />
+          <FormFieldCheckbox
+            name="featureToggles.isPersonalContextEnabled"
+            label="Persönlichen Kontext aktivieren"
+            description="Erlaubt Lehrkräften ein persönliches Kontextprofil, das in Chats einbezogen wird."
             control={control}
           />
           <FormFieldCheckbox

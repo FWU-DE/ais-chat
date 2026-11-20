@@ -3,6 +3,10 @@ import { dbGetRelatedFiles } from '@shared/db/functions/files';
 import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
 import { WebSource } from '@shared/db/types';
 import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
+import {
+  isPersonalContextAvailable,
+  resolvePersonalContextEnabled,
+} from '@shared/personal-context/personal-context-service';
 import { utils } from '@shared/utils';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
@@ -63,6 +67,15 @@ export default async function Page(props: PageProps<'/d/[conversationId]'>) {
     searchParams.model ?? lastUsedModelInChat ?? user.lastUsedModel ?? defaultModelName;
 
   const convertedMessages = convertMessageModelToMessage(messages);
+  const personalContextAvailable = isPersonalContextAvailable({
+    featureToggles: federalState.featureToggles,
+    userRole: user.userRole,
+  });
+  const personalContextEnabled = resolvePersonalContextEnabled({
+    featureToggles: federalState.featureToggles,
+    userRole: user.userRole,
+    conversation,
+  });
   const webSourceMapping = new Map<string, WebSource[]>();
   const logoElement = <Logo logoPath={userAndContext.federalState.pictureUrls?.logo} />;
 
@@ -91,6 +104,9 @@ export default async function Page(props: PageProps<'/d/[conversationId]'>) {
             chatId: conversation.id,
             downloadConversationEnabled: convertedMessages.length > 0,
             userAndContext,
+            personalContext: personalContextAvailable
+              ? { enabled: personalContextEnabled }
+              : undefined,
           },
         }}
       >

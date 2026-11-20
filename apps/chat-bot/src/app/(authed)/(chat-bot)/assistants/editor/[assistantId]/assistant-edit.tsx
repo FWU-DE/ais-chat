@@ -37,6 +37,7 @@ import { CustomChatHeaderContent } from '@/components/custom-chat/custom-chat-he
 import { CustomChatImageUpload } from '@/components/custom-chat/custom-chat-image-upload';
 import { CustomChatInstructionsExampleDialog } from '@/components/custom-chat/custom-chat-instructions-example-dialog';
 import { CustomChatLayoutContainer } from '@/components/custom-chat/custom-chat-layout-container';
+import { CustomChatPersonalContext } from '@/components/custom-chat/custom-chat-personal-context';
 import { CustomChatPromptSuggestions } from '@/components/custom-chat/custom-chat-prompt-suggestions';
 import { CustomChatShareInfo } from '@/components/custom-chat/custom-chat-share-info';
 import CustomShareSection from '@/components/custom-chat/custom-chat-share-section';
@@ -129,6 +130,7 @@ function createAssistantFormValuesSchema(t: AssistantTranslator) {
     isCommunityShared: z.boolean(),
     hasLinkAccess: z.boolean(),
     isWebSearchEnabled: z.boolean(),
+    isPersonalContextEnabled: z.boolean(),
     webSearchScope: webSearchScopeSchema,
     webSearchIncludedDomains: z.array(z.string()),
     isSpeechEnabled: z.boolean(),
@@ -156,6 +158,7 @@ export function AssistantEdit({
   avatarPictureUrl,
   initialCommunityTemplateRequest,
   isWebSearchAvailable,
+  isPersonalContextAvailable,
   isSpeechAvailable,
   speechVoices,
   initialIsFavorite,
@@ -166,6 +169,7 @@ export function AssistantEdit({
   avatarPictureUrl?: string;
   initialCommunityTemplateRequest: CommunityTemplateRequestWithEvents | null;
   isWebSearchAvailable: boolean;
+  isPersonalContextAvailable: boolean;
   isSpeechAvailable: boolean;
   speechVoices: SpeechVoice[];
   initialIsFavorite: boolean;
@@ -200,6 +204,7 @@ export function AssistantEdit({
     }),
     hasLinkAccess: assistant.hasLinkAccess,
     isWebSearchEnabled: assistant.isWebSearchEnabled,
+    isPersonalContextEnabled: assistant.isPersonalContextEnabled,
     webSearchScope: assistant.webSearchScope,
     webSearchIncludedDomains: assistant.webSearchIncludedDomains,
     isSpeechEnabled: assistant.isSpeechEnabled,
@@ -250,6 +255,7 @@ export function AssistantEdit({
           filterGroup: toFilterGroup(data),
           hasLinkAccess: data.hasLinkAccess,
           isWebSearchEnabled: data.isWebSearchEnabled,
+          isPersonalContextEnabled: data.isPersonalContextEnabled,
           webSearchScope: data.webSearchScope,
           webSearchIncludedDomains: data.webSearchIncludedDomains,
           isSpeechEnabled: data.isSpeechEnabled,
@@ -522,6 +528,16 @@ export function AssistantEdit({
                 void flushAutoSave();
               }}
               onSpeechOnlyChange={() => {
+                void flushAutoSave();
+              }}
+            />
+          )}
+
+          {isPersonalContextAvailable && (
+            <CustomChatPersonalContext
+              name="isPersonalContextEnabled"
+              control={control}
+              onCheckedChange={() => {
                 void flushAutoSave();
               }}
             />

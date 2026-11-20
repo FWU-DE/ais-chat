@@ -12,13 +12,17 @@ import { ObscuredFederalState } from '@/auth/utils';
 import { constructCharacterSystemPrompt } from '../character/system-prompt';
 import { constructLearningScenarioSystemPrompt } from '../learning-scenario/system-prompt';
 import {
+  constructPersonalContext,
   constructToolGuidelines,
   FORMAT_GUIDELINES,
   LANGUAGE_GUIDELINES,
   SUGGESTION_GUIDELINES,
 } from '../utils/system-prompt';
 
-function constructAisChatSystemPrompt(activeToolDefinitions: ToolDefinition[]) {
+function constructAisChatSystemPrompt(
+  activeToolDefinitions: ToolDefinition[],
+  personalContext: string | undefined,
+) {
   return `Du bist AIS.chat, der datenschutzkonforme KI-Chatbot für den Schulunterricht. 
 Du unterstützt Lehrkräfte bei der Unterrichtsgestaltung und Schülerinnen und Schüler beim Lernen. 
 Du wirst vom FWU, dem Medieninstitut der Länder, entwickelt und betrieben. 
@@ -26,12 +30,14 @@ Heute ist der ${formatDateToDayMonthYear(new Date())}.
 ${LANGUAGE_GUIDELINES}
 ${constructToolGuidelines(activeToolDefinitions)}
 ${FORMAT_GUIDELINES}
-${SUGGESTION_GUIDELINES}`;
+${SUGGESTION_GUIDELINES}
+${constructPersonalContext(personalContext)}`;
 }
 
 function constructAssistantSystemPrompt(
   assistant: AssistantSelectModel,
   activeToolDefinitions: ToolDefinition[] = [],
+  personalContext: string | undefined = undefined,
 ) {
   return `Du bist ein hilfreicher Assistent, der in einer Schule eingesetzt wird, um eine Lehrkraft zu unterstützen. Dein Name ist ${assistant.name}.
 
@@ -39,6 +45,7 @@ ${LANGUAGE_GUIDELINES}
 ${constructToolGuidelines(activeToolDefinitions)}
 ${FORMAT_GUIDELINES}
 ${SUGGESTION_GUIDELINES}
+${constructPersonalContext(personalContext)}
 
 Die folgenden Anweisungen wurden von der Lehrkraft erstellt und haben bei Widersprüchen immer Vorrang vor den allgemeinen Richtlinien.
 
@@ -117,6 +124,7 @@ export function constructChatSystemPrompt({
   isTeacher,
   federalState,
   activeToolDefinitions = [],
+  personalContext,
 }: {
   character?: CharacterSelectModel;
   learningScenario?: LearningScenarioSelectModel;
@@ -124,6 +132,7 @@ export function constructChatSystemPrompt({
   isTeacher: boolean;
   federalState: ObscuredFederalState;
   activeToolDefinitions?: ToolDefinition[];
+  personalContext?: string | undefined;
 }) {
   if (character !== undefined) {
     return constructCharacterSystemPrompt({ character, activeToolDefinitions });
@@ -146,8 +155,8 @@ export function constructChatSystemPrompt({
       });
     }
 
-    return constructAssistantSystemPrompt(assistant, activeToolDefinitions);
+    return constructAssistantSystemPrompt(assistant, activeToolDefinitions, personalContext);
   }
 
-  return constructAisChatSystemPrompt(activeToolDefinitions);
+  return constructAisChatSystemPrompt(activeToolDefinitions, personalContext);
 }

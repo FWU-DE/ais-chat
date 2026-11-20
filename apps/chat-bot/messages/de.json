@@ -748,6 +748,11 @@
       "voice-preview-text": "Hallo, schön, dass du da bist. Wie kann ich dir heute helfen?",
       "speech-only-label": "Nur Sprache, kein Text",
       "speech-only-tooltip": "Falls aktiviert, werden die Antworten initial nur als Audio bereitgestellt. Über ein Text-Icon kann bei Bedarf der Text angezeigt werden."
+    },
+    "personal-context": {
+      "heading": "Persönlicher Kontext",
+      "heading-tooltip": "Bezieht das persönliche Kontextprofil der Lehrkraft in Chats mit diesem Assistenten ein.",
+      "description": "Standardmäßig ist der persönliche Kontext bei Assistenten ausgeschaltet."
     }
   },
   "assistants": {
@@ -984,6 +989,26 @@
       "create-dialog-title": "Lernszenario melden",
       "create-dialog-confirm-button-text": "Lernszenario melden",
       "create-dialog-success-message": "Vielen Dank!\nDas Lernszenario wurde gemeldet."
+    }
+  },
+  "personal-context": {
+    "heading": "Persönlicher Kontext",
+    "description": "Hier stehen Informationen, die AIS.chat in Chats über Sie berücksichtigt. AIS.chat ergänzt den Text automatisch aus Ihren Gesprächen. Sie können ihn jederzeit selbst bearbeiten oder löschen.",
+    "toggle-label": "Persönlichen Kontext verwenden",
+    "toggle-description": "Ist die Option ausgeschaltet, wird der Text weder in Chats einbezogen noch automatisch ergänzt.",
+    "editor-label": "Inhalt",
+    "editor-description": "Der Text ist Markdown. Angaben werden als Aufzählungspunkte unter Überschriften gepflegt.",
+    "editor-placeholder": "## Über mich\n- Unterrichtet Mathematik in der Sekundarstufe I",
+    "save": "Speichern",
+    "clear": "Inhalt leeren",
+    "toasts": {
+      "saved": "Persönlicher Kontext gespeichert",
+      "save-error": "Speichern fehlgeschlagen"
+    },
+    "chat-toggle": {
+      "enable": "Persönlichen Kontext in diesem Chat verwenden",
+      "disable": "Persönlichen Kontext in diesem Chat nicht verwenden",
+      "error": "Einstellung konnte nicht geändert werden"
     }
   }
 }

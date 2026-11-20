@@ -69,6 +69,31 @@
         "back-button": "Vai all’interlocutore",
         "join": "Partecipare al dialogo"
       }
+    },
+    "personal-context": {
+      "heading": "Contesto personale",
+      "heading-tooltip": "Include il profilo di contesto personale dell'insegnante nelle chat con questo assistente.",
+      "description": "Per gli assistenti il contesto personale è disattivato per impostazione predefinita."
+    }
+  },
+  "personal-context": {
+    "heading": "Contesto personale",
+    "description": "Informazioni che AIS.chat considera sul suo conto nelle chat. AIS.chat integra questo testo automaticamente a partire dalle sue conversazioni. Può modificarlo o eliminarlo in qualsiasi momento.",
+    "toggle-label": "Utilizzare il contesto personale",
+    "toggle-description": "Se l'opzione è disattivata, il testo non viene né utilizzato nelle chat né integrato automaticamente.",
+    "editor-label": "Contenuto",
+    "editor-description": "Il testo è in formato Markdown. Le informazioni sono organizzate in elenchi puntati sotto i titoli.",
+    "editor-placeholder": "## Su di me\n- Insegna matematica nella scuola secondaria di primo grado",
+    "save": "Salva",
+    "clear": "Svuota contenuto",
+    "toasts": {
+      "saved": "Contesto personale salvato",
+      "save-error": "Salvataggio non riuscito"
+    },
+    "chat-toggle": {
+      "enable": "Utilizzare il contesto personale in questa chat",
+      "disable": "Non utilizzare il contesto personale in questa chat",
+      "error": "Non è stato possibile modificare l'impostazione"
     }
   },
   "ai-activity": {

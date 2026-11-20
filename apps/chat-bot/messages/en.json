@@ -69,6 +69,31 @@
         "back-button": "Back to dialog partner",
         "join": "Join the dialog"
       }
+    },
+    "personal-context": {
+      "heading": "Personal context",
+      "heading-tooltip": "Includes the teacher's personal context profile in chats with this assistant.",
+      "description": "Personal context is switched off for assistants by default."
+    }
+  },
+  "personal-context": {
+    "heading": "Personal context",
+    "description": "Information that AIS.chat takes into account about you in chats. AIS.chat adds to this text automatically based on your conversations. You can edit or delete it at any time.",
+    "toggle-label": "Use personal context",
+    "toggle-description": "When switched off, the text is neither included in chats nor extended automatically.",
+    "editor-label": "Content",
+    "editor-description": "The text is Markdown. Entries are kept as bullet points under headings.",
+    "editor-placeholder": "## About me\n- Teaches mathematics in lower secondary education",
+    "save": "Save",
+    "clear": "Clear content",
+    "toasts": {
+      "saved": "Personal context saved",
+      "save-error": "Saving failed"
+    },
+    "chat-toggle": {
+      "enable": "Use personal context in this chat",
+      "disable": "Do not use personal context in this chat",
+      "error": "The setting could not be changed"
     }
   },
   "ai-activity": {

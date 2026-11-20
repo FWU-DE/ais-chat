@@ -42,6 +42,15 @@ import {
 } from '@shared/learning-scenarios/learning-scenario-service';
 import { logError } from '@shared/logging';
 import {
+  buildExtractionWindow,
+  shouldRunPersonalContextExtraction,
+  updatePersonalContextFromConversation,
+} from '@shared/personal-context/personal-context-extraction';
+import {
+  getPersonalContextContent,
+  resolvePersonalContextEnabled,
+} from '@shared/personal-context/personal-context-service';
+import {
   constructNewMessageEvent,
   constructTokenBudgetExceededEvent,
   sendRabbitmqEvent,
@@ -440,6 +449,19 @@ export async function sendChatMessage({
   });
   const aiActivity = createAiActivityStream(update);
 
+  const personalContextEnabled = resolvePersonalContextEnabled({
+    featureToggles: user.federalState.featureToggles,
+    userRole: user.userRole,
+    conversation: activeConversation,
+    assistant: activeAssistant,
+    character: activeCharacter,
+    learningScenario: activeLearningScenario,
+  });
+
+  const personalContext = personalContextEnabled
+    ? await getPersonalContextContent({ userId: user.id })
+    : undefined;
+
   // Build system prompt
   const systemPrompt = constructChatSystemPrompt({
     character: activeCharacter,
@@ -448,6 +470,7 @@ export async function sendChatMessage({
     isTeacher: user.userRole === 'teacher',
     federalState: user.federalState,
     activeToolDefinitions: Object.values(tools.toolRegistry).map((entry) => entry.definition),
+    personalContext,
   });
 
   const assistantMessageId = crypto.randomUUID();
@@ -558,6 +581,26 @@ export async function sendChatMessage({
     }
 
     await persistUsage({ usage, priceInCents, modelUsages });
+
+    // Batched rather than per turn: runs every few user messages over the whole window
+    // since the last run. Uses the auxiliary model so it works with any selected chat
+    // model. Fire-and-forget: it must never delay or break the response.
+    const conversationForExtraction = [
+      ...fullMessages.map((message) => ({ role: message.role, content: message.content })),
+      { role: 'assistant', content: fullText },
+    ];
+    const userMessageCount = conversationForExtraction.filter(
+      (message) => message.role === 'user',
+    ).length;
+
+    if (personalContextEnabled && shouldRunPersonalContextExtraction({ userMessageCount })) {
+      void updatePersonalContextFromConversation({
+        userId: user.id,
+        conversationWindow: buildExtractionWindow({ messages: conversationForExtraction }),
+        modelId: auxiliaryModel.id,
+        apiKeyId: activeAuxiliaryModelAndApiKey.apiKeyId,
+      });
+    }
   }
 
   async function persistEmptyAssistantMessage() {

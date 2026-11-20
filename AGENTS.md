@@ -75,6 +75,9 @@ Key file: `packages/shared/src/knotenpunkt/index.ts`
 - **Business logic placement**: Keep logic in services (`packages/shared/src/**/*.ts`), not routes/components
 - **Cross-app utilities**: Framework-agnostic code goes in `packages/shared-core/src`
 - **Component reuse**: Check `packages/ui/` (shadcn/ui) before creating custom components
+- **Client/server module boundary**: A `'use client'` component that imports a service module pulls in everything that module imports at runtime — including `db` and its env validation. `check-types` does **not** catch this; it surfaces only in `next build` or at runtime. When a client component needs a pure helper (a gating predicate, a constant, a formatter) that lives next to server code, split the helper into its own module whose imports are type-only, and import that. Example: `packages/shared/src/personal-context/personal-context-availability.ts` is separate from `personal-context-service.ts` precisely so the profile menu can use it.
+
+**Verification**: `pnpm check-types` alone does not prove a change is safe. Run `pnpm --filter ais-chat-app build` when you touch client/server boundaries, and treat a green `next build` as the real gate.
 
 ## Developer Workflows
 

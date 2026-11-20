@@ -2,6 +2,10 @@ import { getConversationWithMessagesAndAssistant } from '@shared/assistants/assi
 import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
 import { getAvatarPictureUrl } from '@shared/files/fileService';
 import { getDefaultModelNameByFederalStateId } from '@shared/llm-models/llm-model-service';
+import {
+  isPersonalContextAvailable,
+  resolvePersonalContextEnabled,
+} from '@shared/personal-context/personal-context-service';
 import { type Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import z from 'zod';
@@ -58,6 +62,16 @@ export default async function Page(
     searchParams.model ?? lastUsedModelInChat ?? user.lastUsedModel ?? defaultModelName;
 
   const avatarPictureUrl = await getAvatarPictureUrl(assistant.pictureId);
+  const personalContextAvailable = isPersonalContextAvailable({
+    featureToggles: federalState.featureToggles,
+    userRole: user.userRole,
+  });
+  const personalContextEnabled = resolvePersonalContextEnabled({
+    featureToggles: federalState.featureToggles,
+    userRole: user.userRole,
+    conversation,
+    assistant,
+  });
 
   return (
     <LlmModelsProvider
@@ -74,6 +88,9 @@ export default async function Page(
             title: assistant.name,
             downloadConversationEnabled: chatMessages.length > 0,
             userAndContext,
+            personalContext: personalContextAvailable
+              ? { enabled: personalContextEnabled }
+              : undefined,
           },
         }}
       >

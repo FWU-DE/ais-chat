@@ -11,6 +11,8 @@ export type DefaultPageLayoutConfig =
         downloadConversationEnabled: boolean;
         userAndContext: UserAndContext;
         title?: string;
+        // Only set when the personal context may be toggled for this chat
+        personalContext?: { enabled: boolean };
       };
     }
   | {

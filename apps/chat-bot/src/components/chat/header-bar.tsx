@@ -19,18 +19,22 @@ import SelectLlmModel from '../conversation/select-llm-model';
 import { NewChatButton } from '../navigation/sidebar/collapsible-sidebar';
 import { useLlmModels } from '../providers/llm-model-provider';
 import { useConversationDownload } from './conversation-download-context';
+import { PersonalContextToggle } from './personal-context-toggle';
 
 export type ChatHeaderBarProps = {
   userAndContext: UserAndContext;
   title?: string;
   downloadConversationEnabled: boolean;
   chatId: string;
+  personalContext?: { enabled: boolean };
 };
 
 export function ChatHeaderBar({
   userAndContext,
   title,
   downloadConversationEnabled: downloadConversationEnabledProp,
+  chatId,
+  personalContext,
 }: ChatHeaderBarProps) {
   const tCommon = useTranslations('common');
   const toast = useToast();
@@ -72,6 +76,12 @@ export function ChatHeaderBar({
               <div className="hidden min-w-0 sm:flex">
                 <span className="block w-full truncate font-normal text-xl">{title}</span>
               </div>
+            )}
+            {personalContext !== undefined && (
+              <PersonalContextToggle
+                conversationId={chatId}
+                initialEnabled={personalContext.enabled}
+              />
             )}
             <div className="hidden sm:flex">
               <DownloadConversationButton
