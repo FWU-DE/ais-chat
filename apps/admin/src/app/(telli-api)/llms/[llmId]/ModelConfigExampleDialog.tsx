@@ -6,10 +6,12 @@ import { JsonExamplesDialog } from './JsonExamplesDialog';
 
 const azureSpeechConfigExample: SpeechConfig = {
   voices: [
-    { name: 'de-DE-Katja', displayName: 'Katja (weiblich)' },
-    { name: 'de-DE-Conrad', displayName: 'Conrad (männlich)' },
+    // SSML rewrite uses <lang>, which only multilingual voices support.
+    { name: 'de-DE-Seraphina:DragonHDLatestNeural', displayName: 'Seraphina (weiblich)' },
+    { name: 'de-DE-Florian:DragonHDLatestNeural', displayName: 'Florian (männlich)' },
   ],
   useAzureSpeechEndpoint: true,
+  enableSsmlRewrite: true,
 };
 
 export function ModelConfigExampleDialog() {
