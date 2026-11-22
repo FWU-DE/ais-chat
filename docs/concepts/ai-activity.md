@@ -8,8 +8,9 @@ input, what came out, and a reasoning summary if the model provides one. For add
 
 - **Derived, not stored.** Activity is never persisted on its own. It is rebuilt from the persisted
   tool calls, tool results and reasoning summary, so live streaming and reload share one code path.
-- **Display only.** The client receives only the values it needs to display. The full tool result
-  goes to the model and the database, not to the browser. Steps are never fed back to the model.
+- **Display only.** Steps and the activity stream carry only the values needed to display. The full
+  tool result goes to the model and the database, not into the activity payload. Steps are never fed
+  back to the model.
 - **Opt-in per tool.** A tool appears only if it declares how to describe itself. Other tools run
   normally and stay invisible.
 - **Old data stays readable.** Persisted arguments and results are never migrated. Old shapes are
@@ -119,11 +120,11 @@ Rules:
 
 Example with a generic search tool:
 
-| Stage                 | Data                                                     | Step                                          |
-| --------------------- | -------------------------------------------------------- | --------------------------------------------- |
-| Call received         | Arguments `{"query": "weather berlin"}`                  | Detail "weather berlin"                       |
-| Result arrives        | Result `{"results": [{"title", "url", "content"}, ...]}` | Links (title, url); content stays server-side |
-| Conversation reloaded | The same persisted call and result                       | The same step                                 |
+| Stage                 | Data                                                     | Step                                                |
+| --------------------- | -------------------------------------------------------- | --------------------------------------------------- |
+| Call received         | Arguments `{"query": "weather berlin"}`                  | Detail "weather berlin"                             |
+| Result arrives        | Result `{"results": [{"title", "url", "content"}, ...]}` | Links (title, url); content is not part of the step |
+| Conversation reloaded | The same persisted call and result                       | The same step                                       |
 
 ## Persisted data must stay parseable
 
@@ -152,8 +153,10 @@ what a descriptor reads or emits changes how existing conversations render.
 
 ## Privacy and trust
 
-- Only the values a descriptor emits leave the server. File contents, page text and search snippets
-  stay server-side.
+- Only the values a descriptor emits are part of the activity payload. File contents, page text and
+  search snippets are not. This limits the activity payload only: reloading an authenticated chat
+  also loads the persisted tool messages into the client, so descriptor filtering is not a general
+  privacy boundary.
 - Shared chats hide details that would reveal the owner's data (for example uploaded file names)
   from steps, both while generating and after reload.
 - When adding a tool, decide whether its arguments or result values reveal such data. If they do,
