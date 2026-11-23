@@ -54,7 +54,7 @@ export const generateDocumentActivity: ToolActivity<GenerateDocumentToolResult> 
       id: toolCall.id,
       tool: TOOL_NAMES.generateDocument,
       detail: fileName,
-      document: { fileName, format, content },
+      document: { fileName, title, format, content },
     };
   },
   parsePersistedResult: (raw) => parseGenericPersistedToolResult<GenerateDocumentToolResult>(raw),

@@ -103,7 +103,7 @@ describe('generateDocumentActivity', () => {
       id: 'call-1',
       tool: 'generate_document',
       detail: 'Bericht.docx',
-      document: { fileName: 'Bericht.docx', format: 'docx', content: '# Hallo' },
+      document: { fileName: 'Bericht.docx', title: 'Bericht', format: 'docx', content: '# Hallo' },
     });
   });
 

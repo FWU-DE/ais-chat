@@ -71,7 +71,7 @@ export function GeneratedDocumentAttachment({
           document.format,
           createImageReferences(fileMapping, messageFileMapping),
           {
-            title: document.fileName.replace(/\.[^.]+$/, ''),
+            title: document.title,
             sharedChat,
           },
         ),
