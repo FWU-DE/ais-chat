@@ -1,7 +1,7 @@
 # ADR: Dateigenerierung im Chat
 
-- **Status:** DOCX und HTML umgesetzt (#1690), PDF offen (nicht in `main` gemergt; Prototypen für
-  Chromium/Gotenberg und `pdfmake` liegen auf separaten Branches)
+- **Status:** DOCX und HTML umgesetzt (#1690, #1691), PDF über Gotenberg in Review (#1713); der
+  `pdfmake`-Prototyp liegt auf einem separaten Branch und wird nicht weiterverfolgt
 - **Ticket:** TD-1541
 - **Scope:** DOCX, PDF und HTML; PPTX und ODT sind zunächst zurückgestellt
 
@@ -23,7 +23,7 @@ Nutzeranfrage
 → Tool-Call enthält Format, Titel und Inhalt
 → AI Activity speichert die Dokumentdaten
 → Client zeigt Dateianhang
-→ Client erzeugt DOCX/HTML
+→ Client erzeugt DOCX/HTML; für PDF sendet er Markdown, Bilder und Plots an den Server
 → Download
 ```
 
@@ -43,13 +43,13 @@ Die erzeugte Datei wird derzeit nicht in S3 gespeichert. Nach einem Reload wird 
 
 - `generate_document` ist eine normale `ToolRegistration` in
   `apps/chat-bot/src/app/api/chat/tools/generate-document-tool.ts` (Definition, Handler, Activity).
-- Zod-Schema: `format` aus `GENERATED_DOCUMENT_FORMATS` (`docx`, `html`), `title` getrimmt mit
+- Zod-Schema: `format` aus `GENERATED_DOCUMENT_FORMATS` (`docx`, `pdf`, `html`), `title` getrimmt mit
   1–80 Zeichen, `content` getrimmt mit 1–100.000 Zeichen. Für `html` muss der Inhalt mit
   `<!doctype html>` beginnen und ein vollständiges `<html>...</html>`-Dokument enthalten.
 - Der Handler liefert nur `{ status: 'created', fileName, format }` oder
   `{ error: 'Invalid arguments (...)' }`.
-- `createStep` der Activity läuft vor dem Tool-Ergebnis und legt `document: { fileName, format,
-content }` im AI-Activity-Step ab. Bei ungültigen Argumenten entsteht ein Step ohne Dokument.
+- `createStep` der Activity läuft vor dem Tool-Ergebnis und legt `document: { fileName, title, format, content }` im AI-Activity-Step ab. `title` ist optional,
+  so dass ältere gespeicherte Steps weiter gelesen werden; PDF nutzt ihn als Dokumenttitel. Bei ungültigen Argumenten entsteht ein Step ohne Dokument.
 - Dateinamen werden in `generated-document-format.ts` serverseitig und clientseitig identisch
   bereinigt; unbrauchbare Titel fallen auf `Dokument` zurück. Die Datei ist ohne Browser-APIs
   importierbar, damit Server-Code (Tool, Typen) nicht den DOCX-Stack lädt.
@@ -58,9 +58,10 @@ content }` im AI-Activity-Step ab. Bei ungültigen Argumenten entsteht ein Step 
 
 ### Client-Erzeugung
 
-- `createGeneratedDocumentBlob` lädt den Renderer per dynamischem Import, damit `remark-docx`,
-  `docx`, Shiki und JSXGraph nur beim Download geladen werden. Für HTML wird das bereits
-  validierte vollständige HTML direkt verarbeitet.
+- `createGeneratedDocumentBlob` importiert die Renderer für DOCX, HTML und PDF statisch. Die
+  Aufteilung in `generated-document-format.ts` (serverfähig) und `generated-document.ts`
+  (nur Client) verhindert, dass Server-Code den DOCX-Stack lädt; ein dynamischer Import ist dafür
+  nicht mehr nötig. Optionen wie Titel und Shared-Chat-Kontext werden als Objekt übergeben.
 - `generated-document-attachment.tsx` zeigt den Anhang, baut die Bildreferenzen auf und meldet
   Fehler per Toast (`files.toasts.download-error`).
 
@@ -96,6 +97,9 @@ unified → remark-parse → remark-math-extended → remark-gfm → remark-docx
   umgeschrieben.
 - Der Titel stammt aus dem vom LLM erzeugten HTML-Dokument; der Dateiname wird weiterhin separat
   aus dem Tool-Argument `title` erzeugt.
+- Interaktives HTML kann Schadcode enthalten. Der System-Prompt weist das Modell an, in der Antwort
+  immer kurz auf dieses Risiko hinzuweisen (umgesetzt auf `feat/TD-1541-add-warning-to-html-generation`).
+  Das ist eine Bitte an das Modell und keine technische Absicherung.
 
 ### Bildreferenzen
 
@@ -111,6 +115,78 @@ unified → remark-parse → remark-math-extended → remark-gfm → remark-docx
   `![Beschreibung](attachment://...)`, HTML verwendet `<img src="attachment://..." alt="...">`.
 - Im Konversationsexport werden Bild-URLs als Markdown-Bildziel kodiert (`encodeURI`, Klammern als
   `%28`/`%29`), damit Dateinamen das Markdown nicht brechen.
+
+### PDF (Chromium und Gotenberg)
+
+```text
+Download-Klick → Client (markdown-pdf.ts) → POST /api/generate-document/pdf
+→ pdf-service.ts (Markdown → sicheres HTML) → Gotenberg (Chromium) → PDF-Blob → Download
+```
+
+**Client (`markdown-pdf.ts`)**
+
+- Das Markdown wird einmal mit `remark-parse` geparst. Aus dem Baum werden die referenzierten
+  Bildziele (`image` und `definition`, also auch Referenz-Bilder) und die `jsxgraph-json`-Blöcke
+  gelesen.
+- Nur Bilder, die im Markdown vorkommen, werden geladen (`loadDocumentImage`, höchstens 240 px) und
+  als Base64 mitgeschickt. Sonst würde ein unbenutztes, nicht ladbares Bild oder mehr als 20
+  Uploads im Chat das PDF scheitern lassen.
+- Plots lassen sich nur im Browser zeichnen. `renderPlots` rendert jede gültige, verschiedene Spec
+  (höchstens 10) zu PNG und schickt sie mit dem Block-Code als Schlüssel mit. Die Spec-Prüfung
+  (`getValidPlotSpec` in `plot-spec.ts`) wird von DOCX und PDF gemeinsam genutzt.
+- Die Adresse hängt vom Kontext ab: `/api/generate-document/pdf` (angemeldet) oder
+  `/api/v1/shared-chat/generate-document/pdf` (Shared Chat, mit Einladungscode, Entität und Session).
+
+**Server (`pdf-service.ts`, `route.ts`, `pdf-response.ts`)**
+
+- Die Route verlangt eine Anmeldung (`getUser`) und validiert den Body mit `pdfRequestSchema`:
+  Markdown bis 100.000 Zeichen, Titel 1–120 Zeichen, höchstens 20 Bilder (PNG/JPEG, Base64 bis
+  2 MB) und 10 Plots.
+- Pipeline: `remark-parse`, `remark-gfm`, `remark-math-extended`, dann zwei eigene Plugins.
+  `resolveImageReferences` ersetzt `attachment://` durch die mitgesendeten Data-URLs (auch bei
+  Referenz-Bildern) und entfernt unbekannte Bilder. `embedPlots` ersetzt Plot-Codeblöcke durch das
+  Bild mit demselben Code. Danach `remark-rehype`, `rehype-sanitize`, `rehype-katex` (MathML) und
+  `rehype-stringify`.
+- `rehype-sanitize` läuft vor `rehype-katex`. Das Schema erlaubt für `src` nur `data:` und die
+  Formel-Klassen von `remark-math-extended`. Externe Bild-URLs kommen deshalb nicht ins PDF; im
+  Container könnte Chromium sie ohnehin nicht laden.
+- Das HTML wird als `index.html` an `POST /forms/chromium/convert/html` geschickt, mit
+  `preferCssPageSize` (A4 und Rand aus dem CSS), `printBackground` (Tabellen- und Codehintergründe)
+  und `nativeTaggedPdf` (getaggtes PDF für Barrierefreiheit). Ein Timeout von 30 Sekunden verhindert,
+  dass die Anfrage bei einem hängenden Container offen bleibt.
+- Der Titel wird in `<title>` maskiert eingesetzt (`&`, `<`, `>`), weil er aus dem Request-Body kommt.
+- Die Antwort setzt `Content-Type: application/pdf`, `Content-Disposition: attachment` und
+  `Cache-Control: no-store`; der Dateiname im Browser kommt aus dem AI-Activity-Step.
+
+**Shared Chats (`shared-chat-document-service.ts`)**
+
+- Es gibt keine angemeldete Nutzerin. Die eigene Route prüft deshalb, dass der Shared Chat existiert
+  und weder gelöscht noch gesperrt ist, dass die Session zu Einladungscode und Entität gehört und
+  dass das Markdown aus einem erfolgreichen `generate_document`-Aufruf dieser Unterhaltung stammt.
+- Dazu werden die gespeicherten `toolCalls` der Assistenten-Nachrichten mit den gespeicherten
+  Tool-Ergebnissen (Rolle `tool`, gleiche `toolCallId`, `status: 'created'`) abgeglichen. Die
+  Argumente werden mit `generateDocumentArgsSchema` normalisiert (getrimmt) und der Inhalt muss dem
+  gesendeten Markdown entsprechen. Der Prototyp suchte stattdessen nach ```document-Blöcken im
+  Nachrichtentext; das passte nicht zum Tool-Weg und hätte jeden Download mit 403 abgelehnt.
+- Bilder und Plots im Body werden nicht gegen die Unterhaltung geprüft. Sie sind durch Größe und
+  Anzahl begrenzt und gelangen nur als Data-URLs durch den Sanitizer.
+
+**Betrieb**
+
+- Gotenberg läuft als eigener Container (`gotenberg/gotenberg:9.5.1-chromium`, Port 8002), in
+  `docker-compose.local.yml` nur auf `127.0.0.1`, in `docker-compose.yml` ohne veröffentlichten Port.
+  Die URL kommt aus `GOTENBERG_URL` (`env.ts`, `turbo.json`, `.env.example`).
+- Die Startoptionen schalten JavaScript und jeden Netzwerkzugriff von Chromium ab.
+- `ais-chat-app` wartet in `docker-compose.yml` auf einen gesunden Gotenberg-Container. Fällt er
+  aus, startet die App nicht; das ist eine bewusste Kopplung, die man auf `service_started`
+  lockern könnte.
+
+**Schrift**
+
+- Das PDF verwendet `Arial, sans-serif`. Im Gotenberg-Image ist Arial in der Regel nicht installiert,
+  sodass Chromium auf eine metrisch kompatible Schrift (Liberation Sans) ausweicht. Die App-Schrift
+  Barlow ist nicht eingebunden. Wer das PDF an das App-Layout angleichen will, muss die Schrift
+  per `@font-face` einbetten oder in den Container bringen.
 
 ## Entscheidungen
 
@@ -147,6 +223,30 @@ unified → remark-parse → remark-math-extended → remark-gfm → remark-docx
   Plot-Anleitung im System-Prompt steht, soll das Modell das Ergebnis von `create_plot`
   unverändert als Codeblock in den Dokumentinhalt übernehmen und Werte nicht nur als Tabelle
   beschreiben.
+
+- **PDF serverseitig über Gotenberg:** Chromium liefert die beste Tabellen-, CSS- und
+  Seitenumbruchqualität und rendert MathML ohne Schriften. Die Alternativen `remark-pdf` und
+  `pdfmake` (clientseitig) blieben bei Tabellen, Formeln und Seitenumbrüchen zurück. Gotenberg läuft
+  als eigener Container ohne App-Secrets (siehe Betriebsvarianten).
+- **Plots und Bilder kommen vom Client:** JSXGraph und Canvas laufen nur im Browser, und die
+  Bild-URLs mit Session sind dort verfügbar. Der Server bekommt Markdown plus Data-URLs und führt
+  nie Client-HTML aus.
+- **Nur referenzierte Bilder werden übertragen:** verhindert Fehler durch unbenutzte Uploads und
+  hält die Anfrage unter den Limits.
+- **Autorisierung in Shared Chats über gespeicherte Tool-Aufrufe:** Ein Dokument gilt nur dann als
+  zur Unterhaltung gehörig, wenn ein erfolgreicher `generate_document`-Aufruf mit demselben Inhalt
+  gespeichert ist. Das verhindert, dass der anonyme Endpunkt als freier PDF-Dienst genutzt wird.
+- **Trennlinien über den Prompt, nicht über Server-Code:** Eine frühere Funktion entfernte `---`
+  und Linien vor Überschriften aus dem Syntaxbaum und hängte Schreiblinien an Listenpunkte. Sie
+  wurde zugunsten einer Prompt-Regel entfernt. Hält sich das Modell nicht daran, erscheinen die
+  Linien im PDF, und Schreiblinien nach Listen stehen nicht mehr eingerückt.
+- **Titel im AI-Activity-Step:** `title` wird zusätzlich zum Dateinamen gespeichert, statt ihn aus
+  dem bereinigten und gekürzten Dateinamen zurückzurechnen.
+- **Statische Imports der Renderer:** Nach der Trennung von `generated-document-format.ts` und
+  `generated-document.ts` ist der dynamische Import nicht mehr nötig. Die Auswirkung auf die
+  Bundle-Größe ist nicht gemessen.
+- **Gemeinsame Hilfsfunktion `getValidPlotSpec`:** ersetzt dieselbe Prüfung an mehreren Stellen in
+  DOCX und PDF. `parsePlotSpec` bleibt für Aufrufer erhalten, die die Fehlermeldung brauchen.
 
 ## Variantenvergleich
 
@@ -290,7 +390,8 @@ Gotenberg) und `feat/TD-1541-generate-docx-html-pdfmake`.
   die Schriftausstattung des Containers.
 - Markdown-Eigenheiten: Eine Zeile aus `___` ist für Markdown eine Trennlinie. Schreiblinien für
   Arbeitsblätter erscheinen deshalb als Linien und brauchen eigenes Styling. `---` zwischen
-  Abschnitten und Linien direkt vor Überschriften wirken schnell störend und werden entfernt.
+  Abschnitten und Linien direkt vor Überschriften wirken schnell störend. Der Prototyp entfernte sie
+  serverseitig; die aktuelle Umsetzung bittet das Modell stattdessen im Prompt, sie zu vermeiden.
 
 **`pdfmake`**
 
@@ -386,8 +487,19 @@ für den ersten Scope überdimensioniert.
 
 ### ODT
 
-Pandoc oder LibreOffice wären die pragmatischsten Lösungen. Ein eigener ODT-Renderer aus ZIP/XML
-ist möglich, aber kompatibilitäts- und wartungsintensiv.
+Gotenberg hilft nicht weiter: Die LibreOffice-Route wandelt nach unserem Kenntnisstand nur in PDF
+um (in der verwendeten Version 9.5.1 noch zu prüfen). Eine Umwandlung von DOCX nach ODT braucht
+eine Office-Engine, also einen eigenen LibreOffice-Dienst (z. B. unoserver), Pandoc oder
+`libreoffice-convert` im App-Image. Letzteres vergrößert das Image stark und startet pro Umwandlung
+einen Prozess; `docker exec` in den Gotenberg-Container scheidet aus, weil dafür der Docker-Socket
+nötig wäre.
+
+Bevorzugt wäre ein eigener clientseitiger Writer, der den Markdown-Syntaxbaum in ODF-XML
+(`content.xml`, `styles.xml`, `Pictures/`) abbildet und als ZIP verpackt. Formeln (eingebettete
+MathML-Objekte) wären der aufwendigste Teil. Ein erster Schritt ohne Formeln wäre deutlich kleiner.
+Ein serverseitiger Dienst käme nur in Frage, wenn die Qualität bei Formeln und Layout wichtiger ist
+als weniger Infrastruktur; er braucht dieselben Schutzmaßnahmen wie Gotenberg und für Shared Chats
+dieselbe Verifikation.
 
 ### Pandoc
 
@@ -403,6 +515,8 @@ Umgesetzt:
 - Dateinamen werden bereinigt und begrenzt.
 - Upload-Bilder werden über opake `attachment://`-Referenzen aufgelöst und skaliert.
 - Plot-Specs werden vor dem Rendern mit `parsePlotSpec` validiert.
+- PDF: Zod-Limits pro Feld, `rehype-sanitize` mit `data:`-only-`src`, Gotenberg ohne JavaScript und
+  ohne Netzwerkzugriff, nur im internen Netz erreichbar, Timeout pro Anfrage.
 
 Noch offen beziehungsweise Ziel:
 
@@ -415,38 +529,41 @@ Noch offen beziehungsweise Ziel:
 - Für persistente Dateien sind zusätzlich Ownership, S3-Upload, Download-Autorisierung und Cleanup
   bei Chatlöschung erforderlich.
 
-Für einen serverseitigen PDF-Dienst (siehe Prototypen) gilt zusätzlich:
+Für den serverseitigen PDF-Dienst gilt zusätzlich:
 
 - Die Route verlangt eine angemeldete Nutzerin oder einen angemeldeten Nutzer.
 - Das HTML wird auf dem Server aus Markdown erzeugt und bereinigt; Client-HTML wird nicht
   akzeptiert. Die Bereinigung läuft vor `rehype-katex`, dessen Ausgabe mit Standardeinstellungen
   keine aktiven Inhalte erzeugt.
-- Größenlimits gelten pro Feld und insgesamt; ein Rate-Limit pro Nutzerin oder Nutzer fehlt im
-  Prototyp noch.
+- Größenlimits gelten pro Feld und insgesamt; ein Rate-Limit pro Nutzerin oder Nutzer fehlt noch.
 - Der Konverter ist ohne ausgehende Verbindungen zu betreiben (Container im internen Netz, kein
   veröffentlichter Port).
-- Shared Chats haben keine angemeldete Nutzerin. Eine eigene Route müsste anhand von Einladungscode
-  und Session prüfen, dass der Inhalt zur persistierten Konversation gehört. Im Prototyp geschah das
-  über gespeicherte ```document-Blöcke; das passt nicht zum aktuellen Tool-Weg und müsste auf
-  persistierte Tool-Call-Argumente umgestellt werden.
+- Shared Chats haben keine angemeldete Nutzerin. Die eigene Route prüft Einladungscode, Session
+  und, dass das Markdown aus einem erfolgreichen, gespeicherten `generate_document`-Aufruf dieser
+  Unterhaltung stammt (siehe PDF-Abschnitt).
 
 ## Offene Punkte
 
 - Sollen generierte Dateien dauerhaft in S3 gespeichert werden?
-- Soll die PDF-Erzeugung als eigener Chromium-Service betrieben werden?
-- Reicht `remark-pdf` qualitativ aus oder wird `pdfmake` für Tabellen benötigt?
+- Rate-Limit pro Nutzerin, Nutzer oder Einladungscode für die PDF-Routen fehlt; jede Anfrage
+  belegt Chromium bis zu 30 Sekunden.
+- Soll das PDF dieselbe Schrift wie die App (Barlow) erhalten, und wie kommt sie in den Container?
+- Sollen externe Bild-URLs im PDF unterstützt werden (Abruf im Browser per `fetch` und Einbetten,
+  begrenzt durch CORS)?
 - Soll interaktives HTML dauerhaft unterstützt oder als experimentelles Format gekennzeichnet werden?
 - Sollen externe Bild-URLs in DOCX erlaubt bleiben?
 - Wie werden Sonderzeichen in Word zuverlässig dargestellt (Symbolschrift, eingebettete Schrift,
   `w:sym` oder Prompt-Regel für Checkboxen wie `[ ]`/`[x]`)?
 - Unit-Tests decken Tool, Dateinamen, Bildreferenzen, DOCX-Erzeugung und Plot-Export mit Mocks ab.
   Browser- und Integrationstests für Download, Shared Chat, Word-Darstellung und PDF-Service fehlen
-  noch.
+  noch. Für `pdf-service.ts` (Sanitizer, Bild- und Plot-Einbettung) und die
+  Shared-Chat-Verifikation gibt es keine Tests.
 - Wie verhindern wir, dass Modelle nach dem Tool-Aufruf trotzdem Download-Links schreiben (siehe
   Entscheidung zum Antwortverhalten)?
 - Wie begrenzen wir Navigation und Datenabfluss in interaktivem HTML verlässlich, wenn
   `navigate-to` nicht greift?
-- Darf ein Shared Chat `generate_document` überhaupt anbieten? Falls ja, wie wird der Inhalt
-  serverseitig verifiziert, wenn es kein angemeldetes Konto gibt?
+- Shared Chats bieten `generate_document` an; die Verifikation für PDF ist umgesetzt. Offen ist,
+  ob ältere Unterhaltungen ohne gespeicherte Tool-Ergebnisse (Rolle `tool`) PDFs erzeugen können;
+  sie würden mit 403 abgelehnt.
 - Reicht bei Symbolen die Symbolschrift für Text und Inline-Code, oder müssen auch Codeblöcke
   (Shiki) abgedeckt werden?
