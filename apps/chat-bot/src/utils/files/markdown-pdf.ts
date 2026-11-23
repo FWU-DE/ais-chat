@@ -18,8 +18,7 @@ import { renderPlotImage, waitForPlotActivation } from './plot-image';
 
 const MAX_PLOTS = 10;
 
-async function renderPlots(markdown: string) {
-  const root = unified().use(remarkParse).parse(markdown) as Root;
+async function renderPlots(root: Root) {
   const specs = new Map<string, NonNullable<ReturnType<typeof getValidSpec>>>();
   visit(root, 'code', (node) => {
     const spec = node.lang === PLOT_LANGUAGE ? getValidSpec(node.value) : undefined;
@@ -46,6 +45,17 @@ async function renderPlots(markdown: string) {
   }
 }
 
+function getReferencedImageSources(root: Root) {
+  const sources = new Set<string>();
+  visit(root, 'image', (node) => {
+    sources.add(node.url);
+  });
+  visit(root, 'definition', (node) => {
+    sources.add(node.url);
+  });
+  return sources;
+}
+
 function getValidSpec(code: string) {
   const parsed = parsePlotSpec(code);
   return 'spec' in parsed ? parsed.spec : undefined;
@@ -57,17 +67,21 @@ export async function markdownToPdfBlob(
   title = 'Dokument',
   sharedChat?: SharedChatDocumentContext,
 ): Promise<Blob> {
+  const root = unified().use(remarkParse).parse(markdown) as Root;
+  const referencedSources = getReferencedImageSources(root);
   const images = await Promise.all(
-    [...imageReferences.entries()].map(async ([source, url]) => {
-      const loadedImage = await loadDocumentImage(url);
-      return {
-        source,
-        mimeType: loadedImage.mimeType,
-        data: arrayBufferToBase64(loadedImage.data),
-      };
-    }),
+    [...imageReferences.entries()]
+      .filter(([source]) => referencedSources.has(source))
+      .map(async ([source, url]) => {
+        const loadedImage = await loadDocumentImage(url);
+        return {
+          source,
+          mimeType: loadedImage.mimeType,
+          data: arrayBufferToBase64(loadedImage.data),
+        };
+      }),
   );
-  const plots = await renderPlots(markdown);
+  const plots = await renderPlots(root);
   const response = await fetch(
     sharedChat === undefined
       ? '/api/generate-document/pdf'

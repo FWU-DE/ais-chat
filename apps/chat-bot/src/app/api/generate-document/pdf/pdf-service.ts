@@ -66,6 +66,10 @@ function resolveImageReferences(images: PdfRequest['images']) {
       }
       node.url = dataUrl;
     });
+    // Unresolved images are dropped by the sanitizer.
+    visit(tree, 'definition', (node) => {
+      node.url = imageMap.get(node.url) ?? node.url;
+    });
   };
 }
 
