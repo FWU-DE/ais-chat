@@ -70,10 +70,7 @@ export function GeneratedDocumentAttachment({
           document.content,
           document.format,
           createImageReferences(fileMapping, messageFileMapping),
-          {
-            title: document.title,
-            sharedChat,
-          },
+          { title: document.title, sharedChat },
         ),
         document.fileName,
       );

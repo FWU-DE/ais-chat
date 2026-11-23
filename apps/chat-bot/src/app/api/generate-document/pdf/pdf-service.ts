@@ -1,4 +1,5 @@
 import type { Root } from 'mdast';
+import rehypeDocument from 'rehype-document';
 import rehypeKatex from 'rehype-katex';
 import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
@@ -12,6 +13,8 @@ import { z } from 'zod';
 
 import { env } from '@/env';
 import { PLOT_LANGUAGE } from '@/utils/code-blocks';
+
+import { PDF_STYLES } from './pdf-styles';
 
 export const pdfRequestSchema = z.object({
   markdown: z.string().min(1).max(100_000),
@@ -102,14 +105,16 @@ async function markdownToPdfHtml({ markdown, title, images, plots }: PdfRequest)
       .use(rehypeSanitize, sanitizeSchema)
       // MathML needs no CSS or fonts, Chromium renders it with the container's math font.
       .use(rehypeKatex, { output: 'mathml' })
+      .use(rehypeDocument, {
+        language: 'de',
+        title,
+        style: PDF_STYLES,
+        responsive: false,
+      })
       .use(rehypeStringify)
       .process(markdown),
   );
-  const safeTitle = title.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-
-  return `<!doctype html>
-<html lang="de"><head><meta charset="utf-8"><title>${safeTitle}</title>
-<style>@page { size: A4; margin: 18mm; } body { color:#1f2933; font-family:Arial,sans-serif; font-size:11pt; line-height:1.5; } h1 { font-size:20pt; } h2 { font-size:16pt; } h3 { font-size:13pt; } table { border-collapse:collapse; width:100%; margin:12pt 0; } th,td { border:1px solid #9aa5b1; padding:6pt; text-align:left; } th { background:#f1f5f9; } img { max-width:100%; max-height:220mm; display:block; margin:8pt auto; } pre { background:#f2f4f7; padding:8pt; white-space:pre-wrap; } code { font-family:monospace; } hr { border:0; border-top:1px solid #1f2933; margin:20pt 0 0; }</style></head><body>${body}</body></html>`;
+  return body;
 }
 
 const GOTENBERG_TIMEOUT_MS = 30_000;

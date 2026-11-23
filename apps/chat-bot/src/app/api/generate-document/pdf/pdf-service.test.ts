@@ -17,7 +17,9 @@ async function renderHtml(overrides: Record<string, unknown> = {}) {
     .mockResolvedValue(new Response('%PDF-test', { status: 200 }));
   await generatePdfFromMarkdown(buildRequest(overrides));
 
-  const [url, init] = fetchSpy.mock.calls[0];
+  const firstCall = fetchSpy.mock.calls[0];
+  if (firstCall === undefined) throw new Error('Expected Gotenberg request');
+  const [url, init] = firstCall;
   const form = (init as RequestInit).body as FormData;
   return { url, form, html: await (form.get('files') as File).text() };
 }
@@ -53,7 +55,9 @@ describe('generatePdfFromMarkdown', () => {
 
     const pdf = await generatePdfFromMarkdown(buildRequest());
 
-    const [url, init] = fetchSpy.mock.calls[0];
+    const firstCall = fetchSpy.mock.calls[0];
+    if (firstCall === undefined) throw new Error('Expected Gotenberg request');
+    const [url, init] = firstCall;
     const form = (init as RequestInit).body as FormData;
     expect(String(url)).toBe('http://gotenberg:8002/forms/chromium/convert/html');
     expect((init as RequestInit).method).toBe('POST');
@@ -79,7 +83,7 @@ describe('generatePdfFromMarkdown', () => {
     });
 
     expect(html).toContain('<table>');
-    expect(html).toContain('<title>A &amp; &lt;b&gt;</title>');
+    expect(html).toContain('<title>A &#x26; &#x3C;b></title>');
   });
 
   it('renders math as MathML', async () => {

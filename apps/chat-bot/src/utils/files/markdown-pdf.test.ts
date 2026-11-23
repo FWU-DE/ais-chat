@@ -31,7 +31,15 @@ function mockFetch() {
 }
 
 function sentBody(fetchSpy: ReturnType<typeof mockFetch>) {
-  return JSON.parse(String((fetchSpy.mock.calls[0][1] as RequestInit).body));
+  const firstCall = fetchSpy.mock.calls[0];
+  if (firstCall === undefined) throw new Error('Expected PDF request');
+  return JSON.parse(String((firstCall[1] as RequestInit).body));
+}
+
+function sentUrl(fetchSpy: ReturnType<typeof mockFetch>) {
+  const firstCall = fetchSpy.mock.calls[0];
+  if (firstCall === undefined) throw new Error('Expected PDF request');
+  return firstCall[0];
 }
 
 beforeEach(() => {
@@ -55,7 +63,7 @@ describe('markdownToPdfBlob', () => {
     const blob = await markdownToPdfBlob('# Hallo', undefined, 'Titel');
 
     expect(await blob.text()).toBe('%PDF-test');
-    expect(fetchSpy.mock.calls[0][0]).toBe('/api/generate-document/pdf');
+    expect(sentUrl(fetchSpy)).toBe('/api/generate-document/pdf');
     expect(sentBody(fetchSpy)).toEqual({
       markdown: '# Hallo',
       title: 'Titel',
@@ -75,7 +83,7 @@ describe('markdownToPdfBlob', () => {
 
     await markdownToPdfBlob('# Hallo', undefined, 'Titel', sharedChat);
 
-    expect(fetchSpy.mock.calls[0][0]).toBe('/api/v1/shared-chat/generate-document/pdf');
+    expect(sentUrl(fetchSpy)).toBe('/api/v1/shared-chat/generate-document/pdf');
     expect(sentBody(fetchSpy)).toMatchObject(sharedChat);
   });
 
