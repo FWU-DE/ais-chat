@@ -1,6 +1,5 @@
 import { ReactNode } from 'react';
 
-import type { UserAndContext } from '@/auth/types';
 import { PageLayoutSelector } from '@/components/layout/page-layout-selector';
 
 export type DefaultPageLayoutConfig =
@@ -9,7 +8,6 @@ export type DefaultPageLayoutConfig =
       headerConfig: {
         chatId: string;
         downloadConversationEnabled: boolean;
-        userAndContext: UserAndContext;
         title?: string;
       };
     }

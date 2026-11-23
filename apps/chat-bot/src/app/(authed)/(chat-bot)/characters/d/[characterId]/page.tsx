@@ -72,7 +72,6 @@ export default async function Page(props: PageProps<'/characters/d/[characterId]
             chatId: id,
             title: character.name,
             downloadConversationEnabled: false,
-            userAndContext,
           },
         }}
       >
