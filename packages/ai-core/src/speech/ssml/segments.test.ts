@@ -117,6 +117,11 @@ describe('buildSsmlSegments', () => {
       ['audio', '<p>Hallo <audio src="https://example.com/a.mp3"/></p>'],
       ['mstts:backgroundaudio', '<mstts:backgroundaudio src="https://example.com/a.mp3"/>'],
       ['lexicon', '<lexicon uri="https://example.com/custom.xml"/>'],
+      ['mstts:voiceconversion', '<mstts:voiceconversion url="https://example.com/a.wav"/>'],
+      [
+        'mstts:ttsembedding',
+        '<mstts:ttsembedding speakerProfileId="other">Hallo</mstts:ttsembedding>',
+      ],
     ])('rejects the forbidden element <%s>, also when nested', (element, body) => {
       expectInvalidSsml(
         `<lang xml:lang="de-DE">${body}</lang>`,

@@ -11,7 +11,7 @@ const MAX_SPEECH_SEGMENT_CHARS = 10000;
 
 // Generous ceiling per segment (not just time-to-first-chunk), since long segments legitimately
 // take longer to fully synthesize than the non-streaming SPEECH_TIMEOUT_MS.
-const SPEECH_SEGMENT_MAX_DURATION_MS = 60_000;
+const SPEECH_SEGMENT_MAX_DURATION_MS = 300_000;
 
 export async function streamSpeechById({
   modelId,
