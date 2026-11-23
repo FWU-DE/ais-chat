@@ -14,6 +14,8 @@ import {
 
 const RESPONSE_FORMAT = 'mp3';
 
+const SPEECH_CLIENT_MAX_RETRIES = 5;
+
 function createBifrostClient(model: AiModel): { client: OpenAI; modelName: string } {
   if (model.provider !== 'bifrost') {
     throw new ProviderConfigurationError('Invalid model configuration for Bifrost');
@@ -28,6 +30,7 @@ function createBifrostClient(model: AiModel): { client: OpenAI; modelName: strin
       new OpenAI({
         apiKey: env.bifrostApiKey ?? 'not-needed',
         baseURL: env.bifrostBaseUrl,
+        maxRetries: SPEECH_CLIENT_MAX_RETRIES,
         ...(env.bifrostApiKey ? { defaultHeaders: { 'x-bf-vk': env.bifrostApiKey } } : {}),
       }),
     ),

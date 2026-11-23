@@ -19,7 +19,7 @@ import {
   SpeechStreamingPipelineParams,
 } from '@shared/speech/streaming/speech-pipeline';
 
-import { ChatSpeechStreamResult } from './types';
+import { ChatSpeechStreamResult, SpeechTextUsage } from './types';
 import { resolveSpeechVoice } from './utils';
 
 type SpeechContext = {
@@ -97,6 +97,35 @@ export async function generateChatSpeechStream({
             costsInCent,
           });
         }
+      },
+      storeTextUsage: async (
+        _params: SpeechStreamingPipelineParams,
+        context: SpeechContext,
+        usage: SpeechTextUsage,
+      ) => {
+        // like speech usage, text usage is only stored for messages of an existing conversation
+        if (!context.conversation) return;
+
+        await dbInsertConversationUsage({
+          conversationId: context.conversation.id,
+          userId: user.id,
+          modelId: usage.modelId,
+          completionTokens: usage.completionTokens,
+          promptTokens: usage.promptTokens,
+          costsInCent: usage.costsInCent,
+        });
+        await sendRabbitmqEvent(
+          constructNewMessageEvent({
+            user: { ...user, federalState: { id: user.federalStateId } },
+            promptTokens: usage.promptTokens,
+            completionTokens: usage.completionTokens,
+            costsInCent: usage.costsInCent,
+            provider: usage.provider,
+            modelName: usage.modelName,
+            anonymous: false,
+            conversation: context.conversation,
+          }),
+        );
       },
       reportUsage: async (
         _params: SpeechStreamingPipelineParams,

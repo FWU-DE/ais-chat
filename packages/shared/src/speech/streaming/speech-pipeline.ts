@@ -4,7 +4,8 @@ import { LlmModelSelectModel } from '@shared/db/schema';
 import { ForbiddenError, NotFoundError } from '@shared/error';
 import { FederalStateModel } from '@shared/federal-states/types';
 
-import { ChatSpeechStreamResult } from '../types';
+import { rewriteTextToSsml } from '../ssml-rewrite/ssml-rewrite-service';
+import { ChatSpeechStreamResult, SpeechTextUsage } from '../types';
 import { startStream } from './start-streaming';
 import {
   checkAccess,
@@ -44,6 +45,15 @@ export type SpeechStreamingPipelineStrategy<TContext extends { user: { id: strin
     model: LlmModelSelectModel,
     result: ChatSpeechStreamResult,
   ): Promise<void>;
+  /**
+   * Store and report the usage of a text model used to prepare the speech input (SSML rewrite).
+   * Billing to the API key already happened when the text was generated.
+   */
+  storeTextUsage(
+    params: SpeechStreamingPipelineParams,
+    context: TContext,
+    usage: SpeechTextUsage,
+  ): Promise<void>;
   /** Report the usage of the speech model for the given params and result */
   reportUsage(
     params: SpeechStreamingPipelineParams,
@@ -78,7 +88,18 @@ export async function runSpeechPipeline<TContext extends { user: { id: string } 
   const model = await getSpeechModel();
   if (!model) throw new NotFoundError('No speech model configured');
 
-  return startStream(params, model, async (result) => {
+  let ssmlBody: string | undefined;
+  if (model.modelConfig?.enableSsmlRewrite === true) {
+    const rewrite = await rewriteTextToSsml({
+      text: params.input,
+      federalStateId: params.federalState.id,
+      abortSignal: params.abortSignal,
+    });
+    await strategy.storeTextUsage(params, context, rewrite.usage);
+    ssmlBody = rewrite.ssmlBody;
+  }
+
+  return startStream(params, model, ssmlBody, async (result) => {
     // stream finished
     await strategy.storeUsage(params, context, model, result);
     await strategy.reportUsage(params, context, model, result);
