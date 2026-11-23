@@ -128,6 +128,7 @@ services:
       RUSTFS_ACCESS_KEY: rustfsadmin
       RUSTFS_SECRET_KEY: RustFS-Admin-123456
       RUSTFS_VOLUMES: /data
+      RUSTFS_REGION: eu-de
       RUSTFS_CORS_ALLOWED_ORIGINS: 'http://localhost:3000'
     volumes:
       - rustfs_data:/data
