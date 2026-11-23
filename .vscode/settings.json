@@ -5,6 +5,8 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "always"
   },
+  "markdown-mermaid.lightModeTheme": "default",
+  "markdown-mermaid.darkModeTheme": "dark",
   "[typescript][typescriptreact]": {
     "editor.codeActionsOnSave": {
       "source.organizeImports": "never",
