@@ -6,7 +6,7 @@ import { visit } from 'unist-util-visit';
 import { activateLivePlots } from '@/components/chat/plot/live-plots';
 import { getPlotKey } from '@/components/chat/plot/rendered-plots';
 import { PLOT_LANGUAGE } from '@/utils/code-blocks';
-import { parsePlotSpec } from '@/utils/plot/plot-spec';
+import { getValidPlotSpec, type PlotSpec } from '@/utils/plot/plot-spec';
 
 import {
   arrayBufferToBase64,
@@ -18,10 +18,12 @@ import { renderPlotImage, waitForPlotActivation } from './plot-image';
 
 const MAX_PLOTS = 10;
 
+// Renders each distinct, valid jsxgraph-json block to a base64 PNG keyed by its code;
+// plots can only be drawn in the browser, so the server receives them as images.
 async function renderPlots(root: Root) {
-  const specs = new Map<string, NonNullable<ReturnType<typeof getValidSpec>>>();
+  const specs = new Map<string, PlotSpec>();
   visit(root, 'code', (node) => {
-    const spec = node.lang === PLOT_LANGUAGE ? getValidSpec(node.value) : undefined;
+    const spec = node.lang === PLOT_LANGUAGE ? getValidPlotSpec(node.value) : undefined;
     if (spec !== undefined && specs.size < MAX_PLOTS) {
       specs.set(node.value, spec);
     }
@@ -45,6 +47,7 @@ async function renderPlots(root: Root) {
   }
 }
 
+// Get all image targets used in the Markdown, so only those uploads are loaded and sent to the server.
 function getReferencedImageSources(root: Root) {
   const sources = new Set<string>();
   visit(root, 'image', (node) => {
@@ -54,11 +57,6 @@ function getReferencedImageSources(root: Root) {
     sources.add(node.url);
   });
   return sources;
-}
-
-function getValidSpec(code: string) {
-  const parsed = parsePlotSpec(code);
-  return 'spec' in parsed ? parsed.spec : undefined;
 }
 
 export async function markdownToPdfBlob(

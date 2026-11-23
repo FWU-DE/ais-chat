@@ -31,7 +31,7 @@ import { getPlotKey } from '@/components/chat/plot/rendered-plots';
 import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
 import { type DocumentImageReferences, loadDocumentImage } from '@/utils/files/document-images';
 import { isImageFile } from '@/utils/files/generic';
-import { parsePlotSpec } from '@/utils/plot/plot-spec';
+import { getValidPlotSpec } from '@/utils/plot/plot-spec';
 
 import { renderPlotImage, waitForPlotActivation } from './plot-image';
 
@@ -262,12 +262,12 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
         return;
       }
 
-      const parsed = parsePlotSpec(value);
-      if ('error' in parsed) {
+      const spec = getValidPlotSpec(value);
+      if (spec === undefined) {
         return;
       }
 
-      const plotImage = await renderPlotImage(parsed.spec);
+      const plotImage = await renderPlotImage(spec);
       if (plotImage !== undefined) {
         images.set(imageKey, { type: 'png', ...plotImage });
       }
@@ -301,9 +301,9 @@ function preparePlotCodeBlocks(root: Root, plotKeys: Set<string>) {
       return;
     }
 
-    const parsed = parsePlotSpec(node.value);
-    if (!('error' in parsed)) {
-      plotKeys.add(getPlotKey(parsed.spec));
+    const spec = getValidPlotSpec(node.value);
+    if (spec !== undefined) {
+      plotKeys.add(getPlotKey(spec));
     }
     // Set lang here to json so shikiPlugin renders the code blocks correctly
     // as it only recognizes json but not jsxgraph-json

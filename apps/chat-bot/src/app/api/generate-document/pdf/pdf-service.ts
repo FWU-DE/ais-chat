@@ -36,7 +36,9 @@ export const pdfRequestSchema = z.object({
     .default([]),
 });
 
-// Images are only embedded as data URLs and math keeps its marker classes; the default schema drops both.
+type PdfRequest = z.infer<typeof pdfRequestSchema>;
+
+// Images should only be embedded as data URLs and math should keep its marker classes; the default schema of rehypeSanitize would otherwise drops both.
 const sanitizeSchema: SanitizeSchema = {
   ...defaultSchema,
   protocols: { ...defaultSchema.protocols, src: ['data'] },
@@ -49,8 +51,7 @@ const sanitizeSchema: SanitizeSchema = {
   },
 };
 
-type PdfRequest = z.infer<typeof pdfRequestSchema>;
-
+// Replaces attachment:// image URLs by the uploaded data URLs and removes images that were not sent along.
 function resolveImageReferences(images: PdfRequest['images']) {
   const imageMap = new Map(
     images.map((image) => [image.source, `data:${image.mimeType};base64,${image.data}`]),
@@ -73,6 +74,7 @@ function resolveImageReferences(images: PdfRequest['images']) {
   };
 }
 
+// Replaces jsxgraph-json code blocks by the plot images the browser rendered for exactly that code.
 function embedPlots(plots: PdfRequest['plots']) {
   const plotMap = new Map(plots.map((plot) => [plot.code, `data:image/png;base64,${plot.data}`]));
 
