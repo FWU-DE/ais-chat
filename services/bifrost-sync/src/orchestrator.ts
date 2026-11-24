@@ -369,7 +369,7 @@ export class Orchestrator {
     let rollbackErrors: SyncError[] = [];
 
     for (let attempt = 1; attempt <= 2; attempt++) {
-      const outcome = await syncAll(this.target(target), baseline);
+      const outcome = await syncAll(this.target(target), baseline, { authoritative: true });
       rollbackErrors = outcome.errors;
       this.log.info(
         { runId: run.runId, attempt, pod: target.name, errors: outcome.errors.length },
@@ -391,6 +391,8 @@ export class Orchestrator {
       }
       if (attempt === 2) break;
       target = await this.replaceInstance(target);
+      // A crash during the retry must bind the next run to the pod that writes now.
+      await run.save({ run: { ...run.state.run!, writerUid: target.id } });
       this.log.info({ runId: run.runId, pod: target.name }, 'writer replaced for rollback retry');
     }
 
@@ -449,8 +451,10 @@ export class Orchestrator {
           throw new Error('rollout timeout: no progress');
         }
 
+        // Every pod evicted so far needs its replacement, not just the first one. A replacement
+        // can appear late, and a disruption budget above one lets the next eviction through.
         const fresh = instances.filter((i) => !oldUids.includes(i.id));
-        const replacementsMissing = pending.length < oldUids.length && fresh.length === 0;
+        const replacementsMissing = fresh.length < oldUids.length - pending.length;
         if (replacementsMissing || fresh.some((i) => !i.ready)) {
           await sleep(this.options.pollMs ?? 1000);
           continue;

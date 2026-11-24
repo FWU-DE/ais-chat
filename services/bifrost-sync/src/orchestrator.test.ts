@@ -147,6 +147,43 @@ describe('successful run', () => {
   });
 });
 
+describe('rollout with three pods', () => {
+  afterEach(() => h.close());
+
+  test('verifies and waits for every replacement before the next eviction (budget of 2)', async () => {
+    h = await createHarness({ replicas: 3, maxUnavailable: 2, replacementDelay: 4 });
+    h.seedBaseline();
+    await h.post(syncRequest());
+    await h.runToEnd();
+
+    expect((await h.status()).lastRun?.result).toBe('ok');
+    const events = h.cluster.events;
+    const evictions = events.filter((e) => e.startsWith('evict')).length;
+    expect(evictions).toBe(3);
+    // Before each further eviction, every pod evicted so far has its replacement, and it was checked.
+    const evictIndexes = events.flatMap((e, i) => (e.startsWith('evict') ? [i] : []));
+    for (let n = 1; n < evictIndexes.length; n++) {
+      const before = events.slice(0, evictIndexes[n]);
+      expect(before.filter((e) => e.startsWith('new ')).length).toBeGreaterThanOrEqual(n);
+      expect(
+        before.filter((e) => e.startsWith('GET /api/providers bifrost-')).length,
+      ).toBeGreaterThanOrEqual(n);
+    }
+  });
+
+  test('does not evict a second pod while the first replacement has not appeared', async () => {
+    h = await createHarness({ replicas: 3, maxUnavailable: 2, replacementDelay: 6 });
+    h.seedBaseline();
+    await h.post(syncRequest());
+    await h.runToEnd();
+
+    const events = h.cluster.events;
+    const first = events.findIndex((e) => e.startsWith('evict'));
+    const second = events.findIndex((e, i) => i > first && e.startsWith('evict'));
+    expect(events.slice(first, second).some((e) => e.startsWith('new '))).toBe(true);
+  });
+});
+
 describe('rollback', () => {
   beforeEach(async () => {
     h = await createHarness();
@@ -272,6 +309,72 @@ describe('rollback', () => {
     // The replacement is the only writer that is allowed next.
     expect(h.store.state.lastWriterUid).toBeDefined();
     expect(h.store.state.lastWriterUid).not.toBe(h.cluster.uidOf('bifrost-b'));
+  });
+
+  test('persists the replacement as writer before the second rollback attempt', async () => {
+    const originalUid = h.cluster.uidOf('bifrost-a');
+    h.cluster.faults = [
+      (r) => r.pod === 'bifrost-a' && r.method !== 'GET',
+      (r) => r.pod === 'bifrost-c' && r.method !== 'GET',
+    ];
+    const original = h.store.write.bind(h.store);
+    const writers: (string | undefined)[] = [];
+    h.store.write = (state, version) => {
+      if (state.phase === 'rolling_back') writers.push(state.run?.writerUid);
+      return original(state, version);
+    };
+    await h.post(syncRequest());
+    await h.runToEnd();
+
+    expect(writers[0]).toBe(originalUid);
+    const replacementUid = h.cluster.uidOf('bifrost-c');
+    expect(writers.at(-1)).toBe(replacementUid);
+    expect(writers.at(-1)).not.toBe(originalUid);
+  });
+
+  test('a crash while the replacement rolls back binds the next run to the replacement', async () => {
+    h.cluster.faults = [(r) => r.pod === 'bifrost-a' && r.method !== 'GET'];
+    const original = h.store.write.bind(h.store);
+    const originalUid = h.cluster.uidOf('bifrost-a');
+    let recordedReplacement: string | undefined;
+    h.store.write = async (state, version) => {
+      const result = await original(state, version);
+      const writer = state.run?.writerUid;
+      if (state.phase === 'rolling_back' && writer && writer !== originalUid) {
+        // The process dies right after the replacement was recorded.
+        recordedReplacement = writer;
+        throw new Error('process died');
+      }
+      return result;
+    };
+    await h.post(syncRequest());
+    await h.runToEnd();
+    expect(recordedReplacement).toBeDefined();
+
+    h.store.write = original;
+    await h.makeOrchestrator().recover();
+
+    expect(h.store.state.phase).toBe('failed');
+    expect(h.store.state.lastWriterUid).toBe(recordedReplacement);
+    expect(h.store.state.lastWriterUid).not.toBe(originalUid);
+  });
+
+  test('the rollback restores a provider setting that the baseline omits', async () => {
+    h.cluster.db.providers.get('pa')!.extra = {};
+    h.cluster.podByName('bifrost-a').reload();
+    h.cluster.podByName('bifrost-b').reload();
+    const target = syncRequest();
+    target.providers[0] = {
+      ...target.providers[0]!,
+      network_config: { base_url: 'https://target.example/v1' },
+    };
+    h.cluster.faults = [failWritesOn('pd')];
+    await h.post(target);
+    await h.runToEnd();
+
+    expect((await h.status()).lastRun?.result).toBe('rolled_back');
+    const extra = h.cluster.db.providers.get('pa')!.extra as { network_config?: unknown };
+    expect(extra.network_config).toBeUndefined();
   });
 
   test('fails when the rollback also fails on the replacement and binds to the replacement', async () => {

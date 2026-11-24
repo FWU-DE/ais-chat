@@ -43,10 +43,11 @@ export const syncRequest = (
 
 export type LogLine = { level: 'info' | 'error'; obj: Record<string, unknown>; msg: string };
 
-export async function createHarness(
-  options: Partial<OrchestratorOptions> & { replicas?: number } = {},
-) {
-  const cluster = new FakeCluster(options.replicas ?? 2);
+type ClusterOptions = { replicas?: number; maxUnavailable?: number; replacementDelay?: number };
+
+export async function createHarness(options: Partial<OrchestratorOptions> & ClusterOptions = {}) {
+  const { replicas = 2, maxUnavailable = 1, replacementDelay = 0, ...overrides } = options;
+  const cluster = new FakeCluster(replicas, maxUnavailable, replacementDelay);
   await cluster.init();
   const store = new MemoryStateStore();
   const logs: LogLine[] = [];
@@ -57,12 +58,12 @@ export async function createHarness(
   const orchestratorOptions: OrchestratorOptions = {
     adminUsername: 'admin',
     adminPassword: 'admin-test-password',
-    expectedReplicas: options.replicas ?? 2,
+    expectedReplicas: replicas,
     rolloutTimeoutMs: 5000,
     evictBackoffMs: 1,
     pollMs: 1,
     verifyProviders: 'fail',
-    ...options,
+    ...overrides,
   };
   const makeOrchestrator = () => new Orchestrator(cluster, store, orchestratorOptions, logger);
   const orchestrator = makeOrchestrator();
@@ -83,7 +84,7 @@ export async function createHarness(
         })),
       });
     }
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < replicas; i++) {
       const name = `bifrost-${String.fromCharCode(97 + i)}`;
       cluster.podByName(name).reload();
     }

@@ -29,12 +29,14 @@ function describeError(error: unknown): string {
 }
 
 /**
- * Brings Bifrost to `desired` through one pod. Collects errors per provider. Stale providers are
+ * Brings Bifrost to `desired` through one pod. Collects errors per provider. `authoritative`
+ * resets provider settings that `desired` omits, so a baseline replaces the failed target. Stale providers are
  * deleted and virtual key access updated only if every provider succeeded, like the direct path.
  */
 export async function syncAll(
   target: BifrostTarget,
   desired: BifrostProviderConfig[],
+  options: { authoritative?: boolean } = {},
 ): Promise<SyncOutcome> {
   const connection = {
     bifrostAdminUrl: target.baseUrl,
@@ -53,6 +55,7 @@ export async function syncAll(
         ...connection,
         providerConfig,
         onKeyDelete: markDeleted,
+        authoritative: options.authoritative,
         logger: silentLogger,
       });
     } catch (error) {

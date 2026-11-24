@@ -4,6 +4,8 @@ import { type Restarter, RestartRefusedError, waitForInstances } from '../restar
 import type { Instance } from '../types';
 import { FakeDb, FakePod, type FakeRequest, type FaultRule } from './fake-bifrost';
 
+type Spawn = { appearAtPoll: number };
+
 type Entry = {
   uid: string;
   pod: FakePod;
@@ -12,8 +14,9 @@ type Entry = {
 };
 
 /**
- * Cluster with a PodDisruptionBudget of `maxUnavailable: 1`: a restart is refused while any pod
- * is not Ready or still terminating. Time advances with each `listInstances` call.
+ * Cluster with a PodDisruptionBudget: a restart is refused while `maxUnavailable` pods or more are
+ * not Ready. A replacement appears `replacementDelay` polls after the eviction, like a
+ * ReplicaSet that reacts late. Time advances with each `listInstances` call.
  */
 export class FakeCluster implements Restarter {
   readonly db = new FakeDb();
@@ -30,7 +33,13 @@ export class FakeCluster implements Restarter {
   private counter = 0;
   private readonly all: FakePod[] = [];
 
-  constructor(private readonly replicas = 2) {}
+  private spawns: Spawn[] = [];
+
+  constructor(
+    private readonly replicas = 2,
+    private readonly maxUnavailable = 1,
+    private readonly replacementDelay = 0,
+  ) {}
 
   async init(): Promise<void> {
     for (let i = 0; i < this.replicas; i++) await this.addPod(0);
@@ -64,33 +73,46 @@ export class FakeCluster implements Restarter {
     this.entries = this.entries.filter((e) => e.pod.name !== name);
   }
 
-  listInstances(): Promise<Instance[]> {
+  private async spawnReplacement(): Promise<void> {
+    const replacement = await this.addPod(this.poll + 3);
+    replacement.pod.reload();
+    this.events.push(`new ${replacement.pod.name}`);
+  }
+
+  private async materializeSpawns(): Promise<void> {
+    const due = this.spawns.filter((spawn) => spawn.appearAtPoll <= this.poll);
+    this.spawns = this.spawns.filter((spawn) => spawn.appearAtPoll > this.poll);
+    for (let i = 0; i < due.length; i++) await this.spawnReplacement();
+  }
+
+  async listInstances(): Promise<Instance[]> {
     this.poll++;
+    await this.materializeSpawns();
     this.entries = this.entries.filter(
       (e) => e.goneAtPoll === undefined || e.goneAtPoll > this.poll,
     );
-    return Promise.resolve(
-      this.entries
-        .map((e) => {
-          const terminating = e.goneAtPoll !== undefined;
-          return {
-            id: e.uid,
-            name: e.pod.name,
-            baseUrl: e.pod.baseUrl,
-            terminating,
-            ready: !terminating && this.poll >= e.readyAtPoll,
-          };
-        })
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    );
+    return this.entries
+      .map((e) => {
+        const terminating = e.goneAtPoll !== undefined;
+        return {
+          id: e.uid,
+          name: e.pod.name,
+          baseUrl: e.pod.baseUrl,
+          terminating,
+          ready: !terminating && this.poll >= e.readyAtPoll,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   async restart(id: string): Promise<void> {
     const entry = this.entries.find((e) => e.uid === id);
     if (!entry || entry.goneAtPoll !== undefined) return;
-    const unavailable = this.entries.some(
-      (e) => e.goneAtPoll !== undefined || this.poll < e.readyAtPoll,
+    const ready = this.entries.filter(
+      (e) => e.goneAtPoll === undefined && this.poll >= e.readyAtPoll,
     );
+    // Evicted pods whose replacement has not appeared yet count as unavailable, too.
+    const unavailable = this.replicas - ready.length >= this.maxUnavailable;
     if (unavailable || this.refuseNext > 0) {
       if (this.refuseNext > 0) this.refuseNext--;
       this.refused++;
@@ -99,9 +121,8 @@ export class FakeCluster implements Restarter {
     }
     this.events.push(`evict ${entry.pod.name}`);
     entry.goneAtPoll = this.poll + 2;
-    const replacement = await this.addPod(this.poll + 3);
-    replacement.pod.reload();
-    this.events.push(`new ${replacement.pod.name}`);
+    if (this.replacementDelay === 0) await this.spawnReplacement();
+    else this.spawns.push({ appearAtPoll: this.poll + this.replacementDelay });
   }
 
   waitUntilAllReady(oldIds: string[], timeoutMs: number): Promise<void> {

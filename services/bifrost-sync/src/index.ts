@@ -6,6 +6,7 @@ import { logger } from './logger';
 import { Orchestrator } from './orchestrator';
 import type { Restarter } from './restarter';
 import { createServer } from './server';
+import { start } from './start';
 import { ConfigMapStateStore, FileStateStore, type StateStore } from './state-store';
 
 function createRestarter(): { restarter: Restarter; store: StateStore } {
@@ -61,9 +62,8 @@ process.once('SIGTERM', () => void shutdown());
 process.once('SIGINT', () => void shutdown());
 
 try {
-  await server.listen({ port: env.port, host: env.host });
+  await start(orchestrator, server, { port: env.port, host: env.host });
   logger.info({ restarter: env.restarter, expectedReplicas: env.expectedReplicas }, 'listening');
-  await orchestrator.recover();
 } catch (error) {
   logger.error({ error: error instanceof Error ? error.message : 'unknown' }, 'startup failed');
   process.exitCode = 1;

@@ -140,7 +140,9 @@ export class FakePod {
         if (this.ids(providers, name) !== this.ids(this.db.providers, name)) {
           return [500, { error: 'API key names must be unique across providers' }];
         }
-        provider.extra = { ...provider.extra, ...req.body };
+        // Measured: a PUT without `network_config` resets it.
+        const { network_config: networkConfig, ...rest } = req.body!;
+        provider.extra = { ...provider.extra, ...rest, network_config: networkConfig };
         this.db.providers.get(name)!.extra = structuredClone(provider.extra);
         return [200, {}];
       }

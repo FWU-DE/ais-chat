@@ -26,6 +26,7 @@ export async function syncBifrostProvider({
   bifrostAdminPassword,
   providerConfig,
   onKeyDelete,
+  authoritative,
   logger,
 }: {
   bifrostAdminUrl: string;
@@ -34,6 +35,12 @@ export async function syncBifrostProvider({
   providerConfig: BifrostProviderConfig;
   /** Called before each key deletion request, so callers learn about deletions even if the sync fails later. */
   onKeyDelete?: () => void;
+  /**
+   * Resets `network_config` when `providerConfig` omits it, instead of keeping Bifrost's current
+   * value. Used to restore a baseline. `custom_provider_config` stays inherited: Bifrost rejects
+   * a PUT that removes it.
+   */
+  authoritative?: boolean;
   logger?: BifrostProviderSyncLogger;
 }): Promise<void> {
   await ensureBifrostProvider({
@@ -41,6 +48,7 @@ export async function syncBifrostProvider({
     bifrostAdminUsername,
     bifrostAdminPassword,
     providerConfig,
+    authoritative,
     logger,
   });
   const existingKeysBeforeSync = await listBifrostProviderKeys({
@@ -50,7 +58,7 @@ export async function syncBifrostProvider({
     provider: providerConfig.provider,
     logger,
   });
-  await Promise.all(
+  await allSettledOrThrow(
     providerConfig.keys.map((key) =>
       syncBifrostProviderKey({
         bifrostAdminUrl,
@@ -64,7 +72,7 @@ export async function syncBifrostProvider({
     ),
   );
   const desiredKeyNames = new Set(providerConfig.keys.map(({ name }) => name.toLowerCase()));
-  await Promise.all(
+  await allSettledOrThrow(
     existingKeysBeforeSync
       .filter(({ name, id }) => id && !desiredKeyNames.has(name.toLowerCase()))
       .map((key) => {
@@ -79,6 +87,16 @@ export async function syncBifrostProvider({
         });
       }),
   );
+}
+
+/**
+ * Like `Promise.all`, but rejects only after every promise settled. A fail-fast `Promise.all`
+ * would let sibling writes run on while the caller already starts a rollback.
+ */
+async function allSettledOrThrow(promises: Promise<unknown>[]): Promise<void> {
+  const results = await Promise.allSettled(promises);
+  const failed = results.find((result) => result.status === 'rejected');
+  if (failed) throw failed.reason;
 }
 
 /**
@@ -168,12 +186,14 @@ async function ensureBifrostProvider({
   bifrostAdminUsername,
   bifrostAdminPassword,
   providerConfig,
+  authoritative,
   logger,
 }: {
   bifrostAdminUrl: string;
   bifrostAdminUsername?: string;
   bifrostAdminPassword?: string;
   providerConfig: BifrostProviderConfig;
+  authoritative?: boolean;
   logger?: BifrostProviderSyncLogger;
 }): Promise<void> {
   const providerResponse = await bifrostFetch({
@@ -217,7 +237,9 @@ async function ensureBifrostProvider({
       path: providerPath(providerConfig.provider),
       init: {
         method: 'PUT',
-        body: JSON.stringify(getUpdateProviderPayload(providerConfig, existingProvider)),
+        body: JSON.stringify(
+          getUpdateProviderPayload(providerConfig, existingProvider, authoritative),
+        ),
       },
     }),
     logger,
@@ -318,11 +340,13 @@ function getAddProviderPayload(providerConfig: BifrostProviderConfig) {
 function getUpdateProviderPayload(
   providerConfig: BifrostProviderConfig,
   existingProvider: BifrostProviderResponse,
+  authoritative = false,
 ) {
+  const networkConfig = authoritative
+    ? providerConfig.network_config
+    : (providerConfig.network_config ?? existingProvider.network_config);
   return {
-    ...(providerConfig.network_config || existingProvider.network_config
-      ? { network_config: providerConfig.network_config ?? existingProvider.network_config }
-      : {}),
+    ...(networkConfig ? { network_config: networkConfig } : {}),
     ...(existingProvider.concurrency_and_buffer_size
       ? { concurrency_and_buffer_size: existingProvider.concurrency_and_buffer_size }
       : {}),
