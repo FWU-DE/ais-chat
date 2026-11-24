@@ -249,8 +249,9 @@ export function ChatBox({
       ? [{ id: step.id, document: step.document }]
       : [],
   );
+  const isStreamingThisMessage = isLastNonUser && status === 'streaming';
   const maybeGeneratedDocuments =
-    generatedDocuments.length > 0 ? (
+    generatedDocuments.length > 0 && !isStreamingThisMessage ? (
       <div className="flex w-full min-w-0 flex-row flex-wrap gap-2">
         {generatedDocuments.map(({ id, document }) => (
           <GeneratedDocumentAttachment
