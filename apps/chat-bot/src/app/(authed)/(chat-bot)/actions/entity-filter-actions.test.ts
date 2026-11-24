@@ -1,5 +1,6 @@
 import { getAssistantsByOverviewFilter } from '@shared/assistants/assistant-service';
 import { getCharactersByOverviewFilter } from '@shared/characters/character-service';
+import { getFavoriteEntityIds } from '@shared/favorites/favorite-service';
 import { getLearningScenariosByOverviewFilter } from '@shared/learning-scenarios/learning-scenario-service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -15,6 +16,7 @@ import {
 vi.mock('@/auth/requireAuth', () => ({ requireAuth: vi.fn() }));
 vi.mock('@shared/assistants/assistant-service', () => ({ getAssistantsByOverviewFilter: vi.fn() }));
 vi.mock('@shared/characters/character-service', () => ({ getCharactersByOverviewFilter: vi.fn() }));
+vi.mock('@shared/favorites/favorite-service', () => ({ getFavoriteEntityIds: vi.fn() }));
 vi.mock('@shared/learning-scenarios/learning-scenario-service', () => ({
   enrichLearningScenarioWithPictureUrl: vi.fn(),
   getLearningScenariosByOverviewFilter: vi.fn(),
@@ -47,12 +49,17 @@ describe('entity filter actions', () => {
 
   it('preserves authenticated student access to assistants', async () => {
     vi.mocked(getAssistantsByOverviewFilter).mockResolvedValue([]);
+    vi.mocked(getFavoriteEntityIds).mockResolvedValue([]);
     vi.mocked(enrichAssistantsWithImage).mockResolvedValue([]);
 
     await expect(getAssistantsByFilterAction('official')).resolves.toEqual([]);
     expect(getAssistantsByOverviewFilter).toHaveBeenCalledWith({
       filter: 'official',
       user: { id: 'student', schoolIds: [], federalStateId: 'test' },
+    });
+    expect(getFavoriteEntityIds).toHaveBeenCalledWith({
+      entityType: 'assistant',
+      user: { id: 'student', schoolIds: [], userRole: 'student' },
     });
   });
 });
