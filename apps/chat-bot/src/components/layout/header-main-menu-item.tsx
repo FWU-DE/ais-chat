@@ -7,7 +7,7 @@ import {
 import type { ReactNode } from 'react';
 import { useId } from 'react';
 
-import { Badge } from '../common/badge';
+import { NewBadge } from '../common/new-badge';
 import { GreenLeafIcon } from '../icons/green-leaf-icon';
 
 type HeaderMainMenuItemProps = {
@@ -45,7 +45,7 @@ export function HeaderMainMenuItem({
         {triggerLabel}
       </span>
       {isGreen && <GreenLeafIcon aria-hidden="true" />}
-      {isNew && <Badge text="NEU" />}
+      {isNew && <NewBadge />}
       {isDropdownEnabled && <CaretDownIcon aria-hidden="true" className="shrink-0" />}
     </span>
   );

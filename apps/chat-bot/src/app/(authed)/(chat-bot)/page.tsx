@@ -52,7 +52,6 @@ export default async function Page() {
           headerConfig: {
             chatId: id,
             downloadConversationEnabled: false,
-            userAndContext,
           },
         }}
       >

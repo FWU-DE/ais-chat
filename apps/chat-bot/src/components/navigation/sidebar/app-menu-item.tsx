@@ -11,9 +11,10 @@ type AppMenuItemProps = {
   href: string;
   icon: ReactElement<{ weight?: 'regular' | 'bold' }>;
   text: string;
+  testId?: string;
 };
 
-export function AppMenuItem({ href, icon, text }: AppMenuItemProps) {
+export function AppMenuItem({ href, icon, text, testId }: AppMenuItemProps) {
   const pathname = useCustomPathname();
   const { isMobile, setOpenMobile } = useSidebar();
 
@@ -31,6 +32,7 @@ export function AppMenuItem({ href, icon, text }: AppMenuItemProps) {
       <SidebarMenuButton asChild isActive={isActive()}>
         <Link
           href={href}
+          data-testid={testId}
           onClick={() => {
             if (isMobile) {
               setOpenMobile(false);

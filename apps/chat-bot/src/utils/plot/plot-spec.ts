@@ -138,3 +138,8 @@ export function parsePlotSpec(source: string): { spec: PlotSpec } | { error: Plo
     return { error: new PlotSpecError('Plot source could not be validated', { cause: error }) };
   }
 }
+
+export function getValidPlotSpec(source: string): PlotSpec | undefined {
+  const parsed = parsePlotSpec(source);
+  return 'spec' in parsed ? parsed.spec : undefined;
+}

@@ -18,7 +18,6 @@ export default function SelectImageModel() {
       modelType="image"
       label={t('image-generation-model')}
       noModelsLabel={t('no-model-available')}
-      isStudent={false}
       enableUrlParams={false}
     />
   );

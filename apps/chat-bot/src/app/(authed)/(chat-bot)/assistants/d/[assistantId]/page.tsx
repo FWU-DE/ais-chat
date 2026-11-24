@@ -8,6 +8,7 @@ import { getTranslations } from 'next-intl/server';
 
 import { requireAuth } from '@/auth/requireAuth';
 import Chat from '@/components/chat/chat';
+import { toChatAssistantDto } from '@/components/chat/chat-client-dto';
 import Logo from '@/components/common/logo';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
@@ -26,10 +27,6 @@ export default async function Page(props: PageProps<'/assistants/d/[assistantId]
   const { assistantId } = await props.params;
   const id = generateUUID();
   const { user, federalState } = await requireAuth();
-  const userAndContext = {
-    ...user,
-    federalState,
-  };
 
   const assistant = await getAssistantForNewChat({
     assistantId: assistantId,
@@ -56,7 +53,6 @@ export default async function Page(props: PageProps<'/assistants/d/[assistantId]
           layout: 'chat',
           headerConfig: {
             chatId: id,
-            userAndContext,
             downloadConversationEnabled: false,
           },
         }}
@@ -64,7 +60,7 @@ export default async function Page(props: PageProps<'/assistants/d/[assistantId]
         <Chat
           id={id}
           initialMessages={[]}
-          assistant={assistant}
+          assistant={toChatAssistantDto(assistant)}
           enableFileUpload={true}
           promptSuggestions={assistant.promptSuggestions}
           imageSource={avatarPictureUrl}

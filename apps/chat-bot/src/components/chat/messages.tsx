@@ -3,6 +3,7 @@ import { WebSource } from '@shared/db/types';
 
 import type { AiActivityStep } from '@/types/ai-activity';
 import { type ChatStatus, type UIMessage } from '@/types/chat';
+import type { SharedChatDocumentContext } from '@/utils/files/generated-document';
 
 import { ChatBox, type MessageFileModel } from './chat-box';
 import LoadingAnimation from './loading-animation';
@@ -29,6 +30,7 @@ interface MessagesProps {
   speechVoice?: string;
   isSpeechModelEnabled: boolean;
   speechOnly: boolean;
+  sharedChat?: SharedChatDocumentContext;
 }
 
 export function Messages({
@@ -48,6 +50,7 @@ export function Messages({
   speechVoice,
   isSpeechModelEnabled,
   speechOnly,
+  sharedChat,
 }: MessagesProps): React.JSX.Element {
   const canRegenerateMessage = messages.some((message) => message.role === 'user');
   const lastMessage = messages[messages.length - 1];
@@ -80,6 +83,7 @@ export function Messages({
             speechVoice={speechVoice}
             isSpeechModelEnabled={isSpeechModelEnabled}
             speechOnly={speechOnly}
+            sharedChat={sharedChat}
           />
         ))}
       </AudioPlaybackCoordinatorProvider>

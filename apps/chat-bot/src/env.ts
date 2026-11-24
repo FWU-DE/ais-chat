@@ -21,6 +21,7 @@ export const env = createEnv({
     crawl4AIToken: z.string().optional(),
     xbergUrl: z.url().default('http://localhost:8000'),
     calculatorUrl: z.url().default('http://localhost:8081'),
+    gotenbergUrl: z.url().default('http://localhost:8002'),
   },
   runtimeEnv: {
     apiKey: process.env.API_KEY,
@@ -40,5 +41,6 @@ export const env = createEnv({
     crawl4AIToken: process.env.CRAWL4AI_API_TOKEN,
     xbergUrl: process.env.XBERG_URL,
     calculatorUrl: process.env.CALCULATOR_URL,
+    gotenbergUrl: process.env.GOTENBERG_URL,
   },
 });

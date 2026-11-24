@@ -33,6 +33,30 @@ const baseNextConfig: NextConfig = {
     // Run the React Compiler natively inside Turbopack instead of via Babel
     turbopackRustReactCompiler: true,
   },
+  turbopack: {
+    rules: {
+      // Treat SVG imports as React components (used by the vendor icons in @ais-chat/ui).
+      '*.svg': [
+        {
+          condition: {
+            all: [
+              { any: [{ not: 'foreign' }, { path: /@lobehub\/icons-static-svg/ }] },
+              { not: { query: /url/ } },
+            ],
+          },
+          loaders: [
+            {
+              loader: '@svgr/webpack',
+              options: {
+                exportType: 'default',
+              },
+            },
+          ],
+          as: '*.js',
+        },
+      ],
+    },
+  },
 };
 
 export default withSentryConfig(baseNextConfig, {

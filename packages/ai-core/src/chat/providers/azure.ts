@@ -12,6 +12,7 @@ import type {
 } from '../types';
 import { toOpenAIResponsesInput } from '../utils';
 import { streamOpenAICompatibleAgenticResponse } from './openai-compatible';
+import { getReasoningRequestParams } from './reasoning';
 
 function createAzureClient(model: AiModel): {
   client: OpenAI;
@@ -54,6 +55,7 @@ export function constructAzureResponsesStreamFn(model: AiModel): TextStreamFn {
         stream: true,
         max_output_tokens: maxTokens,
         ...model.additionalParameters,
+        ...getReasoningRequestParams(model),
       },
       {
         path: `/openai/responses`,
@@ -114,7 +116,10 @@ export function constructAzureResponsesAgenticStreamFn(model: AiModel): AgenticS
       createOptions: {
         path: `/openai/responses`,
       },
-      additionalParameters: model.additionalParameters as Record<string, unknown>,
+      additionalParameters: {
+        ...(model.additionalParameters as Record<string, unknown>),
+        ...getReasoningRequestParams(model),
+      },
     });
   };
 }
@@ -133,6 +138,7 @@ export function constructAzureResponsesGenerationFn(model: AiModel): TextGenerat
         stream: false,
         max_output_tokens: maxTokens,
         ...model.additionalParameters,
+        ...getReasoningRequestParams(model),
       },
       {
         path: `/openai/responses`,

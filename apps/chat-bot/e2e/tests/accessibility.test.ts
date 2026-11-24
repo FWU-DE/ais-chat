@@ -46,6 +46,7 @@ test.describe('accessibility checks', () => {
       '/learning-scenarios',
       '/characters',
       '/top-up',
+      '/models',
     ].forEach((url) => {
       test(`page "${url}" has no axe violations`, async ({ page }) => {
         await page.goto(url);

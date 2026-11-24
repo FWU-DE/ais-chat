@@ -1,7 +1,18 @@
 'use client';
 
-import { imageGenerationConfigSchema, speechConfigSchema } from '@ais-chat/api-database/types';
+import {
+  imageGenerationConfigSchema,
+  REASONING_EFFORTS,
+  REASONING_SUMMARIES,
+  type ReasoningConfig,
+  type ReasoningEffort,
+  reasoningEffortSchema,
+  type ReasoningSummary,
+  reasoningSummarySchema,
+  speechConfigSchema,
+} from '@ais-chat/api-database/types';
 import { llmModelPriceMetadataSchema } from '@ais-chat/shared/db/schema';
+import { VENDORS } from '@ais-chat/shared-core/schemas/llm-model-vendor';
 import { FormFieldCheckbox } from '@ais-chat/ui/components/form/form-field-checkbox';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { TrashSimpleIcon } from '@phosphor-icons/react';
@@ -11,6 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/c
 import { Checkbox } from '@ui/components/checkbox';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@ui/components/field';
 import { FormField } from '@ui/components/form/form-field';
+import { ModelVendorIcon } from '@ui/components/icons/model-vendor-icon';
 import { Input } from '@ui/components/input';
 import { useRouter } from 'next/navigation';
 import { Controller, useForm, useWatch } from 'react-hook-form';
@@ -62,6 +74,9 @@ const llmFormSchema = z.object({
   imageGenerationConfig: imageGenerationConfigFormSchema.optional().default(''),
   modelConfig: modelConfigFormSchema.optional().default(''),
   additionalParameters: jsonStringSchema.optional().default(''),
+  vendor: z.string(),
+  reasoningEffort: z.union([reasoningEffortSchema, z.literal('')]),
+  reasoningSummary: z.union([reasoningSummarySchema, z.literal('')]),
   isNew: z.boolean().default(false),
   isDeleted: z.boolean().default(false),
   useBifrost: z.boolean().default(true),
@@ -77,6 +92,18 @@ const llmFormSchema = z.object({
 
 type LLMForm = z.infer<typeof llmFormSchema>;
 
+/** Builds the config from form values; no value set means no config. */
+function buildReasoningConfig({
+  effort,
+  summary,
+}: {
+  effort: ReasoningEffort | '';
+  summary: ReasoningSummary | '';
+}): ReasoningConfig | null {
+  if (!effort && !summary) return null;
+  return { ...(effort ? { effort } : {}), ...(summary ? { summary } : {}) };
+}
+
 // `useAzureSpeechEndpoint` switches Bifrost to the Azure AI Speech route, which only exists
 // for speech models served by an Azure provider key.
 function createLlmFormSchema(providerKeys: ProviderKey[]) {
@@ -85,6 +112,15 @@ function createLlmFormSchema(providerKeys: ProviderKey[]) {
   );
 
   return llmFormSchema.superRefine((data, ctx) => {
+    const modelType = parseJsonFormValue(data.priceMetadata, llmModelPriceMetadataSchema)?.type;
+    if (modelType && modelType !== 'text' && (data.reasoningEffort || data.reasoningSummary)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['reasoningEffort'],
+        message: 'Reasoning ist nur für Textmodelle zulässig (Preis-Metadaten vom Typ „text“).',
+      });
+    }
+
     const modelConfig = parseJsonFormValue(data.modelConfig, speechConfigSchema);
     if (!modelConfig?.useAzureSpeechEndpoint) return;
 
@@ -151,6 +187,9 @@ export function LargeLanguageModelDetailView({
             : '',
           modelConfig: model.modelConfig ? JSON.stringify(model.modelConfig, null, 2) : '',
           additionalParameters: JSON.stringify(model.additionalParameters, null, 2),
+          vendor: model.vendor ?? '',
+          reasoningEffort: model.reasoning?.effort ?? '',
+          reasoningSummary: model.reasoning?.summary ?? '',
           isNew: model.isNew,
           isDeleted: model.isDeleted,
           useBifrost: model.useBifrost,
@@ -173,6 +212,9 @@ export function LargeLanguageModelDetailView({
           imageGenerationConfig: '',
           modelConfig: '',
           additionalParameters: '{}',
+          vendor: '',
+          reasoningEffort: '',
+          reasoningSummary: '',
           isNew: false,
           isDeleted: false,
           useBifrost: true,
@@ -186,6 +228,13 @@ export function LargeLanguageModelDetailView({
   });
   const logicalModelName = useWatch({ control, name: 'name' });
   const providerKeyAssignments = useWatch({ control, name: 'providerKeys' });
+  const priceMetadataValue = useWatch({ control, name: 'priceMetadata' });
+  const reasoningEffortValue = useWatch({ control, name: 'reasoningEffort' });
+  const reasoningSummaryValue = useWatch({ control, name: 'reasoningSummary' });
+  const modelType = parseJsonFormValue(priceMetadataValue, llmModelPriceMetadataSchema)?.type;
+  // A value that is already set stays visible so it can be cleared after the type changed.
+  const showReasoning =
+    !modelType || modelType === 'text' || !!reasoningEffortValue || !!reasoningSummaryValue;
 
   async function onSubmit(data: LLMForm) {
     if (!isValid) {
@@ -193,8 +242,11 @@ export function LargeLanguageModelDetailView({
       return;
     }
 
+    const { reasoningEffort, reasoningSummary, ...formData } = data;
     const payload = {
-      ...data,
+      ...formData,
+      reasoning: buildReasoningConfig({ effort: reasoningEffort, summary: reasoningSummary }),
+      vendor: data.vendor || null,
       providerKeys: data.providerKeys
         .filter(({ selected }) => selected)
         .map(({ providerKeyId, upstreamModelName }) => ({
@@ -338,6 +390,46 @@ export function LargeLanguageModelDetailView({
               </>
             )}
           </FormField>
+
+          <FormField
+            name="vendor"
+            label="Hersteller"
+            description="Entwickler des Modells, wird in der KI-Modelle-Übersicht angezeigt"
+            control={control}
+            type="select"
+            options={VENDORS}
+            renderOption={(vendor) => (
+              <span className="flex items-center gap-2">
+                <ModelVendorIcon vendor={vendor} className="size-4" />
+                {vendor}
+              </span>
+            )}
+            placeholder="Kein Hersteller"
+          />
+
+          {showReasoning && (
+            <>
+              <FormField
+                name="reasoningEffort"
+                label="Reasoning-Aufwand"
+                description="Wie intensiv das Modell vor der Antwort nachdenkt (reasoning.effort)"
+                control={control}
+                type="select"
+                options={REASONING_EFFORTS}
+                placeholder="Nicht gesetzt"
+              />
+
+              <FormField
+                name="reasoningSummary"
+                label="Reasoning-Zusammenfassung"
+                description="Detailgrad der angezeigten Zusammenfassung des Denkprozesses (reasoning.summary)"
+                control={control}
+                type="select"
+                options={REASONING_SUMMARIES}
+                placeholder="Nicht gesetzt"
+              />
+            </>
+          )}
 
           <FormField
             name="additionalParameters"

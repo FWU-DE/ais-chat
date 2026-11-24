@@ -7,6 +7,7 @@ import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { type ChatStatus, type UIMessage } from '@/types/chat';
 import { TOOL_NAMES } from '@/types/tool-names';
 import { replacePlotBlocks } from '@/utils/code-blocks';
+import type { SharedChatDocumentContext } from '@/utils/files/generated-document';
 import { isImageFile } from '@/utils/files/generic';
 import { cn } from '@/utils/tailwind';
 
@@ -44,6 +45,7 @@ export function ChatBox({
   speechVoice,
   isSpeechModelEnabled,
   speechOnly,
+  sharedChat,
 }: {
   assistantIcon?: ReactNode;
   message: UIMessage;
@@ -63,6 +65,7 @@ export function ChatBox({
   speechVoice?: string;
   isSpeechModelEnabled: boolean;
   speechOnly: boolean;
+  sharedChat?: SharedChatDocumentContext;
 }) {
   const { isAtLeast } = useBreakpoints();
   const tCommon = useTranslations('common');
@@ -246,15 +249,18 @@ export function ChatBox({
       ? [{ id: step.id, document: step.document }]
       : [],
   );
+  const isStreamingThisMessage = isLastNonUser && status === 'streaming';
   const maybeGeneratedDocuments =
-    generatedDocuments.length > 0 ? (
+    generatedDocuments.length > 0 && !isStreamingThisMessage ? (
       <div className="flex w-full min-w-0 flex-row flex-wrap gap-2">
         {generatedDocuments.map(({ id, document }) => (
           <GeneratedDocumentAttachment
             key={id}
+            toolCallId={id}
             document={document}
             fileMapping={fileMapping}
             messageFileMapping={messageFileMapping}
+            sharedChat={sharedChat}
           />
         ))}
       </div>

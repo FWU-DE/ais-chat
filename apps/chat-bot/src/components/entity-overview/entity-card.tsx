@@ -3,6 +3,7 @@
 import { ChatTextIcon, ImageSquareIcon } from '@phosphor-icons/react';
 import { calculateShareSessionState } from '@shared/sharing/calculate-share-session-state';
 import { Button } from '@ui/components/button';
+import { Chip } from '@ui/components/chip';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/tooltip';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -82,9 +83,11 @@ export default function EntityCard({
           <div className="flex items-center gap-2">
             <h2 className={cn('font-medium leading-none py-0.5', truncateClassName)}>{name}</h2>
             {isOwned && (
-              <span className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary shrink-0 uppercase tracking-wider">
-                {t('badge-mine')}
-              </span>
+              <Chip
+                size="xs"
+                label={t('badge-mine')}
+                className="text-[11px] font-semibold uppercase tracking-wider"
+              />
             )}
           </div>
           {description && (

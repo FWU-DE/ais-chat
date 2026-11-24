@@ -8,6 +8,7 @@ import z from 'zod';
 
 import { requireAuth } from '@/auth/requireAuth';
 import Chat from '@/components/chat/chat';
+import { toChatAssistantDto } from '@/components/chat/chat-client-dto';
 import Logo from '@/components/common/logo';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
@@ -32,10 +33,6 @@ export default async function Page(
   const { assistantId, conversationId } = await props.params;
   const searchParams = parseSearchParams(searchParamsSchema, await props.searchParams);
   const { user, federalState } = await requireAuth();
-  const userAndContext = {
-    ...user,
-    federalState,
-  };
 
   const { conversation, messages, assistant } = await getConversationWithMessagesAndAssistant({
     conversationId: conversationId,
@@ -73,14 +70,13 @@ export default async function Page(
             chatId: conversation.id,
             title: assistant.name,
             downloadConversationEnabled: chatMessages.length > 0,
-            userAndContext,
           },
         }}
       >
         <Chat
           id={conversation.id}
           initialMessages={chatMessages}
-          assistant={assistant}
+          assistant={toChatAssistantDto(assistant)}
           enableFileUpload={true}
           imageSource={avatarPictureUrl}
           logoElement={logoElement}

@@ -54,7 +54,7 @@ export const generateDocumentActivity: ToolActivity<GenerateDocumentToolResult> 
       id: toolCall.id,
       tool: TOOL_NAMES.generateDocument,
       detail: fileName,
-      document: { fileName, format, content },
+      document: { fileName, title, format, content },
     };
   },
   parsePersistedResult: (raw) => parseGenericPersistedToolResult<GenerateDocumentToolResult>(raw),
@@ -81,7 +81,7 @@ export function buildGenerateDocumentTool(): ToolRegistration<GenerateDocumentTo
         content: {
           type: 'string',
           description:
-            'For docx, provide the complete document as Markdown. For html, provide a complete HTML document starting with <!doctype html>, including an <html> root element and inline JavaScript where needed.',
+            'For docx and pdf, provide the complete document as Markdown. For html, provide a complete HTML document starting with <!doctype html>, including an <html> root element and inline JavaScript where needed.',
           minLength: 1,
           maxLength: MAX_DOCUMENT_CONTENT_LENGTH,
         },

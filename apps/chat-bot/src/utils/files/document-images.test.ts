@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { loadDocumentImage } from './document-images';
+import { arrayBufferToBase64, loadDocumentImage } from './document-images';
 import { createConversationExportMessages, formatConversationExport } from './markdown-docx';
 
 describe('formatConversationExport', () => {
@@ -342,5 +342,17 @@ describe('loadDocumentImage', () => {
     );
     await expect(loadDocumentImage('/encode-failure')).rejects.toThrow('Failed to encode image');
     vi.unstubAllGlobals();
+  });
+});
+
+describe('arrayBufferToBase64', () => {
+  it('encodes small buffers', () => {
+    expect(arrayBufferToBase64(new TextEncoder().encode('Hallo').buffer)).toBe('SGFsbG8=');
+  });
+
+  it('encodes buffers larger than the chunk size', () => {
+    const bytes = new Uint8Array(100_000).fill(65);
+
+    expect(arrayBufferToBase64(bytes.buffer)).toBe(Buffer.from(bytes).toString('base64'));
   });
 });

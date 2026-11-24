@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getSliderRange, parsePlotSpec } from './plot-spec';
+import { getSliderRange, getValidPlotSpec, parsePlotSpec } from './plot-spec';
 
 function expectValid(source: string) {
   const result = parsePlotSpec(source);
@@ -266,4 +266,19 @@ describe('getSliderRange', () => {
       ]),
     ).toBeUndefined();
   });
+});
+
+describe('getValidPlotSpec', () => {
+  it('returns the spec for a valid source', () => {
+    expect(getValidPlotSpec('{"elements":[["point",[0,0]]]}')?.elements).toEqual([
+      ['point', [0, 0]],
+    ]);
+  });
+
+  it.each(['not json', '{"elements":[["unknown",[0,0]]]}', ''])(
+    'returns undefined for %j',
+    (source) => {
+      expect(getValidPlotSpec(source)).toBeUndefined();
+    },
+  );
 });

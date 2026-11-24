@@ -26,6 +26,7 @@
     "current-language-model": "Aktuelles Sprachmodell",
     "no-language-model-available": "Kein Sprachmodell verfügbar",
     "energy-efficient-model": "Energieeffizientes Modell",
+    "new-badge": "Neu",
     "conversation-download": "Konversation herunterladen",
     "send-message-placeholder": "Wie kann ich Dir helfen?",
     "information-disclaimer": "AIS.chat kann Fehler machen. Sei kritisch und überprüfe alle Informationen.",
@@ -205,6 +206,7 @@
     "assistants": "Assistenten",
     "learning-scenarios": "Lernszenarien",
     "characters": "Dialogpartner",
+    "models": "KI-Modelle",
     "help-chat": "Hilfe-Chat",
     "token-points": "Tokenvolumen",
     "chat-search-placeholder": "Chat suchen",
@@ -984,6 +986,44 @@
       "create-dialog-title": "Lernszenario melden",
       "create-dialog-confirm-button-text": "Lernszenario melden",
       "create-dialog-success-message": "Vielen Dank!\nDas Lernszenario wurde gemeldet."
+    }
+  },
+  "models": {
+    "page-title": "KI-Modelle",
+    "title": "KI-Modelle",
+    "eu-banner": "Alle KI-Modelle werden in der EU gehostet und können DSGVO-konform eingesetzt werden.",
+    "columns": {
+      "model": "Modell",
+      "reasoning": "Reasoning",
+      "cost": "Kosten",
+      "select": "Auswahl"
+    },
+    "sort-by": "Nach {column} sortieren",
+    "select-model": "{model} auswählen",
+    "default-tag": "Standard",
+    "reasoning-tooltip": "Durch Reasoning erfolgt zunächst eine schrittweise Analyse. Höheres Reasoning eignet sich für anspruchsvolle Aufgaben, kann aber mehr Zeit und Kosten verursachen.",
+    "cost-tooltip": "Der Kostenfaktor zeigt, wie viel Tokenvolumen ein Modell im Vergleich zum Standardmodell verbraucht. Beim Standardmodell beträgt er 1x.",
+    "cost-factor": "{factor}x",
+    "vendor-tooltip": "Von {vendor} entwickelt",
+    "vendor-unknown": "Hersteller unbekannt",
+    "reasoning": {
+      "none": "Kein",
+      "minimal": "Minimal",
+      "low": "Niedrig",
+      "medium": "Mittel",
+      "high": "Hoch",
+      "xhigh": "Sehr hoch"
+    },
+    "vendors": {
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "google": "Google",
+      "meta": "Meta",
+      "mistral": "Mistral AI",
+      "alibabacloud": "Alibaba Cloud",
+      "microsoft": "Microsoft",
+      "baai": "BAAI",
+      "bfl": "Black Forest Labs"
     }
   }
 }

@@ -35,7 +35,10 @@ vi.mock('@sentry/server-utils', () => ({
   instrumentOpenAiClient: instrumentOpenAiClientMock,
 }));
 
-function createAzureModel(additionalParameters: Record<string, unknown> = {}): AiModel {
+function createAzureModel(
+  additionalParameters: Record<string, unknown> = {},
+  reasoning: AiModel['reasoning'] = null,
+): AiModel {
   return {
     id: 'model-azure',
     name: 'azure-gpt-model',
@@ -48,6 +51,7 @@ function createAzureModel(additionalParameters: Record<string, unknown> = {}): A
         'https://example.openai.azure.com/openai/deployments/chat-deploy?api-version=2024-02-15-preview',
     },
     additionalParameters,
+    reasoning,
     priceMetadata: {
       type: 'text',
       completionTokenPrice: 1,
@@ -81,9 +85,7 @@ describe('Azure Responses chat providers', () => {
         },
       });
 
-      const model = createAzureModel({
-        reasoning: { effort: 'low' },
-      });
+      const model = createAzureModel({}, { effort: 'low' });
       const streamText = constructAzureResponsesStreamFn(model);
       const onComplete = vi.fn();
       const chunks: string[] = [];
