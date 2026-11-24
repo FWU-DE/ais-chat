@@ -32,7 +32,7 @@ export function ModelCostChip({ factor }: { factor: number }) {
 
   return (
     <Chip
-      size="sm"
+      size="default"
       variant={TIER_VARIANT[getCostTier(displayFactor)]}
       label={t('cost-factor', { factor: displayFactor })}
     />
