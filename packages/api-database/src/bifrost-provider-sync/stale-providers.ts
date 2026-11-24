@@ -10,6 +10,8 @@ import type { BifrostProviderConfig, BifrostProviderSyncOptions } from './types'
 export async function deleteStaleManagedProviders(
   providerConfigs: BifrostProviderConfig[],
   options: BifrostProviderSyncOptions,
+  /** Called before each provider deletion request. */
+  onProviderDelete?: () => void,
 ): Promise<void> {
   const configuredProviders = new Set<string>(providerConfigs.map(({ provider }) => provider));
   const existingProviders = await listBifrostProviders({
@@ -24,6 +26,7 @@ export async function deleteStaleManagedProviders(
     .filter((provider): provider is string => !!provider && !configuredProviders.has(provider));
 
   for (const provider of staleProviders) {
+    onProviderDelete?.();
     await deleteBifrostProvider({
       bifrostAdminUrl: options.bifrostAdminUrl!,
       bifrostAdminUsername: options.bifrostAdminUsername,

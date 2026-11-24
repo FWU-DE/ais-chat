@@ -25,12 +25,15 @@ export async function syncBifrostProvider({
   bifrostAdminUsername,
   bifrostAdminPassword,
   providerConfig,
+  onKeyDelete,
   logger,
 }: {
   bifrostAdminUrl: string;
   bifrostAdminUsername?: string;
   bifrostAdminPassword?: string;
   providerConfig: BifrostProviderConfig;
+  /** Called before each key deletion request, so callers learn about deletions even if the sync fails later. */
+  onKeyDelete?: () => void;
   logger?: BifrostProviderSyncLogger;
 }): Promise<void> {
   await ensureBifrostProvider({
@@ -64,16 +67,17 @@ export async function syncBifrostProvider({
   await Promise.all(
     existingKeysBeforeSync
       .filter(({ name, id }) => id && !desiredKeyNames.has(name.toLowerCase()))
-      .map((key) =>
-        deleteBifrostProviderKey({
+      .map((key) => {
+        onKeyDelete?.();
+        return deleteBifrostProviderKey({
           bifrostAdminUrl,
           bifrostAdminUsername,
           bifrostAdminPassword,
           provider: providerConfig.provider,
           keyId: key.id!,
           logger,
-        }),
-      ),
+        });
+      }),
   );
 }
 
