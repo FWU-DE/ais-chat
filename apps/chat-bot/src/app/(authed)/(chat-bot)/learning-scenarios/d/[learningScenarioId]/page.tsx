@@ -68,7 +68,6 @@ export default async function Page(props: PageProps<'/learning-scenarios/d/[lear
             chatId: id,
             title: learningScenario.name,
             downloadConversationEnabled: false,
-            userAndContext,
           },
         }}
       >

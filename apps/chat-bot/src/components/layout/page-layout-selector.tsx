@@ -47,7 +47,6 @@ function ChatPageHeader({
 }) {
   return (
     <ChatHeaderBar
-      userAndContext={layoutConfig.headerConfig.userAndContext}
       chatId={layoutConfig.headerConfig.chatId}
       title={layoutConfig.headerConfig.title}
       downloadConversationEnabled={layoutConfig.headerConfig.downloadConversationEnabled}
