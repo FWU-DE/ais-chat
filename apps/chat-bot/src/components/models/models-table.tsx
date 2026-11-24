@@ -19,6 +19,7 @@ import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 
 import { Badge } from '@/components/common/badge';
+import { NewBadge } from '@/components/common/new-badge';
 import { useLlmModels } from '@/components/providers/llm-model-provider';
 
 import { getCostFactor } from './cost-factor';
@@ -168,7 +169,7 @@ function ModelRow({
               <span id={labelId} data-testid="model-name" className="font-medium">
                 {model.displayName}
               </span>
-              {model.isNew && <Badge text="NEU" />}
+              {model.isNew && <NewBadge />}
               {model.id === defaultModel?.id && (
                 <Badge text={t('default-tag')} variant="neutral" data-testid="model-default-tag" />
               )}
