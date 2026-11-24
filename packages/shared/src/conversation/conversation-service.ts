@@ -155,7 +155,6 @@ export async function getConversationMessageForExport({
   userId: string;
 }) {
   const conversation = await getConversation({ conversationId, userId });
-  // All messages are needed to prepend the text of the turn's tool-call messages.
   const messages = await getConversationMessages({ conversationId, userId });
   const message = mergeToolCallTextIntoFinalMessages(messages).find(
     (candidate) => candidate.id === messageId,

@@ -371,7 +371,7 @@ beforeEach(() => {
             modelName: mainModel.name,
           },
         ],
-        turnMessages: [{ role: 'assistant', content: 'agentic chunk' }],
+        agentLoopMessages: [{ role: 'assistant', content: 'agentic chunk' }],
       });
     },
   );
@@ -539,7 +539,7 @@ describe('sendChatMessage', () => {
           priceInCents: 44,
           modelId: mainModel.id,
           modelUsages: [],
-          turnMessages: [
+          agentLoopMessages: [
             {
               role: 'assistant',
               content: 'Let me look.',

@@ -20,18 +20,19 @@ vi.mock('@sentry/core', () => ({
   startSpan: (options: unknown, callback: unknown) => mockStartSpan(options, callback),
 }));
 
-/** Matches `turnMessages` whose last element is the final assistant message with this text. */
+/** Matches `agentLoopMessages` whose last element is the final assistant message with this text. */
 function endsWithFinalMessage(content: string) {
   return {
-    asymmetricMatch: (turnMessages: Message[]) => {
-      const finalMessage = turnMessages.at(-1);
+    asymmetricMatch: (agentLoopMessages: Message[]) => {
+      const finalMessage = agentLoopMessages.at(-1);
       return (
         finalMessage?.role === 'assistant' &&
         finalMessage.content === content &&
         finalMessage.toolCalls === undefined
       );
     },
-    toString: () => `turnMessages ending with final assistant message ${JSON.stringify(content)}`,
+    toString: () =>
+      `agentLoopMessages ending with final assistant message ${JSON.stringify(content)}`,
   };
 }
 
@@ -115,7 +116,7 @@ describe('agent-loop', () => {
     // Each message keeps only its own text, the final assistant message comes last
     expect(onComplete).toHaveBeenCalledWith(
       expect.objectContaining({
-        turnMessages: [
+        agentLoopMessages: [
           expect.objectContaining({ role: 'assistant', content: 'Hello world.' }),
           expect.objectContaining({
             role: 'tool',
@@ -206,7 +207,7 @@ describe('agent-loop', () => {
     });
 
     expect(onError).not.toHaveBeenCalled();
-    expect(onComplete.mock.calls[0]?.[0].turnMessages).toEqual(
+    expect(onComplete.mock.calls[0]?.[0].agentLoopMessages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           role: 'tool',
@@ -249,7 +250,7 @@ describe('agent-loop', () => {
 
     expect(onComplete).toHaveBeenCalledWith(
       expect.objectContaining({
-        turnMessages: endsWithFinalMessage('Single response.'),
+        agentLoopMessages: endsWithFinalMessage('Single response.'),
       }),
     );
   });
@@ -345,7 +346,7 @@ describe('agent-loop', () => {
 
     expect(onComplete).toHaveBeenCalledWith(
       expect.objectContaining({
-        turnMessages: endsWithFinalMessage('Result after tool.'),
+        agentLoopMessages: endsWithFinalMessage('Result after tool.'),
       }),
     );
   });
@@ -408,7 +409,7 @@ describe('agent-loop', () => {
 
     expect(onComplete).toHaveBeenCalledWith(
       expect.objectContaining({
-        turnMessages: endsWithFinalMessage('Second response.'),
+        agentLoopMessages: endsWithFinalMessage('Second response.'),
       }),
     );
   });
@@ -472,7 +473,7 @@ describe('agent-loop', () => {
 
     expect(onComplete).toHaveBeenCalledWith(
       expect.objectContaining({
-        turnMessages: endsWithFinalMessage('Third.'),
+        agentLoopMessages: endsWithFinalMessage('Third.'),
       }),
     );
   });
@@ -531,17 +532,17 @@ describe('agent-loop', () => {
 
     expect(onError).not.toHaveBeenCalled();
 
-    // Verify onComplete received turnMessages with tool results
-    const turnMessages = onComplete.mock.calls[0]?.[0].turnMessages;
+    // Verify onComplete received agentLoopMessages with tool results
+    const agentLoopMessages = onComplete.mock.calls[0]?.[0].agentLoopMessages;
 
     // Find the first assistant message with tool calls (iteration 1)
-    const firstAssistant = turnMessages.find((msg: Message) => msg.role === 'assistant');
+    const firstAssistant = agentLoopMessages.find((msg: Message) => msg.role === 'assistant');
     expect(firstAssistant).toBeDefined();
     expect(firstAssistant.toolCalls).toHaveLength(10);
 
     // Find tool result messages after the first assistant message
-    const firstAssistantIndex = turnMessages.indexOf(firstAssistant);
-    const toolResultMessages = turnMessages.slice(
+    const firstAssistantIndex = agentLoopMessages.indexOf(firstAssistant);
+    const toolResultMessages = agentLoopMessages.slice(
       firstAssistantIndex + 1,
       firstAssistantIndex + 11,
     );
@@ -862,7 +863,7 @@ describe('agent-loop', () => {
       expect(onComplete).toHaveBeenCalledWith(
         expect.objectContaining({
           // The partial text belongs to the tool-call message, not to the final message.
-          turnMessages: [
+          agentLoopMessages: [
             expect.objectContaining({ role: 'assistant', content: 'Partial answer.' }),
             expect.objectContaining({ role: 'tool', toolCallId: 'call_123' }),
             { role: 'assistant', content: '' },
@@ -945,7 +946,7 @@ describe('agent-loop', () => {
       expect(mockGenerateAgenticStreamWithBilling).toHaveBeenCalledTimes(1);
       expect(onError).not.toHaveBeenCalled();
       expect(onComplete).toHaveBeenCalledWith(
-        expect.objectContaining({ turnMessages: endsWithFinalMessage('Partial answer.') }),
+        expect.objectContaining({ agentLoopMessages: endsWithFinalMessage('Partial answer.') }),
       );
     });
 
@@ -978,7 +979,7 @@ describe('agent-loop', () => {
 
       expect(onError).not.toHaveBeenCalled();
       expect(onComplete).toHaveBeenCalledWith(
-        expect.objectContaining({ turnMessages: endsWithFinalMessage('Partial.') }),
+        expect.objectContaining({ agentLoopMessages: endsWithFinalMessage('Partial.') }),
       );
     });
 
@@ -1055,7 +1056,7 @@ describe('agent-loop', () => {
       expect(onError).not.toHaveBeenCalled();
       expect(onComplete).toHaveBeenCalledWith(
         expect.objectContaining({
-          turnMessages: endsWithFinalMessage(''),
+          agentLoopMessages: endsWithFinalMessage(''),
           priceInCents: 7,
           modelUsages: [{ modelId: 'test-model', usage, priceInCents: 7 }],
         }),

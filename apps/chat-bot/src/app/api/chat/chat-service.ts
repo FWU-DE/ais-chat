@@ -506,19 +506,19 @@ export async function sendChatMessage({
   async function persistAssistantMessage({
     usage,
     priceInCents,
-    turnMessages,
+    agentLoopMessages,
     modelUsages,
     reasoningSummary,
   }: {
     usage: TokenUsage;
     priceInCents: number;
-    turnMessages: AiCoreMessage[];
+    agentLoopMessages: AiCoreMessage[];
     modelUsages: ModelUsage[];
     reasoningSummary?: string;
   }) {
-    const finalMessageIndex = turnMessages.length - 1;
+    const finalMessageIndex = agentLoopMessages.length - 1;
     // Persist tool call/result messages and the final assistant message in one query
-    const messagesToInsert = turnMessages.map((msg, index) => ({
+    const messagesToInsert = agentLoopMessages.map((msg, index) => ({
       // The final assistant message gets the ID that was returned to the client for streaming
       ...(index === finalMessageIndex
         ? { id: assistantMessageId, reasoningSummary: reasoningSummary ?? null }
@@ -578,14 +578,14 @@ export async function sendChatMessage({
     onReasoningSummary: aiActivity.onReasoningSummary,
     onToolCalls: aiActivity.onToolCalls,
     onToolResult: aiActivity.onToolResult,
-    onComplete: async ({ usage, priceInCents, modelUsages, turnMessages }) => {
+    onComplete: async ({ usage, priceInCents, modelUsages, agentLoopMessages }) => {
       try {
         aiActivity.finish();
         await persistAssistantMessage({
           usage,
           priceInCents,
           modelUsages,
-          turnMessages,
+          agentLoopMessages,
           reasoningSummary: aiActivity.getReasoningSummary(),
         });
         done();

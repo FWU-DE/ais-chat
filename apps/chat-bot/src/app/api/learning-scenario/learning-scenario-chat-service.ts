@@ -262,12 +262,12 @@ export async function sendLearningScenarioMessage({
     onReasoningSummary: aiActivity.onReasoningSummary,
     onToolCalls: aiActivity.onToolCalls,
     onToolResult: aiActivity.onToolResult,
-    onComplete: async ({ usage, priceInCents, modelUsages, turnMessages }) => {
+    onComplete: async ({ usage, priceInCents, modelUsages, agentLoopMessages }) => {
       try {
         aiActivity.finish();
         await sharedChatConversation.persistResponse({
           assistantMessageId,
-          turnMessages,
+          agentLoopMessages,
         });
         await persistUsage({ usage, priceInCents, modelUsages });
         done();

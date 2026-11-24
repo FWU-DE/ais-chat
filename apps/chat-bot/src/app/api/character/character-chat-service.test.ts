@@ -269,7 +269,7 @@ beforeEach(() => {
             modelName: model.name,
           },
         ],
-        turnMessages: [{ role: 'assistant', content: 'shared response' }],
+        agentLoopMessages: [{ role: 'assistant', content: 'shared response' }],
       });
     },
   );

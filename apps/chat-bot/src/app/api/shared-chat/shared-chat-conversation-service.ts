@@ -154,13 +154,13 @@ export async function prepareSharedChatConversation({
     fileIds: [...new Set([...currentFileIds, ...storedFileIds])],
     persistResponse: async ({
       assistantMessageId,
-      turnMessages,
+      agentLoopMessages,
     }: {
       assistantMessageId: string;
-      turnMessages: AiCoreMessage[];
+      agentLoopMessages: AiCoreMessage[];
     }) => {
-      const finalMessageIndex = turnMessages.length - 1;
-      const messagesToPersist = turnMessages.map((message, index) => ({
+      const finalMessageIndex = agentLoopMessages.length - 1;
+      const messagesToPersist = agentLoopMessages.map((message, index) => ({
         // The final assistant message gets the ID that was returned to the client for streaming
         id: index === finalMessageIndex ? assistantMessageId : crypto.randomUUID(),
         conversationId: sharedSessionId,
