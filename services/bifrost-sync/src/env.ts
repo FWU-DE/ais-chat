@@ -1,0 +1,52 @@
+import { createEnv } from '@t3-oss/env-core';
+import { z } from 'zod';
+
+// Names avoid the `BIFROST_*_PORT` / `BIFROST_*_SERVICE_*` pattern: Kubernetes service links
+// for services named `bifrost` or `bifrost-sync` inject variables like `BIFROST_SYNC_PORT=tcp://…`.
+export const env = createEnv({
+  clientPrefix: '',
+  client: {},
+  emptyStringAsUndefined: true,
+  server: {
+    bifrostSyncToken: z.string().min(16),
+    bifrostAdminUsername: z.string(),
+    bifrostAdminPassword: z.string(),
+    restarter: z.enum(['kubernetes', 'docker']).default('kubernetes'),
+    namespace: z.string().optional(),
+    podSelector: z.string(),
+    podPort: z.coerce.number().int().default(8080),
+    expectedReplicas: z.coerce.number().int().min(1),
+    stateConfigMap: z.string().default('bifrost-sync-state'),
+    stateFile: z.string().default('/data/state.json'),
+    dockerSocket: z.string().default('/var/run/docker.sock'),
+    dockerStopTimeoutSeconds: z.coerce.number().int().default(60),
+    verifyProviders: z.enum(['off', 'warn', 'fail']).default('fail'),
+    rolloutTimeoutMs: z.coerce.number().int().default(360_000),
+    evictBackoffMs: z.coerce.number().int().default(2000),
+    pollMs: z.coerce.number().int().default(1000),
+    logLevel: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+    host: z.string().default('0.0.0.0'),
+    port: z.coerce.number().int().default(8080),
+  },
+  runtimeEnv: {
+    bifrostSyncToken: process.env.BIFROST_SYNC_TOKEN,
+    bifrostAdminUsername: process.env.BIFROST_ADMIN_USERNAME,
+    bifrostAdminPassword: process.env.BIFROST_ADMIN_PASSWORD,
+    restarter: process.env.RESTARTER,
+    namespace: process.env.NAMESPACE,
+    podSelector: process.env.POD_SELECTOR,
+    podPort: process.env.POD_PORT,
+    expectedReplicas: process.env.EXPECTED_REPLICAS,
+    stateConfigMap: process.env.STATE_CONFIGMAP,
+    stateFile: process.env.STATE_FILE,
+    dockerSocket: process.env.DOCKER_SOCKET,
+    dockerStopTimeoutSeconds: process.env.DOCKER_STOP_TIMEOUT_SECONDS,
+    verifyProviders: process.env.VERIFY_PROVIDERS,
+    rolloutTimeoutMs: process.env.ROLLOUT_TIMEOUT_MS,
+    evictBackoffMs: process.env.EVICT_BACKOFF_MS,
+    pollMs: process.env.POLL_MS,
+    logLevel: process.env.LOG_LEVEL,
+    host: process.env.HOST,
+    port: process.env.PORT,
+  },
+});
