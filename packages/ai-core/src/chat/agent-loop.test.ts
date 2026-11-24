@@ -20,6 +20,21 @@ vi.mock('@sentry/core', () => ({
   startSpan: (options: unknown, callback: unknown) => mockStartSpan(options, callback),
 }));
 
+/** Matches `turnMessages` whose last element is the final assistant message with this text. */
+function endsWithFinalMessage(content: string) {
+  return {
+    asymmetricMatch: (turnMessages: Message[]) => {
+      const finalMessage = turnMessages.at(-1);
+      return (
+        finalMessage?.role === 'assistant' &&
+        finalMessage.content === content &&
+        finalMessage.toolCalls === undefined
+      );
+    },
+    toString: () => `turnMessages ending with final assistant message ${JSON.stringify(content)}`,
+  };
+}
+
 describe('agent-loop', () => {
   const usage: TokenUsage = {
     promptTokens: 10,
@@ -97,17 +112,18 @@ describe('agent-loop', () => {
     const allChunks = onTextChunk.mock.calls.map((call) => call[0]).join('');
     expect(allChunks).toBe('Hello world.\n\nMore info.');
 
-    // Verify onComplete received the correct fullText
+    // Each message keeps only its own text, the final assistant message comes last
     expect(onComplete).toHaveBeenCalledWith(
       expect.objectContaining({
-        fullText: 'Hello world.\n\nMore info.',
-        agentLoopMessages: expect.arrayContaining([
+        turnMessages: [
+          expect.objectContaining({ role: 'assistant', content: 'Hello world.' }),
           expect.objectContaining({
             role: 'tool',
             content: '{"value":"tool result"}',
             toolCallId: 'call_123',
           }),
-        ]),
+          { role: 'assistant', content: 'More info.' },
+        ],
       }),
     );
     expect(onToolResult).toHaveBeenCalledWith({
@@ -190,7 +206,7 @@ describe('agent-loop', () => {
     });
 
     expect(onError).not.toHaveBeenCalled();
-    expect(onComplete.mock.calls[0]?.[0].agentLoopMessages).toEqual(
+    expect(onComplete.mock.calls[0]?.[0].turnMessages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           role: 'tool',
@@ -233,7 +249,7 @@ describe('agent-loop', () => {
 
     expect(onComplete).toHaveBeenCalledWith(
       expect.objectContaining({
-        fullText: 'Single response.',
+        turnMessages: endsWithFinalMessage('Single response.'),
       }),
     );
   });
@@ -329,7 +345,7 @@ describe('agent-loop', () => {
 
     expect(onComplete).toHaveBeenCalledWith(
       expect.objectContaining({
-        fullText: 'Result after tool.',
+        turnMessages: endsWithFinalMessage('Result after tool.'),
       }),
     );
   });
@@ -392,7 +408,7 @@ describe('agent-loop', () => {
 
     expect(onComplete).toHaveBeenCalledWith(
       expect.objectContaining({
-        fullText: 'First response.\n\nSecond response.',
+        turnMessages: endsWithFinalMessage('Second response.'),
       }),
     );
   });
@@ -456,7 +472,7 @@ describe('agent-loop', () => {
 
     expect(onComplete).toHaveBeenCalledWith(
       expect.objectContaining({
-        fullText: 'First.\n\nSecond.\n\nThird.',
+        turnMessages: endsWithFinalMessage('Third.'),
       }),
     );
   });
@@ -515,17 +531,17 @@ describe('agent-loop', () => {
 
     expect(onError).not.toHaveBeenCalled();
 
-    // Verify onComplete received agentLoopMessages with tool results
-    const agentLoopMessages = onComplete.mock.calls[0]?.[0].agentLoopMessages;
+    // Verify onComplete received turnMessages with tool results
+    const turnMessages = onComplete.mock.calls[0]?.[0].turnMessages;
 
     // Find the first assistant message with tool calls (iteration 1)
-    const firstAssistant = agentLoopMessages.find((msg: Message) => msg.role === 'assistant');
+    const firstAssistant = turnMessages.find((msg: Message) => msg.role === 'assistant');
     expect(firstAssistant).toBeDefined();
     expect(firstAssistant.toolCalls).toHaveLength(10);
 
     // Find tool result messages after the first assistant message
-    const firstAssistantIndex = agentLoopMessages.indexOf(firstAssistant);
-    const toolResultMessages = agentLoopMessages.slice(
+    const firstAssistantIndex = turnMessages.indexOf(firstAssistant);
+    const toolResultMessages = turnMessages.slice(
       firstAssistantIndex + 1,
       firstAssistantIndex + 11,
     );
@@ -844,7 +860,14 @@ describe('agent-loop', () => {
       expect(onError).not.toHaveBeenCalled();
       expect(mockGenerateAgenticStreamWithBilling).toHaveBeenCalledTimes(1);
       expect(onComplete).toHaveBeenCalledWith(
-        expect.objectContaining({ fullText: 'Partial answer.' }),
+        expect.objectContaining({
+          // The partial text belongs to the tool-call message, not to the final message.
+          turnMessages: [
+            expect.objectContaining({ role: 'assistant', content: 'Partial answer.' }),
+            expect.objectContaining({ role: 'tool', toolCallId: 'call_123' }),
+            { role: 'assistant', content: '' },
+          ],
+        }),
       );
     });
 
@@ -922,7 +945,7 @@ describe('agent-loop', () => {
       expect(mockGenerateAgenticStreamWithBilling).toHaveBeenCalledTimes(1);
       expect(onError).not.toHaveBeenCalled();
       expect(onComplete).toHaveBeenCalledWith(
-        expect.objectContaining({ fullText: 'Partial answer.' }),
+        expect.objectContaining({ turnMessages: endsWithFinalMessage('Partial answer.') }),
       );
     });
 
@@ -954,7 +977,9 @@ describe('agent-loop', () => {
       });
 
       expect(onError).not.toHaveBeenCalled();
-      expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({ fullText: 'Partial.' }));
+      expect(onComplete).toHaveBeenCalledWith(
+        expect.objectContaining({ turnMessages: endsWithFinalMessage('Partial.') }),
+      );
     });
 
     it('reports nothing when the stream throws after an abort without any text', async () => {
@@ -1030,7 +1055,7 @@ describe('agent-loop', () => {
       expect(onError).not.toHaveBeenCalled();
       expect(onComplete).toHaveBeenCalledWith(
         expect.objectContaining({
-          fullText: '',
+          turnMessages: endsWithFinalMessage(''),
           priceInCents: 7,
           modelUsages: [{ modelId: 'test-model', usage, priceInCents: 7 }],
         }),

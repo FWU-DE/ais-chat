@@ -18,7 +18,7 @@ import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
 import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
 import type { ChatMessage as Message } from '@/types/chat';
-import { convertMessageModelToMessage } from '@/utils/chat/messages';
+import { convertMessageModelToDisplayMessages } from '@/utils/chat/messages';
 import { parseSearchParams } from '@/utils/parse-search-params';
 
 export const dynamic = 'force-dynamic';
@@ -62,7 +62,7 @@ export default async function Page(
     handleErrorInServerComponent(new NotFoundError('Conversation not found'));
   }
 
-  const dbMessages = convertMessageModelToMessage(rawChatMessages);
+  const dbMessages = convertMessageModelToDisplayMessages(rawChatMessages);
 
   // Prepend the character's initial message since it is not persisted in DB
   const chatMessages: Message[] = character.initialMessage

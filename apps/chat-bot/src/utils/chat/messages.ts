@@ -1,4 +1,5 @@
 import type { ToolErrorResult, ToolResult } from '@ais-chat/ai-core/chat/types';
+import { mergeToolCallTextIntoFinalMessages } from '@shared/conversation/merge-tool-call-text';
 import { ConversationMessageModel } from '@shared/db/types';
 import { logError } from '@shared/logging/logging';
 
@@ -109,4 +110,15 @@ export function convertMessageModelToMessage(
       toolCallId: message.toolCallId ?? undefined,
     };
   });
+}
+
+/**
+ * Converts database messages for rendering in the chat UI. Unlike `convertMessageModelToMessage`,
+ * the final assistant message of each turn also contains the text of the turn's tool-call
+ * messages, matching what was streamed. Do not use this result as LLM history.
+ */
+export function convertMessageModelToDisplayMessages(
+  messages: Array<ConversationMessageModel>,
+): Array<ChatMessage> {
+  return convertMessageModelToMessage(mergeToolCallTextIntoFinalMessages(messages));
 }

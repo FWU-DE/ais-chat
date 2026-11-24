@@ -55,12 +55,16 @@ type RunAgentLoopParams = {
     result: ToolResult | ToolErrorResult;
   }) => void;
   onComplete: (result: {
-    fullText: string;
     usage: TokenUsage;
     priceInCents: number;
     modelId: string;
     modelUsages: ModelUsage[];
-    agentLoopMessages: AiCoreMessage[];
+    /**
+     * All messages generated in this turn: assistant tool-call messages, tool results and,
+     * always as the last element, the final assistant message without tool calls.
+     * Its content may be empty, e.g. when the run was aborted after a tool call.
+     */
+    turnMessages: AiCoreMessage[];
   }) => void;
   /**
    * Receives whatever was billed before the failure, so a partially completed generation is
@@ -92,6 +96,7 @@ export function runAgentLoop({
 }: RunAgentLoopParams): void {
   void (async () => {
     let fullText = '';
+    let finalMessageText = '';
     let lastModelId = modelSelection.modelIds[0];
     const modelUsages: ModelUsage[] = [];
     const loopMessages = [...messages];
@@ -112,11 +117,13 @@ export function runAgentLoop({
     const complete = () => {
       recordOutcome(abortSignal?.aborted ? 'aborted' : 'success');
       onComplete({
-        fullText,
         ...sumModelUsages(modelUsages),
         modelId: lastModelId,
         modelUsages,
-        agentLoopMessages: loopMessages.slice(messages.length),
+        turnMessages: [
+          ...loopMessages.slice(messages.length),
+          { role: 'assistant', content: finalMessageText },
+        ],
       });
     };
 
@@ -205,17 +212,20 @@ export function runAgentLoop({
               if (!streamCompleted && iterationText.length > 0) {
                 // Preserve partial output when the provider stream is interrupted.
                 fullText += iterationText;
+                finalMessageText = iterationText;
               }
             }
 
             if (pendingToolCalls.length === 0 && overBudgetToolCalls.length === 0) {
               fullText += iterationText;
+              finalMessageText = iterationText;
               break;
             }
 
             if (abortSignal?.aborted) {
               if (iterationText.length > 0 && streamCompleted) {
                 fullText += iterationText;
+                finalMessageText = iterationText;
               }
               break;
             }

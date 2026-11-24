@@ -14,7 +14,7 @@ import Chat from '@/components/chat/chat';
 import Logo from '@/components/common/logo';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
-import { convertMessageModelToMessage } from '@/utils/chat/messages';
+import { convertMessageModelToDisplayMessages } from '@/utils/chat/messages';
 import { parseSearchParams } from '@/utils/parse-search-params';
 
 export const dynamic = 'force-dynamic';
@@ -62,7 +62,7 @@ export default async function Page(props: PageProps<'/d/[conversationId]'>) {
   const currentModel =
     searchParams.model ?? lastUsedModelInChat ?? user.lastUsedModel ?? defaultModelName;
 
-  const convertedMessages = convertMessageModelToMessage(messages);
+  const convertedMessages = convertMessageModelToDisplayMessages(messages);
   const webSourceMapping = new Map<string, WebSource[]>();
   const logoElement = <Logo logoPath={userAndContext.federalState.pictureUrls?.logo} />;
 

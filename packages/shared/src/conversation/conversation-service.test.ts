@@ -1,9 +1,5 @@
 import { dbGetCharacterById } from '@shared/db/functions/character';
-import {
-  dbGetConversationById,
-  dbGetConversationMessageById,
-  dbGetConversationMessages,
-} from '@shared/db/functions/chat';
+import { dbGetConversationById, dbGetConversationMessages } from '@shared/db/functions/chat';
 import { dbGetRelatedFiles } from '@shared/db/functions/files';
 import { ConversationModel } from '@shared/db/types';
 import { ForbiddenError, NotFoundError } from '@shared/error';
@@ -19,7 +15,6 @@ import {
 
 vi.mock('../db/functions/chat', () => ({
   dbGetConversationById: vi.fn(),
-  dbGetConversationMessageById: vi.fn(),
   dbGetConversationMessages: vi.fn(),
 }));
 
@@ -34,9 +29,6 @@ vi.mock('@shared/db/functions/files', () => ({
 describe('conversation-service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (
-      dbGetConversationMessageById as MockedFunction<typeof dbGetConversationMessageById>
-    ).mockResolvedValue(undefined);
     (dbGetRelatedFiles as MockedFunction<typeof dbGetRelatedFiles>).mockResolvedValue(new Map());
   });
 
@@ -218,8 +210,8 @@ describe('conversation-service', () => {
       };
 
       (
-        dbGetConversationMessageById as MockedFunction<typeof dbGetConversationMessageById>
-      ).mockResolvedValue(message as never);
+        dbGetConversationMessages as MockedFunction<typeof dbGetConversationMessages>
+      ).mockResolvedValue([message] as never);
       (dbGetRelatedFiles as MockedFunction<typeof dbGetRelatedFiles>).mockResolvedValue(
         fileMapping as never,
       );
@@ -248,17 +240,55 @@ describe('conversation-service', () => {
       } as ConversationModel);
 
       (
-        dbGetConversationMessageById as MockedFunction<typeof dbGetConversationMessageById>
-      ).mockResolvedValue({
-        id: messageId,
-        role: 'tool',
-        content: '{"chunks":[],"error":"No matching chunks found."}',
-        toolCallId: 'call-1',
-      } as never);
+        dbGetConversationMessages as MockedFunction<typeof dbGetConversationMessages>
+      ).mockResolvedValue([
+        {
+          id: messageId,
+          role: 'tool',
+          content: '{"chunks":[],"error":"No matching chunks found."}',
+          toolCallId: 'call-1',
+        },
+      ] as never);
 
       await expect(
         getConversationMessageForExport({ conversationId, messageId, userId }),
       ).rejects.toThrowError(NotFoundError);
+    });
+
+    it('prepends the text of the turn tool-call messages to the final assistant message', async () => {
+      const userId = generateUUID();
+      const conversationId = generateUUID();
+      const messageId = generateUUID();
+
+      (dbGetConversationById as MockedFunction<typeof dbGetConversationById>).mockResolvedValue({
+        id: conversationId,
+        userId,
+      } as ConversationModel);
+      (
+        dbGetConversationMessages as MockedFunction<typeof dbGetConversationMessages>
+      ).mockResolvedValue([
+        { id: generateUUID(), role: 'user', content: 'Wetter?', toolCallId: null },
+        {
+          id: generateUUID(),
+          role: 'assistant',
+          content: 'Ich schaue nach.',
+          toolCalls: [{ id: 'call-1', name: 'get_weather', arguments: '{}' }],
+          toolCallId: null,
+          isLegacyAggregatedContent: false,
+        },
+        { id: generateUUID(), role: 'tool', content: '{"temp":12}', toolCallId: 'call-1' },
+        {
+          id: messageId,
+          role: 'assistant',
+          content: 'Es sind 12 Grad.',
+          toolCallId: null,
+          isLegacyAggregatedContent: false,
+        },
+      ] as never);
+
+      const result = await getConversationMessageForExport({ conversationId, messageId, userId });
+
+      expect(result.message.content).toBe('Ich schaue nach.\n\nEs sind 12 Grad.');
     });
   });
 });

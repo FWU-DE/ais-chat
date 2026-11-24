@@ -1,4 +1,5 @@
 import type { Message as AiCoreMessage } from '@ais-chat/ai-core';
+import { mergeToolCallTextIntoFinalMessages } from '@shared/conversation/merge-tool-call-text';
 import { dbGetFilesInIds, linkFilesToSharedChatMessage } from '@shared/db/functions/files';
 import {
   dbDeleteRegeneratedSharedChatMessages,
@@ -56,7 +57,7 @@ export async function loadSharedChatConversationMessages({
   );
 
   return {
-    messages: messages
+    messages: mergeToolCallTextIntoFinalMessages(messages)
       .filter((message) => !isToolRelatedMessage(message))
       .map((message) => ({
         id: message.id,
@@ -153,32 +154,22 @@ export async function prepareSharedChatConversation({
     fileIds: [...new Set([...currentFileIds, ...storedFileIds])],
     persistResponse: async ({
       assistantMessageId,
-      fullText,
-      agentLoopMessages,
+      turnMessages,
     }: {
       assistantMessageId: string;
-      fullText: string;
-      agentLoopMessages: AiCoreMessage[];
+      turnMessages: AiCoreMessage[];
     }) => {
-      const messagesToPersist = [
-        ...agentLoopMessages.map((message) => ({
-          id: crypto.randomUUID(),
-          conversationId: sharedSessionId,
-          ...message,
-          content: message.content,
-          role: message.role,
-          toolCalls: message.toolCalls ?? null,
-          toolCallId: message.toolCallId ?? null,
-        })),
-        {
-          id: assistantMessageId,
-          conversationId: sharedSessionId,
-          role: 'assistant' as const,
-          content: fullText,
-          toolCalls: null,
-          toolCallId: null,
-        },
-      ];
+      const finalMessageIndex = turnMessages.length - 1;
+      const messagesToPersist = turnMessages.map((message, index) => ({
+        // The final assistant message gets the ID that was returned to the client for streaming
+        id: index === finalMessageIndex ? assistantMessageId : crypto.randomUUID(),
+        conversationId: sharedSessionId,
+        ...message,
+        content: message.content,
+        role: message.role,
+        toolCalls: message.toolCalls ?? null,
+        toolCallId: message.toolCallId ?? null,
+      }));
 
       await dbInsertSharedChatContentBatch(
         messagesToPersist.map((message, index) => ({

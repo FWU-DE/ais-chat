@@ -1,7 +1,7 @@
+import { mergeToolCallTextIntoFinalMessages } from '@shared/conversation/merge-tool-call-text';
 import { dbGetCharacterById } from '@shared/db/functions/character';
 import {
   dbGetConversationById,
-  dbGetConversationMessageById,
   dbGetConversationMessages,
   dbGetConversations,
   dbUpdateConversationTitle,
@@ -134,7 +134,9 @@ export async function getConversationAndMessagesForExport({
   }
   return {
     conversation,
-    messages: messages.filter((message) => !isToolRelatedMessage(message)),
+    messages: mergeToolCallTextIntoFinalMessages(messages).filter(
+      (message) => !isToolRelatedMessage(message),
+    ),
     fileMapping,
   };
 }
@@ -153,7 +155,11 @@ export async function getConversationMessageForExport({
   userId: string;
 }) {
   const conversation = await getConversation({ conversationId, userId });
-  const message = await dbGetConversationMessageById({ conversationId, messageId, userId });
+  // All messages are needed to prepend the text of the turn's tool-call messages.
+  const messages = await getConversationMessages({ conversationId, userId });
+  const message = mergeToolCallTextIntoFinalMessages(messages).find(
+    (candidate) => candidate.id === messageId,
+  );
 
   if (!message) {
     throw new NotFoundError('Conversation message not found');
