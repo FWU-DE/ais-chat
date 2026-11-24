@@ -20,22 +20,6 @@ vi.mock('@sentry/core', () => ({
   startSpan: (options: unknown, callback: unknown) => mockStartSpan(options, callback),
 }));
 
-/** Matches `agentLoopMessages` whose last element is the final assistant message with this text. */
-function endsWithFinalMessage(content: string) {
-  return {
-    asymmetricMatch: (agentLoopMessages: Message[]) => {
-      const finalMessage = agentLoopMessages.at(-1);
-      return (
-        finalMessage?.role === 'assistant' &&
-        finalMessage.content === content &&
-        finalMessage.toolCalls === undefined
-      );
-    },
-    toString: () =>
-      `agentLoopMessages ending with final assistant message ${JSON.stringify(content)}`,
-  };
-}
-
 describe('agent-loop', () => {
   const usage: TokenUsage = {
     promptTokens: 10,
@@ -248,11 +232,10 @@ describe('agent-loop', () => {
     const allChunks = onTextChunk.mock.calls.map((call) => call[0]).join('');
     expect(allChunks).toBe('Single response.');
 
-    expect(onComplete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        agentLoopMessages: endsWithFinalMessage('Single response.'),
-      }),
-    );
+    expect(onComplete.mock.calls[0]?.[0].agentLoopMessages.at(-1)).toEqual({
+      role: 'assistant',
+      content: 'Single response.',
+    });
   });
 
   it('forwards each text delta before the provider stream completes', async () => {
@@ -344,11 +327,10 @@ describe('agent-loop', () => {
     const allChunks = onTextChunk.mock.calls.map((call) => call[0]).join('');
     expect(allChunks).toBe('Result after tool.');
 
-    expect(onComplete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        agentLoopMessages: endsWithFinalMessage('Result after tool.'),
-      }),
-    );
+    expect(onComplete.mock.calls[0]?.[0].agentLoopMessages.at(-1)).toEqual({
+      role: 'assistant',
+      content: 'Result after tool.',
+    });
   });
 
   it('does not double-space when model already ends with double newlines', async () => {
@@ -407,11 +389,10 @@ describe('agent-loop', () => {
     // Should NOT have quadruple newlines
     expect(allChunks).toBe('First response.\n\nSecond response.');
 
-    expect(onComplete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        agentLoopMessages: endsWithFinalMessage('Second response.'),
-      }),
-    );
+    expect(onComplete.mock.calls[0]?.[0].agentLoopMessages.at(-1)).toEqual({
+      role: 'assistant',
+      content: 'Second response.',
+    });
   });
 
   it('inserts separators between all three iterations when all produce text', async () => {
@@ -471,11 +452,10 @@ describe('agent-loop', () => {
     const allChunks = onTextChunk.mock.calls.map((call) => call[0]).join('');
     expect(allChunks).toBe('First.\n\nSecond.\n\nThird.');
 
-    expect(onComplete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        agentLoopMessages: endsWithFinalMessage('Third.'),
-      }),
-    );
+    expect(onComplete.mock.calls[0]?.[0].agentLoopMessages.at(-1)).toEqual({
+      role: 'assistant',
+      content: 'Third.',
+    });
   });
 
   it('returns error responses for over-budget tool calls', async () => {
@@ -945,9 +925,10 @@ describe('agent-loop', () => {
       expect(handler).not.toHaveBeenCalled();
       expect(mockGenerateAgenticStreamWithBilling).toHaveBeenCalledTimes(1);
       expect(onError).not.toHaveBeenCalled();
-      expect(onComplete).toHaveBeenCalledWith(
-        expect.objectContaining({ agentLoopMessages: endsWithFinalMessage('Partial answer.') }),
-      );
+      expect(onComplete.mock.calls[0]?.[0].agentLoopMessages.at(-1)).toEqual({
+        role: 'assistant',
+        content: 'Partial answer.',
+      });
     });
 
     it('keeps the partial text when the stream throws because of the abort', async () => {
@@ -978,9 +959,10 @@ describe('agent-loop', () => {
       });
 
       expect(onError).not.toHaveBeenCalled();
-      expect(onComplete).toHaveBeenCalledWith(
-        expect.objectContaining({ agentLoopMessages: endsWithFinalMessage('Partial.') }),
-      );
+      expect(onComplete.mock.calls[0]?.[0].agentLoopMessages.at(-1)).toEqual({
+        role: 'assistant',
+        content: 'Partial.',
+      });
     });
 
     it('reports nothing when the stream throws after an abort without any text', async () => {
@@ -1056,11 +1038,14 @@ describe('agent-loop', () => {
       expect(onError).not.toHaveBeenCalled();
       expect(onComplete).toHaveBeenCalledWith(
         expect.objectContaining({
-          agentLoopMessages: endsWithFinalMessage(''),
           priceInCents: 7,
           modelUsages: [{ modelId: 'test-model', usage, priceInCents: 7 }],
         }),
       );
+      expect(onComplete.mock.calls[0]?.[0].agentLoopMessages.at(-1)).toEqual({
+        role: 'assistant',
+        content: '',
+      });
     });
   });
 
