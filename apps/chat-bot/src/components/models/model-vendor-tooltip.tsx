@@ -1,10 +1,9 @@
 'use client';
 
 import { VENDORS } from '@ais-chat/shared-core/schemas/llm-model-vendor';
+import { ModelVendorIcon } from '@ui/components/icons/model-vendor-icon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui/components/tooltip';
 import { useTranslations } from 'next-intl';
-
-import { ModelVendorIcon } from '../icons/vendors/model-vendor-icon';
 
 export function ModelVendorTooltip({ vendor }: { vendor: string | null }) {
   const t = useTranslations('models');
