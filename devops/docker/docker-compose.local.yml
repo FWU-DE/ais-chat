@@ -187,6 +187,46 @@ services:
       retries: 30
       start_period: 2s
 
+  # Applies provider config to bifrost and restarts it afterwards (see services/bifrost-sync/README.md).
+  # Local only: the Docker socket gives root on the host, so it is mounted nowhere else. The socket
+  # is owned by root, hence `user: root`.
+  bifrost-sync:
+    build:
+      context: ../..
+      dockerfile: services/bifrost-sync/Dockerfile
+    restart: unless-stopped
+    user: '0:0'
+    depends_on:
+      bifrost:
+        condition: service_healthy
+    environment:
+      BIFROST_SYNC_TOKEN: local-dev-bifrost-sync-token
+      BIFROST_ADMIN_USERNAME: admin
+      BIFROST_ADMIN_PASSWORD: admin
+      RESTARTER: docker
+      POD_SELECTOR: com.docker.compose.project=ais-chat,com.docker.compose.service=bifrost
+      POD_PORT: '8080'
+      EXPECTED_REPLICAS: '1'
+      STATE_FILE: /data/state.json
+      LOG_LEVEL: info
+    ports:
+      - '127.0.0.1:8082:8080'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - bifrost_sync_data:/data
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8080/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
   calculator:
     build:
       context: ../..
@@ -242,6 +282,7 @@ services:
 
 volumes:
   bifrost_data:
+  bifrost_sync_data:
   keycloak_data:
   postgres_data:
   valkey_data:
