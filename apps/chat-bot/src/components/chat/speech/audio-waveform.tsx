@@ -195,7 +195,7 @@ export function AudioWaveform({
         )}
       </div>
       {isLoading && (
-        <span className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 whitespace-nowrap text-xs text-muted-foreground">
+        <span className="pointer-events-none block text-center text-xs text-muted-foreground">
           {t('audio-waveform-loading')}
         </span>
       )}
