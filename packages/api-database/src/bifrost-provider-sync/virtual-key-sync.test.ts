@@ -1,18 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { dbGetAllProviderKeysWithModels } from '../functions';
-import { buildBifrostProviderConfigs } from './provider-config-builder';
 import type { BifrostProviderConfig, BifrostVirtualKey } from './types';
 import { listBifrostVirtualKeys, updateBifrostVirtualKeyProviders } from './virtual-key-client';
 import { ensureBifrostVirtualKeyProviderAccess } from './virtual-key-sync';
-
-vi.mock('../functions', () => ({
-  dbGetAllProviderKeysWithModels: vi.fn(),
-}));
-
-vi.mock('./provider-config-builder', () => ({
-  buildBifrostProviderConfigs: vi.fn(),
-}));
 
 vi.mock('./virtual-key-client', () => ({
   listBifrostVirtualKeys: vi.fn(),
@@ -38,6 +28,7 @@ function options() {
     bifrostAdminUrl: 'http://localhost:8080',
     bifrostAdminUsername: 'admin',
     bifrostAdminPassword: 'secret',
+    providerConfigs: authoritativeProviderConfigs,
   };
 }
 
@@ -47,8 +38,6 @@ function getUpdateCallArgs(callIndex = 0): Parameters<typeof updateBifrostVirtua
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(dbGetAllProviderKeysWithModels).mockResolvedValue([]);
-  vi.mocked(buildBifrostProviderConfigs).mockReturnValue(authoritativeProviderConfigs);
   vi.mocked(updateBifrostVirtualKeyProviders).mockResolvedValue(undefined);
 });
 

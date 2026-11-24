@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./bifrost-provider-sync": "./src/bifrost-provider-sync/index.ts",
+    "./bifrost-provider-sync/core": "./src/bifrost-provider-sync/core.ts",
     "./bifrost-provider-sync/error": "./src/bifrost-provider-sync/error.ts",
     "./llm-model": "./src/llm-model/index.ts",
     "./memory-cache": "./src/memory-cache.ts",
