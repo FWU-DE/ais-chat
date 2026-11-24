@@ -56,9 +56,10 @@ function SortableHead({
 
   return (
     <TableHead
+      className="whitespace-normal @min-[28rem]:whitespace-nowrap"
       aria-sort={!isActive ? 'none' : sort.direction === 'asc' ? 'ascending' : 'descending'}
     >
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-x-1 @min-[28rem]:flex-nowrap">
         <button
           type="button"
           data-testid={`models-sort-${sortKey}`}
@@ -91,8 +92,12 @@ export function ModelsTable() {
   }
 
   return (
-    <RadioGroup value={selectedModel?.name ?? ''} onValueChange={handleSelect} className="block">
-      <Table>
+    <RadioGroup
+      value={selectedModel?.name ?? ''}
+      onValueChange={handleSelect}
+      className="@container block"
+    >
+      <Table className="min-w-[24rem]">
         <TableHeader>
           <TableRow>
             <TableHead className="w-10">
@@ -161,10 +166,10 @@ function ModelRow({
           onClick={(event) => event.stopPropagation()}
         />
       </TableCell>
-      <TableCell>
+      <TableCell className="w-full max-w-0 whitespace-normal hyphens-auto break-words">
         <div className="flex items-center gap-3">
           <ModelVendorTooltip vendor={model.vendor} />
-          <div className="flex flex-col">
+          <div className="flex min-w-0 flex-col">
             <div className="flex flex-wrap items-center gap-2">
               <span id={labelId} data-testid="model-name" className="font-medium">
                 {model.displayName}
