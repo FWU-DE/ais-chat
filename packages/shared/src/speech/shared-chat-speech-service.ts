@@ -1,6 +1,8 @@
+import { billPrecalculatedSpeechCostsToApiKey } from '@ais-chat/ai-core';
 import { requireTeacherRole } from '@shared/auth/authorization-service';
 import { UserModel } from '@shared/auth/user-model';
 import { dbUpdateTokenUsageByCharacterChatId } from '@shared/db/functions/character';
+import { dbGetFederalState } from '@shared/db/functions/federal-state';
 import { dbUpdateTokenUsageBySharedLearningScenarioId } from '@shared/db/functions/learning-scenario';
 import { ForbiddenError, NotFoundError } from '@shared/error';
 import { FederalStateModel } from '@shared/federal-states/types';
@@ -167,26 +169,80 @@ function createSharedChatSpeechStrategy({
           costsInCent,
         });
       }
+
+      const { apiKeyId } = await dbGetFederalState(context.federalState.id);
+      if (apiKeyId) {
+        await billPrecalculatedSpeechCostsToApiKey({
+          apiKeyId,
+          modelId: model.id,
+          costsInCent,
+        });
+      }
     },
-    reportUsage: async (_params, context, model, result) => {
-      const costsInCent = await result.costsInCent;
-      const common = {
-        user: { ...context.user, federalState: { id: context.federalState.id } },
-        anonymous: true,
-        provider: model.provider,
-        modelName: model.name,
-        promptTokens: 0,
-        completionTokens: 0,
-        costsInCent,
+    storeTextUsage: async (_params, context, usage) => {
+      const usageEntry = {
+        userId: context.user.id,
+        modelId: usage.modelId,
+        completionTokens: usage.completionTokens,
+        promptTokens: usage.promptTokens,
+        costsInCent: usage.costsInCent,
       };
+      if (context.entityType === 'character') {
+        await dbUpdateTokenUsageByCharacterChatId({
+          characterId: context.entity.id,
+          ...usageEntry,
+        });
+      } else {
+        await dbUpdateTokenUsageBySharedLearningScenarioId({
+          learningScenarioId: context.entity.id,
+          ...usageEntry,
+        });
+      }
 
       await sendRabbitmqEvent(
         constructNewMessageEvent(
-          context.entityType === 'character'
-            ? { ...common, character: context.entity as SharedChatCharacter }
-            : { ...common, sharedChat: context.entity as SharedChatLearningScenario },
+          createSharedChatUsageEventProps(context, {
+            provider: usage.provider,
+            modelName: usage.modelName,
+            promptTokens: usage.promptTokens,
+            completionTokens: usage.completionTokens,
+            costsInCent: usage.costsInCent,
+          }),
+        ),
+      );
+    },
+    reportUsage: async (_params, context, model, result) => {
+      await sendRabbitmqEvent(
+        constructNewMessageEvent(
+          createSharedChatUsageEventProps(context, {
+            provider: model.provider,
+            modelName: model.name,
+            promptTokens: 0,
+            completionTokens: 0,
+            costsInCent: await result.costsInCent,
+          }),
         ),
       );
     },
   };
+}
+
+function createSharedChatUsageEventProps(
+  context: SharedChatSpeechContext,
+  usage: {
+    provider: string;
+    modelName: string;
+    promptTokens: number;
+    completionTokens: number;
+    costsInCent: number;
+  },
+) {
+  const common = {
+    user: { ...context.user, federalState: { id: context.federalState.id } },
+    anonymous: true,
+    ...usage,
+  };
+  return context.entityType === 'character'
+    ? { ...common, character: context.entity as SharedChatCharacter }
+    : { ...common, sharedChat: context.entity as SharedChatLearningScenario };
 }

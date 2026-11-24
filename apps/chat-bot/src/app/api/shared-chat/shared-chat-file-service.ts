@@ -1,5 +1,7 @@
 import { dbGetFilesInIds } from '@shared/db/functions/files';
+import { dbGetSharedChatFileConversationIds } from '@shared/db/functions/shared-chat-conversation';
 import { FileModel } from '@shared/db/schema';
+import { ForbiddenError } from '@shared/error';
 import { SharedSessionId, verify } from '@shared/shared-chat';
 
 type SharedRelatedFile = FileModel & { conversationMessageId?: string };
@@ -12,17 +14,11 @@ type SharedRelatedFile = FileModel & { conversationMessageId?: string };
 export async function combineSharedRelatedFiles({
   relatedFileEntities,
   fileIds,
-  inviteCode,
-  entityType,
-  entityId,
   sharedSessionId,
   userMessageId,
 }: {
   relatedFileEntities: FileModel[];
   fileIds?: string[];
-  inviteCode: string;
-  entityType: 'character' | 'learningScenario';
-  entityId: string;
   sharedSessionId?: SharedSessionId;
   userMessageId?: string;
 }): Promise<SharedRelatedFile[]> {
@@ -34,13 +30,14 @@ export async function combineSharedRelatedFiles({
 
   const uploadedFiles = await dbGetFilesInIds(fileIds);
   verify.filesDoNotBelongToAnyUser(uploadedFiles);
-  verify.sharedChatFileOwnershipBySession({
-    files: uploadedFiles,
-    inviteCode,
-    entityType,
-    entityId,
-    sharedSessionId,
-  });
+  const mappedToThisConversation = new Set(
+    (await dbGetSharedChatFileConversationIds(fileIds))
+      .filter((mapping) => mapping.conversationId === sharedSessionId)
+      .map((mapping) => mapping.fileId),
+  );
+  if (uploadedFiles.some((file) => !mappedToThisConversation.has(file.id))) {
+    throw new ForbiddenError('Not authorized to access this file');
+  }
 
   const uploadedFilesWithMessageId: SharedRelatedFile[] = uploadedFiles.map((file) => ({
     ...file,

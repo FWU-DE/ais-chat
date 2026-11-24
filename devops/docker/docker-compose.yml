@@ -6,7 +6,7 @@ services:
   # so that a service is reachable under the same URL from within a container and
   # from the browser
   keycloak:
-    image: quay.io/keycloak/keycloak:26.8.2-0
+    image: quay.io/keycloak/keycloak:26.8.2-3
     restart: unless-stopped
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
@@ -32,7 +32,7 @@ services:
 
   # Fix keycloak volume permissions (runs with uid 1000)
   fix-keycloak-volume-ownership:
-    image: alpine:3.24.3
+    image: alpine:3.24.4
     restart: no
     entrypoint: /bin/sh -c "chown 1000 /keycloak"
     volumes:
@@ -61,7 +61,7 @@ services:
 
   # Valkey (Redis-compatible) for session storage
   valkey:
-    image: ghcr.io/valkey-io/valkey:9.1.3-alpine
+    image: ghcr.io/valkey-io/valkey:9.2.0-alpine
     restart: unless-stopped
     volumes:
       - valkey_data:/data
@@ -97,7 +97,7 @@ services:
 
   # Xberg text extraction service
   xberg:
-    image: ghcr.io/xberg-io/xberg:1.3.9-core
+    image: ghcr.io/xberg-io/xberg:1.4.2-core
     restart: unless-stopped
     environment:
       XBERG_MAX_REQUEST_BODY_BYTES: '26214400'
@@ -119,7 +119,7 @@ services:
   # Shares keycloak's netns so presigned URLs signed for http://localhost:9000 are
   # reachable both from the app containers and from the browser on the host.
   rustfs:
-    image: rustfs/rustfs:1.0.4
+    image: rustfs/rustfs:1.0.6
     restart: unless-stopped
     environment:
       RUSTFS_ADDRESS: 0.0.0.0:9000
@@ -128,6 +128,7 @@ services:
       RUSTFS_ACCESS_KEY: rustfsadmin
       RUSTFS_SECRET_KEY: RustFS-Admin-123456
       RUSTFS_VOLUMES: /data
+      RUSTFS_REGION: eu-de
       RUSTFS_CORS_ALLOWED_ORIGINS: 'http://localhost:3000'
     volumes:
       - rustfs_data:/data
@@ -143,7 +144,7 @@ services:
         condition: service_started
 
   bifrost:
-    image: ghcr.io/maximhq/bifrost:v2.4.0
+    image: ghcr.io/maximhq/bifrost:v2.6.0
     restart: unless-stopped
     environment:
       BIFROST_ADMIN_USERNAME: admin
@@ -195,7 +196,6 @@ services:
       DATABASE_URL: postgresql://admin:test1234@postgres:5432/api_db
 
       # API Configuration
-      API_NAME: ais-chat
       API_KEY: ais-chat-api_api-key
       PORT: 3002
 
@@ -308,6 +308,23 @@ services:
       calculator:
         condition: service_healthy
 
+  # Periodic admin calls (popularity refresh, cleanup), see scheduled-tasks.sh
+  scheduled-tasks:
+    image: curlimages/curl:8.23.0
+    restart: unless-stopped
+    environment:
+      APP_HOSTNAME: localhost
+      PORT: 3000
+      API_KEY: ais-chat-app_api-key
+    # Shares keycloak's netns like ais-chat-app, so the app is reachable on localhost:3000
+    network_mode: service:keycloak
+    entrypoint: ['/bin/sh', '/scheduled-tasks.sh']
+    volumes:
+      - ./scheduled-tasks.sh:/scheduled-tasks.sh:ro
+    depends_on:
+      ais-chat-app:
+        condition: service_healthy
+
   # AIS.chat Admin - Administration interface
   ais-chat-admin:
     image: ghcr.io/fwu-de/ais-chat-admin:latest
@@ -362,7 +379,7 @@ services:
 
   # Initialization container
   ais-chat-init:
-    image: alpine:3.24.3
+    image: alpine:3.24.4
     restart: no
     environment:
       # Database URLs for both databases

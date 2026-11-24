@@ -7,7 +7,7 @@ import {
   dbInsertChatContent,
 } from '@shared/db/functions/chat';
 import { dbDeleteConversationByIdAndUserId } from '@shared/db/functions/conversation';
-import { dbGetFederalStateWithDecryptedApiKeyWithResult } from '@shared/db/functions/federal-state';
+import { dbGetFederalStateWithApiKeyIdWithResult } from '@shared/db/functions/federal-state';
 import {
   dbDeleteFileAndDetachFromConversation,
   dbDetachFilesFromConversationMessages,
@@ -300,17 +300,12 @@ export async function generateImage({
     throw new Error('Prompt is required');
   }
 
-  const [federalStateError, federalStateObject] =
-    await dbGetFederalStateWithDecryptedApiKeyWithResult({
-      federalStateId: user.federalState.id,
-    });
+  const [federalStateError, federalStateObject] = await dbGetFederalStateWithApiKeyIdWithResult({
+    federalStateId: user.federalState.id,
+  });
 
   if (federalStateError !== null) {
     throw new Error(federalStateError.message);
-  }
-
-  if (!federalStateObject.apiKeyId) {
-    throw new Error('Federal state has no API key assigned');
   }
 
   // Get conversation for RabbitMQ event

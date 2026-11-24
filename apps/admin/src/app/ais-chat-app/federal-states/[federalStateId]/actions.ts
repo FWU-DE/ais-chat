@@ -1,12 +1,11 @@
 'use server';
+import { dbGetApiKeysByProjectId } from '@ais-chat/api-database';
 import { runServerAction } from '@shared/actions/run-server-action';
-import { encrypt } from '@shared/db/crypto';
 import {
   federalStateFeatureTogglesSchema,
   FederalStateInsertModel,
   FederalStateUpdateModel,
 } from '@shared/db/schema';
-import { env } from '@shared/env';
 import {
   createFederalState,
   deleteFederalState,
@@ -23,20 +22,20 @@ export async function getFederalStateByIdAction(federalStateId: string) {
   return getFederalStateById(federalStateId);
 }
 
+// API keys of the ais-chat-api project whose id matches the federal state id
+export async function getApiKeyOptionsAction(federalStateId: string) {
+  await requireAdminAuth();
+
+  return dbGetApiKeysByProjectId(federalStateId);
+}
+
 export async function createFederalStateAction(
   data: Omit<FederalStateInsertModel, 'createdAt' | 'featureToggles' | 'encryptedApiKey'>,
-  plainApiKey?: string,
 ) {
   await requireAdminAuth();
 
   return createFederalState({
     ...data,
-    encryptedApiKey: plainApiKey
-      ? encrypt({
-          text: plainApiKey,
-          plainEncryptionKey: env.encryptionKey,
-        })
-      : undefined,
     featureToggles: federalStateFeatureTogglesSchema.parse({}),
   });
 }

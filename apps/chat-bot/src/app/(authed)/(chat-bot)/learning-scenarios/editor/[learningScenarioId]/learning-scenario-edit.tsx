@@ -30,6 +30,7 @@ import { RichText, stripRichTextTags } from '@/components/common/rich-text';
 import { useToast } from '@/components/common/toast';
 import { CustomChatActionDelete } from '@/components/custom-chat/custom-chat-action-delete';
 import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
+import { CustomChatActionFavorite } from '@/components/custom-chat/custom-chat-action-favorite';
 import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
 import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
 import { CustomChatHeaderContent } from '@/components/custom-chat/custom-chat-header-content';
@@ -60,6 +61,7 @@ import {
   DIDACTIC_COMMENTARY_LENGTH_LIMIT,
   LICENSE_INFORMATION_LENGTH_LIMIT,
   SMALL_TEXT_INPUT_FIELDS_LIMIT,
+  STUDENT_EXERCISE_LENGTH_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT,
   TEXT_INPUT_FIELDS_LENGTH_LIMIT_FOR_DETAILED_SETTINGS,
 } from '@/configuration-text-inputs/const';
@@ -114,9 +116,9 @@ function createLearningScenarioFieldValidationConfig(t: LearningScenarioTranslat
       }),
     },
     studentExercise: {
-      maxLength: TEXT_INPUT_FIELDS_LENGTH_LIMIT,
+      maxLength: STUDENT_EXERCISE_LENGTH_LIMIT,
       maxLengthErrorMessage: t('student-exercise-max-length', {
-        maxLength: TEXT_INPUT_FIELDS_LENGTH_LIMIT,
+        maxLength: STUDENT_EXERCISE_LENGTH_LIMIT,
       }),
     },
   };
@@ -165,6 +167,7 @@ export function LearningScenarioEdit({
   isWebSearchAvailable,
   isSpeechAvailable,
   speechVoices,
+  initialIsFavorite,
 }: {
   learningScenario: LearningScenarioOptionalShareDataModel;
   relatedFiles: FileModel[];
@@ -177,6 +180,7 @@ export function LearningScenarioEdit({
   isWebSearchAvailable: boolean;
   isSpeechAvailable: boolean;
   speechVoices: SpeechVoice[];
+  initialIsFavorite: boolean;
 }) {
   useForceReloadOnBrowserBackButton();
   const router = useRouter();
@@ -422,6 +426,10 @@ export function LearningScenarioEdit({
         modalTitle={t('delete-modal-title')}
         modalDescription={t('delete-modal-description')}
       />
+      <CustomChatActionFavorite
+        entityRef={{ entityType: 'learningScenario', entityId: learningScenario.id }}
+        initialIsFavorite={initialIsFavorite}
+      />
     </CustomChatActions>
   );
 
@@ -582,7 +590,7 @@ export function LearningScenarioEdit({
                     testId="learning-scenario-student-exercise-input"
                     onBlur={handleAutoSave}
                     type="textArea"
-                    className="h-27 resize-none"
+                    className="h-27"
                   />
                 </FieldGroup>
               </CardContent>

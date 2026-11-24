@@ -35,8 +35,9 @@ export default async function Page(
     maxBudget,
     usedBudget,
     budgetUsedBySharedChat,
+    isFavorite: initialIsFavorite,
   } = await getLearningScenarioForEditView({
-    learningScenarioId: learningScenarioId,
+    learningScenarioId,
     user,
     federalState,
   }).catch(handleErrorInServerComponent);
@@ -72,6 +73,7 @@ export default async function Page(
         relatedFiles={relatedFiles}
         initialLinks={initialLinks}
         avatarPictureUrl={avatarPictureUrl}
+        initialIsFavorite={initialIsFavorite}
         initialCommunityTemplateRequest={communityTemplateRequest}
         usedBudget={usedBudget ?? 0}
         maxBudget={maxBudget ?? 500}

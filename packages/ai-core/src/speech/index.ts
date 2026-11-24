@@ -1,5 +1,11 @@
+export {
+  billPrecalculatedSpeechCostsToApiKey,
+  billSpeechUsageToApiKey,
+  calculatePriceInCentBySpeechModelAndUsage,
+} from '../api-keys/billing';
+export { generateSpeechStreamByNameWithBilling, generateSpeechStreamWithBilling } from './billing';
 export { generateSpeechById } from './generate';
-export { streamSpeechById } from './generate-stream';
+export { streamSpeechById, streamSsmlSpeechById } from './generate-stream';
 export {
   constructBifrostSpeechGenerationFn,
   constructBifrostStreamingSpeechGenerationFn,

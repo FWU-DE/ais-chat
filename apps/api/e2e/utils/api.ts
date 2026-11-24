@@ -3,7 +3,9 @@ import type { APIRequestContext } from '@playwright/test';
 const API_KEY = process.env.DE_TEST_API_KEY;
 
 if (!API_KEY) {
-  throw new Error('DE_TEST_API_KEY environment variable is required. Set it in apps/api/.env.test');
+  throw new Error(
+    'DE_TEST_API_KEY environment variable is required. Set it in apps/api/.env.local',
+  );
 }
 
 export const authorizationHeader = {
@@ -12,9 +14,17 @@ export const authorizationHeader = {
 
 type ApiModel = {
   name: string;
+  provider?: string;
   isDeleted?: boolean;
   priceMetadata?: {
     type?: string;
+    priceInCentPer1MillionCharacters?: number;
+  };
+  modelConfig?: {
+    voices?: Array<{
+      name: string;
+      displayName?: string;
+    }>;
   };
 };
 
@@ -79,5 +89,14 @@ export async function getImageModel(request: APIRequestContext) {
     request,
     (m) => !m.isDeleted && m.priceMetadata?.type === 'image',
     'No image generation model available',
+  );
+}
+
+/** Returns a speech model. Throws if none available. */
+export async function getSpeechModel(request: APIRequestContext) {
+  return findModel(
+    request,
+    (m) => !m.isDeleted && m.priceMetadata?.type === 'speech',
+    'No speech model available',
   );
 }

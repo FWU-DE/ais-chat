@@ -1,12 +1,11 @@
-import type { LlmModel } from '@ais-chat/api-database';
+import type { SensitiveLlmModel } from '@ais-chat/api-database';
 
 export const MP3_MIME_TYPE = 'audio/mpeg';
 
 export type SpeechMimeType = typeof MP3_MIME_TYPE;
 
 export type SpeechUsage = {
-  inputTextTokens: number;
-  outputAudioTokens: number;
+  characters: number;
 };
 
 export type SpeechCosts = {
@@ -42,4 +41,4 @@ export type SpeechStreamGenerationFn = (args: {
   abortSignal: AbortSignal;
 }) => Promise<SpeechStreamResult>;
 
-export type AiModel = LlmModel;
+export type AiModel = SensitiveLlmModel;

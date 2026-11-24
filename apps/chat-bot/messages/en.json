@@ -5,6 +5,7 @@
     "information-disclaimer": "AIS.chat can make mistakes. Think critically and check all information.",
     "message-copy": "Copy message",
     "regenerate-message-button": "Regenerate response",
+    "code-download": "Download file",
     "plot": {
       "label": "Figure",
       "download-png": "Download figure",
@@ -14,6 +15,10 @@
       "fullscreen": "Show in fullscreen",
       "description": "Figure: {title}",
       "error": "The figure could not be displayed."
+    },
+    "document": {
+      "download": "Download {fileName}",
+      "error": "The document could not be created."
     },
     "read-aloud": "Read message aloud",
     "pause-message": "Pause reading",
@@ -82,7 +87,8 @@
       "retrieve_entire_file": "File fully read",
       "mundo_search": "Searched Mundo",
       "math_calculate": "Calculation performed",
-      "create_plot": "Figure created"
+      "create_plot": "Figure created",
+      "generate_document": "File created"
     }
   }
 }

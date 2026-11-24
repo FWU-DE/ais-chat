@@ -10,10 +10,12 @@
     "./bifrost-provider-sync": "./src/bifrost-provider-sync/index.ts",
     "./bifrost-provider-sync/error": "./src/bifrost-provider-sync/error.ts",
     "./llm-model": "./src/llm-model/index.ts",
+    "./memory-cache": "./src/memory-cache.ts",
     "./types": "./src/types.ts",
     "./utils": "./src/api-utils/index.ts"
   },
   "scripts": {
+    "db:check": "API_DATABASE_URL=postgres://dummy drizzle-kit check --config=./drizzle.config.ts",
     "db:generate": "dotenvx run -f ../../apps/api/.env.local -f ../../apps/api/.env.development -- drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",
     "db:migrate:local": "dotenvx run -f ../../apps/api/.env.local -f ../../apps/api/.env.development -- drizzle-kit migrate --config=./drizzle.config.ts",
@@ -27,6 +29,7 @@
   },
   "dependencies": {
     "@ais-chat/shared-core": "workspace:*",
+    "@sentry/core": "11.12.0",
     "@t3-oss/env-core": "0.13.11",
     "bcryptjs": "3.0.3",
     "drizzle-orm": "0.45.4",
@@ -41,11 +44,11 @@
     "@dotenvx/dotenvx": "2.38.2",
     "@types/node": "24.19.2",
     "@types/pg": "8.23.1",
-    "@vitest/coverage-v8": "5.0.5",
+    "@vitest/coverage-v8": "5.1.0",
     "drizzle-kit": "0.31.11",
     "eslint": "10.8.1",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "vitest": "5.0.5"
+    "vitest": "5.1.0"
   }
 }

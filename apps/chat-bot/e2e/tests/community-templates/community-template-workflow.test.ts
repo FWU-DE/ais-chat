@@ -39,11 +39,11 @@ test.describe('community template workflow', { tag: '@smoke' }, () => {
       storageState: EDITOR_AUTH_FILE,
       baseURL: ADMIN_BASE_URL,
     });
-    const adminPage = await adminContext.newPage();
+    const adminListPage = await adminContext.newPage();
 
     try {
-      // Editor: open the request and verify the author's message is visible
-      await openRequestInAdmin(adminPage, characterName);
+      // Editor: open the request (opens in a new tab) and verify the author's message is visible
+      const adminPage = await openRequestInAdmin(adminListPage, characterName);
       await expect(
         adminPage
           .getByTestId('community-template-event-message')

@@ -45,4 +45,28 @@ describe('syncBifrostProvider', () => {
       expect(url).not.toContain('/api/governance/virtual-keys');
     }
   });
+
+  test('sends the prompt cache config when updating an existing provider', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ name: 'vertex' })) // GET provider -> exists
+      .mockResolvedValueOnce(jsonResponse({ message: 'ok' })) // PUT update provider
+      .mockResolvedValueOnce(jsonResponse({ keys: [] })); // GET existing keys
+    vi.stubGlobal('fetch', fetchMock);
+
+    const promptCache: BifrostProviderConfig['prompt_cache'] = {
+      auto_inject: true,
+      cache_control_injection_points: [{ location: 'message', role: 'system' }],
+    };
+
+    await syncBifrostProvider({
+      bifrostAdminUrl: 'http://localhost:8080',
+      providerConfig: { provider: 'vertex', prompt_cache: promptCache, keys: [] },
+    });
+
+    const putCall = (fetchMock.mock.calls as [URL, RequestInit][]).find(
+      ([, init]) => init.method === 'PUT',
+    );
+    expect(JSON.parse(putCall?.[1].body as string)).toMatchObject({ prompt_cache: promptCache });
+  });
 });

@@ -47,7 +47,6 @@ export async function fetchConversationDownload({
   const createdAtISOString = createdAt.toISOString();
   const gptName = characterName ?? 'AIS.chat';
   const conversationName = conversationTitle ?? 'Konversation';
-
   return {
     blob: await markdownToDocxBlob(
       formatConversationExport({

@@ -27,7 +27,7 @@ export const EMPTY_FILTER_VALUES: FilterValues = {
   languages: [],
 };
 
-type EntityWithFilterValues = {
+export type EntityWithFilterValues = {
   filterGroup?: {
     school_types?: SchoolType[];
     grade_ranges?: GradeRange[];

@@ -33,10 +33,6 @@ export default async function Page(
   const { assistantId, conversationId } = await props.params;
   const searchParams = parseSearchParams(searchParamsSchema, await props.searchParams);
   const { user, federalState } = await requireAuth();
-  const userAndContext = {
-    ...user,
-    federalState,
-  };
 
   const { conversation, messages, assistant } = await getConversationWithMessagesAndAssistant({
     conversationId: conversationId,
@@ -74,7 +70,6 @@ export default async function Page(
             chatId: conversation.id,
             title: assistant.name,
             downloadConversationEnabled: chatMessages.length > 0,
-            userAndContext,
           },
         }}
       >

@@ -90,7 +90,6 @@ export default async function Page(props: PageProps<'/d/[conversationId]'>) {
           headerConfig: {
             chatId: conversation.id,
             downloadConversationEnabled: convertedMessages.length > 0,
-            userAndContext,
           },
         }}
       >

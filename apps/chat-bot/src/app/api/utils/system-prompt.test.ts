@@ -17,4 +17,14 @@ describe('constructToolGuidelines', () => {
   it.each(toolNames)('adds a guideline section when %s is active', (toolName) => {
     expect(constructToolGuidelines([tool(toolName)])).not.toEqual(baseGuidelines);
   });
+
+  it('describes document generation with formulas and attachment references', () => {
+    const guidelines = constructToolGuidelines([tool(TOOL_NAMES.generateDocument)]);
+
+    expect(guidelines).toContain(TOOL_NAMES.generateDocument);
+    expect(guidelines).toContain('attachment://');
+    expect(guidelines).toContain('![Beschreibung](attachment://...)');
+    expect(guidelines).toContain('<img src="attachment://..." alt="Beschreibung">');
+    expect(guidelines).toContain('$');
+  });
 });

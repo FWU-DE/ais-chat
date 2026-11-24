@@ -29,14 +29,16 @@ export function InitialChatContentDisplay({
         <p className="max-w-full text-center">{description}</p>
       )}
       {exerciseDescription !== undefined && exerciseDescription.trim() !== '' && (
-        <div className="max-w-full min-w-[50%] m-4 border-primary border-2 rounded-enterprise-md p-4 ">
-          <MarkdownDisplay>{exerciseDescription}</MarkdownDisplay>
+        <div className="flex flex-col max-w-full min-w-[50%] min-h-0 m-4 border-primary border-2 rounded-enterprise-md py-3 pr-2">
+          <div className="min-h-0 overflow-y-auto pl-4 pr-2">
+            <MarkdownDisplay>{exerciseDescription}</MarkdownDisplay>
+          </div>
         </div>
       )}
       {setDialogStarted !== undefined && (
         <Button
           onClick={() => setDialogStarted(true)}
-          className="mt-3"
+          className="mt-3 shrink-0"
           data-testid="start-dialog-button"
         >
           {startDialogLabel ?? tCustomChat('start-chat')}

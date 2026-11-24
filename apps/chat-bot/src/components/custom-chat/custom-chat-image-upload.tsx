@@ -33,6 +33,7 @@ export function CustomChatImageUpload({
 
   const toast = useToast();
   const t = useTranslations('custom-chat.image');
+  const tCommon = useTranslations('common');
   const tFileInteraction = useTranslations('file-interaction');
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -84,7 +85,7 @@ export function CustomChatImageUpload({
               src={displayedAvatarUrl}
               fill
               unoptimized
-              alt={t('profile-picture')}
+              alt={tCommon('profile-picture')}
               className="rounded-full"
               priority
             />

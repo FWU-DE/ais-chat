@@ -108,6 +108,7 @@ export function CustomChatExtendShareExpirationDialog({
           <Button
             variant="default"
             disabled={isSubmitting}
+            data-testid="add-additional-time-confirm-button"
             onClick={() => {
               void handleAddTime();
             }}

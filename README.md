@@ -101,15 +101,10 @@ nvm alias default "$(cat .nvmrc)" # sets it as the default node version
 
 ### Environment variables
 
-The project uses environment variables in `.env.local` files for local development configuration.
+The tracked `apps/*/.env.development` files hold working local defaults (ports, connection settings, dummy secrets), so the steps below work without any `.env.local`.
+Create `apps/<app>/.env.local` (gitignored) only for personal overrides and real credentials, e.g. `LINKUP_API_KEY` or real LLM keys.
 
-**Required `.env.local` files:**
-
-- `apps/chat-bot/.env.local` — For the chat-bot app (database URLs, API connection, authentication, storage)
-- `apps/admin/.env.local` — For the admin app (database URLs, API connection, authentication)
-- `apps/api/.env.local` — For the API app (database URL, logging, telemetry)
-
-For detailed variable documentation and values for local development with docker-compose, see the `.env.example` files in each app directory.
+For detailed variable documentation, see the `.env.example` files in each app directory and [docs/concepts/local-env.md](docs/concepts/local-env.md).
 
 **How env files are loaded:**
 
@@ -159,8 +154,6 @@ If you start with a fresh database, apply migrations and seed both databases; ot
 pnpm db:migrate
 ```
 
-Add api keys in your `.env.local` files for all federal states that you want to seed. These keys are used to fetch the available LLM models from the ais-chat-api (e.g. `DE_BY_API_KEY` for Bavaria). If you previously seeded the api database, use the resulting API key.
-
 The api database seed also requires LLM provider credentials for the models it creates locally. Add these to `apps/api/.env.local`:
 
 ```sh
@@ -185,6 +178,22 @@ You can now start the application from the root directory:
 ```sh
 pnpm dev
 ```
+
+To run several copies at once (e.g. in git worktrees), run `pnpm dev:ports` before starting the apps: it writes free ports into `apps/*/.env.local`. The copies share one docker stack and database, and Keycloak backchannel logout and login sessions only work for one copy at a time (see [docs/concepts/local-env.md](docs/concepts/local-env.md)).
+
+### Run as Docker container
+
+To run an app image locally with the same behavior as `pnpm dev` (host network, local env files):
+
+```sh
+pnpm build:docker:chat-bot
+docker run --rm --network host \
+  --env-file apps/chat-bot/.env.development \
+  --env-file apps/chat-bot/.env.local \
+  ais-chat-app
+```
+
+If you have no `.env.local`, omit its `--env-file` line. Don't quote values in env files, Docker keeps the quotes. The same works for `admin` (`ais-chat-admin`) and `api` (`ais-chat-api`) with their `apps/<app>/` env files.
 
 ### Keycloak
 

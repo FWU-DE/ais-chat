@@ -1,3 +1,4 @@
+import { logError } from '@shared/logging';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
@@ -103,10 +104,11 @@ export function useAudioStream(
           signal: abortController.signal,
         });
         await player.start(readableStreamToAsyncIterable(body));
-      } catch {
+      } catch (error) {
         if (abortController.signal.aborted || playerRef.current !== player) {
           return;
         }
+        logError('Speech playback failed', error);
         player.dispose();
         playerRef.current = null;
         toast.error(tCommon('read-aloud-error'));

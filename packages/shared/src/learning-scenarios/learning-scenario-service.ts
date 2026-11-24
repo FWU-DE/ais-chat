@@ -27,14 +27,16 @@ import {
   dbGetLatestManageableLearningScenarioShare,
   dbGetLearningScenarioById,
   dbGetLearningScenarioByIdForConversation,
-  dbGetLearningScenarioByIdOptionalShareData,
-  dbGetLearningScenarioByIdWithShareData,
+  dbGetLearningScenarioByIdWithManageableShare,
   dbGetLearningScenariosByAssociatedSchools,
+  dbGetLearningScenariosByIdsOptionalShareData,
   dbGetLearningScenariosByUser,
+  dbGetLearningScenariosByUserFavorite,
   dbStopLearningScenarioShare,
   dbUpdateLearningScenarioShareTokenPointsLimit,
 } from '@shared/db/functions/learning-scenario';
 import { dbGetLearningScenarioChatUsageInCentByLearningScenarioId } from '@shared/db/functions/token-points';
+import { dbIsUserFavorite } from '@shared/db/functions/user-favorites';
 import {
   FileModel,
   LearningScenarioFileMapping,
@@ -60,12 +62,8 @@ import { duplicateLearningScenario } from '@shared/learning-scenarios/learning-s
 import { OverviewFilter } from '@shared/overview-filter';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
-import {
-  MAX_SHARE_USAGE_TIME_LIMIT_IN_MINUTES,
-  SHARE_EXTENSION_WINDOW_MS,
-} from '@shared/sharing/const';
+import { MAX_SHARE_USAGE_TIME_LIMIT_IN_MINUTES } from '@shared/sharing/const';
 import { generateInviteCode } from '@shared/sharing/generate-invite-code';
-import { isShareWithinGraceWindow } from '@shared/sharing/is-share-within-grace-window';
 import { sharedLearningScenarioChatHasReachedTokenPointsLimit } from '@shared/users/usage';
 import {
   getMaxBudgetInCentByUser,
@@ -142,6 +140,10 @@ export async function getLearningScenariosByOverviewFilter({
       ]);
       break;
     }
+    case 'favorites': {
+      learningScenarios = await dbGetLearningScenariosByUserFavorite({ user });
+      break;
+    }
     default:
       return [];
   }
@@ -197,15 +199,11 @@ export async function getSharedLearningScenario({
   user: Pick<UserModel, 'id'>;
 }): Promise<LearningScenarioWithShareDataModel> {
   checkParameterUUID(learningScenarioId);
-  const learningScenario = await dbGetLearningScenarioByIdWithShareData({
+  const learningScenario = await dbGetLearningScenarioByIdWithManageableShare({
     learningScenarioId,
     user,
   });
-  if (!learningScenario || learningScenario.manuallyStoppedAt !== null) {
-    throw new NotFoundError('Learning scenario not found');
-  }
-
-  if (!isShareWithinGraceWindow(learningScenario.expiredAt, SHARE_EXTENSION_WINDOW_MS)) {
+  if (!learningScenario) {
     throw new NotFoundError('Learning scenario not found');
   }
 
@@ -644,16 +642,22 @@ export async function getLearningScenarioForEditView({
   maxBudget: number | null;
   usedBudget: number;
   budgetUsedBySharedChat: number;
+  isFavorite: boolean;
 }> {
   checkParameterUUID(learningScenarioId);
   requireTeacherRole(user.userRole);
-  const learningScenario = await dbGetLearningScenarioByIdOptionalShareData({
-    learningScenarioId,
+  const [learningScenario] = await dbGetLearningScenariosByIdsOptionalShareData({
+    learningScenarioIds: [learningScenarioId],
     user,
   });
   if (!learningScenario) throw new NotFoundError('Learning scenario not found');
 
   verifyReadAccess({ item: learningScenario, user });
+
+  const isFavorite = await dbIsUserFavorite({
+    userId: user.id,
+    entityRef: { entityType: 'learningScenario', entityId: learningScenarioId },
+  });
 
   const relatedFiles = await getFilesForLearningScenario({
     learningScenarioId,
@@ -686,6 +690,7 @@ export async function getLearningScenarioForEditView({
     maxBudget,
     usedBudget,
     budgetUsedBySharedChat,
+    isFavorite,
   };
 }
 

@@ -12,9 +12,10 @@ import {
   dbGetAllCharactersByUser,
   dbGetCharacterById,
   dbGetCharacterByIdForConversation,
-  dbGetCharacterByIdOptionalShareData,
-  dbGetCharacterByIdWithShareData,
+  dbGetCharacterByIdWithManageableShare,
   dbGetCharactersByAssociatedSchools,
+  dbGetCharactersByIdsOptionalShareData,
+  dbGetCharactersByUserFavorite,
   dbGetCommunityCharacters,
   dbGetGlobalCharacters,
   dbGetLatestManageableCharacterShare,
@@ -25,7 +26,6 @@ import { dbGetRelatedCharacterFiles } from '../db/functions/files';
 import { dbGetLlmModelsByFederalStateId } from '../db/functions/llm-model';
 import { getAvatarPictureUrl } from '../files/fileService';
 import { getReadOnlySignedUrl, uploadFileToS3 } from '../s3';
-import { SHARE_EXTENSION_WINDOW_MS } from '../sharing/const';
 import { copyCharacter, copyRelatedTemplateFiles } from '../templates/template-service';
 import { getMaxBudgetInCentByUser, getUsedBudgetInCentByUser } from '../users/user-budget-service';
 import { generateUUID } from '../utils/uuid';
@@ -52,13 +52,13 @@ import {
 } from './character-service';
 
 vi.mock('../db/functions/character', () => ({
+  dbGetCharactersByIdsOptionalShareData: vi.fn(),
+  dbGetCharactersByUserFavorite: vi.fn(),
   dbGetAllAccessibleCharacters: vi.fn(),
   dbGetAllCharactersByUser: vi.fn(),
   dbGetCharacterById: vi.fn(),
-  dbGetCharacterByIdAndUserId: vi.fn(),
   dbGetCharacterByIdForConversation: vi.fn(),
-  dbGetCharacterByIdOptionalShareData: vi.fn(),
-  dbGetCharacterByIdWithShareData: vi.fn(),
+  dbGetCharacterByIdWithManageableShare: vi.fn(),
   dbDeleteCharacterByIdAndUser: vi.fn(),
   dbGetCharactersByAssociatedSchools: vi.fn(),
   dbGetCommunityCharacters: vi.fn(),
@@ -72,6 +72,9 @@ vi.mock('../db/functions/character', () => ({
 }));
 vi.mock('../db/functions/files', () => ({
   dbGetRelatedCharacterFiles: vi.fn(),
+}));
+vi.mock('@shared/db/functions/user-favorites', () => ({
+  dbIsUserFavorite: vi.fn().mockResolvedValue(false),
 }));
 vi.mock('../s3', () => ({
   getReadOnlySignedUrl: vi.fn(),
@@ -169,7 +172,7 @@ describe('character-service', () => {
     ])(
       'should throw NotFoundError when character does not exist - $functionName',
       async ({ testFunction }) => {
-        vi.mocked(dbGetCharacterByIdWithShareData).mockResolvedValue(null as never);
+        vi.mocked(dbGetCharacterByIdWithManageableShare).mockResolvedValue(null as never);
 
         await expect(testFunction()).rejects.toThrow(NotFoundError);
       },
@@ -183,22 +186,6 @@ describe('character-service', () => {
           characterId: generateUUID(),
           user: { id: 'user-id' },
           croppedImageBlob: new Blob(),
-        }),
-      ).rejects.toThrow(NotFoundError);
-    });
-
-    it('should throw NotFoundError when character has no invite code - getSharedCharacter', async () => {
-      const userId = generateUUID();
-      const mockCharacter: Partial<CharacterSelectModel> = {
-        userId: userId,
-      };
-
-      vi.mocked(dbGetCharacterByIdWithShareData).mockResolvedValue(mockCharacter as never);
-
-      await expect(
-        getSharedCharacter({
-          characterId: generateUUID(),
-          userId: 'user-id',
         }),
       ).rejects.toThrow(NotFoundError);
     });
@@ -1051,7 +1038,9 @@ describe('character-service', () => {
           hasLinkAccess: true,
         };
 
-        vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(mockCharacter as never);
+        vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([
+          mockCharacter,
+        ] as never);
         // Also mock dbGetCharacterById because fetchFileMappings -> getCharacterInfo uses it
         vi.mocked(dbGetCharacterById).mockResolvedValue(mockCharacter as never);
         vi.mocked(dbGetRelatedCharacterFiles).mockResolvedValue([]);
@@ -1138,7 +1127,9 @@ describe('character-service', () => {
           hasLinkAccess: false,
         };
 
-        vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(mockCharacter as never);
+        vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([
+          mockCharacter,
+        ] as never);
 
         await expect(
           getCharacterForEditView({
@@ -1177,7 +1168,7 @@ describe('character-service', () => {
         hasLinkAccess: false,
       } as unknown as CharacterSelectModel;
 
-      vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(character as never);
+      vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([character] as never);
       vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
       vi.mocked(dbGetRelatedCharacterFiles).mockResolvedValue([] as never);
       vi.mocked(getReadOnlySignedUrl).mockResolvedValue('');
@@ -1205,7 +1196,7 @@ describe('character-service', () => {
         expiredAt,
       } as unknown as CharacterSelectModel;
 
-      vi.mocked(dbGetCharacterByIdOptionalShareData).mockResolvedValue(character as never);
+      vi.mocked(dbGetCharactersByIdsOptionalShareData).mockResolvedValue([character] as never);
       vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
       vi.mocked(dbGetRelatedCharacterFiles).mockResolvedValue([] as never);
       vi.mocked(getReadOnlySignedUrl).mockResolvedValue('');
@@ -1455,6 +1446,37 @@ describe('character-service', () => {
       expect(result).toEqual([schoolAndCommunityCharacter]);
     });
 
+    it('routes filter=favorites to the favorite characters that are still readable', async () => {
+      const readableCharacter = {
+        id: generateUUID(),
+        userId: generateUUID(),
+        isCommunityShared: true,
+        hasLinkAccess: false,
+        suspended: false,
+        ownerSchoolIds: [],
+      } as unknown as CharacterSelectModel;
+      const noLongerSharedCharacter = {
+        ...readableCharacter,
+        id: generateUUID(),
+        isCommunityShared: false,
+      } as CharacterSelectModel;
+      const suspendedCharacter = {
+        ...readableCharacter,
+        id: generateUUID(),
+        suspended: true,
+      } as CharacterSelectModel;
+      vi.mocked(dbGetCharactersByUserFavorite).mockResolvedValue([
+        readableCharacter,
+        noLongerSharedCharacter,
+        suspendedCharacter,
+      ] as never);
+
+      const result = await getCharactersByOverviewFilter({ filter: 'favorites', user });
+
+      expect(dbGetCharactersByUserFavorite).toHaveBeenCalledWith({ user });
+      expect(result).toEqual([readableCharacter]);
+    });
+
     it('returns an empty list for unsupported overview filters', async () => {
       const result = await getCharactersByOverviewFilter({
         filter: 'invalid' as never,
@@ -1574,7 +1596,7 @@ describe('character-service', () => {
         userId,
         expiredAt: new Date(NOW.getTime() + 60 * 60 * 1000),
       });
-      vi.mocked(dbGetCharacterByIdWithShareData).mockResolvedValue(character as never);
+      vi.mocked(dbGetCharacterByIdWithManageableShare).mockResolvedValue(character as never);
 
       const result = await getSharedCharacter({ characterId, userId });
 
@@ -1589,36 +1611,17 @@ describe('character-service', () => {
         userId,
         expiredAt: new Date(NOW.getTime() - 60 * 60 * 1000), // expired 1 hour ago, within 2-hour grace window
       });
-      vi.mocked(dbGetCharacterByIdWithShareData).mockResolvedValue(character as never);
+      vi.mocked(dbGetCharacterByIdWithManageableShare).mockResolvedValue(character as never);
 
       const result = await getSharedCharacter({ characterId, userId });
 
       expect(result).toBe(character);
     });
 
-    it('throws NotFoundError when the share has expired beyond the grace window', async () => {
+    it('throws NotFoundError when no manageable share exists', async () => {
       const characterId = generateUUID();
       const userId = generateUUID();
-      const character = mockCharacterWithShareData({
-        id: characterId,
-        userId,
-        expiredAt: new Date(NOW.getTime() - SHARE_EXTENSION_WINDOW_MS - 1000), // expired 2 hours and 1 second ago
-      });
-      vi.mocked(dbGetCharacterByIdWithShareData).mockResolvedValue(character as never);
-
-      await expect(getSharedCharacter({ characterId, userId })).rejects.toThrow(NotFoundError);
-    });
-
-    it('throws NotFoundError when the share was manually stopped', async () => {
-      const characterId = generateUUID();
-      const userId = generateUUID();
-      const character = mockCharacterWithShareData({
-        id: characterId,
-        userId,
-        expiredAt: new Date(NOW.getTime() + 60 * 60 * 1000), // still active time-wise
-        manuallyStoppedAt: new Date(NOW.getTime() - 30 * 60 * 1000), // but manually stopped 30 min ago
-      });
-      vi.mocked(dbGetCharacterByIdWithShareData).mockResolvedValue(character as never);
+      vi.mocked(dbGetCharacterByIdWithManageableShare).mockResolvedValue(undefined);
 
       await expect(getSharedCharacter({ characterId, userId })).rejects.toThrow(NotFoundError);
     });

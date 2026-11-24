@@ -14,6 +14,8 @@ import {
 
 const RESPONSE_FORMAT = 'mp3';
 
+const SPEECH_CLIENT_MAX_RETRIES = 5;
+
 function createBifrostClient(model: AiModel): { client: OpenAI; modelName: string } {
   if (model.provider !== 'bifrost') {
     throw new ProviderConfigurationError('Invalid model configuration for Bifrost');
@@ -28,6 +30,7 @@ function createBifrostClient(model: AiModel): { client: OpenAI; modelName: strin
       new OpenAI({
         apiKey: env.bifrostApiKey ?? 'not-needed',
         baseURL: env.bifrostBaseUrl,
+        maxRetries: SPEECH_CLIENT_MAX_RETRIES,
         ...(env.bifrostApiKey ? { defaultHeaders: { 'x-bf-vk': env.bifrostApiKey } } : {}),
       }),
     ),
@@ -36,8 +39,6 @@ function createBifrostClient(model: AiModel): { client: OpenAI; modelName: strin
 }
 
 const speechUsageSchema = z.object({
-  input_tokens: z.number().nullish(),
-  output_tokens: z.number().nullish(),
   /** Azure AI Speech bills characters rather than tokens. */
   input_chars: z.number().nullish(),
 });
@@ -54,8 +55,7 @@ type BifrostSpeechEvent = z.infer<typeof speechEventSchema>;
 
 function toSpeechUsage(usage: BifrostSpeechUsage | null | undefined): SpeechUsage {
   return {
-    inputTextTokens: usage?.input_tokens ?? usage?.input_chars ?? 0,
-    outputAudioTokens: usage?.output_tokens ?? 0,
+    characters: usage?.input_chars ?? 0,
   };
 }
 
@@ -157,7 +157,7 @@ export function constructBifrostSpeechGenerationFn(model: AiModel): SpeechGenera
     });
 
     const parts: Buffer[] = [];
-    let usage: SpeechUsage = { inputTextTokens: 0, outputAudioTokens: 0 };
+    let usage: SpeechUsage = { characters: 0 };
 
     for await (const event of readSpeechEvents(body)) {
       if (event.audio) parts.push(Buffer.from(event.audio, 'base64'));
@@ -193,7 +193,7 @@ export function constructBifrostStreamingSpeechGenerationFn(
     });
 
     async function* readChunks() {
-      let finalUsage: SpeechUsage = { inputTextTokens: 0, outputAudioTokens: 0 };
+      let finalUsage: SpeechUsage = { characters: 0 };
       let receivedAudio = false;
 
       try {

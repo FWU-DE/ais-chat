@@ -7,6 +7,12 @@ vi.mock('@ais-chat/ai-core/errors', () => ({
   ApiKeyQuotaExceededError: {
     is: (e: unknown) => e instanceof Error && e.message === 'ApiKeyQuotaExceeded',
   },
+  ApiKeyUnusableError: {
+    is: (e: unknown) => e instanceof Error && e.message === 'ApiKeyUnusable',
+  },
+  InvalidSpeechVoiceError: {
+    is: (e: unknown) => e instanceof Error && e.message === 'InvalidSpeechVoice',
+  },
   InvalidModelError: { is: (e: unknown) => e instanceof Error && e.message === 'InvalidModel' },
   ProviderRateLimitExceededError: {
     is: (e: unknown) => e instanceof Error && e.message === 'ProviderRateLimitExceeded',
@@ -47,6 +53,20 @@ describe('handleAiCoreError', () => {
     const handled = handleAiCoreError(reply as never, new Error('InvalidModel'));
     expect(handled).toBe(true);
     expect(reply.statusCode).toBe(404);
+  });
+
+  it('handles InvalidSpeechVoiceError with 400', () => {
+    const reply = createMockReply();
+    const handled = handleAiCoreError(reply as never, new Error('InvalidSpeechVoice'));
+    expect(handled).toBe(true);
+    expect(reply.statusCode).toBe(400);
+  });
+
+  it('handles ApiKeyUnusableError with 403', () => {
+    const reply = createMockReply();
+    const handled = handleAiCoreError(reply as never, new Error('ApiKeyUnusable'));
+    expect(handled).toBe(true);
+    expect(reply.statusCode).toBe(403);
   });
 
   it('handles ApiKeyQuotaExceededError with 429 and a quota message', () => {

@@ -18,10 +18,11 @@ import {
   dbGetAllCharactersByUser,
   dbGetCharacterById,
   dbGetCharacterByIdForConversation,
-  dbGetCharacterByIdOptionalShareData,
-  dbGetCharacterByIdWithShareData,
+  dbGetCharacterByIdWithManageableShare,
   dbGetCharacters,
   dbGetCharactersByAssociatedSchools,
+  dbGetCharactersByIdsOptionalShareData,
+  dbGetCharactersByUserFavorite,
   dbGetCommunityCharacters,
   dbGetGlobalCharacters,
   dbGetLatestManageableCharacterShare,
@@ -36,6 +37,7 @@ import {
 } from '@shared/db/functions/files';
 import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
 import { dbGetSharedCharacterChatUsageInCentByCharacterId } from '@shared/db/functions/token-points';
+import { dbIsUserFavorite } from '@shared/db/functions/user-favorites';
 import {
   CharacterFileMapping,
   CharacterOptionalShareDataModel,
@@ -56,12 +58,8 @@ import {
 import { OverviewFilter } from '@shared/overview-filter';
 import { deleteFileFromS3, getReadOnlySignedUrl, uploadFileToS3 } from '@shared/s3';
 import { ONE_HOUR } from '@shared/s3/const';
-import {
-  MAX_SHARE_USAGE_TIME_LIMIT_IN_MINUTES,
-  SHARE_EXTENSION_WINDOW_MS,
-} from '@shared/sharing/const';
+import { MAX_SHARE_USAGE_TIME_LIMIT_IN_MINUTES } from '@shared/sharing/const';
 import { generateInviteCode } from '@shared/sharing/generate-invite-code';
-import { isShareWithinGraceWindow } from '@shared/sharing/is-share-within-grace-window';
 import { copyCharacter, copyRelatedTemplateFiles } from '@shared/templates/template-service';
 import { sharedCharacterChatHasReachedTokenPointsLimit } from '@shared/users/usage';
 import {
@@ -759,12 +757,21 @@ export const getCharacterForEditView = async ({
   maxBudget: number | null;
   usedBudget: number;
   budgetUsedBySharedChat: number;
+  isFavorite: boolean;
 }> => {
   checkParameterUUID(characterId);
   requireTeacherRole(user.userRole);
-  const character = await dbGetCharacterByIdOptionalShareData({ characterId, user });
+  const [character] = await dbGetCharactersByIdsOptionalShareData({
+    characterIds: [characterId],
+    user,
+  });
   if (!character) throw new NotFoundError('Character not found');
   verifyReadAccess({ item: character, user });
+
+  const isFavorite = await dbIsUserFavorite({
+    userId: user.id,
+    entityRef: { entityType: 'character', entityId: characterId },
+  });
 
   const relatedFiles = await fetchFileMappings({
     characterId,
@@ -801,6 +808,7 @@ export const getCharacterForEditView = async ({
     maxBudget,
     usedBudget,
     budgetUsedBySharedChat,
+    isFavorite,
   };
 };
 
@@ -823,13 +831,12 @@ export const getSharedCharacter = async ({
   userId: string;
 }): Promise<CharacterWithShareDataModel> => {
   checkParameterUUID(characterId);
-  const character = await dbGetCharacterByIdWithShareData({ characterId, user: { id: userId } });
+  const character = await dbGetCharacterByIdWithManageableShare({
+    characterId,
+    user: { id: userId },
+  });
 
-  if (!character || character.manuallyStoppedAt !== null) {
-    throw new NotFoundError('Character not found');
-  }
-
-  if (!isShareWithinGraceWindow(character.expiredAt, SHARE_EXTENSION_WINDOW_MS)) {
+  if (!character) {
     throw new NotFoundError('Character not found');
   }
 
@@ -887,6 +894,10 @@ export async function getCharactersByOverviewFilter({
         ...schoolCharacters,
         ...filterCommunitySharedByAssociatedSchool({ items: communityCharacters, user }),
       ]);
+      break;
+    }
+    case 'favorites': {
+      characters = await dbGetCharactersByUserFavorite({ user });
       break;
     }
     default:

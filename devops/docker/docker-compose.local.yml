@@ -22,7 +22,7 @@ services:
       start_period: 30s
 
   valkey:
-    image: ghcr.io/valkey-io/valkey:9.1.3-alpine
+    image: ghcr.io/valkey-io/valkey:9.2.0-alpine
     restart: unless-stopped
     volumes:
       - valkey_data:/data
@@ -35,7 +35,7 @@ services:
       retries: 5
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.8.2-0
+    image: quay.io/keycloak/keycloak:26.8.2-3
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
@@ -61,7 +61,7 @@ services:
 
   # keycloak runs with uid 1000, but docker creates volumes with root as owner; use a one-shot container to fix the permission
   fix-keycloak-volume-ownership:
-    image: alpine:3.24.3
+    image: alpine:3.24.4
     restart: no
     entrypoint: /bin/sh -c "chown 1000 /keycloak"
     volumes:
@@ -105,7 +105,7 @@ services:
       start_period: 40s
 
   xberg:
-    image: ghcr.io/xberg-io/xberg:1.3.9-core
+    image: ghcr.io/xberg-io/xberg:1.4.2-core
     environment:
       XBERG_MAX_REQUEST_BODY_BYTES: '26214400'
       XBERG_MAX_MULTIPART_FIELD_BYTES: '26214400'
@@ -133,7 +133,7 @@ services:
 
   # RustFS - S3-compatible object storage
   rustfs:
-    image: rustfs/rustfs:1.0.4
+    image: rustfs/rustfs:1.0.6
     restart: unless-stopped
     environment:
       RUSTFS_ADDRESS: 0.0.0.0:9000
@@ -142,7 +142,9 @@ services:
       RUSTFS_ACCESS_KEY: rustfsadmin
       RUSTFS_SECRET_KEY: RustFS-Admin-123456
       RUSTFS_VOLUMES: /data
-      RUSTFS_CORS_ALLOWED_ORIGINS: 'http://localhost:3000'
+      RUSTFS_REGION: eu-de
+      # Any origin, since worktrees run the apps on other localhost ports (RustFS has no port wildcard)
+      RUSTFS_CORS_ALLOWED_ORIGINS: '*'
     volumes:
       - rustfs_data:/data
     ports:
@@ -157,7 +159,7 @@ services:
 
   # One-shot init container to create the S3 bucket used by ais-chat on rustfs
   rustfs-init:
-    image: alpine:3.24.3
+    image: alpine:3.24.4
     restart: no
     entrypoint: /bin/sh -c "apk add --no-cache s3cmd && s3cmd --access_key=rustfsadmin --secret_key=RustFS-Admin-123456 --host=rustfs:9000 --host-bucket='rustfs:9000/%(bucket)' --region=eu-de --no-ssl --no-check-certificate mb s3://ais-chat"
     depends_on:
@@ -165,7 +167,7 @@ services:
         condition: service_healthy
 
   bifrost:
-    image: ghcr.io/maximhq/bifrost:v2.4.0
+    image: ghcr.io/maximhq/bifrost:v2.6.0
     restart: unless-stopped
     environment:
       BIFROST_ADMIN_USERNAME: admin
@@ -177,12 +179,12 @@ services:
     volumes:
       - ./bifrost/config.json:/app/data/config.json:ro
       - bifrost_data:/app/data
-    # bifrost is reliably up within ~1s; poll faster than the image's default 30s interval.
+    # Poll faster than the image's default 30s interval; generous retries for slow CI startups.
     healthcheck:
       test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8080/health']
       interval: 2s
       timeout: 2s
-      retries: 10
+      retries: 30
       start_period: 2s
 
   calculator:
@@ -218,6 +220,25 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  # Periodic admin calls (popularity refresh, cleanup) against the chat-bot running on the host,
+  # see scheduled-tasks.sh. On every `up`, local conversations past their retention time and empty
+  # entities are deleted. API_KEY and PORT come from apps/chat-bot/.env.development, overridden by
+  # .env.local, which are both loaded in full (local development only).
+  scheduled-tasks:
+    image: curlimages/curl:8.23.0
+    restart: unless-stopped
+    env_file:
+      - ../../apps/chat-bot/.env.development
+      - path: ../../apps/chat-bot/.env.local
+        required: false
+    environment:
+      APP_HOSTNAME: host.docker.internal
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    entrypoint: ['/bin/sh', '/scheduled-tasks.sh']
+    volumes:
+      - ./scheduled-tasks.sh:/scheduled-tasks.sh:ro
 
 volumes:
   bifrost_data:

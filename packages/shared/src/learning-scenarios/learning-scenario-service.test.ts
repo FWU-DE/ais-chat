@@ -17,16 +17,16 @@ import {
   dbGetLatestManageableLearningScenarioShare,
   dbGetLearningScenarioById,
   dbGetLearningScenarioByIdForConversation,
-  dbGetLearningScenarioByIdOptionalShareData,
-  dbGetLearningScenarioByIdWithShareData,
+  dbGetLearningScenarioByIdWithManageableShare,
   dbGetLearningScenariosByAssociatedSchools,
+  dbGetLearningScenariosByIdsOptionalShareData,
   dbGetLearningScenariosByUser,
+  dbGetLearningScenariosByUserFavorite,
   dbStopLearningScenarioShare,
   dbUpdateLearningScenarioShareTokenPointsLimit,
 } from '../db/functions/learning-scenario';
 import { getAvatarPictureUrl } from '../files/fileService';
 import { getReadOnlySignedUrl, uploadFileToS3 } from '../s3';
-import { SHARE_EXTENSION_WINDOW_MS } from '../sharing/const';
 import { getMaxBudgetInCentByUser, getUsedBudgetInCentByUser } from '../users/user-budget-service';
 import { generateUUID } from '../utils/uuid';
 import { duplicateLearningScenario } from './learning-scenario-admin-service';
@@ -55,6 +55,8 @@ import {
 } from './learning-scenario-service';
 
 vi.mock('../db/functions/learning-scenario', () => ({
+  dbGetLearningScenariosByIdsOptionalShareData: vi.fn(),
+  dbGetLearningScenariosByUserFavorite: vi.fn(),
   dbGetAllAccessibleLearningScenarios: vi.fn(),
   dbGetAllLearningScenariosByUser: vi.fn(),
   dbGetCommunityLearningScenarios: vi.fn(),
@@ -64,8 +66,7 @@ vi.mock('../db/functions/learning-scenario', () => ({
   dbGetLatestManageableLearningScenarioShare: vi.fn(),
   dbGetLearningScenarioById: vi.fn(),
   dbGetLearningScenarioByIdForConversation: vi.fn(),
-  dbGetLearningScenarioByIdOptionalShareData: vi.fn(),
-  dbGetLearningScenarioByIdWithShareData: vi.fn(),
+  dbGetLearningScenarioByIdWithManageableShare: vi.fn(),
   dbGetLearningScenariosByAssociatedSchools: vi.fn(),
   dbGetLearningScenariosByUser: vi.fn(),
   dbStopLearningScenarioShare: vi.fn(),
@@ -80,6 +81,9 @@ vi.mock('./learning-scenario-admin-service', () => ({
 vi.mock('../db/functions/files', () => ({
   dbGetFileForLearningScenario: vi.fn(),
   dbGetFilesForLearningScenario: vi.fn(),
+}));
+vi.mock('@shared/db/functions/user-favorites', () => ({
+  dbIsUserFavorite: vi.fn().mockResolvedValue(false),
 }));
 vi.mock('../files/fileService', () => ({
   getAvatarPictureUrl: vi.fn(),
@@ -281,6 +285,7 @@ describe('learning-scenario-service', () => {
     // Set default mock return values for budget functions
     vi.mocked(getMaxBudgetInCentByUser).mockResolvedValue(500);
     vi.mocked(getUsedBudgetInCentByUser).mockResolvedValue(0);
+    vi.mocked(dbGetLearningScenariosByIdsOptionalShareData).mockResolvedValue([]);
   });
 
   describe('createNewLearningScenario', () => {
@@ -337,10 +342,10 @@ describe('learning-scenario-service', () => {
         ownerSchoolIds: [],
       };
       vi.mocked(dbGetLearningScenarioById).mockResolvedValue(mockLearningScenario as never);
-      vi.mocked(dbGetLearningScenarioByIdOptionalShareData).mockResolvedValue(
-        mockLearningScenario as never,
-      );
-      vi.mocked(dbGetLearningScenarioByIdWithShareData).mockResolvedValue(
+      vi.mocked(dbGetLearningScenariosByIdsOptionalShareData).mockResolvedValue([
+        mockLearningScenario,
+      ] as never);
+      vi.mocked(dbGetLearningScenarioByIdWithManageableShare).mockResolvedValue(
         mockLearningScenario as never,
       );
       vi.mocked(dbGetLearningScenarioById).mockResolvedValue(mockLearningScenario as never);
@@ -537,9 +542,9 @@ describe('learning-scenario-service', () => {
             hasLinkAccess: true,
           };
 
-          vi.mocked(dbGetLearningScenarioByIdOptionalShareData).mockResolvedValue(
-            mockLearningScenario as never,
-          );
+          vi.mocked(dbGetLearningScenariosByIdsOptionalShareData).mockResolvedValue([
+            mockLearningScenario,
+          ] as never);
           // Also mock dbGetLearningScenarioById because getFilesForLearningScenario -> getLearningScenarioInfo uses it
           vi.mocked(dbGetLearningScenarioById).mockResolvedValue(mockLearningScenario as never);
           vi.mocked(dbGetFilesForLearningScenario).mockResolvedValue([]);
@@ -602,9 +607,9 @@ describe('learning-scenario-service', () => {
           hasLinkAccess: false,
         };
 
-        vi.mocked(dbGetLearningScenarioByIdOptionalShareData).mockResolvedValue(
-          mockLearningScenario as never,
-        );
+        vi.mocked(dbGetLearningScenariosByIdsOptionalShareData).mockResolvedValue([
+          mockLearningScenario,
+        ] as never);
 
         await expect(
           getLearningScenarioForEditView({
@@ -643,9 +648,9 @@ describe('learning-scenario-service', () => {
         hasLinkAccess: false,
       } as unknown as LearningScenarioSelectModel;
 
-      vi.mocked(dbGetLearningScenarioByIdOptionalShareData).mockResolvedValue(
-        learningScenario as never,
-      );
+      vi.mocked(dbGetLearningScenariosByIdsOptionalShareData).mockResolvedValue([
+        learningScenario,
+      ] as never);
       vi.mocked(dbGetLearningScenarioById).mockResolvedValue(learningScenario as never);
       vi.mocked(dbGetFilesForLearningScenario).mockResolvedValue([] as never);
       vi.mocked(getAvatarPictureUrl).mockResolvedValue(undefined);
@@ -673,9 +678,9 @@ describe('learning-scenario-service', () => {
         expiredAt,
       } as unknown as LearningScenarioSelectModel;
 
-      vi.mocked(dbGetLearningScenarioByIdOptionalShareData).mockResolvedValue(
-        learningScenario as never,
-      );
+      vi.mocked(dbGetLearningScenariosByIdsOptionalShareData).mockResolvedValue([
+        learningScenario,
+      ] as never);
       vi.mocked(dbGetLearningScenarioById).mockResolvedValue(learningScenario as never);
       vi.mocked(dbGetFilesForLearningScenario).mockResolvedValue([] as never);
       vi.mocked(getAvatarPictureUrl).mockResolvedValue(undefined);
@@ -799,6 +804,9 @@ describe('learning-scenario-service', () => {
       } as unknown as LearningScenarioSelectModel;
 
       vi.mocked(dbGetLearningScenarioById).mockResolvedValue(learningScenario as never);
+      vi.mocked(dbGetLearningScenariosByIdsOptionalShareData).mockResolvedValue([
+        learningScenario,
+      ] as never);
 
       const result = await getLearningScenarioForChatSession({
         learningScenarioId,
@@ -871,6 +879,9 @@ describe('learning-scenario-service', () => {
       vi.mocked(dbGetLearningScenarioByIdForConversation).mockResolvedValue(
         learningScenario as never,
       );
+      vi.mocked(dbGetLearningScenariosByIdsOptionalShareData).mockResolvedValue([
+        learningScenario,
+      ] as never);
 
       const result = await getLearningScenarioForExistingConversation({
         learningScenarioId,
@@ -933,10 +944,10 @@ describe('learning-scenario-service', () => {
         userId,
       };
       vi.mocked(dbGetLearningScenarioById).mockResolvedValue(mockLearningScenario as never);
-      vi.mocked(dbGetLearningScenarioByIdOptionalShareData).mockResolvedValue(
-        mockLearningScenario as never,
-      );
-      vi.mocked(dbGetLearningScenarioByIdWithShareData).mockResolvedValue(
+      vi.mocked(dbGetLearningScenariosByIdsOptionalShareData).mockResolvedValue([
+        mockLearningScenario,
+      ] as never);
+      vi.mocked(dbGetLearningScenarioByIdWithManageableShare).mockResolvedValue(
         mockLearningScenario as never,
       );
       vi.mocked(dbCreateLearningScenarioShare).mockResolvedValue(mockLearningScenario as never);
@@ -1276,9 +1287,9 @@ describe('learning-scenario-service', () => {
 
     beforeEach(() => {
       vi.mocked(dbGetLearningScenarioById).mockResolvedValue(mockLearningScenario as never);
-      vi.mocked(dbGetLearningScenarioByIdOptionalShareData).mockResolvedValue(
-        mockLearningScenario as never,
-      );
+      vi.mocked(dbGetLearningScenariosByIdsOptionalShareData).mockResolvedValue([
+        mockLearningScenario,
+      ] as never);
       vi.mocked(dbCreateLearningScenarioShare).mockResolvedValue(newShare as never);
       vi.mocked(dbGetLatestManageableLearningScenarioShare).mockResolvedValue(null as never);
     });
@@ -1529,6 +1540,37 @@ describe('learning-scenario-service', () => {
       expect(result).toEqual([schoolAndCommunityScenario]);
     });
 
+    it('routes filter=favorites to the favorite learning scenarios that are still readable', async () => {
+      const readableScenario = {
+        id: generateUUID(),
+        userId: generateUUID(),
+        isCommunityShared: true,
+        hasLinkAccess: false,
+        suspended: false,
+        ownerSchoolIds: [],
+      } as unknown as LearningScenarioSelectModel;
+      const noLongerSharedScenario = {
+        ...readableScenario,
+        id: generateUUID(),
+        isCommunityShared: false,
+      } as LearningScenarioSelectModel;
+      const suspendedScenario = {
+        ...readableScenario,
+        id: generateUUID(),
+        suspended: true,
+      } as LearningScenarioSelectModel;
+      vi.mocked(dbGetLearningScenariosByUserFavorite).mockResolvedValue([
+        readableScenario,
+        noLongerSharedScenario,
+        suspendedScenario,
+      ] as never);
+
+      const result = await getLearningScenariosByOverviewFilter({ filter: 'favorites', user });
+
+      expect(dbGetLearningScenariosByUserFavorite).toHaveBeenCalledWith({ user });
+      expect(result).toEqual([readableScenario]);
+    });
+
     it('returns an empty list for unsupported overview filters', async () => {
       const result = await getLearningScenariosByOverviewFilter({
         filter: 'invalid' as never,
@@ -1614,7 +1656,7 @@ describe('learning-scenario-service', () => {
         didacticCommentary: 'Learning scenario teaching notes',
         expiredAt: new Date(NOW.getTime() + 60 * 60 * 1000),
       });
-      vi.mocked(dbGetLearningScenarioByIdWithShareData).mockResolvedValue(
+      vi.mocked(dbGetLearningScenarioByIdWithManageableShare).mockResolvedValue(
         learningScenario as never,
       );
 
@@ -1640,7 +1682,7 @@ describe('learning-scenario-service', () => {
         userId,
         expiredAt: new Date(NOW.getTime() - 60 * 60 * 1000), // expired 1 hour ago, within grace window
       });
-      vi.mocked(dbGetLearningScenarioByIdWithShareData).mockResolvedValue(
+      vi.mocked(dbGetLearningScenarioByIdWithManageableShare).mockResolvedValue(
         learningScenario as never,
       );
 
@@ -1652,35 +1694,10 @@ describe('learning-scenario-service', () => {
       expect(result).toBe(learningScenario);
     });
 
-    it('throws NotFoundError when the share has expired beyond the grace window', async () => {
+    it('throws NotFoundError when no manageable share exists', async () => {
       const learningScenarioId = generateUUID();
       const userId = generateUUID();
-      const learningScenario = mockLearningScenarioWithShareData({
-        id: learningScenarioId,
-        userId,
-        expiredAt: new Date(NOW.getTime() - SHARE_EXTENSION_WINDOW_MS - 1000), // expired 2 hours and 1 second ago
-      });
-      vi.mocked(dbGetLearningScenarioByIdWithShareData).mockResolvedValue(
-        learningScenario as never,
-      );
-
-      await expect(
-        getSharedLearningScenario({ learningScenarioId, user: { id: userId } }),
-      ).rejects.toThrow(NotFoundError);
-    });
-
-    it('throws NotFoundError when the share was manually stopped', async () => {
-      const learningScenarioId = generateUUID();
-      const userId = generateUUID();
-      const learningScenario = mockLearningScenarioWithShareData({
-        id: learningScenarioId,
-        userId,
-        expiredAt: new Date(NOW.getTime() + 60 * 60 * 1000), // still active time-wise
-        manuallyStoppedAt: new Date(NOW.getTime() - 30 * 60 * 1000), // but manually stopped 30 min ago
-      });
-      vi.mocked(dbGetLearningScenarioByIdWithShareData).mockResolvedValue(
-        learningScenario as never,
-      );
+      vi.mocked(dbGetLearningScenarioByIdWithManageableShare).mockResolvedValue(undefined);
 
       await expect(
         getSharedLearningScenario({ learningScenarioId, user: { id: userId } }),

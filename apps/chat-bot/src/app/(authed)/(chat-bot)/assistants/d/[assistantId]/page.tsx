@@ -27,10 +27,6 @@ export default async function Page(props: PageProps<'/assistants/d/[assistantId]
   const { assistantId } = await props.params;
   const id = generateUUID();
   const { user, federalState } = await requireAuth();
-  const userAndContext = {
-    ...user,
-    federalState,
-  };
 
   const assistant = await getAssistantForNewChat({
     assistantId: assistantId,
@@ -57,7 +53,6 @@ export default async function Page(props: PageProps<'/assistants/d/[assistantId]
           layout: 'chat',
           headerConfig: {
             chatId: id,
-            userAndContext,
             downloadConversationEnabled: false,
           },
         }}

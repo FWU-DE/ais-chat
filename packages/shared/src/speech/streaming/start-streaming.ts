@@ -1,33 +1,32 @@
-import { streamSpeechById } from '@ais-chat/ai-core';
+import { streamSpeechById, streamSsmlSpeechById } from '@ais-chat/ai-core';
 import { LlmModelSelectModel } from '@shared/db/schema';
 
 import { ChatSpeechStreamResult } from '../types';
-import { calculateSpeechCostsInCent } from '../utils';
+import { calculateSpeechCostsInCent, resolveSpeechVoice } from '../utils';
 import type { SpeechStreamingPipelineParams } from './speech-pipeline';
 
 export const startStream = async (
   params: SpeechStreamingPipelineParams,
   model: LlmModelSelectModel,
+  /** When set, the SSML body is synthesized instead of the plain text input. */
+  ssmlBody: string | undefined,
   onStreamFinished: (result: ChatSpeechStreamResult) => Promise<void>,
 ): Promise<ChatSpeechStreamResult> => {
-  const voices = model.modelConfig?.voices ?? [];
-  const firstVoice = voices.at(0);
-
-  if (firstVoice === undefined) {
-    throw new Error('No voices configured for the speech model');
-  }
-
-  const selectedVoice =
-    params.voice && voices.some((voice) => voice.name === params.voice)
-      ? params.voice
-      : firstVoice.name;
-
-  const { chunks, usage, mimeType } = await streamSpeechById({
-    modelId: model.id,
-    text: params.input,
-    voice: selectedVoice,
-    abortSignal: params.abortSignal,
-  });
+  const voice = resolveSpeechVoice(model, params.voice);
+  const { chunks, usage, mimeType } =
+    ssmlBody !== undefined
+      ? await streamSsmlSpeechById({
+          modelId: model.id,
+          ssmlBody,
+          voice,
+          abortSignal: params.abortSignal,
+        })
+      : await streamSpeechById({
+          modelId: model.id,
+          text: params.input,
+          voice,
+          abortSignal: params.abortSignal,
+        });
 
   const result: ChatSpeechStreamResult = {
     chunks,

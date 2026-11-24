@@ -1,9 +1,9 @@
-import type { LlmModel } from '@ais-chat/api-database';
+import type { SensitiveLlmModel } from '@ais-chat/api-database';
 import { describe, expect, it } from 'vitest';
 
 import { obscureModels } from './utils';
 
-const baseModel: LlmModel = {
+const baseModel: SensitiveLlmModel = {
   id: 'model-1',
   provider: 'openai',
   name: 'gpt-4',
@@ -42,5 +42,27 @@ describe('obscureModels', () => {
 
   it('returns empty array for empty input', () => {
     expect(obscureModels([])).toEqual([]);
+  });
+
+  it('only exposes voices from speech model configuration', () => {
+    const speechModel = {
+      ...baseModel,
+      modelConfig: {
+        voices: [{ name: 'alloy', displayName: 'Alloy' }],
+        useAzureSpeechEndpoint: true,
+      },
+    } as SensitiveLlmModel;
+
+    expect(obscureModels([speechModel])[0]?.modelConfig).toEqual({
+      voices: [{ name: 'alloy', displayName: 'Alloy' }],
+    });
+  });
+
+  it('preserves null model configuration', () => {
+    expect(obscureModels([baseModel])[0]?.modelConfig).toBeNull();
+  });
+
+  it('does not expose the model setting', () => {
+    expect(obscureModels([baseModel])[0]).not.toHaveProperty('setting');
   });
 });

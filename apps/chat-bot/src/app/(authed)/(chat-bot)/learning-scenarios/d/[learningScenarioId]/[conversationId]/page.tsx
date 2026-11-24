@@ -91,7 +91,6 @@ export default async function Page(
             chatId: chat.id,
             title: learningScenario.name,
             downloadConversationEnabled: rawChatMessages.length > 0,
-            userAndContext,
           },
         }}
       >

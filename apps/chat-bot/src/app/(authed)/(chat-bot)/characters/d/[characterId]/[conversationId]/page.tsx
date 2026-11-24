@@ -99,7 +99,6 @@ export default async function Page(
             chatId: chat.id,
             title: character.name,
             downloadConversationEnabled: rawChatMessages.length > 0,
-            userAndContext,
           },
         }}
       >

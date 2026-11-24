@@ -96,7 +96,7 @@ export async function getUserAndContextByUserId({
     federalStateId: userAndContext.user.federalStateId,
     federalState: {
       ...obscureFederalState(userAndContext.federalState),
-      hasApiKeyAssigned: !!userAndContext.federalState.encryptedApiKey,
+      hasApiKeyAssigned: !!userAndContext.federalState.apiKeyId,
     },
   };
 }

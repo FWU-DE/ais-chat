@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { MemoryCache } from '@shared/db/memory-cache';
+import { MemoryCache } from '@ais-chat/api-database/memory-cache';
 import { logError, logInfo } from '@shared/logging';
 import { isDevelopment } from '@shared/utils/isDevelopment';
 import { drizzle } from 'drizzle-orm/node-postgres';

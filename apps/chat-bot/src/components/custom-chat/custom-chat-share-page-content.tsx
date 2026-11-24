@@ -149,7 +149,7 @@ export default function CustomChatSharePageContent({
               <p data-testid="join-code" className="text-3xl sm:text-5xl text-primary font-bold">
                 {formattedInviteCode}
               </p>
-              <CopyToClipboardButton text={formattedInviteCode} className="size-7 sm:size-9" />
+              <CopyToClipboardButton text={formattedInviteCode} className="size-6 sm:size-7" />
             </div>
           </div>
           <div className="flex flex-col items-center gap-4 sm:mt-auto">
@@ -176,6 +176,7 @@ export default function CustomChatSharePageContent({
             data-testid="qr-code"
             className="w-full h-full max-w-64 sm:max-w-80 md:max-w-96 max-h-64 sm:max-h-80 md:max-h-96"
             value={absoluteShareUrl}
+            aria-hidden="true"
           />
         </section>
       </main>

@@ -129,6 +129,21 @@ export class InvalidModelError extends AiGenerationError {
   }
 }
 
+/** Error thrown when a speech voice is not configured for the requested model. */
+export class InvalidSpeechVoiceError extends AiGenerationError {
+  constructor(voice: string, allowedVoices: string[]) {
+    super(`Invalid speech voice "${voice}". Allowed voices: ${allowedVoices.join(', ')}`);
+    this.name = 'InvalidSpeechVoiceError';
+  }
+
+  static is(error: unknown): error is InvalidSpeechVoiceError {
+    if (error && typeof error === 'object') {
+      return 'name' in error && error.name === 'InvalidSpeechVoiceError';
+    }
+    return false;
+  }
+}
+
 /**
  * Error thrown when a provider is misconfigured (e.g., missing API key, invalid URL).
  */
@@ -141,6 +156,26 @@ export class ProviderConfigurationError extends AiGenerationError {
   static is(error: unknown): error is ProviderConfigurationError {
     if (error && typeof error === 'object') {
       return 'name' in error && error.name === 'ProviderConfigurationError';
+    }
+    return false;
+  }
+}
+
+/**
+ * Error thrown when the API key is expired, inactive, deleted or missing.
+ */
+export class ApiKeyUnusableError extends AiGenerationError {
+  readonly reason: string;
+
+  constructor({ apiKeyId, reason }: { apiKeyId: string; reason: string }) {
+    super(`API key ${apiKeyId} is not usable: ${reason}`);
+    this.name = 'ApiKeyUnusableError';
+    this.reason = reason;
+  }
+
+  static is(error: unknown): error is ApiKeyUnusableError {
+    if (error && typeof error === 'object') {
+      return 'name' in error && error.name === 'ApiKeyUnusableError';
     }
     return false;
   }
@@ -268,8 +303,10 @@ export const aiGenerationErrorTypes = [
   ResponsibleAIError,
   RateLimitExceededError,
   ApiKeyQuotaExceededError,
+  ApiKeyUnusableError,
   ProviderRateLimitExceededError,
   InvalidModelError,
+  InvalidSpeechVoiceError,
   ProviderConfigurationError,
   TokenPointsExceededError,
   SharedChatExpiredError,

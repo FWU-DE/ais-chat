@@ -20,7 +20,6 @@ type ModelSelectProps = {
   modelType: 'text' | 'image';
   label: string;
   noModelsLabel: string;
-  isStudent?: boolean;
   enableUrlParams?: boolean;
 };
 
@@ -31,7 +30,6 @@ export default function ModelSelect({
   modelType,
   label,
   noModelsLabel,
-  isStudent = false,
   enableUrlParams = false,
 }: ModelSelectProps) {
   const pathname = useCustomPathname();
@@ -62,7 +60,6 @@ export default function ModelSelect({
   const isNew = currentSelectedModel?.isNew ?? false;
   const selectableModels = models
     .filter((m) => m.priceMetadata.type === modelType)
-    .filter((m) => !isStudent || !m.name.includes('mistral')) // students should not be able to select mistral models
     .filter((m) => m.id !== currentSelectedModel?.id);
 
   return (

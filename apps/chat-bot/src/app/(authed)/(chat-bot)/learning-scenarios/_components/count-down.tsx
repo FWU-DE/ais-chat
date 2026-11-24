@@ -83,7 +83,7 @@ export default function CountDownTimer({
         textClassName,
       )}
     >
-      <StopWatchIcon className={stopWatchClassName} />
+      <StopWatchIcon className={stopWatchClassName} aria-hidden="true" />
       <span aria-hidden="true">{formatDuration(timeRemaining)}</span>
     </div>
   );

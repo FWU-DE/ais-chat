@@ -49,7 +49,6 @@ export async function fetchConversationMessageDownload({
   });
   const gptName = characterName ?? 'AIS.chat';
   const conversationName = conversationTitle ?? 'Konversation';
-
   return {
     blob: await markdownToDocxBlob(
       formatConversationExport({

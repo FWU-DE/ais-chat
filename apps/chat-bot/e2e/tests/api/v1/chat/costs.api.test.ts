@@ -8,7 +8,6 @@ import {
   CharacterWithShareDataModel,
   conversationUsageTracking,
   LearningScenarioWithShareDataModel,
-  llmModelTable,
   sharedCharacterChatUsageTrackingTable,
   sharedLearningScenarioUsageTracking,
   userTable,
@@ -35,7 +34,6 @@ test.describe('costs', () => {
     const user = mockUserAndContext();
 
     const model = mockLlmModel();
-    await db.insert(llmModelTable).values(model);
 
     for (let i = 0; i < 2; i++) {
       const conversationUsage = {
@@ -102,7 +100,6 @@ test.describe('costs', () => {
     user = { ...user, id: insertedUser.id, userRole: 'teacher' };
 
     const model = mockLlmModel();
-    await db.insert(llmModelTable).values(model);
 
     // create shared learning scenario
     const startedAt = new Date();
@@ -192,7 +189,6 @@ test.describe('costs', () => {
     user = { ...user, id: insertedUser.id, userRole: 'teacher' };
 
     const model = mockLlmModel();
-    await db.insert(llmModelTable).values(model);
 
     const startedAt = new Date();
     const character: CharacterWithShareDataModel = {

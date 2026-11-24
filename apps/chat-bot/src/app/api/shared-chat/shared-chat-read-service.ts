@@ -45,11 +45,4 @@ export async function verifySharedChatImageAccess({
   }
 
   verify.filesDoNotBelongToAnyUser([file]);
-  verify.sharedChatFileOwnershipBySession({
-    files: [file],
-    inviteCode,
-    entityType,
-    entityId,
-    sharedSessionId,
-  });
 }

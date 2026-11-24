@@ -10,7 +10,6 @@ export const env = createEnv({
   emptyStringAsUndefined: true,
   server: {
     appVersion: z.string().default('0.0.0'),
-    apiName: z.string().default('AIS.chat API'),
     apiKey: z.string(),
     databaseUrl: z.string(),
     logLevel: z
@@ -35,7 +34,6 @@ export const env = createEnv({
   },
   runtimeEnv: {
     appVersion: process.env.APP_VERSION,
-    apiName: process.env.API_NAME,
     apiKey: process.env.API_KEY,
     databaseUrl: process.env.API_DATABASE_URL,
     logLevel: process.env.LOG_LEVEL,

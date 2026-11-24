@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 120
     permissions:
       contents: read
@@ -73,10 +73,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Restore smart-reporter test history
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/chat-bot/smart-report/test-history.json
           # On a PR, restore the target branch's history (read-only baseline, see baseline.branch
@@ -89,9 +89,9 @@ jobs:
         run: docker compose -f devops/docker/docker-compose.local.yml up -d --build &
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
@@ -100,7 +100,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
@@ -141,7 +141,7 @@ jobs:
 
       - name: Seed ais-chat-api database
         # db:seed will print the generated API KEY on the console
-        # The output is captured in GITHUB_ENV for seeding ais-chat-app
+        # The output is captured in GITHUB_ENV for the API e2e tests (DE_TEST_API_KEY)
         # On fork PRs, the LLM_* secrets below are unavailable and resolve to empty strings;
         # db:seed skips any real-provider model whose credentials aren't set and seeds the
         # mock LLM only, which is all the smoke suite (the suite fork PRs run) needs.
@@ -174,7 +174,7 @@ jobs:
         run: pnpm --filter @ais-chat/shared db:migrate && pnpm --filter @ais-chat/shared db:seed
 
       - name: Cache turbo build cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .turbo
           key: turbo-e2e-${{ runner.os }}-${{ github.sha }}
@@ -231,6 +231,7 @@ jobs:
 
       # Stream container logs (with timestamps) to a file so the Playwright reporter can correlate them with tests.
       - name: Stream container logs to file
+        if: ${{ !cancelled() }}
         run: docker compose -f devops/docker/docker-compose.local.yml logs --no-color --timestamps --follow > "$CONTAINER_LOG_FILE" 2>&1 &
 
       - name: Run E2E tests (app)
@@ -258,13 +259,13 @@ jobs:
           DE_TEST_API_KEY: ${{ env.DE_TEST_API_KEY }}
 
       - name: Merge app/admin/api blob reports into one aggregated smart report
-        if: always()
+        if: ${{ !cancelled() }}
         run: pnpm --filter ais-chat-app smart-report:merge
 
       - name: Upload aggregated smart report
         id: upload-smart-report
-        uses: actions/upload-artifact@v7
-        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
         with:
           name: smart-report-${{ env.E2E_SUITE }}
           path: |
@@ -276,15 +277,15 @@ jobs:
           retention-days: 30
 
       - name: Save smart-reporter test history
-        if: always() && github.event_name != 'pull_request'
-        uses: actions/cache/save@v6
+        if: ${{ !cancelled() && github.event_name != 'pull_request' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/chat-bot/smart-report/test-history.json
           key: test-history-${{ github.ref_name }}-${{ github.run_id }}
 
       - name: Post smart-reporter pull request comment
-        if: always() && github.event_name == 'pull_request'
-        uses: qa-gary-parker/playwright-smart-reporter@v4.0.0
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        uses: qa-gary-parker/playwright-smart-reporter@66c029723e29b02ae4275819e60a9296bef83f63 # v4.0.1
         with:
           data: apps/chat-bot/smart-report/smart-report-data.json
           report-url: ${{ steps.upload-smart-report.outputs.artifact-url }}

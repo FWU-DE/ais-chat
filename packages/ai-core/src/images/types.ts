@@ -1,4 +1,4 @@
-import type { LlmModel } from '@ais-chat/api-database';
+import type { SensitiveLlmModel } from '@ais-chat/api-database';
 
 export type Usage = {
   input_text_tokens: number;
@@ -10,7 +10,7 @@ export type Usage = {
 export type ImageResponse = {
   // Base64-encoded images
   data: Array<string>;
-  output_format?: 'png' | 'webp' | 'jpeg';
+  output_format?: 'png' | 'webp' | 'jpeg' | 'gif' | 'svg';
   usage?: Usage;
   /** The real upstream provider that served the request, when the provider reports it. */
   provider?: string;
@@ -38,4 +38,4 @@ export type ImageGenerationFn = (args: {
 }) => Promise<ImageResponse>;
 
 // TODO: Just an alias for now, since the llmModel table needs renaming (it has image and embedding models too)
-export type AiModel = LlmModel;
+export type AiModel = SensitiveLlmModel;

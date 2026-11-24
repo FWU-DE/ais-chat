@@ -5,6 +5,7 @@
     "information-disclaimer": "AIS.chat peut faire des erreurs. Fais preuve d'esprit critique et vérifie toutes les informations.",
     "message-copy": "Copier le message",
     "regenerate-message-button": "Régénérer la réponse",
+    "code-download": "Télécharger le fichier",
     "plot": {
       "label": "Graphique",
       "download-png": "Télécharger le graphique",
@@ -14,6 +15,10 @@
       "fullscreen": "Afficher en plein écran",
       "description": "Graphique : {title}",
       "error": "Le graphique n'a pas pu être affiché."
+    },
+    "document": {
+      "download": "Télécharger {fileName}",
+      "error": "Le document n'a pas pu être créé."
     },
     "read-aloud": "Lire le message à voix haute",
     "pause-message": "Mettre la lecture en pause",
@@ -82,7 +87,8 @@
       "retrieve_entire_file": "Fichier entièrement lu",
       "mundo_search": "Recherche dans Mundo",
       "math_calculate": "Calcul effectué",
-      "create_plot": "Graphique créé"
+      "create_plot": "Graphique créé",
+      "generate_document": "Fichier créé"
     }
   }
 }

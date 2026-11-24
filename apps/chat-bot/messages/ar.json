@@ -5,6 +5,7 @@
     "information-disclaimer": "قد يخطئ AIS.chat. فكّر بشكل نقدي وتحقّق من جميع المعلومات.",
     "message-copy": "نسخ الرسالة",
     "regenerate-message-button": "إعادة توليد الرد",
+    "code-download": "تنزيل الملف",
     "plot": {
       "label": "رسم بياني",
       "download-png": "تنزيل الرسم البياني",
@@ -14,6 +15,10 @@
       "fullscreen": "عرض بملء الشاشة",
       "description": "رسم بياني: {title}",
       "error": "تعذّر عرض الرسم البياني."
+    },
+    "document": {
+      "download": "تنزيل {fileName}",
+      "error": "تعذّر إنشاء المستند."
     },
     "read-aloud": "قراءة الرسالة بصوت عالٍ",
     "pause-message": "إيقاف القراءة مؤقتًا",
@@ -82,7 +87,8 @@
       "retrieve_entire_file": "تمت قراءة الملف بالكامل",
       "mundo_search": "البحث في Mundo",
       "math_calculate": "تم إجراء الحساب",
-      "create_plot": "تم إنشاء الرسم البياني"
+      "create_plot": "تم إنشاء الرسم البياني",
+      "generate_document": "تم إنشاء الملف"
     }
   }
 }

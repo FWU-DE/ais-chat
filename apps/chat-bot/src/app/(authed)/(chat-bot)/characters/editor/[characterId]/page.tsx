@@ -33,11 +33,10 @@ export default async function Page(props: PageProps<'/characters/editor/[charact
     maxBudget,
     usedBudget,
     budgetUsedBySharedChat,
-  } = await getCharacterForEditView({
-    characterId,
-    user,
-    federalState,
-  }).catch(handleErrorInServerComponent);
+    isFavorite: initialIsFavorite,
+  } = await getCharacterForEditView({ characterId, user, federalState }).catch(
+    handleErrorInServerComponent,
+  );
 
   const readOnly = user.id !== character.userId;
 
@@ -70,6 +69,7 @@ export default async function Page(props: PageProps<'/characters/editor/[charact
         relatedFiles={relatedFiles}
         initialLinks={initialLinks}
         avatarPictureUrl={maybeSignedPictureUrl}
+        initialIsFavorite={initialIsFavorite}
         initialCommunityTemplateRequest={communityTemplateRequest}
         usedBudget={usedBudget ?? 0}
         maxBudget={maxBudget ?? 500}

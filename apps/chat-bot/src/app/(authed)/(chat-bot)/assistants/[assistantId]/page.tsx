@@ -22,10 +22,12 @@ export default async function Page(props: PageProps<'/assistants/[assistantId]'>
   const { assistantId } = await props.params;
   const { user, federalState } = await requireAuth();
 
-  const { assistant, fileMappings, pictureUrl } = await getAssistantByUser({
-    assistantId: assistantId,
-    user,
-  }).catch(handleErrorInServerComponent);
+  const {
+    assistant,
+    fileMappings,
+    pictureUrl,
+    isFavorite: initialIsFavorite,
+  } = await getAssistantByUser({ assistantId, user }).catch(handleErrorInServerComponent);
 
   return (
     <DefaultPageLayout>
@@ -33,6 +35,7 @@ export default async function Page(props: PageProps<'/assistants/[assistantId]'>
         assistant={assistant}
         fileMappings={fileMappings}
         pictureUrl={pictureUrl}
+        initialIsFavorite={initialIsFavorite}
         isWebSearchAvailable={isWebSearchAvailableForFederalState(federalState.featureToggles)}
         isSpeechAvailable={federalState.featureToggles.isSpeechModelEnabled === true}
       />

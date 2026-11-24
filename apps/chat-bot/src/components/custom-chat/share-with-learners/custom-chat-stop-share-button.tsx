@@ -62,11 +62,10 @@ export function CustomChatStopShareButton({
         <Button
           type="button"
           variant="destructive"
-          aria-label={t('button-stop')}
           data-testid="stop-share-button"
           className={className}
         >
-          <TrashSimpleIcon className="size-5" /> {t('button-close-session')}
+          <TrashSimpleIcon className="size-5" aria-hidden="true" /> {t('button-close-session')}
         </Button>
       </DialogTrigger>
       <DialogContent data-testid="stop-share-dialog">

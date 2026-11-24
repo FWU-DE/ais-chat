@@ -10,6 +10,7 @@ import { useTranslations } from 'next-intl';
 import { BackButton } from '@/components/common/back-button';
 import { useToast } from '@/components/common/toast';
 import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
+import { CustomChatActionFavorite } from '@/components/custom-chat/custom-chat-action-favorite';
 import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
 import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
 import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-author-info';
@@ -50,6 +51,7 @@ export function CharacterView({
   budgetUsedBySharedChat,
   isWebSearchAvailable,
   isSpeechAvailable,
+  initialIsFavorite,
 }: {
   character: CharacterOptionalShareDataModel;
   relatedFiles: FileModel[];
@@ -60,6 +62,7 @@ export function CharacterView({
   budgetUsedBySharedChat: number;
   isWebSearchAvailable: boolean;
   isSpeechAvailable: boolean;
+  initialIsFavorite: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -104,6 +107,10 @@ export function CharacterView({
       <CustomChatActions>
         <CustomChatActionUse onClick={handleUseChat} />
         <CustomChatActionDuplicate onClick={handleDuplicateCharacter} />
+        <CustomChatActionFavorite
+          entityRef={{ entityType: 'character', entityId: character.id }}
+          initialIsFavorite={initialIsFavorite}
+        />
         <CustomChatLastUpdate date={character.updatedAt} />
       </CustomChatActions>
 

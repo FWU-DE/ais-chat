@@ -1,43 +1,12 @@
 import { logError } from '@shared/logging';
 import { z } from 'zod';
 
-import { chatMessageSchema } from '@/types/chat';
-
-const STORAGE_KEY_VERSION = 'v2';
-
-const persistedSharedFileSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  type: z.string(),
-  size: z.number(),
-});
-
-/**
- * Schema for a persisted chat message in browser storage.
- * Kept in sync with `ChatMessage` from `@/types/chat`, plus the files that
- * were attached to that message (empty when none were attached).
- * The restored value is structurally compatible with `ChatMessage` for rendering
- * and round-trip back through the same persistence path.
- */
-const persistedChatMessageSchema = chatMessageSchema
-  .pick({
-    id: true,
-    role: true,
-    content: true,
-    activitySteps: true,
-  })
-  .extend({
-    files: z.array(persistedSharedFileSchema).default([]),
-  })
-  .strip();
+const STORAGE_KEY_VERSION = 'v3';
 
 const persistedSharedChatSchema = z.object({
-  sharedSessionId: z.string().min(1),
-  messages: z.array(persistedChatMessageSchema),
+  sharedSessionId: z.uuid(),
 });
 
-export type PersistedSharedFile = z.infer<typeof persistedSharedFileSchema>;
-export type PersistedSharedChatMessage = z.infer<typeof persistedChatMessageSchema>;
 export type PersistedSharedChat = z.infer<typeof persistedSharedChatSchema>;
 
 export function sharedChatStorageKey(inviteCode: string): string {
@@ -88,7 +57,7 @@ export function loadSharedChat(inviteCode: string): PersistedSharedChat | null {
 }
 
 /**
- * Persist the given shared chat state for the invite code. Best-effort:
+ * Persist the shared session identity for the invite code. Best-effort:
  * failures (quota exceeded, storage disabled) are logged and swallowed so the
  * chat keeps working in-memory.
  */
@@ -97,7 +66,6 @@ export function saveSharedChat(inviteCode: string, data: PersistedSharedChat): v
   if (storage === null) return;
 
   try {
-    // strips away any extra properties like attachments, webSearchResults, toolCalls, etc. that are not needed for persistence
     const parsed = persistedSharedChatSchema.parse(data);
     storage.setItem(sharedChatStorageKey(inviteCode), JSON.stringify(parsed));
   } catch (error) {

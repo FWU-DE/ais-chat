@@ -1,17 +1,16 @@
 import bcrypt from 'bcryptjs';
 import { and, eq, getTableColumns, inArray } from 'drizzle-orm';
 
-import { isDateBefore } from '../date';
 import { db } from '../db';
 import {
   ApiKeyInsertModel,
-  ApiKeyModel,
   apiKeyTable,
   llmModelApiKeyMappingTable,
   llmModelTable,
   projectTable,
 } from '../schema';
 import { cnanoid } from '../utils';
+import { type ApiKeyValidationResult, checkApiKeyUsable } from './api-key-validation';
 import { dbGetProjectById } from './projects';
 
 export async function dbLookupApiKeyByFullKey(fullApiKey: string) {
@@ -109,6 +108,14 @@ export async function dbGetAllApiKeysByProjectId(projectId: string) {
   return await db.select().from(apiKeyTable).where(eq(apiKeyTable.projectId, projectId));
 }
 
+export async function dbGetApiKeysByProjectId(projectId: string) {
+  return await db
+    .select({ id: apiKeyTable.id, name: apiKeyTable.name })
+    .from(apiKeyTable)
+    .where(eq(apiKeyTable.projectId, projectId))
+    .orderBy(apiKeyTable.name);
+}
+
 export async function dbGetAllApiKeys() {
   return await db
     .select({
@@ -147,9 +154,7 @@ export async function hashSecretKey(secretKey: string): Promise<string> {
   return bcrypt.hash(secretKey, saltRounds);
 }
 
-export async function dbValidateApiKey(
-  fullApiKey: string,
-): Promise<{ valid: true; apiKey: ApiKeyModel } | { valid: false; reason: string }> {
+export async function dbValidateApiKey(fullApiKey: string): Promise<ApiKeyValidationResult> {
   const [sk, keyId, secretKey] = fullApiKey.split('_');
 
   if (sk !== 'sk' || keyId === undefined || secretKey === undefined) {
@@ -158,29 +163,20 @@ export async function dbValidateApiKey(
 
   const apiKey = (await db.select().from(apiKeyTable).where(eq(apiKeyTable.keyId, keyId)))[0];
 
-  if (apiKey === undefined) {
-    return { valid: false, reason: 'Could not find the api key' };
-  }
+  const usable = checkApiKeyUsable(apiKey);
+  if (!usable.valid) return usable;
 
-  if (apiKey.expiresAt !== null && !isDateBefore(new Date(), apiKey.expiresAt)) {
-    return { valid: false, reason: 'Api key is expired' };
-  }
-
-  if (apiKey.state === 'inactive') {
-    return { valid: false, reason: 'Api key is inactive' };
-  }
-
-  if (apiKey.state === 'deleted') {
-    return { valid: false, reason: 'Api key was deleted' };
-  }
-
-  const isSameHash = await bcrypt.compare(secretKey, apiKey.secretHash);
+  const isSameHash = await bcrypt.compare(secretKey, usable.apiKey.secretHash);
 
   if (!isSameHash) {
     return { valid: false, reason: 'Api key is invalid' };
   }
 
-  return { valid: true, apiKey };
+  return usable;
+}
+
+export async function dbValidateApiKeyById(apiKeyId: string): Promise<ApiKeyValidationResult> {
+  return checkApiKeyUsable(await dbGetApiKeyById({ apiKeyId }));
 }
 
 export async function createApiKeyRecord(): Promise<{

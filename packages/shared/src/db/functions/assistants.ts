@@ -20,6 +20,7 @@ import {
   assistantTable,
   assistantTemplateMappingTable,
   conversationTable,
+  userFavoriteTable,
   userTable,
 } from '../schema';
 import { PgTransactionObject } from '../types';
@@ -105,6 +106,23 @@ export async function dbGetAssistantsByIds({
   return baseAssistantQuery().where(
     and(inArray(assistantTable.id, assistantIds), excludeDeletedAssistants({ includeDeleted })),
   );
+}
+
+export async function dbGetAssistantsByUserFavorite({
+  user,
+}: {
+  user: Pick<UserModel, 'id'>;
+}): Promise<AssistantSelectModel[]> {
+  return baseAssistantQuery()
+    .innerJoin(
+      userFavoriteTable,
+      and(
+        eq(userFavoriteTable.assistantId, assistantTable.id),
+        eq(userFavoriteTable.userId, user.id),
+      ),
+    )
+    .where(excludeDeletedAssistants())
+    .orderBy(desc(assistantTable.createdAt));
 }
 
 export async function dbGetGlobalGpts({

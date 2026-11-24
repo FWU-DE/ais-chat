@@ -12,12 +12,14 @@
     "dev:chat-bot": "pnpm --filter ais-chat-app dev",
     "dev:admin": "pnpm --filter ais-chat-admin dev",
     "dev:api": "pnpm --filter ais-chat-api dev",
+    "dev:ports": "node scripts/assign-ports.mjs",
     "format": "prettier --write --cache --log-level warn .",
     "format:check": "prettier --check --cache --log-level warn .",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
     "check-types": "turbo run check-types",
+    "db:check": "turbo run db:check",
     "db:migrate": "pnpm --filter @ais-chat/shared db:migrate:local && pnpm --filter @ais-chat/api-database db:migrate:local",
     "db:seed": "pnpm --filter @ais-chat/api-database db:seed && pnpm --filter @ais-chat/shared db:seed",
     "db:seed:from-stage": "pnpm --filter @ais-chat/api-database db:seed:from-stage && pnpm --filter @ais-chat/shared db:seed:from-stage",
@@ -25,12 +27,12 @@
   },
   "packageManager": "pnpm@12.16.1",
   "engines": {
-    "node": ">=24.22.1"
+    "node": ">=24.22.3"
   },
   "devDependencies": {
     "@ais-chat/typescript-config": "workspace:*",
     "madge": "8.0.0",
-    "prettier": "3.9.10",
-    "turbo": "2.11.10"
+    "prettier": "3.10.1",
+    "turbo": "2.11.11"
   }
 }

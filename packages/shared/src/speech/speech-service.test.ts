@@ -1,5 +1,4 @@
 import type { LlmModelSelectModel } from '@shared/db/schema';
-import { InvalidArgumentError } from '@shared/error';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -25,7 +24,7 @@ const speechModel = {
   id: 'speech-model-id',
   provider: 'bifrost',
   name: 'speech-model',
-  priceMetadata: { type: 'speech', inputTextTokenPrice: 1, outputAudioTokenPrice: 1 },
+  priceMetadata: { type: 'speech', priceInCentPer1MillionCharacters: 1 },
   modelConfig: { voices: [{ name: 'alloy' }, { name: 'nova' }] },
 } as unknown as LlmModelSelectModel;
 
@@ -37,17 +36,21 @@ beforeEach(() => {
   mocks.generateSpeechById.mockResolvedValue({
     audioBuffer: mp3Buffer,
     mimeType: 'audio/mpeg',
-    usage: { inputTextTokens: 10, outputAudioTokens: 20 },
+    usage: { characters: 10 },
   });
 });
 
 describe('generateSpeechPreview', () => {
-  it('rejects an unknown voice without generating speech', async () => {
-    await expect(
-      generateSpeechPreview({ text: 'Hello', voice: 'does-not-exist' }),
-    ).rejects.toBeInstanceOf(InvalidArgumentError);
+  it('falls back to the first configured voice for an unknown voice', async () => {
+    mocks.getCachedSpeechPreview.mockResolvedValue(undefined);
 
-    expect(mocks.generateSpeechById).not.toHaveBeenCalled();
+    await generateSpeechPreview({ text: 'Hello', voice: 'does-not-exist' });
+
+    expect(mocks.generateSpeechById).toHaveBeenCalledWith({
+      modelId: speechModel.id,
+      text: 'Hello',
+      voice: 'alloy',
+    });
   });
 
   it('returns the cached preview without regenerating or re-caching', async () => {

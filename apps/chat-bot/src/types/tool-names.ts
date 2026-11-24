@@ -6,6 +6,7 @@ export const TOOL_NAMES = {
   mundoSearch: 'mundo_search',
   mathCalculate: 'math_calculate',
   createPlot: 'create_plot',
+  generateDocument: 'generate_document',
 } as const;
 
 export type ToolName = (typeof TOOL_NAMES)[keyof typeof TOOL_NAMES];

@@ -3,9 +3,8 @@
 import { useTranslations } from 'next-intl';
 import { z } from 'zod';
 
-import { useLearningScenarioChat } from '@/hooks/use-chat-hooks';
+import { type ChatMessage, useLearningScenarioChat } from '@/hooks/use-chat-hooks';
 import { fetchSpeechStream } from '@/utils/audio/fetch-speech-stream';
-import { loadSharedChat } from '@/utils/shared-chat-storage';
 
 import GenericSharedChat from './generic-shared-chat';
 import type { SharedLearningScenarioDto } from './shared-chat-client-dto';
@@ -22,13 +21,7 @@ export default function LearningScenarioSharedChat({
   const t = useTranslations('learning-scenarios.shared');
   const { id, inviteCode, modelId } = learningScenario;
 
-  const initialMessages =
-    loadSharedChat(inviteCode)?.messages.map((message) => ({
-      id: message.id,
-      role: message.role,
-      content: message.content,
-      activitySteps: message.activitySteps,
-    })) ?? [];
+  const initialMessages: ChatMessage[] = [];
 
   const chat = useLearningScenarioChat({
     learningScenarioId: id,

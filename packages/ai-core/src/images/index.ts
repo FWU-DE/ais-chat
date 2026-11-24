@@ -1,11 +1,6 @@
-import { billImageGenerationUsageToApiKey, isApiKeyOverQuota } from '../api-keys/billing';
-import { hasAccessToModel } from '../api-keys/model-access';
-import {
-  ApiKeyQuotaExceededError,
-  InvalidModelError,
-  normalizeAiGenerationError,
-  ResponsibleAIError,
-} from '../errors';
+import { assertApiKeyCanUseModel } from '../api-keys/access';
+import { billImageGenerationUsageToApiKey } from '../api-keys/billing';
+import { normalizeAiGenerationError, ResponsibleAIError } from '../errors';
 import { getImageModelById, getImageModelByName } from '../models';
 import { buildImageSafetyMessages, checkInputSafety } from '../safety';
 import { generateImage } from './providers';
@@ -35,19 +30,7 @@ export async function generateImageWithBilling(
 ) {
   const model = await getImageModelById(modelId);
 
-  // Run access check and quota check in parallel for better performance
-  const [hasAccess, isOverQuota] = await Promise.all([
-    hasAccessToModel(apiKeyId, model),
-    isApiKeyOverQuota(apiKeyId),
-  ]);
-
-  if (!hasAccess) {
-    throw new InvalidModelError(`API key does not have access to the image model: ${model.name}`);
-  }
-
-  if (isOverQuota) {
-    throw new ApiKeyQuotaExceededError(`API key has exceeded its monthly quota`);
-  }
+  await assertApiKeyCanUseModel(apiKeyId, model, 'image');
 
   try {
     if (safetyModelName && model.safetyFilterEnabled) {

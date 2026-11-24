@@ -7,6 +7,7 @@ import { getCodeTitle } from '@/utils/code-blocks';
 import { cn } from '@/utils/tailwind';
 
 import CopyToClipboardButton from '../common/clipboard-button';
+import DownloadCodeButton from './download-code-button';
 
 export function MarkdownCode({
   className,
@@ -39,13 +40,14 @@ export function MarkdownCode({
   }
 
   return (
-    <div className="flex flex-col py-2 text-sm max-w-full">
-      <div className="flex items-center justify-center bg-muted py-2 px-2 gap-2">
+    <div className="flex flex-col pt-2 pb-[6.5rem] text-sm max-w-full">
+      <div className="sticky top-0 flex items-center justify-center bg-muted py-2 px-2 gap-2">
         <span className="min-w-0 grow truncate">
           {[language, title].filter(Boolean).join(' – ')}
         </span>
-        <div className="shrink-0">
-          <CopyToClipboardButton text={sanitizedText} />
+        <div className="shrink-0 flex items-center gap-1 [&_button]:hover:bg-foreground/10">
+          <DownloadCodeButton code={sanitizedText} language={rawToken} title={title} />
+          <CopyToClipboardButton text={sanitizedText} size="icon-sm" />
         </div>
       </div>
       <SyntaxHighlighter
@@ -57,6 +59,8 @@ export function MarkdownCode({
         customStyle={{
           overflowX: 'auto',
           margin: '0rem',
+          // offsets the wrapper's padding so the sticky header scrolls out before a lone header row remains
+          marginBottom: '-6rem',
         }}
       >
         {sanitizedText}

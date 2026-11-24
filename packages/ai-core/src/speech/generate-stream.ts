@@ -1,11 +1,17 @@
-import { AiGenerationError } from '../errors';
 import { getSpeechModelById } from '../models';
 import { getStreamingSpeechGenerationFn } from './providers';
-import type { SpeechStreamResult } from './types';
+import { buildSsmlSegments } from './ssml/segments';
+import { streamSpeechSegments } from './stream-segments';
+import { preprocessSpeechText } from './text/preprocess';
+import { splitSpeechText } from './text/split';
+import type { AiModel, SpeechStreamResult } from './types';
 
-// Generous ceiling for the whole stream (not just time-to-first-chunk), since long assistant
-// messages legitimately take longer to fully synthesize than the non-streaming SPEECH_TIMEOUT_MS.
-const SPEECH_STREAM_MAX_DURATION_MS = 60_000;
+// Keeps each request well below the input limits of speech providers.
+const MAX_SPEECH_SEGMENT_CHARS = 10000;
+
+// Generous ceiling per segment (not just time-to-first-chunk), since long segments legitimately
+// take longer to fully synthesize than the non-streaming SPEECH_TIMEOUT_MS.
+const SPEECH_SEGMENT_MAX_DURATION_MS = 300_000;
 
 export async function streamSpeechById({
   modelId,
@@ -16,34 +22,58 @@ export async function streamSpeechById({
   modelId: string;
   text: string;
   voice: string;
-  /** Aborted when the HTTP client disconnects, combined with an internal ceiling below. */
+  /** Aborted when the HTTP client disconnects, combined with an internal per-segment ceiling. */
   abortSignal?: AbortSignal;
 }): Promise<SpeechStreamResult> {
   const model = await getSpeechModelById(modelId);
-  const generateSpeechStream = getStreamingSpeechGenerationFn(model);
-  const timeoutSignal = AbortSignal.timeout(SPEECH_STREAM_MAX_DURATION_MS);
-  const combinedSignal = abortSignal
-    ? AbortSignal.any([timeoutSignal, abortSignal])
-    : timeoutSignal;
+  return streamSpeechForModel(model, { text, voice, abortSignal });
+}
 
-  const { chunks, usage, mimeType } = await generateSpeechStream({
+/**
+ * Streams speech for an SSML body (the content of the `<voice>` element). The body is validated
+ * and wrapped into complete `<speak>` documents, which Bifrost passes to Azure AI Speech as is.
+ */
+export async function streamSsmlSpeechById({
+  modelId,
+  ssmlBody,
+  voice,
+  abortSignal,
+}: {
+  modelId: string;
+  ssmlBody: string;
+  voice: string;
+  abortSignal?: AbortSignal;
+}): Promise<SpeechStreamResult> {
+  const model = await getSpeechModelById(modelId);
+
+  return streamSpeechSegments({
+    segments: buildSsmlSegments({ body: ssmlBody, voice, maxChars: MAX_SPEECH_SEGMENT_CHARS }),
+    voice,
+    abortSignal,
+    segmentTimeoutMs: SPEECH_SEGMENT_MAX_DURATION_MS,
+    generateSpeechStream: getStreamingSpeechGenerationFn(model),
+  });
+}
+
+export async function streamSpeechForModel(
+  model: AiModel,
+  {
     text,
     voice,
-    abortSignal: combinedSignal,
+    abortSignal,
+  }: {
+    text: string;
+    voice: string;
+    abortSignal?: AbortSignal;
+  },
+): Promise<SpeechStreamResult> {
+  const generateSpeechStream = getStreamingSpeechGenerationFn(model);
+
+  return streamSpeechSegments({
+    segments: splitSpeechText(preprocessSpeechText(text), MAX_SPEECH_SEGMENT_CHARS),
+    voice,
+    abortSignal,
+    segmentTimeoutMs: SPEECH_SEGMENT_MAX_DURATION_MS,
+    generateSpeechStream,
   });
-
-  async function* chunksWithTimeoutHandling() {
-    try {
-      yield* chunks;
-    } catch (error) {
-      if (timeoutSignal.aborted) {
-        throw new AiGenerationError(
-          `Speech generation timed out after ${SPEECH_STREAM_MAX_DURATION_MS} ms`,
-        );
-      }
-      throw error;
-    }
-  }
-
-  return { chunks: chunksWithTimeoutHandling(), usage, mimeType };
 }

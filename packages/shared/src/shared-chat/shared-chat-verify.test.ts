@@ -1,6 +1,5 @@
 import {
   filesDoNotBelongToAnyUser,
-  sharedChatFileOwnershipBySession,
   sharedSessionIdIsNotEmpty,
 } from '@shared/shared-chat/shared-chat-verify';
 import { describe, expect, it } from 'vitest';
@@ -30,54 +29,5 @@ describe('filesDoNotBelongToAnyUser', () => {
 
   it('allows files that do not belong to any user', () => {
     expect(() => filesDoNotBelongToAnyUser([{ userId: null }])).not.toThrow();
-  });
-});
-
-describe('sharedChatFileOwnershipBySession', () => {
-  const context = {
-    inviteCode: 'invite-1',
-    entityType: 'character' as const,
-    entityId: 'character-1',
-    sharedSessionId: 'session-1' as const,
-  };
-
-  it('accepts files with matching ownership metadata', () => {
-    const files = [
-      {
-        metadata: {
-          inviteCode: 'invite-1',
-          entityType: 'character',
-          entityId: 'character-1',
-          sessionId: 'session-1',
-        },
-      },
-    ];
-
-    expect(() => sharedChatFileOwnershipBySession({ files, ...context })).not.toThrow();
-  });
-
-  it('throws when metadata does not match context/session', () => {
-    const files = [
-      {
-        metadata: {
-          inviteCode: 'invite-1',
-          entityType: 'character',
-          entityId: 'character-1',
-          sessionId: 'other-session',
-        },
-      },
-    ];
-
-    expect(() => sharedChatFileOwnershipBySession({ files, ...context })).toThrow(
-      'Not authorized to access this file',
-    );
-  });
-
-  it('throws when metadata is null', () => {
-    const files = [{ metadata: null }];
-
-    expect(() => sharedChatFileOwnershipBySession({ files, ...context })).toThrow(
-      'Not authorized to access this file',
-    );
   });
 });

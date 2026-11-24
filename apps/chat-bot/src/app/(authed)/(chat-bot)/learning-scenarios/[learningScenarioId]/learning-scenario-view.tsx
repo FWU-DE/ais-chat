@@ -10,6 +10,7 @@ import { useTranslations } from 'next-intl';
 import { BackButton } from '@/components/common/back-button';
 import { useToast } from '@/components/common/toast';
 import { CustomChatActionDuplicate } from '@/components/custom-chat/custom-chat-action-duplicate';
+import { CustomChatActionFavorite } from '@/components/custom-chat/custom-chat-action-favorite';
 import { CustomChatActionUse } from '@/components/custom-chat/custom-chat-action-use';
 import { CustomChatActions } from '@/components/custom-chat/custom-chat-actions';
 import { CustomChatAuthorInfo } from '@/components/custom-chat/custom-chat-author-info';
@@ -52,6 +53,7 @@ export function LearningScenarioView({
   budgetUsedBySharedChat,
   isWebSearchAvailable,
   isSpeechAvailable,
+  initialIsFavorite,
 }: {
   learningScenario: LearningScenarioOptionalShareDataModel;
   fileMappings: FileModel[];
@@ -62,6 +64,7 @@ export function LearningScenarioView({
   budgetUsedBySharedChat: number;
   isWebSearchAvailable: boolean;
   isSpeechAvailable: boolean;
+  initialIsFavorite: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -154,6 +157,10 @@ export function LearningScenarioView({
       <CustomChatActions>
         <CustomChatActionUse onClick={handleUseChat} />
         <CustomChatActionDuplicate onClick={handleDuplicateLearningScenario} />
+        <CustomChatActionFavorite
+          entityRef={{ entityType: 'learningScenario', entityId: learningScenario.id }}
+          initialIsFavorite={initialIsFavorite}
+        />
         <CustomChatLastUpdate date={learningScenario.updatedAt} />
       </CustomChatActions>
 

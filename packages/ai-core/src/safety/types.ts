@@ -1,4 +1,4 @@
-import type { LlmModel } from '@ais-chat/api-database';
+import type { SensitiveLlmModel } from '@ais-chat/api-database';
 
 export type SafetyResult =
   | { safe: true }
@@ -26,4 +26,4 @@ export type SafetyCheckArgs = {
 
 export type SafetyCheckFn = (args: SafetyCheckArgs) => Promise<SafetyResult>;
 
-export type AiModel = LlmModel;
+export type AiModel = SensitiveLlmModel;
