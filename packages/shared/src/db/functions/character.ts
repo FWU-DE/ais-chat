@@ -34,6 +34,7 @@ import {
 } from '../schema';
 import { PgTransactionObject } from '../types';
 import { dbDeleteFileIfUnreferenced } from './files';
+import { sanitizeCostsInCent } from './token-usage';
 
 type IncludeDeletedOption = {
   includeDeleted?: boolean;
@@ -525,7 +526,10 @@ export async function dbUpdateTokenUsageByCharacterChatId(
   value: SharedCharacterChatUsageTrackingInsertModel,
 ) {
   const insertedUsage = (
-    await db.insert(sharedCharacterChatUsageTrackingTable).values(value).returning()
+    await db
+      .insert(sharedCharacterChatUsageTrackingTable)
+      .values(sanitizeCostsInCent(value))
+      .returning()
   )[0];
   if (insertedUsage === undefined) {
     throw new Error('Could not track the token usage');

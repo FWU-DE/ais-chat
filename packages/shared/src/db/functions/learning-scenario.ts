@@ -32,6 +32,7 @@ import {
 } from '../schema';
 import { PgTransactionObject } from '../types';
 import { dbDeleteFileIfUnreferenced } from './files';
+import { sanitizeCostsInCent } from './token-usage';
 
 type IncludeDeletedOption = {
   includeDeleted?: boolean;
@@ -454,7 +455,7 @@ export async function dbUpdateTokenUsageBySharedLearningScenarioId(
 ) {
   const [insertedUsage] = await db
     .insert(sharedLearningScenarioUsageTracking)
-    .values(value)
+    .values(sanitizeCostsInCent(value))
     .returning();
   if (insertedUsage === undefined) {
     throw new Error('Could not track the token usage');
