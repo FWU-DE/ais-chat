@@ -17,7 +17,7 @@ async function prepareInteractiveHtml(
   return `<!doctype html>\n${parsed.documentElement.outerHTML}`;
 }
 
-export async function markdownToHtmlBlob(
+export async function htmlToBlob(
   html: string,
   imageReferences?: DocumentImageReferences,
 ): Promise<Blob> {

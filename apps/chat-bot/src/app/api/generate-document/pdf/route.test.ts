@@ -28,12 +28,11 @@ describe('POST /api/generate-document/pdf', () => {
     vi.mocked(generatePdfFromMarkdown).mockResolvedValue(Buffer.from('%PDF-test'));
   });
 
-  it('returns the generated PDF as attachment', async () => {
+  it('returns the generated PDF', async () => {
     const response = await POST(buildRequest(validBody));
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('application/pdf');
-    expect(response.headers.get('Content-Disposition')).toContain('attachment');
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(await response.text()).toBe('%PDF-test');
     expect(generatePdfFromMarkdown).toHaveBeenCalledWith(

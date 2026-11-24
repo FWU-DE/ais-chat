@@ -13,12 +13,13 @@ import { z } from 'zod';
 
 import { env } from '@/env';
 import { PLOT_LANGUAGE } from '@/utils/code-blocks';
+import { MAX_FILE_NAME_LENGTH } from '@/utils/files/generated-document-format';
 
 import { PDF_STYLES } from './pdf-styles';
 
 export const pdfRequestSchema = z.object({
   markdown: z.string().min(1).max(100_000),
-  title: z.string().trim().min(1).max(120),
+  title: z.string().trim().min(1).max(MAX_FILE_NAME_LENGTH),
   images: z
     .array(
       z.object({
