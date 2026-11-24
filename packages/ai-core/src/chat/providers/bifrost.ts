@@ -18,7 +18,7 @@ import type {
 } from '../types';
 import { toOpenAIResponsesInput } from '../utils';
 import { streamOpenAICompatibleAgenticResponse } from './openai-compatible';
-import { getReasoningParameter } from './reasoning';
+import { getReasoningRequestParams } from './reasoning';
 
 function createBifrostClient(model: AiModel): { client: OpenAI; modelName: string } {
   if (model.provider !== 'bifrost') {
@@ -105,7 +105,7 @@ export function constructBifrostTextStreamFn(model: AiModel): TextStreamFn {
           stream: true,
           max_output_tokens: maxTokens,
           ...model.additionalParameters,
-          ...getReasoningParameter(model),
+          ...getReasoningRequestParams(model),
           ...(fallbackModels?.length ? { fallbacks: fallbackModels.map(getBifrostModelName) } : {}),
         },
         { signal: abortSignal },
@@ -175,7 +175,7 @@ export function constructBifrostAgenticStreamFn(model: AiModel): AgenticStreamFn
       providerName: 'Bifrost',
       additionalParameters: {
         ...(model.additionalParameters as Record<string, unknown>),
-        ...getReasoningParameter(model),
+        ...getReasoningRequestParams(model),
         ...(fallbackModels?.length ? { fallbacks: fallbackModels.map(getBifrostModelName) } : {}),
       },
       getUsageInfo: (headers) =>
@@ -204,7 +204,7 @@ export function constructBifrostTextGenerationFn(model: AiModel): TextGeneration
           stream: false,
           max_output_tokens: maxTokens,
           ...model.additionalParameters,
-          ...getReasoningParameter(model),
+          ...getReasoningRequestParams(model),
           ...(fallbackModels?.length ? { fallbacks: fallbackModels.map(getBifrostModelName) } : {}),
         },
         { signal: abortSignal },
