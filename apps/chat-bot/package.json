@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@ais-chat/ai-core": "workspace:*",
+    "@ais-chat/api-database": "workspace:*",
     "@ais-chat/shared": "workspace:*",
     "@ais-chat/shared-core": "workspace:*",
     "@ais-chat/ui": "workspace:*",

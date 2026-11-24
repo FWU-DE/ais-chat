@@ -41,6 +41,8 @@ const textModel = (id: string, name: string): LlmModelSelectModel => ({
   modelConfig: null,
   isNew: false,
   isDeleted: false,
+  vendor: null,
+  reasoning: null,
 });
 
 describe('getDefaultModel', () => {
@@ -72,14 +74,14 @@ describe('getDefaultModel', () => {
     ).resolves.toBe(configuredModel);
   });
 
-  it('falls back to the first non-Mistral text model when the configured model is unavailable', async () => {
+  it('falls back to the first text model when the configured model is unavailable', async () => {
     dbFindModelByIdAndFederalStateId.mockResolvedValue(undefined);
     const fallbackModel = textModel('fallback', 'fallback-model');
 
     await expect(
       getDefaultModel({
         federalStateId: 'DE-BY',
-        models: [textModel('mistral', 'mistral-small'), fallbackModel],
+        models: [fallbackModel],
       }),
     ).resolves.toBe(fallbackModel);
   });
