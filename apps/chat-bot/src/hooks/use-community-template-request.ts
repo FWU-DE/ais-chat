@@ -5,7 +5,7 @@ import {
   CommunityTemplateRequestWithEvents,
   EntitySharingSnapshot,
 } from '@shared/community-templates/community-template-service';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 export type CommunitySharingState = {
   request: CommunityTemplateRequestWithEvents | null;
@@ -28,6 +28,7 @@ type UseCommunityTemplateRequestResult = {
   createRequest: () => Promise<CommunityTemplateRequestMutationResult>;
   cancelRequest: () => Promise<CommunityTemplateRequestMutationResult>;
   sendMessage: (message: string) => Promise<CommunityTemplateRequestMutationResult>;
+  isPending: boolean;
 };
 
 /**
@@ -46,32 +47,62 @@ export function useCommunityTemplateRequest({
 }: UseCommunityTemplateRequestOptions): UseCommunityTemplateRequestResult {
   const [communityTemplateRequest, setCommunityTemplateRequest] =
     useState<CommunityTemplateRequestWithEvents | null>(initialRequest);
+  const [isPending, setIsPending] = useState(false);
+  const pendingCount = useRef(0);
+  const mutationQueue = useRef(Promise.resolve());
+
+  const runMutation = <T>(mutation: () => Promise<T>, applyResult: (result: T) => void) => {
+    pendingCount.current += 1;
+    setIsPending(true);
+
+    const queuedMutation = mutationQueue.current
+      .catch(() => undefined)
+      .then(async () => {
+        const result = await mutation();
+        applyResult(result);
+        return result;
+      })
+      .finally(() => {
+        pendingCount.current -= 1;
+        if (pendingCount.current === 0) {
+          setIsPending(false);
+        }
+      });
+
+    mutationQueue.current = queuedMutation.then(
+      () => undefined,
+      () => undefined,
+    );
+
+    return queuedMutation;
+  };
 
   return {
     communityTemplateRequest,
     setCommunityTemplateRequest,
-    createRequest: async () => {
-      const result = await createRequest();
-      if (result.success) {
-        setCommunityTemplateRequest(result.value.request);
-        onSharingStateChange(result.value);
-      }
-      return result;
-    },
-    cancelRequest: async () => {
-      const result = await cancelRequest();
-      if (result.success) {
-        setCommunityTemplateRequest(result.value.request);
-        onSharingStateChange(result.value);
-      }
-      return result;
-    },
-    sendMessage: async (message: string) => {
-      const result = await sendMessage(message);
-      if (result.success) {
-        setCommunityTemplateRequest(result.value.request);
-      }
-      return result;
-    },
+    isPending,
+    createRequest: () =>
+      runMutation(createRequest, (result) => {
+        if (result.success) {
+          setCommunityTemplateRequest(result.value.request);
+          onSharingStateChange(result.value);
+        }
+      }),
+    cancelRequest: () =>
+      runMutation(cancelRequest, (result) => {
+        if (result.success) {
+          setCommunityTemplateRequest(result.value.request);
+          onSharingStateChange(result.value);
+        }
+      }),
+    sendMessage: (message: string) =>
+      runMutation(
+        () => sendMessage(message),
+        (result) => {
+          if (result.success) {
+            setCommunityTemplateRequest(result.value.request);
+          }
+        },
+      ),
   };
 }

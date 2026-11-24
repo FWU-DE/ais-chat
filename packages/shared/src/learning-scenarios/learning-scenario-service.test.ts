@@ -82,6 +82,9 @@ vi.mock('../db/functions/files', () => ({
   dbGetFileForLearningScenario: vi.fn(),
   dbGetFilesForLearningScenario: vi.fn(),
 }));
+vi.mock('@shared/community-templates/community-template-service', () => ({
+  verifyCommunitySharingInactive: vi.fn(),
+}));
 vi.mock('@shared/db/functions/user-favorites', () => ({
   dbIsUserFavorite: vi.fn().mockResolvedValue(false),
 }));
@@ -198,7 +201,7 @@ function buildFunctionList(
       functionName: updateLearningScenario.name,
       testFunction: () =>
         updateLearningScenario({
-          data: {} as LearningScenarioSelectModel,
+          data: { author: 'Unauthorized credit' } as LearningScenarioSelectModel,
           learningScenarioId,
           user,
         }),
@@ -334,7 +337,7 @@ describe('learning-scenario-service', () => {
         userId,
         id: learningScenarioId,
         name: 'Test Scenario',
-        isSchoolShared: false,
+        isSchoolShared: true,
         isCommunityShared: false,
         isGlobal: false,
         hasLinkAccess: false,
@@ -417,14 +420,15 @@ describe('learning-scenario-service', () => {
   });
 
   describe('sharing updates preserve updatedAt', () => {
-    it('preserves updatedAt when only isSchoolShared changes', async () => {
+    it('retains the author when withdrawing school sharing and preserves updatedAt', async () => {
       const user = mockUser('teacher');
       const learningScenarioId = generateUUID();
       const updatedAt = new Date('2026-06-01T10:00:00.000Z');
       const learningScenario = {
         id: learningScenarioId,
         userId: user.id,
-        isSchoolShared: false,
+        author: 'Original credited authors',
+        isSchoolShared: true,
         isCommunityShared: false,
         isGlobal: false,
         hasLinkAccess: false,
@@ -433,12 +437,17 @@ describe('learning-scenario-service', () => {
 
       vi.mocked(dbGetLearningScenarioById).mockResolvedValue(learningScenario as never);
       mockDbReturning.mockResolvedValue([
-        { ...learningScenario, isSchoolShared: true } as LearningScenarioSelectModel,
+        { ...learningScenario, isSchoolShared: false } as LearningScenarioSelectModel,
       ]);
 
-      await updateLearningScenarioSchoolSharing({ learningScenarioId, user, isSchoolShared: true });
+      const result = await updateLearningScenarioSchoolSharing({
+        learningScenarioId,
+        user,
+        isSchoolShared: false,
+      });
 
-      expect(mockDbSet).toHaveBeenCalledWith({ isSchoolShared: true, updatedAt });
+      expect(mockDbSet).toHaveBeenCalledWith({ isSchoolShared: false, updatedAt });
+      expect(result.author).toBe('Original credited authors');
     });
 
     it('preserves updatedAt when only hasLinkAccess changes', async () => {
@@ -468,6 +477,56 @@ describe('learning-scenario-service', () => {
         hasLinkAccess: true,
         updatedAt,
       });
+    });
+
+    it('updates an existing author credit without changing sharing state', async () => {
+      const user = mockUser('teacher');
+      const learningScenarioId = generateUUID();
+      const learningScenario = {
+        id: learningScenarioId,
+        userId: user.id,
+        author: 'Old credit',
+      };
+
+      vi.mocked(dbGetLearningScenarioById).mockResolvedValue(learningScenario as never);
+      mockDbReturning.mockResolvedValue([
+        { ...learningScenario, author: 'Ada Lovelace & Alan Turing' },
+      ]);
+
+      await updateLearningScenario({
+        learningScenarioId,
+        user,
+        data: {
+          id: learningScenarioId,
+          author: 'Ada Lovelace & Alan Turing',
+        } as LearningScenarioSelectModel,
+      });
+
+      expect(mockDbSet).toHaveBeenCalledWith({
+        id: learningScenarioId,
+        author: 'Ada Lovelace & Alan Turing',
+      });
+    });
+
+    it('allows clearing an existing author credit with an empty string', async () => {
+      const user = mockUser('teacher');
+      const learningScenarioId = generateUUID();
+      const learningScenario = {
+        id: learningScenarioId,
+        userId: user.id,
+        author: 'Existing credit',
+      };
+
+      vi.mocked(dbGetLearningScenarioById).mockResolvedValue(learningScenario as never);
+      mockDbReturning.mockResolvedValue([{ ...learningScenario, author: '' }]);
+
+      await updateLearningScenario({
+        learningScenarioId,
+        user,
+        data: { id: learningScenarioId, author: '' } as LearningScenarioSelectModel,
+      });
+
+      expect(mockDbSet).toHaveBeenCalledWith({ id: learningScenarioId, author: '' });
     });
 
     it('ignores a popularity value sent by the owner', async () => {

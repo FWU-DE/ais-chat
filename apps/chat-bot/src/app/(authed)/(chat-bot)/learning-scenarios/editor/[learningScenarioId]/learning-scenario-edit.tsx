@@ -127,6 +127,7 @@ function createLearningScenarioFieldValidationConfig(t: LearningScenarioTranslat
 function createLearningScenarioFormValuesSchema(t: LearningScenarioTranslator) {
   return z.object({
     name: z.string().trim().min(1, t('name-required')),
+    author: z.string(),
     description: z.string(),
     additionalInstructions: z.string(),
     studentExercise: z.string(),
@@ -186,6 +187,7 @@ export function LearningScenarioEdit({
   const router = useRouter();
   const toast = useToast();
   const t = useTranslations('learning-scenarios');
+  const tCommon = useTranslations('common');
   const tToast = useTranslations('learning-scenarios.toasts');
   const tChat = useTranslations('custom-chat');
   const learningScenarioFormValuesSchema = useMemo(
@@ -202,6 +204,7 @@ export function LearningScenarioEdit({
 
   const initialValues: LearningScenarioFormValues = {
     name: learningScenario.name,
+    author: learningScenario.author ?? '',
     description: learningScenario.description ?? '',
     additionalInstructions: learningScenario.additionalInstructions ?? '',
     studentExercise: learningScenario.studentExercise ?? '',
@@ -262,6 +265,7 @@ export function LearningScenarioEdit({
             ...learningScenario,
             ...data,
             name: data.name.trim(),
+            author: data.author,
             description: data.description ?? '',
             studentExercise: data.studentExercise ?? '',
             didacticCommentary: data.didacticCommentary.trimEnd(),
@@ -280,6 +284,7 @@ export function LearningScenarioEdit({
     createCommunityTemplateRequest,
     sendMessageToEditor,
     handleSharingChange,
+    isSharingPending,
   } = useEntitySharing({
     setValue,
     initialRequest: initialCommunityTemplateRequest,
@@ -539,6 +544,17 @@ export function LearningScenarioEdit({
                     testId="learning-scenario-name-input"
                     onBlur={handleAutoSave}
                   />
+                  {(isSchoolShared || isCommunityShared || hasLinkAccess) && (
+                    <FormField
+                      name="author"
+                      control={control}
+                      label={tCommon('author-form-label')}
+                      placeholder={tCommon('author-form-placeholder')}
+                      tooltip={tCommon('author-form-tooltip')}
+                      testId="learning-scenario-author-input"
+                      onBlur={handleAutoSave}
+                    />
+                  )}
                   <FormField
                     name="description"
                     control={control}
@@ -640,6 +656,7 @@ export function LearningScenarioEdit({
               linkSharingName="hasLinkAccess"
               linkToShare={`/learning-scenarios/${learningScenario.id}`}
               onShareChange={handleSharingChange}
+              sharingPending={isSharingPending}
               suspended={learningScenario.suspended}
             />
             {communityTemplateRequest && (

@@ -22,7 +22,10 @@
     "listen-to-answer": "Прослушать ответ",
     "pause-audio": "Пауза",
     "show-message-text": "Показать текст",
-    "hide-message-text": "Скрыть текст"
+    "hide-message-text": "Скрыть текст",
+    "author-form-label": "Авторы",
+    "author-form-placeholder": "Имя автора или авторов",
+    "author-form-tooltip": "Необязательно: укажите одного или нескольких авторов."
   },
   "characters": {
     "shared": {

@@ -53,6 +53,9 @@ vi.mock('../db/functions/assistants', () => ({
 vi.mock('../db/functions/files', () => ({
   dbGetRelatedAssistantFiles: vi.fn(),
 }));
+vi.mock('@shared/community-templates/community-template-service', () => ({
+  verifyCommunitySharingInactive: vi.fn(),
+}));
 vi.mock('@shared/db/functions/user-favorites', () => ({
   dbIsUserFavorite: vi.fn().mockResolvedValue(false),
 }));
@@ -288,7 +291,7 @@ describe('assistant-service', () => {
           updateAssistant({
             assistantId,
             user: { id: 'different-user-id' },
-            assistantProps: {},
+            assistantProps: { author: 'Unauthorized credit' },
           }),
       },
       {
@@ -460,14 +463,15 @@ describe('assistant-service', () => {
   });
 
   describe('sharing updates preserve updatedAt', () => {
-    it('preserves updatedAt when only isSchoolShared changes', async () => {
+    it('retains the author when withdrawing school sharing and preserves updatedAt', async () => {
       const userId = generateUUID();
       const assistantId = generateUUID();
       const updatedAt = new Date('2026-06-01T10:00:00.000Z');
       const assistant = {
         id: assistantId,
         userId,
-        isSchoolShared: false,
+        author: 'Existing credited author',
+        isSchoolShared: true,
         hasLinkAccess: false,
         updatedAt,
       } as Partial<AssistantSelectModel>;
@@ -476,16 +480,17 @@ describe('assistant-service', () => {
         assistant as never,
       );
       mockDbReturning.mockResolvedValue([
-        { ...assistant, isSchoolShared: true } as AssistantSelectModel,
+        { ...assistant, isSchoolShared: false } as AssistantSelectModel,
       ]);
 
-      await updateAssistantSchoolSharing({
+      const result = await updateAssistantSchoolSharing({
         assistantId,
-        isSchoolShared: true,
+        isSchoolShared: false,
         user: { id: userId },
       });
 
-      expect(mockDbSet).toHaveBeenCalledWith({ isSchoolShared: true, updatedAt });
+      expect(mockDbSet).toHaveBeenCalledWith({ isSchoolShared: false, updatedAt });
+      expect(result.author).toBe('Existing credited author');
     });
 
     it('preserves updatedAt when only hasLinkAccess changes', async () => {
@@ -513,6 +518,40 @@ describe('assistant-service', () => {
       });
 
       expect(mockDbSet).toHaveBeenCalledWith({ hasLinkAccess: true, updatedAt });
+    });
+
+    it('updates an existing author credit without changing sharing state', async () => {
+      const userId = generateUUID();
+      const assistantId = generateUUID();
+      const assistant = { id: assistantId, userId, author: 'Old credit' };
+
+      vi.mocked(dbGetAssistantById).mockResolvedValue(assistant as never);
+      mockDbReturning.mockResolvedValue([{ ...assistant, author: 'Ada Lovelace & Alan Turing' }]);
+
+      await updateAssistant({
+        assistantId,
+        user: { id: userId },
+        assistantProps: { author: 'Ada Lovelace & Alan Turing' },
+      });
+
+      expect(mockDbSet).toHaveBeenCalledWith({ author: 'Ada Lovelace & Alan Turing' });
+    });
+
+    it('allows clearing an existing author credit with an empty string', async () => {
+      const userId = generateUUID();
+      const assistantId = generateUUID();
+      const assistant = { id: assistantId, userId, author: 'Existing credit' };
+
+      vi.mocked(dbGetAssistantById).mockResolvedValue(assistant as never);
+      mockDbReturning.mockResolvedValue([{ ...assistant, author: '' }]);
+
+      await updateAssistant({
+        assistantId,
+        user: { id: userId },
+        assistantProps: { author: '' },
+      });
+
+      expect(mockDbSet).toHaveBeenCalledWith({ author: '' });
     });
 
     it('ignores a popularity value sent by the owner', async () => {

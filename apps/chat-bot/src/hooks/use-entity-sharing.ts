@@ -3,7 +3,7 @@
 import { ServerActionResult } from '@shared/actions/server-action-result';
 import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
 import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
-import { useCallback } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { UseFormSetValue } from 'react-hook-form';
 
 import {
@@ -67,6 +67,7 @@ export function useEntitySharing<TFormValues extends SharingFormFields>({
     createRequest,
     cancelRequest,
     sendMessage,
+    isPending: isCommunityRequestPending,
   } = useCommunityTemplateRequest({
     initialRequest,
     createRequest: actions.createCommunityTemplateRequest,
@@ -74,6 +75,39 @@ export function useEntitySharing<TFormValues extends SharingFormFields>({
     sendMessage: actions.sendMessageToEditor,
     onSharingStateChange: applySharingState,
   });
+
+  const [isSharingPending, setIsSharingPending] = useState(false);
+  const pendingOperationCount = useRef(0);
+  const sharingOperationQueue = useRef(Promise.resolve());
+
+  const runSharingOperation = <T>(operation: () => Promise<T>) => {
+    pendingOperationCount.current += 1;
+    setIsSharingPending(true);
+
+    const queuedOperation = sharingOperationQueue.current
+      .catch(() => undefined)
+      .then(async () => {
+        await onSuccess();
+        try {
+          return await operation();
+        } finally {
+          await onSuccess();
+        }
+      })
+      .finally(() => {
+        pendingOperationCount.current -= 1;
+        if (pendingOperationCount.current === 0) {
+          setIsSharingPending(false);
+        }
+      });
+
+    sharingOperationQueue.current = queuedOperation.then(
+      () => undefined,
+      () => undefined,
+    );
+
+    return queuedOperation;
+  };
 
   // Resyncs only the sharing fields after a failed mutation, leaving other unsaved fields untouched.
   const refreshSharingState = async () => {
@@ -84,27 +118,28 @@ export function useEntitySharing<TFormValues extends SharingFormFields>({
     }
   };
 
-  const handleSharingChange = async ({ name, checked }: { name: string; checked: boolean }) => {
-    let result: { success: boolean } | undefined;
-    if (name === 'isCommunityShared') {
-      result = checked ? await createRequest() : await cancelRequest();
-    } else if (name === 'isSchoolShared') {
-      result = await actions.updateSchoolSharing(checked);
-    }
+  const handleSharingChange = ({ name, checked }: { name: string; checked: boolean }) =>
+    runSharingOperation(async () => {
+      let result: { success: boolean } | undefined;
+      if (name === 'isCommunityShared') {
+        result = checked ? await createRequest() : await cancelRequest();
+      } else if (name === 'isSchoolShared') {
+        result = await actions.updateSchoolSharing(checked);
+      }
 
-    if (result && !result.success) {
-      await refreshSharingState();
-      onError();
-      return;
-    }
+      if (result && !result.success) {
+        await refreshSharingState();
+        onError();
+      }
+    });
 
-    await onSuccess();
-  };
+  const createCommunityTemplateRequest = () => runSharingOperation(() => createRequest());
 
   return {
     communityTemplateRequest,
-    createCommunityTemplateRequest: createRequest,
+    createCommunityTemplateRequest,
     sendMessageToEditor: sendMessage,
     handleSharingChange,
+    isSharingPending: isSharingPending || isCommunityRequestPending,
   };
 }

@@ -124,6 +124,7 @@ function createCharacterFieldValidationConfig(t: CharacterTranslator) {
 function createCharacterFormValuesSchema(t: CharacterTranslator) {
   return z.object({
     name: z.string().trim().min(1, t('name-required')),
+    author: z.string(),
     description: z.string(),
     instructions: z.string(),
     initialMessage: z.string(),
@@ -181,6 +182,7 @@ export function CharacterEdit({
   const router = useRouter();
   const toast = useToast();
   const t = useTranslations('characters');
+  const tCommon = useTranslations('common');
   const tChat = useTranslations('custom-chat');
   const characterFormValuesSchema = useMemo(() => createCharacterFormValuesSchema(t), [t]);
 
@@ -192,6 +194,7 @@ export function CharacterEdit({
 
   const initialValues: CharacterFormValues = {
     name: character.name,
+    author: character.author ?? '',
     description: character.description ?? '',
     instructions: character.instructions ?? '',
     initialMessage: character.initialMessage ?? '',
@@ -251,6 +254,7 @@ export function CharacterEdit({
         const updateResult = await updateCharacterAction({
           id: character.id,
           name: data.name.trim(),
+          author: data.author,
           description: data.description,
           instructions: data.instructions,
           initialMessage: data.initialMessage,
@@ -276,6 +280,7 @@ export function CharacterEdit({
     createCommunityTemplateRequest,
     sendMessageToEditor,
     handleSharingChange,
+    isSharingPending,
   } = useEntitySharing({
     setValue,
     initialRequest: initialCommunityTemplateRequest,
@@ -516,6 +521,17 @@ export function CharacterEdit({
                   testId="character-name-input"
                   onBlur={handleAutoSave}
                 />
+                {(isSchoolShared || isCommunityShared || hasLinkAccess) && (
+                  <FormField
+                    name="author"
+                    control={control}
+                    label={tCommon('author-form-label')}
+                    placeholder={tCommon('author-form-placeholder')}
+                    tooltip={tCommon('author-form-tooltip')}
+                    testId="character-author-input"
+                    onBlur={handleAutoSave}
+                  />
+                )}
                 <FormField
                   name="description"
                   control={control}
@@ -615,6 +631,7 @@ export function CharacterEdit({
             linkSharingName="hasLinkAccess"
             linkToShare={`/characters/${character.id}`}
             onShareChange={handleSharingChange}
+            sharingPending={isSharingPending}
             suspended={character.suspended}
           />
           {communityTemplateRequest && (
