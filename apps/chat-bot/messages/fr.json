@@ -26,10 +26,7 @@
     "listen-to-answer": "Écouter la réponse",
     "pause-audio": "Pause",
     "show-message-text": "Afficher le texte",
-    "hide-message-text": "Masquer le texte",
-    "author-form-label": "Auteures et auteurs",
-    "author-form-placeholder": "Nom(s) des auteures et auteurs",
-    "author-form-tooltip": "Facultatif : indiquez une ou plusieurs personnes auteures."
+    "hide-message-text": "Masquer le texte"
   },
   "characters": {
     "shared": {

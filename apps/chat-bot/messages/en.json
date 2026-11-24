@@ -26,10 +26,7 @@
     "listen-to-answer": "Listen to answer",
     "pause-audio": "Pause",
     "show-message-text": "Show text",
-    "hide-message-text": "Hide text",
-    "author-form-label": "Authors",
-    "author-form-placeholder": "Author name(s)",
-    "author-form-tooltip": "Optional: Enter one or more authors."
+    "hide-message-text": "Hide text"
   },
   "characters": {
     "shared": {

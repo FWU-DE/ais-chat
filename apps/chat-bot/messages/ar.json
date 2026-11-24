@@ -26,10 +26,7 @@
     "listen-to-answer": "الاستماع إلى الإجابة",
     "pause-audio": "إيقاف مؤقت",
     "show-message-text": "إظهار النص",
-    "hide-message-text": "إخفاء النص",
-    "author-form-label": "المؤلفون والمؤلفات",
-    "author-form-placeholder": "اسم المؤلف/المؤلفين",
-    "author-form-tooltip": "اختياري: أدخل مؤلفًا واحدًا أو أكثر."
+    "hide-message-text": "إخفاء النص"
   },
   "characters": {
     "shared": {
