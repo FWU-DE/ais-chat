@@ -124,7 +124,7 @@ safety model.
 
 As with text and image generation, concurrent requests can exceed the budget slightly because quota
 is checked before generation and billed after. Billing uses the characters reported by the
-provider, which only arrive with the last event of a segment. A stream aborted by the client before
-that is billed with 0 characters for the unfinished segment, although the provider may still charge
-for it. This applies to the chat-bot as well and is a known, accepted gap. It is intentionally not
-mentioned in the public API docs.
+provider, which only arrive with the last event of a segment. If a segment's stream ends without
+that event (e.g. aborted by the client), the segment's full input length is billed, since the
+provider charges the whole input once the request was accepted. Segments that were never started
+are not billed. This applies to the chat-bot as well.
