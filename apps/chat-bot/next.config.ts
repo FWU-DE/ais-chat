@@ -52,7 +52,10 @@ const baseNextConfig: NextConfig = {
         },
         {
           condition: {
-            all: [{ not: 'foreign' }, { not: { query: /url/ } }],
+            all: [
+              { any: [{ not: 'foreign' }, { path: /@lobehub\/icons-static-svg/ }] },
+              { not: { query: /url/ } },
+            ],
           },
           loaders: [
             {
