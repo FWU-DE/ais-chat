@@ -103,6 +103,8 @@ const imageModel = {
   supportedImageFormats: ['png'],
   isNew: false,
   isDeleted: false,
+  vendor: null,
+  reasoning: null,
 } as LlmModelSelectModel;
 
 function prepareExistingConversation() {

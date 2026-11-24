@@ -1,7 +1,7 @@
 'use client';
 
 import { LlmModelSelectModel } from '@shared/db/schema';
-import { getFilteredTextModels } from '@shared/llm-models/llm-model-utils';
+import { getTextModels } from '@shared/llm-models/llm-model-utils';
 import {
   Select,
   SelectContent,
@@ -39,7 +39,7 @@ export function CustomChatModelSelect({
             <SelectValue />
           </SelectTrigger>
           <SelectContent align="start">
-            {getFilteredTextModels(models, true).map((model) => (
+            {getTextModels(models).map((model) => (
               <SelectItem key={model.id} value={model.id}>
                 {model.displayName}
               </SelectItem>

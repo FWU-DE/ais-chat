@@ -67,6 +67,8 @@ export const mockLlmModel = (): LlmModelSelectModel => {
     modelConfig: null,
     isNew: false,
     isDeleted: false,
+    vendor: null,
+    reasoning: null,
   };
 };
 

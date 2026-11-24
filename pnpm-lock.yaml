@@ -444,6 +444,9 @@ importers:
       '@ais-chat/ai-core':
         specifier: workspace:*
         version: link:../../packages/ai-core
+      '@ais-chat/api-database':
+        specifier: workspace:*
+        version: link:../../packages/api-database
       '@ais-chat/shared':
         specifier: workspace:*
         version: link:../../packages/shared

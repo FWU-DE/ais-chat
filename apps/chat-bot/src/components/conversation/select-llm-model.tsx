@@ -1,6 +1,6 @@
 'use client';
 
-import { getFilteredTextModels } from '@shared/llm-models/llm-model-utils';
+import { getTextModels } from '@shared/llm-models/llm-model-utils';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
@@ -13,7 +13,7 @@ export default function SelectLlmModel() {
 
   return (
     <ModelSelect
-      models={getFilteredTextModels(models)}
+      models={getTextModels(models)}
       selectedModel={selectedModel}
       onModelChange={setSelectedModel}
       modelType="text"

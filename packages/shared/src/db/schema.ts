@@ -1,4 +1,5 @@
 import { ToolCall } from '@ais-chat/ai-core/chat/types';
+import type { ReasoningConfig } from '@ais-chat/api-database/types';
 import {
   type LlmModelPriceMetadata,
   llmModelPriceMetadataSchema,
@@ -796,7 +797,10 @@ export const llmModelUpdateSchema = createUpdateSchema(llmModelTable)
     id: z.string(),
   });
 
-export type LlmModelSelectModel = z.infer<typeof llmModelSelectSchema>;
+export type LlmModelSelectModel = z.infer<typeof llmModelSelectSchema> & {
+  vendor: string | null;
+  reasoning: ReasoningConfig | null;
+};
 export type LlmModelInsertModel = z.infer<typeof llmModelInsertSchema>;
 export type LlmModelUpdateModel = z.infer<typeof llmModelUpdateSchema>;
 
