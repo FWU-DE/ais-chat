@@ -29,6 +29,17 @@ async function newAuthenticatedPage(browser: Browser, sourcePage: Page, storageS
   return context.newPage();
 }
 
+// The autosave indicator still shows the previous save, so wait for the save request itself.
+async function saveAuthor(page: Page, author: Locator, value: string) {
+  const saveRequest = page.waitForResponse(
+    (response) => response.request().method() === 'POST' && response.url().includes('/editor/'),
+  );
+  await author.fill(value);
+  await author.press('Tab');
+  await saveRequest;
+  await waitForAutosave(page);
+}
+
 async function waitForSharingSettled(page: Page) {
   await expect(page.locator('#share-settings')).toHaveAttribute('aria-busy', 'false');
 }
@@ -89,9 +100,7 @@ test.describe('character template authorship', { tag: '@smoke' }, () => {
     const sharing = page.getByTestId('school-sharing-checkbox');
     await setSharingState(page, sharing, true);
     await expect(author).toBeVisible();
-    await author.fill(initialAuthor);
-    await author.press('Tab');
-    await waitForAutosave(page);
+    await saveAuthor(page, author, initialAuthor);
     await waitForSharingSettled(page);
     await page.reload();
     await expect(author).toHaveValue(initialAuthor);
@@ -102,9 +111,7 @@ test.describe('character template authorship', { tag: '@smoke' }, () => {
       contentType: 'image/png',
     });
 
-    await author.fill('   ');
-    await author.press('Tab');
-    await waitForAutosave(page);
+    await saveAuthor(page, author, '   ');
     await page.reload();
     await expect(author).toHaveValue('   ');
     const blankViewPage = await newAuthenticatedPage(browser, page, AUTH_FILES.teacher2);
@@ -116,13 +123,9 @@ test.describe('character template authorship', { tag: '@smoke' }, () => {
       await blankViewPage.context().close();
     }
 
-    await author.fill(initialAuthor);
-    await author.press('Tab');
-    await waitForAutosave(page);
+    await saveAuthor(page, author, initialAuthor);
 
-    await author.fill(updatedAuthor);
-    await author.press('Tab');
-    await waitForAutosave(page);
+    await saveAuthor(page, author, updatedAuthor);
     await page.reload();
     await expect(author).toHaveValue(updatedAuthor);
 
@@ -159,9 +162,7 @@ test.describe('character template authorship', { tag: '@smoke' }, () => {
     await expect(author).toBeVisible();
 
     await setSharingState(page, sharing, false);
-    await author.fill(finalAuthor);
-    await author.press('Tab');
-    await waitForAutosave(page);
+    await saveAuthor(page, author, finalAuthor);
     await expect(author).toBeVisible();
     await page.reload();
     await expect(author).toBeVisible();
@@ -216,9 +217,7 @@ test.describe('character template authorship', { tag: '@smoke' }, () => {
 
     await submitToCommunity(page);
     await expect(author).toBeVisible();
-    await author.fill(requestAuthor);
-    await author.press('Tab');
-    await waitForAutosave(page);
+    await saveAuthor(page, author, requestAuthor);
     await page.reload();
     await expect(author).toHaveValue(requestAuthor);
 
@@ -226,10 +225,11 @@ test.describe('character template authorship', { tag: '@smoke' }, () => {
       storageState: EDITOR_AUTH_FILE,
       baseURL: ADMIN_BASE_URL,
     });
-    const adminPage = await adminContext.newPage();
+    const adminListPage = await adminContext.newPage();
 
     try {
-      await openRequestInAdmin(adminPage, name);
+      // The request detail view opens in a new tab
+      const adminPage = await openRequestInAdmin(adminListPage, name);
       await approveRequestInAdmin(adminPage);
     } finally {
       await adminContext.close();
@@ -255,9 +255,7 @@ test.describe('character template authorship', { tag: '@smoke' }, () => {
       await sharedPage.context().close();
     }
 
-    await author.fill(activeAuthor);
-    await author.press('Tab');
-    await waitForAutosave(page);
+    await saveAuthor(page, author, activeAuthor);
     const activeViewPage = await newAuthenticatedPage(browser, page, AUTH_FILES.teacher2);
     try {
       await activeViewPage.goto(page.url().replace('/editor', ''));
