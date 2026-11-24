@@ -189,13 +189,26 @@ services:
 
   # Applies provider config to bifrost and restarts it afterwards (see services/bifrost-sync/README.md).
   # Local only: the Docker socket gives root on the host, so it is mounted nowhere else. The socket
-  # is owned by root, hence `user: root`.
+  # is owned by root, hence `user: root`. Without capabilities and with a read-only filesystem, a
+  # compromised process in this container still holds the socket but little else.
   bifrost-sync:
     build:
       context: ../..
       dockerfile: services/bifrost-sync/Dockerfile
     restart: unless-stopped
     user: '0:0'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
     depends_on:
       bifrost:
         condition: service_healthy
