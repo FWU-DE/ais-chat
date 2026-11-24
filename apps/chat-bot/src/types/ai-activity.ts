@@ -29,6 +29,7 @@ const aiActivityLinkSchema = z.object({
 
 const aiActivityDocumentSchema = z.object({
   fileName: z.string(),
+  title: z.string(),
   format: z.enum(GENERATED_DOCUMENT_FORMATS),
   content: z.string(),
 });

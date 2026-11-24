@@ -11,7 +11,10 @@ import {
   type DocumentImageReferences,
   getDocumentAttachmentReference,
 } from '@/utils/files/document-images';
-import { createGeneratedDocumentBlob } from '@/utils/files/generated-document';
+import {
+  createGeneratedDocumentBlob,
+  type SharedChatDocumentContext,
+} from '@/utils/files/generated-document';
 import { isImageFile } from '@/utils/files/generic';
 
 import DisplayFileAttachment from '../display-file-attachment';
@@ -44,13 +47,17 @@ function createImageReferences(
 }
 
 export function GeneratedDocumentAttachment({
+  toolCallId,
   document,
   fileMapping,
   messageFileMapping,
+  sharedChat,
 }: {
+  toolCallId: string;
   document: AiActivityDocument;
   fileMapping?: ReadonlyMap<string, readonly DocumentImageFile[]>;
   messageFileMapping?: ReadonlyMap<string, readonly DocumentImageFile[]>;
+  sharedChat?: SharedChatDocumentContext;
 }) {
   const tCommon = useTranslations('common');
   const tFiles = useTranslations('file-interaction');
@@ -65,6 +72,10 @@ export function GeneratedDocumentAttachment({
           document.content,
           document.format,
           createImageReferences(fileMapping, messageFileMapping),
+          {
+            title: document.title,
+            sharedChat: sharedChat && { ...sharedChat, toolCallId },
+          },
         ),
         document.fileName,
       );

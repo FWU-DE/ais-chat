@@ -123,6 +123,23 @@ services:
       timeout: 10s
       retries: 3
 
+  gotenberg:
+    image: gotenberg/gotenberg:9.5.1-chromium
+    command:
+      - gotenberg
+      - --api-port=8002
+      - --chromium-disable-javascript=true
+      - --chromium-deny-private-ips=true
+      - --chromium-deny-public-ips=true
+    ports:
+      - '127.0.0.1:8002:8002'
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8002/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   mock-llm:
     build:
       context: ../../services/mock-llm

@@ -224,6 +224,22 @@ services:
       bifrost:
         condition: service_started
 
+  # Gotenberg renders generated PDF documents, only reachable inside the compose network
+  gotenberg:
+    image: gotenberg/gotenberg:9.5.1-chromium
+    command:
+      - gotenberg
+      - --api-port=8002
+      - --chromium-disable-javascript=true
+      - --chromium-deny-private-ips=true
+      - --chromium-deny-public-ips=true
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8002/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # AIS.chat App - Main user-facing application
   ais-chat-app:
     image: ghcr.io/fwu-de/ais-chat-app:latest
@@ -268,6 +284,9 @@ services:
       # Calculator arithmetic service
       CALCULATOR_URL: http://calculator:8080
 
+      # Gotenberg PDF generation
+      GOTENBERG_URL: http://gotenberg:8002
+
       # Bifrost LLM proxy
       BIFROST_BASE_URL: http://bifrost:8080/openai/v1
       BIFROST_API_KEY: sk-bf-example-key
@@ -306,6 +325,8 @@ services:
       bifrost:
         condition: service_started
       calculator:
+        condition: service_healthy
+      gotenberg:
         condition: service_healthy
 
   # Periodic admin calls (popularity refresh, cleanup), see scheduled-tasks.sh

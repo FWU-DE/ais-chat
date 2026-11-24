@@ -1,16 +1,32 @@
 import type { DocumentImageReferences } from './document-images';
 import type { GeneratedDocumentFormat } from './generated-document-format';
+import { htmlToBlob } from './html-document';
+import { markdownToDocxBlob } from './markdown-docx';
+import { markdownToPdfBlob } from './markdown-pdf';
+
+export type SharedChatDocumentContext = {
+  inviteCode: string;
+  entityType: 'character' | 'learningScenario';
+  entityId: string;
+  sharedSessionId: string;
+};
+
+// The server renders the PDF from the stored generate_document call with this id.
+export type SharedChatDocumentRequest = SharedChatDocumentContext & { toolCallId: string };
 
 export async function createGeneratedDocumentBlob(
   content: string,
   format: GeneratedDocumentFormat,
   imageReferences?: DocumentImageReferences,
+  { title, sharedChat }: { title?: string; sharedChat?: SharedChatDocumentRequest } = {},
 ): Promise<Blob> {
-  if (format === 'html') {
-    const { markdownToHtmlBlob } = await import('./markdown-html');
-    return markdownToHtmlBlob(content, imageReferences);
+  if (format === 'pdf') {
+    return markdownToPdfBlob(content, imageReferences, title, sharedChat);
   }
 
-  const { markdownToDocxBlob } = await import('./markdown-docx');
+  if (format === 'html') {
+    return htmlToBlob(content, imageReferences);
+  }
+
   return markdownToDocxBlob({ markdownBlocks: [{ markdown: content }] }, { imageReferences });
 }

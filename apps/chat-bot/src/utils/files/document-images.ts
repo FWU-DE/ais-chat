@@ -6,6 +6,15 @@ export function getDocumentAttachmentReference(fileId: string) {
   return `attachment://${encodeURIComponent(fileId)}`;
 }
 
+export function arrayBufferToBase64(data: ArrayBuffer) {
+  const bytes = new Uint8Array(data);
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  }
+  return btoa(binary);
+}
+
 export type LoadedDocumentImage = {
   data: ArrayBuffer;
   mimeType: 'image/png' | 'image/jpeg';
