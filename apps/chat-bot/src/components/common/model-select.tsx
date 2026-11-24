@@ -11,7 +11,7 @@ import { navigateWithoutRefresh } from '@/utils/navigation/router';
 import { GreenLeafIcon } from '../icons/green-leaf-icon';
 import { HeaderMainMenuItem } from '../layout/header-main-menu-item';
 import { HeaderMenuItem } from '../layout/header-menu-item';
-import { Badge } from './badge';
+import { NewBadge } from './new-badge';
 
 type ModelSelectProps = {
   models: LlmModelSelectModel[];
@@ -111,7 +111,7 @@ function ModelSpan({
       <div className="flex gap-2 items-center">
         <span>{model.displayName}</span>
         {modelType === 'text' && isGreenModel({ model }) && <GreenLeafIcon />}
-        {model.isNew && <Badge text="NEU" />}
+        {model.isNew && <NewBadge />}
       </div>
       {model.description && (
         <span className="text-sm hover:text-text-secondary">{model.description}</span>
