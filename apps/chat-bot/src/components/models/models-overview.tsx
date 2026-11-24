@@ -13,7 +13,9 @@ export async function ModelsOverview() {
         <EU className="h-4 w-6 shrink-0" aria-hidden />
         <p>{t('eu-banner')}</p>
       </div>
-      <ModelsTable />
+      <div className="pb-6">
+        <ModelsTable />
+      </div>
     </>
   );
 }
