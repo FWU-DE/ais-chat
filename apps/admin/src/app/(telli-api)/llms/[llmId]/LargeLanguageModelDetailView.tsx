@@ -1,5 +1,6 @@
 'use client';
 
+import type { SensitiveLlmModel } from '@ais-chat/api-database';
 import {
   imageGenerationConfigSchema,
   REASONING_EFFORTS,
@@ -10,6 +11,7 @@ import {
   type ReasoningSummary,
   reasoningSummarySchema,
   speechConfigSchema,
+  supportedImageFormatsSchema,
 } from '@ais-chat/api-database/types';
 import { llmModelPriceMetadataSchema } from '@ais-chat/shared/db/schema';
 import { VENDORS } from '@ais-chat/shared-core/schemas/llm-model-vendor';
@@ -36,7 +38,7 @@ import {
   parseJsonFormValue,
 } from '@/components/utils/json-schema';
 import { ROUTES } from '@/consts/routes';
-import { LargeLanguageModel } from '@/types/large-language-model';
+import type { LlmModelInput } from '@/services/llm-service';
 import type { ProviderKey } from '@/types/provider-key';
 
 import { createLLMAction, deleteLLMAction, updateLLMAction } from './actions';
@@ -50,8 +52,8 @@ const priceMetadataSchema = createJsonStringSchema(
   { allowEmpty: false },
 );
 
-const supportedImageFormatsSchema = createJsonStringSchema(
-  z.array(z.string()),
+const supportedImageFormatsFormSchema = createJsonStringSchema(
+  supportedImageFormatsSchema,
   'Muss ein JSON-Array mit unterstützten Bild-Dateiendungen sein (z. B. ["png", "jpeg"])',
 );
 
@@ -65,12 +67,14 @@ const modelConfigFormSchema = createJsonStringSchema(
   'Muss eine gültige Modell-Konfiguration sein',
 );
 
+const additionalParametersSchema = z.custom<Record<string, unknown>>();
+
 const llmFormSchema = z.object({
   name: z.string().min(1, 'Name ist erforderlich'),
   displayName: z.string().min(1, 'Anzeigename ist erforderlich'),
   description: z.string().optional().default(''),
   priceMetadata: priceMetadataSchema,
-  supportedImageFormats: supportedImageFormatsSchema.optional().default(''),
+  supportedImageFormats: supportedImageFormatsFormSchema.optional().default(''),
   imageGenerationConfig: imageGenerationConfigFormSchema.optional().default(''),
   modelConfig: modelConfigFormSchema.optional().default(''),
   additionalParameters: jsonStringSchema.optional().default(''),
@@ -148,7 +152,7 @@ function createLlmFormSchema(providerKeys: ProviderKey[]) {
 }
 
 export type LargeLanguageModelDetailViewProps = {
-  model?: LargeLanguageModel;
+  model?: SensitiveLlmModel;
   mode: 'create' | 'edit';
   providerKeys: ProviderKey[];
 };
@@ -243,8 +247,16 @@ export function LargeLanguageModelDetailView({
     }
 
     const { reasoningEffort, reasoningSummary, ...formData } = data;
-    const payload = {
+    const payload: LlmModelInput = {
       ...formData,
+      priceMetadata: JSON.parse(formData.priceMetadata),
+      supportedImageFormats:
+        parseJsonFormValue(formData.supportedImageFormats, supportedImageFormatsSchema) ?? [],
+      imageGenerationConfig:
+        parseJsonFormValue(formData.imageGenerationConfig, imageGenerationConfigSchema) ?? null,
+      modelConfig: parseJsonFormValue(formData.modelConfig, speechConfigSchema) ?? null,
+      additionalParameters:
+        parseJsonFormValue(formData.additionalParameters, additionalParametersSchema) ?? {},
       reasoning: buildReasoningConfig({ effort: reasoningEffort, summary: reasoningSummary }),
       vendor: data.vendor || null,
       providerKeys: data.providerKeys

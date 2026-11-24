@@ -1,5 +1,6 @@
 'use client';
 
+import type { SensitiveLlmModel } from '@ais-chat/api-database';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import { Button } from '@ui/components/button';
@@ -7,15 +8,13 @@ import { Checkbox } from '@ui/components/checkbox';
 import type { DataTableFeatures } from '@ui/components/data-table';
 import { ArrowUpDownIcon } from 'lucide-react';
 
-import type { LargeLanguageModel } from '@/types/large-language-model';
-
-type Col = ColumnDef<DataTableFeatures, LargeLanguageModel>;
+type Col = ColumnDef<DataTableFeatures, SensitiveLlmModel>;
 
 function SortableHeader({
   column,
   label,
 }: {
-  column: Column<DataTableFeatures, LargeLanguageModel>;
+  column: Column<DataTableFeatures, SensitiveLlmModel>;
   label: string;
 }) {
   return (

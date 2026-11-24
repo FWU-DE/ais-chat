@@ -1,5 +1,6 @@
 'use client';
 
+import type { SensitiveLlmModel } from '@ais-chat/api-database';
 import { logError } from '@shared/logging';
 import { Button } from '@ui/components/button';
 import {
@@ -18,18 +19,17 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import { ROUTES } from '@/consts/routes';
-import type { LargeLanguageModel } from '@/types/large-language-model';
 
 import { getLargeLanguageModelsAction } from './actions';
 import { getColumns } from './columns';
 
 export type LargeLanguageModelListViewProps = {
-  initialData: LargeLanguageModel[];
+  initialData: SensitiveLlmModel[];
 };
 
 export function LargeLanguageModelListView({ initialData }: LargeLanguageModelListViewProps) {
   const router = useRouter();
-  const [languageModels, setLanguageModels] = useState<LargeLanguageModel[]>(initialData);
+  const [languageModels, setLanguageModels] = useState<SensitiveLlmModel[]>(initialData);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showDeletedModels, setShowDeletedModels] = useState(false);
 
