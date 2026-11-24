@@ -89,8 +89,9 @@ unified → remark-parse → remark-math-extended → remark-gfm → remark-docx
 
 ### HTML
 
-- `markdown-html.ts` übernimmt das vom LLM gelieferte vollständige HTML-Dokument und gibt es ohne
-  iframe-Wrapper als HTML-Blob aus.
+- `html-document.ts` (`htmlToBlob`) übernimmt das vom LLM gelieferte vollständige HTML-Dokument und
+  gibt es ohne iframe-Wrapper als HTML-Blob aus. Der Inhalt ist immer fertiges HTML, nie Markdown;
+  deshalb wurde die Datei von `markdown-html.ts` umbenannt.
 - `<img src="attachment://...">` wird während des Downloads geladen und durch eingebettete
   Base64-Daten ersetzt. Dadurch bleiben Upload-Bilder auch beim späteren Öffnen der gespeicherten
   Datei über `file://` sichtbar. Andere Inhalte, einschließlich Inline-JavaScript, werden nicht
@@ -119,7 +120,8 @@ unified → remark-parse → remark-math-extended → remark-gfm → remark-docx
 ### PDF (Chromium und Gotenberg)
 
 ```text
-Download-Klick → Client (markdown-pdf.ts) → POST /api/generate-document/pdf
+Download-Klick → Client (markdown-pdf.ts) → POST /api/generate-document/pdf (angemeldet)
+                                           oder /api/v1/shared-chat/generate-document/pdf
 → pdf-service.ts (Markdown → sicheres HTML) → Gotenberg (Chromium) → PDF-Blob → Download
 ```
 
@@ -134,19 +136,25 @@ Download-Klick → Client (markdown-pdf.ts) → POST /api/generate-document/pdf
 - Plots lassen sich nur im Browser zeichnen. `renderPlots` rendert jede gültige, verschiedene Spec
   (höchstens 10) zu PNG und schickt sie mit dem Block-Code als Schlüssel mit. Die Spec-Prüfung
   (`getValidPlotSpec` in `plot-spec.ts`) wird von DOCX und PDF gemeinsam genutzt.
-- Die Adresse hängt vom Kontext ab: `/api/generate-document/pdf` (angemeldet) oder
-  `/api/v1/shared-chat/generate-document/pdf` (Shared Chat, mit Einladungscode, Entität und Session).
+- Die Adresse hängt vom Kontext ab. Angemeldet sendet der Client `markdown`, `title`, `images` und
+  `plots` an `/api/generate-document/pdf`. Im Shared Chat sendet er an
+  `/api/v1/shared-chat/generate-document/pdf` nur Einladungscode, Entität, Session und die
+  `toolCallId` des Dokuments (die Activity-Step-ID) plus `images` und `plots`, aber weder Markdown
+  noch Titel.
+- Der Download-Button erscheint erst, wenn der Stream der Nachricht beendet ist. Der Shared-Chat-
+  Server liest das Dokument aus der Datenbank; gespeichert wird in `persistResponse` vor `done()`.
 
 **Server (`pdf-service.ts`, `route.ts`, `pdf-response.ts`)**
 
 - Die Route verlangt eine Anmeldung (`getUser`) und validiert den Body mit `pdfRequestSchema`:
-  Markdown bis 100.000 Zeichen, Titel 1–120 Zeichen, höchstens 20 Bilder (PNG/JPEG, Base64 bis
+  Markdown bis 100.000 Zeichen, Titel höchstens `MAX_FILE_NAME_LENGTH` (80) Zeichen, höchstens 20 Bilder (PNG/JPEG, Base64 bis
   2 MB) und 10 Plots.
 - Pipeline: `remark-parse`, `remark-gfm`, `remark-math-extended`, dann zwei eigene Plugins.
   `resolveImageReferences` ersetzt `attachment://` durch die mitgesendeten Data-URLs (auch bei
   Referenz-Bildern) und entfernt unbekannte Bilder. `embedPlots` ersetzt Plot-Codeblöcke durch das
-  Bild mit demselben Code. Danach `remark-rehype`, `rehype-sanitize`, `rehype-katex` (MathML) und
-  `rehype-stringify`.
+  Bild mit demselben Code. Danach `remark-rehype`, `rehype-sanitize`, `rehype-katex` (MathML),
+  `rehype-document` (Dokumentgerüst mit `lang="de"`, `<title>` und den Styles aus `pdf-styles.ts`,
+  ohne Viewport-Meta) und `rehype-stringify`.
 - `rehype-sanitize` läuft vor `rehype-katex`. Das Schema erlaubt für `src` nur `data:` und die
   Formel-Klassen von `remark-math-extended`. Externe Bild-URLs kommen deshalb nicht ins PDF; im
   Container könnte Chromium sie ohnehin nicht laden.
@@ -154,20 +162,26 @@ Download-Klick → Client (markdown-pdf.ts) → POST /api/generate-document/pdf
   `preferCssPageSize` (A4 und Rand aus dem CSS), `printBackground` (Tabellen- und Codehintergründe)
   und `nativeTaggedPdf` (getaggtes PDF für Barrierefreiheit). Ein Timeout von 30 Sekunden verhindert,
   dass die Anfrage bei einem hängenden Container offen bleibt.
-- Der Titel wird in `<title>` maskiert eingesetzt (`&`, `<`, `>`), weil er aus dem Request-Body kommt.
-- Die Antwort setzt `Content-Type: application/pdf`, `Content-Disposition: attachment` und
-  `Cache-Control: no-store`; der Dateiname im Browser kommt aus dem AI-Activity-Step.
+- Den Titel setzt `rehype-document` als Text in `<title>`; die Serialisierung maskiert Sonderzeichen.
+  Im angemeldeten Pfad kommt er aus dem Request-Body, im Shared Chat aus den gespeicherten Argumenten.
+- Die Antwort setzt `Content-Type: application/pdf` und `Cache-Control: no-store`. Einen
+  `Content-Disposition`-Header gibt es nicht: der Browser speichert über einen Blob-Link, und der
+  Dateiname kommt aus dem AI-Activity-Step.
 
 **Shared Chats (`shared-chat-document-service.ts`)**
 
-- Es gibt keine angemeldete Nutzerin. Die eigene Route prüft deshalb, dass der Shared Chat existiert
-  und weder gelöscht noch gesperrt ist, dass die Session zu Einladungscode und Entität gehört und
-  dass das Markdown aus einem erfolgreichen `generate_document`-Aufruf dieser Unterhaltung stammt.
-- Dazu werden die gespeicherten `toolCalls` der Assistenten-Nachrichten mit den gespeicherten
-  Tool-Ergebnissen (Rolle `tool`, gleiche `toolCallId`, `status: 'created'`) abgeglichen. Die
-  Argumente werden mit `generateDocumentArgsSchema` normalisiert (getrimmt) und der Inhalt muss dem
-  gesendeten Markdown entsprechen. Der Prototyp suchte stattdessen nach ```document-Blöcken im
-  Nachrichtentext; das passte nicht zum Tool-Weg und hätte jeden Download mit 403 abgelehnt.
+- Es gibt keine angemeldete Nutzerin. Die eigene Route nimmt deshalb kein Markdown entgegen,
+  sondern lädt das Dokument über `getSharedChatDocument` aus der Unterhaltung.
+- Geprüft wird in dieser Reihenfolge: Der Shared Chat existiert und ist weder gelöscht noch gesperrt.
+  Die Session gehört zu Einladungscode und Entität. In den gespeicherten Nachrichten gibt es ein
+  Tool-Ergebnis (Rolle `tool`) mit der angefragten `toolCallId` und `status: 'created'`, und in den
+  `toolCalls` einer Assistenten-Nachricht den Aufruf `generate_document` mit derselben ID.
+- Aus den Argumenten dieses Aufrufs entstehen Markdown und Titel (mit `generateDocumentArgsSchema`
+  normalisiert, also getrimmt). Passt nichts davon, antwortet die Route mit 403.
+- Der Prototyp suchte stattdessen nach ```document-Blöcken im Nachrichtentext und lehnte dadurch
+  jeden Download mit 403 ab. Während der Review wurde zudem eine Variante umgesetzt, die das
+  gesendete Markdown mit den gespeicherten Argumenten verglich. Beides ist ersetzt: Der Client kann
+  dem Server keinen anderen Inhalt mehr unterschieben, und die Anfrage ist kleiner.
 - Bilder und Plots im Body werden nicht gegen die Unterhaltung geprüft. Sie sind durch Größe und
   Anzahl begrenzt und gelangen nur als Data-URLs durch den Sanitizer.
 
@@ -233,15 +247,31 @@ Download-Klick → Client (markdown-pdf.ts) → POST /api/generate-document/pdf
   nie Client-HTML aus.
 - **Nur referenzierte Bilder werden übertragen:** verhindert Fehler durch unbenutzte Uploads und
   hält die Anfrage unter den Limits.
-- **Autorisierung in Shared Chats über gespeicherte Tool-Aufrufe:** Ein Dokument gilt nur dann als
-  zur Unterhaltung gehörig, wenn ein erfolgreicher `generate_document`-Aufruf mit demselben Inhalt
-  gespeichert ist. Das verhindert, dass der anonyme Endpunkt als freier PDF-Dienst genutzt wird.
+- **Autorisierung in Shared Chats über die `toolCallId`:** Der Client sendet nur die ID des
+  Aufrufs. Der Server liest Markdown und Titel aus dem gespeicherten, erfolgreichen
+  `generate_document`-Aufruf der Unterhaltung. Das verhindert, dass der anonyme Endpunkt als freier
+  PDF-Dienst genutzt wird, ohne dass Inhalte verglichen werden müssen. Die Alternative (Markdown
+  senden und gegen die gespeicherten Argumente vergleichen) wurde verworfen, weil sie mehr Daten
+  überträgt und Normalisierungsfälle (Trimmen) prüfen muss.
+- **Download erst nach dem Speichern:** Die Unterhaltung wird am Ende des Streams gespeichert. Würde
+  der Button früher erscheinen, lehnte der Server einen frühen Klick mit 403 ab. Deshalb wird der
+  Anhang erst nach dem Stream angezeigt. Bricht ein Stream ab, ist die Anzeige nicht geprüft.
+- **API-Endpunkt statt Server Action:** Eine Server Action könnte ein `Uint8Array` unverändert
+  zurückgeben (im Dev-Modus gemessen, ohne Base64-Aufschlag). Das Hindernis ist das Request-Limit von
+  1 MB (`Body exceeded 1 MB limit` ab etwa 1,1 MB), weil Bilder und Plots als Base64 im Body liegen.
+  Mit einer Action müsste `serverActions.bodySizeLimit` global angehoben werden. Offen ist, ob das
+  Team trotzdem Actions bevorzugt; andere anonyme Dateiendpunkte (`files`, `speech/stream`) sind
+  Routen, aber aus anderen Gründen (Streams, Bild-URLs).
 - **Trennlinien über den Prompt, nicht über Server-Code:** Eine frühere Funktion entfernte `---`
   und Linien vor Überschriften aus dem Syntaxbaum und hängte Schreiblinien an Listenpunkte. Sie
   wurde zugunsten einer Prompt-Regel entfernt. Hält sich das Modell nicht daran, erscheinen die
   Linien im PDF, und Schreiblinien nach Listen stehen nicht mehr eingerückt.
 - **Titel im AI-Activity-Step:** `title` wird zusätzlich zum Dateinamen gespeichert, statt ihn aus
-  dem bereinigten und gekürzten Dateinamen zurückzurechnen.
+  dem bereinigten und gekürzten Dateinamen zurückzurechnen. Das Feld ist optional, damit gespeicherte
+  Steps gültig bleiben; ohne Titel verwendet das PDF `Dokument`.
+- **Dokumentgerüst über `rehype-document`:** Ersetzt ein eigenes HTML-Template samt Titel-Escaping.
+  Die Styles liegen getrennt in `pdf-styles.ts`. Das Paket ist ESM-only, was für die Server-Pipeline
+  unproblematisch ist.
 - **Statische Imports der Renderer:** Nach der Trennung von `generated-document-format.ts` und
   `generated-document.ts` ist der dynamische Import nicht mehr nötig. Die Auswirkung auf die
   Bundle-Größe ist nicht gemessen.
@@ -539,8 +569,8 @@ Für den serverseitigen PDF-Dienst gilt zusätzlich:
 - Der Konverter ist ohne ausgehende Verbindungen zu betreiben (Container im internen Netz, kein
   veröffentlichter Port).
 - Shared Chats haben keine angemeldete Nutzerin. Die eigene Route prüft Einladungscode, Session
-  und, dass das Markdown aus einem erfolgreichen, gespeicherten `generate_document`-Aufruf dieser
-  Unterhaltung stammt (siehe PDF-Abschnitt).
+  und lädt das Dokument über die `toolCallId` aus einem erfolgreichen, gespeicherten
+  `generate_document`-Aufruf dieser Unterhaltung (siehe PDF-Abschnitt).
 
 ## Offene Punkte
 
@@ -556,14 +586,21 @@ Für den serverseitigen PDF-Dienst gilt zusätzlich:
   `w:sym` oder Prompt-Regel für Checkboxen wie `[ ]`/`[x]`)?
 - Unit-Tests decken Tool, Dateinamen, Bildreferenzen, DOCX-Erzeugung und Plot-Export mit Mocks ab.
   Browser- und Integrationstests für Download, Shared Chat, Word-Darstellung und PDF-Service fehlen
-  noch. Für `pdf-service.ts` (Sanitizer, Bild- und Plot-Einbettung) und die
-  Shared-Chat-Verifikation gibt es keine Tests.
+  noch. Für `pdf-service.ts`, die beiden PDF-Routen, `markdown-pdf.ts` und die Shared-Chat-Abfrage
+  gibt es Unit-Tests mit Mocks, aber keinen Test mit echtem Gotenberg und keinen Browsertest für
+  die Anzeige des Download-Buttons nach dem Stream.
 - Wie verhindern wir, dass Modelle nach dem Tool-Aufruf trotzdem Download-Links schreiben (siehe
   Entscheidung zum Antwortverhalten)?
 - Wie begrenzen wir Navigation und Datenabfluss in interaktivem HTML verlässlich, wenn
   `navigate-to` nicht greift?
-- Shared Chats bieten `generate_document` an; die Verifikation für PDF ist umgesetzt. Offen ist,
-  ob ältere Unterhaltungen ohne gespeicherte Tool-Ergebnisse (Rolle `tool`) PDFs erzeugen können;
-  sie würden mit 403 abgelehnt.
+- Shared Chats bieten `generate_document` an; der Zugriff über die `toolCallId` ist umgesetzt. Offen
+  ist, ob ältere Unterhaltungen ohne gespeicherte Tool-Ergebnisse (Rolle `tool`) PDFs erzeugen
+  können; sie würden mit 403 abgelehnt.
+- Soll der angemeldete PDF-Pfad ebenfalls über die `toolCallId` laufen? Dort sendet der Client
+  weiterhin beliebiges Markdown; die Anfrage ist durch die Anmeldung und Zod-Limits begrenzt.
+- Bricht der Client einen Stream ab, bleibt der Anhang eventuell sichtbar, obwohl nichts
+  gespeichert wurde; ein Klick wird dann mit 403 abgelehnt. Das Verhalten ist nicht geprüft.
+- Sollen Server Actions statt API-Endpunkten verwendet werden? Dafür müsste das Request-Limit
+  (Bilder und Plots als Base64) angehoben oder die Anfrage verkleinert werden.
 - Reicht bei Symbolen die Symbolschrift für Text und Inline-Code, oder müssen auch Codeblöcke
   (Shiki) abgedeckt werden?
