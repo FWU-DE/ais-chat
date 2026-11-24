@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 
 import { ModelVendorIcon } from '../icons/vendors/model-vendor-icon';
 
-export function ModelVendorBadge({ vendor }: { vendor: string | null }) {
+export function ModelVendorTooltip({ vendor }: { vendor: string | null }) {
   const t = useTranslations('models');
   const knownVendor = VENDORS.find((known) => known === vendor);
   const label = knownVendor

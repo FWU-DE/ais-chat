@@ -62,7 +62,7 @@ export const mockLlmModel = (): LlmModelSelectModel => {
       completionTokenPrice: 0,
       promptTokenPrice: 0,
     },
-    supportedImageFormats: null,
+    supportedImageFormats: [],
     imageGenerationConfig: null,
     modelConfig: null,
     isNew: false,

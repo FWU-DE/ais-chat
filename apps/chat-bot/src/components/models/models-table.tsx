@@ -23,7 +23,7 @@ import { useLlmModels } from '@/components/providers/llm-model-provider';
 
 import { getCostFactor } from './cost-factor';
 import { ModelCostBadge } from './model-cost-badge';
-import { ModelVendorBadge } from './model-vendor-badge';
+import { ModelVendorTooltip } from './model-vendor-tooltip';
 import {
   INITIAL_MODEL_SORT,
   type ModelSort,
@@ -162,7 +162,7 @@ function ModelRow({
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-3">
-          <ModelVendorBadge vendor={model.vendor} />
+          <ModelVendorTooltip vendor={model.vendor} />
           <div className="flex flex-col">
             <div className="flex flex-wrap items-center gap-2">
               <span id={labelId} data-testid="model-name" className="font-medium">
