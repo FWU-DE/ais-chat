@@ -1,3 +1,4 @@
+import type { ReasoningConfig } from '@ais-chat/api-database/types';
 import { LlmModelPriceMetadata } from '@ais-chat/shared/db/schema';
 
 export type LargeLanguageModel = {
@@ -13,6 +14,8 @@ export type LargeLanguageModel = {
   imageGenerationConfig: object | null;
   modelConfig: object | null;
   additionalParameters: object;
+  vendor: string | null;
+  reasoning: ReasoningConfig | null;
   isNew: boolean;
   isDeleted: boolean;
   useBifrost: boolean;
@@ -28,6 +31,8 @@ export type CreateLargeLanguageModel = {
   imageGenerationConfig?: string;
   modelConfig?: string;
   additionalParameters?: string;
+  vendor?: string | null;
+  reasoning?: ReasoningConfig | null;
   isNew: boolean;
   isDeleted: boolean;
   useBifrost: boolean;
@@ -44,6 +49,8 @@ export type UpdateLargeLanguageModel = {
   imageGenerationConfig?: string;
   modelConfig?: string;
   additionalParameters?: string;
+  vendor?: string | null;
+  reasoning?: ReasoningConfig | null;
   isNew: boolean;
   isDeleted: boolean;
   useBifrost: boolean;

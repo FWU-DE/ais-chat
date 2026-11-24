@@ -36,6 +36,8 @@ function createGoogleSafetyModel(): AiModel {
     imageGenerationConfig: null,
     modelConfig: null,
     safetyFilterEnabled: true,
+    vendor: null,
+    reasoning: null,
     additionalParameters: {
       endpointId: 'endpoint-id',
       endpointHost: 'vertex.example.com',

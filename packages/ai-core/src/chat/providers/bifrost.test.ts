@@ -60,7 +60,8 @@ function createBifrostModel(settingProvider: 'azure' | 'openai' | 'ionos' | 'goo
             apiKey: 'upstream-api-key',
             baseUrl: 'https://example.com/v1',
           },
-    additionalParameters: { reasoning: { effort: 'low' } },
+    additionalParameters: {},
+    reasoning: { effort: 'low' },
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     description: 'Bifrost test model',
     isDeleted: false,
@@ -74,6 +75,7 @@ function createBifrostModel(settingProvider: 'azure' | 'openai' | 'ionos' | 'goo
     supportedImageFormats: [],
     imageGenerationConfig: null,
     safetyFilterEnabled: true,
+    vendor: null,
     modelConfig: null,
   } satisfies AiModel;
 }

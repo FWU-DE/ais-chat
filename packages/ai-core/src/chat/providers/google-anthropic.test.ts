@@ -63,6 +63,8 @@ function createGoogleAnthropicModel(projectId = 'test-project', location = 'us-c
     imageGenerationConfig: null,
     modelConfig: null,
     safetyFilterEnabled: true,
+    vendor: null,
+    reasoning: null,
     additionalParameters: {},
     isNew: false,
     isDeleted: false,

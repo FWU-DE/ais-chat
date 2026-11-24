@@ -35,6 +35,23 @@ export const speechConfigSchema = z.object({
 export type SpeechVoice = z.infer<typeof speechVoiceSchema>;
 export type SpeechConfig = z.infer<typeof speechConfigSchema>;
 
+// Values accepted by Bifrost for `reasoning.effort`, ordered from lowest to highest.
+export const REASONING_EFFORTS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'] as const;
+export const REASONING_SUMMARIES = ['auto', 'concise', 'detailed'] as const;
+
+export const reasoningEffortSchema = z.enum(REASONING_EFFORTS);
+export const reasoningSummarySchema = z.enum(REASONING_SUMMARIES);
+
+// Shape of the OpenAI Responses `reasoning` request parameter, which Bifrost passes through.
+export const reasoningConfigSchema = z.object({
+  effort: reasoningEffortSchema.optional(),
+  summary: reasoningSummarySchema.optional(),
+});
+
+export type ReasoningEffort = z.infer<typeof reasoningEffortSchema>;
+export type ReasoningSummary = z.infer<typeof reasoningSummarySchema>;
+export type ReasoningConfig = z.infer<typeof reasoningConfigSchema>;
+
 /**
  * Model fields exposed by the API. Parsing strips everything else, such as provider settings and
  * internal speech config. Stored values are passed through as they are, so legacy data can't break
@@ -52,6 +69,7 @@ export const llmModelPublicSchema = z.object({
   imageGenerationConfig: z.unknown(),
   modelConfig: speechConfigSchema.pick({ voices: true }).nullable(),
   additionalParameters: z.unknown(),
+  reasoning: reasoningConfigSchema.nullable().catch(null),
   isNew: z.boolean(),
   isDeleted: z.boolean(),
   useBifrost: z.boolean(),

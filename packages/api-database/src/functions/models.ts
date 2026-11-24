@@ -23,6 +23,8 @@ const llmModelColumns: { [K in keyof LlmModel]: (typeof llmModelTable)[K] } = {
   modelConfig: llmModelTable.modelConfig,
   isNew: llmModelTable.isNew,
   isDeleted: llmModelTable.isDeleted,
+  vendor: llmModelTable.vendor,
+  reasoning: llmModelTable.reasoning,
 };
 
 // LlmModel reads are cached (when a TTL is configured) since they are queried frequently by ais-chat-app.

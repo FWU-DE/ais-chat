@@ -5,6 +5,7 @@ import { Control, Controller, FieldPath, FieldValues, useWatch } from 'react-hoo
 
 import { Field, FieldDescription, FieldError, FieldLabel } from '../field';
 import { Input } from '../input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select';
 import { Textarea } from '../textarea';
 
 export type FormFieldProps<
@@ -25,9 +26,19 @@ export type FormFieldProps<
   labelAction?: ReactNode;
   /** Optional wrapper function rendered around the input, allowing consumers to place elements alongside it */
   children?: (input: ReactNode) => ReactNode;
-  /** Input type: 'text', 'textArea', 'number', 'email', 'password', 'checkbox', 'url', or 'datetime-local' */
+  /** Input type: 'text', 'textArea', 'select', 'number', 'email', 'password', 'checkbox', 'url', or 'datetime-local' */
   type?:
-    'text' | 'textArea' | 'number' | 'email' | 'password' | 'checkbox' | 'url' | 'datetime-local';
+    | 'text'
+    | 'textArea'
+    | 'select'
+    | 'number'
+    | 'email'
+    | 'password'
+    | 'checkbox'
+    | 'url'
+    | 'datetime-local';
+  /** Options of a 'select'; the placeholder is shown as the entry that clears the value ('') */
+  options?: readonly string[];
   /** Whether the field is required */
   required?: boolean;
   /** Maximum number of characters allowed */
@@ -52,6 +63,9 @@ export type FormFieldProps<
 
 const identityWrapper = (input: ReactNode) => input;
 
+// Radix Select does not allow an empty string as item value.
+const UNSET_OPTION = 'unset';
+
 /**
  * Reusable form field component that automatically handles validation display,
  * maxLength constraints, error messages, and supports multiple input types.
@@ -68,6 +82,7 @@ export function FormField<
   labelAction,
   children = identityWrapper,
   type = 'text',
+  options = [],
   required,
   maxLength,
   maxLengthErrorMessage,
@@ -118,7 +133,32 @@ export function FormField<
         };
 
         const inputElement =
-          type === 'textArea' ? (
+          type === 'select' ? (
+            <Select
+              value={field.value || UNSET_OPTION}
+              onValueChange={(next) => field.onChange(next === UNSET_OPTION ? '' : next)}
+              disabled={disabled}
+            >
+              <SelectTrigger
+                id={field.name}
+                aria-label={label}
+                aria-invalid={fieldState.invalid}
+                data-testid={testId}
+                onBlur={field.onBlur}
+                className={className}
+              >
+                <SelectValue placeholder={placeholder} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNSET_OPTION}>{placeholder}</SelectItem>
+                {options.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : type === 'textArea' ? (
             <Textarea {...field} {...sharedProps} ref={textareaRef} />
           ) : (
             <Input
