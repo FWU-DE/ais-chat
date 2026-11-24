@@ -72,19 +72,20 @@ describe('markdownToPdfBlob', () => {
     });
   });
 
-  it('uses the shared chat route and sends the shared chat context', async () => {
+  it('sends the tool call id instead of the document to the shared chat route', async () => {
     const fetchSpy = mockFetch();
     const sharedChat = {
       inviteCode: 'invite',
       entityType: 'character' as const,
       entityId: 'character-1',
       sharedSessionId: 'session-1',
+      toolCallId: 'call-1',
     };
 
     await markdownToPdfBlob('# Hallo', undefined, 'Titel', sharedChat);
 
     expect(sentUrl(fetchSpy)).toBe('/api/v1/shared-chat/generate-document/pdf');
-    expect(sentBody(fetchSpy)).toMatchObject(sharedChat);
+    expect(sentBody(fetchSpy)).toEqual({ ...sharedChat, images: [], plots: [] });
   });
 
   it('only loads images that are referenced in the Markdown', async () => {

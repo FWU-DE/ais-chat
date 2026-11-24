@@ -256,6 +256,7 @@ export function ChatBox({
         {generatedDocuments.map(({ id, document }) => (
           <GeneratedDocumentAttachment
             key={id}
+            toolCallId={id}
             document={document}
             fileMapping={fileMapping}
             messageFileMapping={messageFileMapping}

@@ -13,7 +13,7 @@ import {
   type DocumentImageReferences,
   loadDocumentImage,
 } from './document-images';
-import type { SharedChatDocumentContext } from './generated-document';
+import type { SharedChatDocumentRequest } from './generated-document';
 import { renderPlotImage, waitForPlotActivation } from './plot-image';
 
 const MAX_PLOTS = 10;
@@ -63,7 +63,7 @@ export async function markdownToPdfBlob(
   markdown: string,
   imageReferences: DocumentImageReferences = new Map(),
   title = 'Dokument',
-  sharedChat?: SharedChatDocumentContext,
+  sharedChat?: SharedChatDocumentRequest,
 ): Promise<Blob> {
   const root = unified().use(remarkParse).parse(markdown) as Root;
   const referencedSources = getReferencedImageSources(root);
@@ -87,7 +87,11 @@ export async function markdownToPdfBlob(
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...sharedChat, markdown, title, images, plots }),
+      body: JSON.stringify(
+        sharedChat === undefined
+          ? { markdown, title, images, plots }
+          : { ...sharedChat, images, plots },
+      ),
     },
   );
 

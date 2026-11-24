@@ -14,14 +14,14 @@ vi.mock('@shared/db/functions/shared-chat-conversation', () => ({
   dbGetSharedChatConversationMessages: mocks.dbGetSharedChatConversationMessagesMock,
 }));
 
-import { verifySharedChatDocumentAccess } from './shared-chat-document-service';
+import { getSharedChatDocument } from './shared-chat-document-service';
 
 const request = {
   inviteCode: 'invite',
   entityType: 'character' as const,
   entityId: 'character-1',
   sharedSessionId: 'session-1',
-  markdown: '# Hallo',
+  toolCallId: 'call-1',
 };
 
 function generateDocumentCall(content: string, id = 'call-1', name = 'generate_document') {
@@ -53,14 +53,17 @@ beforeEach(() => {
   mocks.dbGetSharedChatConversationMock.mockResolvedValue({ id: 'session-1' });
 });
 
-describe('verifySharedChatDocumentAccess', () => {
-  it('allows a document from a successful generate_document call', async () => {
+describe('getSharedChatDocument', () => {
+  it('returns the document of a successful generate_document call', async () => {
     mocks.dbGetSharedChatConversationMessagesMock.mockResolvedValue([
       generateDocumentCall('# Hallo'),
       toolResult(createdResult),
     ]);
 
-    await expect(verifySharedChatDocumentAccess(request)).resolves.toBeUndefined();
+    await expect(getSharedChatDocument(request)).resolves.toEqual({
+      markdown: '# Hallo',
+      title: 'Titel',
+    });
     expect(mocks.dbGetSharedChatConversationMock).toHaveBeenCalledWith({
       conversationId: 'session-1',
       inviteCode: 'invite',
@@ -69,17 +72,33 @@ describe('verifySharedChatDocumentAccess', () => {
     });
   });
 
-  it('compares the schema-normalized content', async () => {
+  it('returns the schema-normalized content', async () => {
     mocks.dbGetSharedChatConversationMessagesMock.mockResolvedValue([
       generateDocumentCall('  # Hallo  '),
       toolResult(createdResult),
     ]);
 
-    await expect(verifySharedChatDocumentAccess(request)).resolves.toBeUndefined();
+    await expect(getSharedChatDocument(request)).resolves.toMatchObject({ markdown: '# Hallo' });
+  });
+
+  it('selects the call with the requested id', async () => {
+    mocks.dbGetSharedChatConversationMessagesMock.mockResolvedValue([
+      generateDocumentCall('# Eins', 'call-1'),
+      toolResult(createdResult, 'call-1'),
+      generateDocumentCall('# Zwei', 'call-2'),
+      toolResult(createdResult, 'call-2'),
+    ]);
+
+    await expect(
+      getSharedChatDocument({ ...request, toolCallId: 'call-2' }),
+    ).resolves.toMatchObject({ markdown: '# Zwei' });
   });
 
   it.each([
-    ['a different document', [generateDocumentCall('# Anders'), toolResult(createdResult)]],
+    [
+      'an unknown tool call id',
+      [generateDocumentCall('# Hallo', 'call-2'), toolResult(createdResult, 'call-2')],
+    ],
     [
       'a failed call',
       [generateDocumentCall('# Hallo'), toolResult({ error: 'Invalid arguments' })],
@@ -113,7 +132,7 @@ describe('verifySharedChatDocumentAccess', () => {
   ])('rejects %s', async (_name, messages) => {
     mocks.dbGetSharedChatConversationMessagesMock.mockResolvedValue(messages);
 
-    await expect(verifySharedChatDocumentAccess(request)).rejects.toThrow(
+    await expect(getSharedChatDocument(request)).rejects.toThrow(
       'Document does not belong to this shared chat',
     );
   });
@@ -121,7 +140,7 @@ describe('verifySharedChatDocumentAccess', () => {
   it('rejects when the conversation does not exist', async () => {
     mocks.dbGetSharedChatConversationMock.mockResolvedValue(undefined);
 
-    await expect(verifySharedChatDocumentAccess(request)).rejects.toThrow(
+    await expect(getSharedChatDocument(request)).rejects.toThrow(
       'Document does not belong to this shared chat',
     );
     expect(mocks.dbGetSharedChatConversationMessagesMock).not.toHaveBeenCalled();
@@ -136,7 +155,7 @@ describe('verifySharedChatDocumentAccess', () => {
       manuallyStoppedAt: null,
     });
 
-    await expect(verifySharedChatDocumentAccess(request)).rejects.toThrow();
+    await expect(getSharedChatDocument(request)).rejects.toThrow();
     expect(mocks.dbGetSharedChatConversationMock).not.toHaveBeenCalled();
   });
 });

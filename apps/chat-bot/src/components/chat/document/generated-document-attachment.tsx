@@ -47,11 +47,13 @@ function createImageReferences(
 }
 
 export function GeneratedDocumentAttachment({
+  toolCallId,
   document,
   fileMapping,
   messageFileMapping,
   sharedChat,
 }: {
+  toolCallId: string;
   document: AiActivityDocument;
   fileMapping?: ReadonlyMap<string, readonly DocumentImageFile[]>;
   messageFileMapping?: ReadonlyMap<string, readonly DocumentImageFile[]>;
@@ -70,7 +72,10 @@ export function GeneratedDocumentAttachment({
           document.content,
           document.format,
           createImageReferences(fileMapping, messageFileMapping),
-          { title: document.title, sharedChat },
+          {
+            title: document.title,
+            sharedChat: sharedChat && { ...sharedChat, toolCallId },
+          },
         ),
         document.fileName,
       );
