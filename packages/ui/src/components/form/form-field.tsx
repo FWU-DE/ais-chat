@@ -39,6 +39,8 @@ export type FormFieldProps<
     | 'datetime-local';
   /** Options of a 'select'; the placeholder is shown as the entry that clears the value ('') */
   options?: readonly string[];
+  /** Renders the content of a 'select' option (list entry and selected value); defaults to the plain option text */
+  renderOption?: (option: string) => ReactNode;
   /** Whether the field is required */
   required?: boolean;
   /** Maximum number of characters allowed */
@@ -83,6 +85,7 @@ export function FormField<
   children = identityWrapper,
   type = 'text',
   options = [],
+  renderOption = identityWrapper,
   required,
   maxLength,
   maxLengthErrorMessage,
@@ -153,7 +156,7 @@ export function FormField<
                 <SelectItem value={UNSET_OPTION}>{placeholder}</SelectItem>
                 {options.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {renderOption(option)}
                   </SelectItem>
                 ))}
               </SelectContent>

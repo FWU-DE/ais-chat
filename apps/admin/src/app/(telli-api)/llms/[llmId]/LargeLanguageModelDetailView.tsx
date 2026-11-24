@@ -22,6 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/c
 import { Checkbox } from '@ui/components/checkbox';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@ui/components/field';
 import { FormField } from '@ui/components/form/form-field';
+import { ModelVendorIcon } from '@ui/components/icons/model-vendor-icon';
 import { Input } from '@ui/components/input';
 import { useRouter } from 'next/navigation';
 import { Controller, useForm, useWatch } from 'react-hook-form';
@@ -397,6 +398,12 @@ export function LargeLanguageModelDetailView({
             control={control}
             type="select"
             options={VENDORS}
+            renderOption={(vendor) => (
+              <span className="flex items-center gap-2">
+                <ModelVendorIcon vendor={vendor} className="size-4" />
+                {vendor}
+              </span>
+            )}
             placeholder="Kein Hersteller"
           />
 
