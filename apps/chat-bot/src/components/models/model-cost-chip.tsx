@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@ui/lib/utils';
+import { Chip } from '@ui/components/chip';
 import { useTranslations } from 'next-intl';
 
 type CostTier = 'low' | 'medium' | 'high';
@@ -9,10 +9,10 @@ const MIN_DISPLAY_FACTOR = 0.1;
 const MEDIUM_TIER_START = 1;
 const HIGH_TIER_START = 10;
 
-const TIER_CLASSES: Record<CostTier, string> = {
-  low: 'bg-success/20',
-  medium: 'bg-warning/40',
-  high: 'bg-destructive/20',
+const TIER_VARIANT: Record<CostTier, 'success' | 'warning' | 'danger'> = {
+  low: 'success',
+  medium: 'warning',
+  high: 'danger',
 };
 
 /** Rounds to one decimal; a paid model never shows less than 0.1x. */
@@ -26,18 +26,15 @@ function getCostTier(factor: number): CostTier {
   return 'high';
 }
 
-export function ModelCostBadge({ factor }: { factor: number }) {
+export function ModelCostChip({ factor }: { factor: number }) {
   const t = useTranslations('models');
   const displayFactor = roundFactor(factor);
 
   return (
-    <span
-      className={cn(
-        'inline-block rounded-full px-3 py-0.5 text-sm font-medium',
-        TIER_CLASSES[getCostTier(displayFactor)],
-      )}
-    >
-      {t('cost-factor', { factor: displayFactor })}
-    </span>
+    <Chip
+      size="sm"
+      variant={TIER_VARIANT[getCostTier(displayFactor)]}
+      label={t('cost-factor', { factor: displayFactor })}
+    />
   );
 }

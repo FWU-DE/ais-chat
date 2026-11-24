@@ -3,6 +3,7 @@
 import { ArrowDownIcon, ArrowsDownUpIcon, ArrowUpIcon } from '@phosphor-icons/react';
 import type { LlmModelSelectModel } from '@shared/db/schema';
 import { getTextModels } from '@shared/llm-models/llm-model-utils';
+import { Chip } from '@ui/components/chip';
 import { RadioGroup, RadioGroupItem } from '@ui/components/radio-group';
 import {
   ClickableTableRow,
@@ -18,12 +19,11 @@ import { cn } from '@ui/lib/utils';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 
-import { Badge } from '@/components/common/badge';
 import { NewBadge } from '@/components/common/new-badge';
 import { useLlmModels } from '@/components/providers/llm-model-provider';
 
 import { getCostFactor } from './cost-factor';
-import { ModelCostBadge } from './model-cost-badge';
+import { ModelCostChip } from './model-cost-chip';
 import { ModelVendorTooltip } from './model-vendor-tooltip';
 import {
   INITIAL_MODEL_SORT,
@@ -171,7 +171,13 @@ function ModelRow({
               </span>
               {model.isNew && <NewBadge />}
               {model.id === defaultModel?.id && (
-                <Badge text={t('default-tag')} variant="neutral" data-testid="model-default-tag" />
+                <Chip
+                  size="xs"
+                  variant="neutral"
+                  label={t('default-tag')}
+                  className="font-semibold"
+                  data-testid="model-default-tag"
+                />
               )}
             </div>
             {model.description && (
@@ -184,7 +190,7 @@ function ModelRow({
         {model.reasoning?.effort ? t(`reasoning.${model.reasoning.effort}`) : '–'}
       </TableCell>
       <TableCell>
-        <ModelCostBadge factor={getCostFactor({ model, defaultModel })} />
+        <ModelCostChip factor={getCostFactor({ model, defaultModel })} />
       </TableCell>
     </ClickableTableRow>
   );
