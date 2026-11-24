@@ -133,6 +133,10 @@ test.describe('GET /v1/models speech metadata', () => {
 });
 
 test.describe('speech model success responses', () => {
+  // All three tests bill the same API key. Run them one after another so the billing test only
+  // measures its own request.
+  test.describe.configure({ mode: 'serial' });
+
   test('returns chunked MP3 audio', { tag: '@smoke' }, async ({ request }) => {
     const speechRequest = await getSpeechRequest(request);
 
