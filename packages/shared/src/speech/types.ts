@@ -8,3 +8,13 @@ export type ChatSpeechStreamResult = {
   modelName: string;
   provider: string;
 };
+
+/** Usage of a text model call made while preparing speech, e.g. the SSML rewrite. */
+export type SpeechTextUsage = {
+  modelId: string;
+  provider: string;
+  modelName: string;
+  promptTokens: number;
+  completionTokens: number;
+  costsInCent: number;
+};

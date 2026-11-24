@@ -11,7 +11,7 @@ import { validateApiKeyWithResult } from '@/routes/utils';
 
 const speechRequestSchema = z.object({
   model: z.string().min(1),
-  input: z.string().trim().min(1).max(4096, 'input must be at most 4096 characters'),
+  input: z.string().trim().min(1),
   voice: z.string().min(1),
   response_format: z.enum(['mp3'], { message: "Only 'mp3' is supported" }).optional(),
   stream_format: z.enum(['audio', 'sse']).optional().default('audio'),

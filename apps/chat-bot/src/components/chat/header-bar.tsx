@@ -7,7 +7,6 @@ import DownloadConversationButton, {
   fetchConversationDownload,
   getLastAssistantModelName,
 } from '@/app/(authed)/(chat-bot)/download-conversation-button';
-import { UserAndContext } from '@/auth/types';
 import { useToast } from '@/components/common/toast';
 import {
   ApplicationHeaderActions,
@@ -21,14 +20,12 @@ import { useLlmModels } from '../providers/llm-model-provider';
 import { useConversationDownload } from './conversation-download-context';
 
 export type ChatHeaderBarProps = {
-  userAndContext: UserAndContext;
   title?: string;
   downloadConversationEnabled: boolean;
   chatId: string;
 };
 
 export function ChatHeaderBar({
-  userAndContext,
   title,
   downloadConversationEnabled: downloadConversationEnabledProp,
 }: ChatHeaderBarProps) {
@@ -67,7 +64,7 @@ export function ChatHeaderBar({
         <div className="flex flex-col w-full">
           <div className="flex w-full min-w-0 sm:gap-6 justify-center sm:justify-between items-center">
             <NewChatButton />
-            <SelectLlmModel isStudent={userAndContext.userRole === 'student'} />
+            <SelectLlmModel />
             {title !== undefined && (
               <div className="hidden min-w-0 sm:flex">
                 <span className="block w-full truncate font-normal text-xl">{title}</span>

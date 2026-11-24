@@ -5,7 +5,10 @@ import { dbGetConfiguration, dbUpsertConfiguration } from '../functions/configur
 import { dbGetAllLlmModels } from '../functions/llm-model';
 import { StaticModelRole, staticModelsConfigurationSchema } from '../schema';
 
-const requiredModelNames: Record<Exclude<StaticModelRole, 'safety'>, string> = {
+const requiredModelNames: Record<
+  Exclude<StaticModelRole, 'safety' | 'speech-auxiliary'>,
+  string
+> = {
   'default-chat': 'gpt-5-mini',
   fallback: 'gpt-5-nano',
   auxiliary: 'gpt-4o-mini',

@@ -1,4 +1,3 @@
-import { logWarning } from '@shared/logging';
 import type { ParagraphChild } from 'docx';
 import {
   AlignmentType,
@@ -13,10 +12,10 @@ import {
   TextRun,
   WidthType,
 } from 'docx';
-import JXG from 'jsxgraph';
 import type { Root } from 'mdast';
 import type { DocxOptions, RemarkDocxPlugin } from 'remark-docx';
 import remarkDocx from 'remark-docx';
+import { htmlPlugin } from 'remark-docx/plugins/html';
 import { imagePlugin } from 'remark-docx/plugins/image';
 import { latexPlugin } from 'remark-docx/plugins/latex';
 import { shikiPlugin } from 'remark-docx/plugins/shiki';
@@ -27,19 +26,16 @@ import { unified } from 'unified';
 import { visit } from 'unist-util-visit';
 
 import type { ConversationDownloadFile } from '@/components/chat/conversation-download-context';
-import { createBoard } from '@/components/chat/plot/jsxgraph-board';
 import { activateLivePlots } from '@/components/chat/plot/live-plots';
-import { renderPlotPng } from '@/components/chat/plot/png-export';
-import { getPlotKey, getRenderedPlot } from '@/components/chat/plot/rendered-plots';
+import { getPlotKey } from '@/components/chat/plot/rendered-plots';
 import { getCodeTitle, PLOT_LANGUAGE } from '@/utils/code-blocks';
+import { type DocumentImageReferences, loadDocumentImage } from '@/utils/files/document-images';
 import { isImageFile } from '@/utils/files/generic';
-import { type BoundingBox, parsePlotSpec } from '@/utils/plot/plot-spec';
+import { parsePlotSpec } from '@/utils/plot/plot-spec';
+
+import { renderPlotImage, waitForPlotActivation } from './plot-image';
 
 const PARAGRAPH_SPACER = '\u200B';
-const PLOT_IMAGE_WIDTH = 600;
-const PLOT_IMAGE_MIN_HEIGHT = 260;
-const PLOT_IMAGE_MAX_HEIGHT = 450;
-const DEFAULT_PLOT_BOUNDING_BOX: BoundingBox = [-5, 5, 5, -5];
 const TABLE_CELL_PADDING = 80;
 const CODE_BLOCK_HORIZONTAL_PADDING = 160;
 const CODE_BLOCK_VERTICAL_PADDING = 120;
@@ -53,6 +49,11 @@ const TABLE_BORDER = {
 };
 const plotCodeNodes = new WeakSet<object>();
 const plotExportMetadata = new WeakMap<object, { imageKey: string }>();
+
+// encodeURI leaves parentheses untouched, but an unescaped ')' can end a Markdown image destination early.
+function encodeMarkdownImageDestination(value: string) {
+  return encodeURI(value).replaceAll('(', '%28').replaceAll(')', '%29');
+}
 
 const paddedCodeBlockPlugin: RemarkDocxPlugin = (() => {
   const highlightCodeBlocks = shikiPlugin({ theme: 'night-owl' });
@@ -129,6 +130,46 @@ const paddedCodeBlockPlugin: RemarkDocxPlugin = (() => {
   };
 })();
 
+// Barlow has no glyphs for arrows, check marks or ballot boxes, so those runs get a symbol font.
+const SYMBOL_FONT = 'Segoe UI Symbol';
+const SYMBOL_PATTERN = /([\u2190-\u21FF\u2600-\u27BF\u2B00-\u2BFF]+)/u;
+
+type SymbolRunContext = {
+  style: {
+    bold?: boolean;
+    italic?: boolean;
+    strike?: boolean;
+    inlineCode?: boolean;
+    link?: boolean;
+  };
+  rtl?: boolean;
+};
+
+function createSymbolRuns(value: string, { style, rtl }: SymbolRunContext, inlineCode = false) {
+  return value
+    .split(SYMBOL_PATTERN)
+    .filter((text) => text !== '')
+    .map(
+      (text) =>
+        new TextRun({
+          text,
+          bold: style.bold,
+          italics: style.italic,
+          strike: style.strike,
+          highlight: style.inlineCode || inlineCode ? 'lightGray' : undefined,
+          style: style.link ? 'Hyperlink' : undefined,
+          rightToLeft: rtl ? true : undefined,
+          font: SYMBOL_PATTERN.test(text) ? SYMBOL_FONT : undefined,
+        }),
+    );
+}
+
+// remark-docx renders inline code through its own text builder, so it needs the same override.
+export const symbolFontPlugin: RemarkDocxPlugin = async () => ({
+  text: ({ value }, context) => createSymbolRuns(value, context),
+  inlineCode: ({ value }, context) => createSymbolRuns(value, context, true),
+});
+
 const styledBlocksPlugin: RemarkDocxPlugin = async () => ({
   thematicBreak: () =>
     new Paragraph({
@@ -203,20 +244,6 @@ const styledBlocksPlugin: RemarkDocxPlugin = async () => ({
   },
 });
 
-function getPlotImageDimensions(boundingBox: BoundingBox) {
-  const [xMin, yMax, xMax, yMin] = boundingBox;
-  const aspectRatio = (xMax - xMin) / (yMax - yMin);
-  return {
-    width: PLOT_IMAGE_WIDTH,
-    height: Math.round(
-      Math.min(
-        PLOT_IMAGE_MAX_HEIGHT,
-        Math.max(PLOT_IMAGE_MIN_HEIGHT, PLOT_IMAGE_WIDTH / aspectRatio),
-      ),
-    ),
-  };
-}
-
 const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
   const plotCodeBlocks: Array<{ value: string; imageKey: string }> = [];
   visit(root, 'code', (node) => {
@@ -240,63 +267,9 @@ const plotPlugin: RemarkDocxPlugin = async ({ root, images }) => {
         return;
       }
 
-      try {
-        const renderedPlot = getRenderedPlot(parsed.spec);
-        if (renderedPlot !== undefined) {
-          const { width: renderedWidth, height: renderedHeight } =
-            renderedPlot.getBoundingClientRect();
-          const scale = Math.min(
-            PLOT_IMAGE_WIDTH / renderedWidth,
-            PLOT_IMAGE_MAX_HEIGHT / renderedHeight,
-          );
-          const width = Math.round(renderedWidth * scale);
-          const height = Math.round(renderedHeight * scale);
-          const png = await renderPlotPng(renderedPlot);
-          images.set(imageKey, {
-            type: 'png',
-            width,
-            height,
-            data: await png.arrayBuffer(),
-          });
-          return;
-        }
-
-        const { width, height } = getPlotImageDimensions(
-          parsed.spec.board.boundingBox ?? DEFAULT_PLOT_BOUNDING_BOX,
-        );
-        const container = document.createElement('div');
-        container.style.cssText = `position:fixed;left:-10000px;top:0;width:${width}px;height:${height}px;`;
-        document.body.append(container);
-
-        let board: JXG.Board | undefined;
-        try {
-          board = createBoard(container, parsed.spec, undefined, [], false).board;
-          // sync jsx graph rendering with the browser's rendering cycle
-          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-          board.fullUpdate();
-          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-          const svg = container.querySelector('svg');
-          if (svg === null) {
-            return;
-          }
-
-          const png = await renderPlotPng(svg);
-          images.set(imageKey, {
-            type: 'png',
-            width,
-            height,
-            data: await png.arrayBuffer(),
-          });
-        } finally {
-          if (board !== undefined) {
-            JXG.JSXGraph.freeBoard(board);
-          }
-          container.remove();
-        }
-      } catch (error) {
-        logWarning('Plot could not be exported', {
-          message: error instanceof Error ? error.message : String(error),
-        });
+      const plotImage = await renderPlotImage(parsed.spec);
+      if (plotImage !== undefined) {
+        images.set(imageKey, { type: 'png', ...plotImage });
       }
     }),
   );
@@ -404,7 +377,11 @@ export function formatConversationExport({
     markdownBlocks.push({ markdown: PARAGRAPH_SPACER });
     const messageHeading = role === 'user' ? 'Nutzer/in' : 'AIS.chat';
     markdownBlocks.push({ markdown: `### ${messageHeading}:` }, { markdown: content });
-    markdownBlocks.push(...images.map(({ alt, url }) => ({ markdown: `![${alt}](${url})` })));
+    markdownBlocks.push(
+      ...images.map(({ alt, url }) => ({
+        markdown: `![${alt}](${encodeMarkdownImageDestination(url)})`,
+      })),
+    );
   }
 
   markdownBlocks.push(
@@ -416,33 +393,20 @@ export function formatConversationExport({
   return { markdownBlocks };
 }
 
-async function loadImageForDocx(url: string): Promise<ArrayBuffer> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to load image: ${response.status}`);
-  }
-
-  return response.arrayBuffer();
-}
-
-function createDocxOptions({ exportImages = false }: MarkdownToDocxOptions = {}): DocxOptions {
-  const loadImage = exportImages
-    ? (url: string) => {
-        const exportUrl = new URL(url, window.location.origin);
-        if (exportUrl.origin === window.location.origin) {
-          exportUrl.searchParams.set('export', 'true');
-        }
-        return loadImageForDocx(exportUrl.toString());
-      }
-    : loadImageForDocx;
+function createDocxOptions(imageReferences: DocumentImageReferences = new Map()): DocxOptions {
+  const loadImage = async (reference: string) => {
+    return (await loadDocumentImage(imageReferences.get(reference) ?? reference)).data;
+  };
 
   return {
     plugins: [
+      htmlPlugin(),
       latexPlugin(),
       imagePlugin({ load: loadImage }),
       plotPlugin,
       paddedCodeBlockPlugin,
       styledBlocksPlugin,
+      symbolFontPlugin,
     ],
     spacing: 80,
     thematicBreak: 'line',
@@ -479,19 +443,8 @@ function createDocxOptions({ exportImages = false }: MarkdownToDocxOptions = {})
 }
 
 type MarkdownToDocxOptions = {
-  exportImages?: boolean;
+  imageReferences?: DocumentImageReferences;
 };
-
-async function waitForPlotActivation() {
-  if (typeof requestAnimationFrame === 'undefined') {
-    return;
-  }
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => resolve());
-    });
-  });
-}
 
 export async function markdownToDocxBlob(
   exportDocument: ConversationExport,
@@ -501,10 +454,10 @@ export async function markdownToDocxBlob(
     .use(remarkParse)
     .use(RemarkMathPlugin)
     .use(remarkGfm)
-    .use(remarkDocx, createDocxOptions(options));
-  const roots = exportDocument.markdownBlocks.map(
-    ({ markdown }) => processor.parse(markdown) as Root,
-  );
+    .use(remarkDocx, createDocxOptions(options?.imageReferences));
+  const roots = exportDocument.markdownBlocks.map(({ markdown }) => {
+    return processor.parse(markdown) as Root;
+  });
   const plotKeys = new Set<string>();
   roots.forEach((root) => preparePlotCodeBlocks(root, plotKeys));
   const restoreLivePlots = plotKeys.size > 0 ? activateLivePlots(plotKeys) : undefined;
@@ -519,6 +472,13 @@ export async function markdownToDocxBlob(
       type: 'root',
       children: processedRoots.flatMap((root) => root.children),
     };
+    // Word needs a paragraph after a trailing table, otherwise it reports unreadable content.
+    if (combinedRoot.children.at(-1)?.type === 'table') {
+      combinedRoot.children.push({
+        type: 'paragraph',
+        children: [{ type: 'text', value: PARAGRAPH_SPACER }],
+      });
+    }
     const arrayBuffer = await processor.stringify(combinedRoot);
 
     return new Blob([arrayBuffer], {

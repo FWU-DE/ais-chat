@@ -16,6 +16,10 @@
       "description": "Grafico: {title}",
       "error": "Non è stato possibile visualizzare il grafico."
     },
+    "document": {
+      "download": "Scarica {fileName}",
+      "error": "Non è stato possibile creare il documento."
+    },
     "read-aloud": "Leggi il messaggio ad alta voce",
     "pause-message": "Metti in pausa la lettura",
     "read-aloud-error": "La sintesi vocale non è riuscita.",
@@ -86,7 +90,8 @@
       "retrieve_entire_file": "File letto per intero",
       "mundo_search": "Ricerca in Mundo",
       "math_calculate": "Calcolo eseguito",
-      "create_plot": "Grafico creato"
+      "create_plot": "Grafico creato",
+      "generate_document": "File creato"
     }
   }
 }

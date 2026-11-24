@@ -16,7 +16,6 @@ import { Field, FieldLabel } from '@ui/components/field';
 import { Input } from '@ui/components/input';
 import { MultipleSelectDropdown } from '@ui/components/multiple-select-dropdown';
 import { Skeleton } from '@ui/components/skeleton';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 
@@ -30,7 +29,6 @@ import {
 } from './columns';
 
 export default function CommunityTemplateRequestsListView() {
-  const router = useRouter();
   const [requests, setRequests] = useState<CommunityTemplateRequestSummary[]>([]);
   const [isPending, startTransition] = useTransition();
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -54,8 +52,9 @@ export default function CommunityTemplateRequestsListView() {
     void loadData();
   };
 
+  // Editors review several requests in parallel, so the detail view opens in a new tab
   function handleRowClicked(row: CommunityTemplateRequestSummary): void {
-    router.push(ROUTES.app.communityTemplateRequest(row.id));
+    window.open(ROUTES.app.communityTemplateRequest(row.id), '_blank', 'noopener');
   }
 
   function updateColumnFilter(id: string, value: string | string[]) {

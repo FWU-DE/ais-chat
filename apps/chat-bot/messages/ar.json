@@ -16,6 +16,10 @@
       "description": "رسم بياني: {title}",
       "error": "تعذّر عرض الرسم البياني."
     },
+    "document": {
+      "download": "تنزيل {fileName}",
+      "error": "تعذّر إنشاء المستند."
+    },
     "read-aloud": "قراءة الرسالة بصوت عالٍ",
     "pause-message": "إيقاف القراءة مؤقتًا",
     "read-aloud-error": "فشلت عملية تحويل النص إلى كلام.",
@@ -86,7 +90,8 @@
       "retrieve_entire_file": "تمت قراءة الملف بالكامل",
       "mundo_search": "البحث في Mundo",
       "math_calculate": "تم إجراء الحساب",
-      "create_plot": "تم إنشاء الرسم البياني"
+      "create_plot": "تم إنشاء الرسم البياني",
+      "generate_document": "تم إنشاء الملف"
     }
   }
 }

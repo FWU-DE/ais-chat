@@ -18,6 +18,37 @@ Server side:
    requests `stream_format: 'sse'` and yields the base64-decoded MP3 deltas. Usage is only known
    after the last event.
 
+## SSML rewrite
+
+Markdown, tables, formulas and code are hard to read aloud. If the speech model's
+`modelConfig.enableSsmlRewrite` is `true` (off by default, set in the admin model configuration),
+the chat and shared-chat pipelines rewrite the text before synthesis. The external API and the
+voice preview are not affected.
+
+- `runSpeechPipeline` calls `rewriteTextToSsml` (`packages/shared/src/speech/ssml-rewrite/`) after
+  the access and budget checks. It sends the whole text to the speech auxiliary model (static model
+  role `speech-auxiliary`, falling back to the strong auxiliary model if unset or unavailable for the
+  federal state) with a 60 s timeout and the client's abort signal. Audio only starts once the
+  whole text is rewritten, so long answers or slow (reasoning) models delay playback noticeably.
+- The model returns only the body of the `<voice>` element: one outer `<lang xml:lang>` with the
+  main language, a `<p>` per block, and nested `<lang>` for foreign words. Prose is kept word for
+  word; tables are read row by row, code is described, formulas are read in words.
+- The rewrite is billed to the federal state's API key by `generateTextWithBilling` and stored as
+  text usage via the strategy's `storeTextUsage` (conversation or shared chat usage), so it counts
+  toward the user's budget.
+- `streamSsmlSpeechById` (`packages/ai-core/src/speech/generate-stream.ts`) validates the body with
+  `buildSsmlSegments` (`speech/ssml/segments.ts`): it must be well-formed XML and must not contain
+  `<speak>`, `<voice>`, `<audio>` or `<mstts:backgroundaudio>`. The server builds the
+  `<speak xml:lang>` wrapper (locale from the voice name prefix, default `de-DE`) and the `<voice>`
+  element. Bifrost passes input starting with `<speak` to Azure unchanged.
+- Long bodies are split between top-level blocks into documents of at most
+  `MAX_SPEECH_SEGMENT_CHARS`; every segment repeats the outer `<lang>`. A single block above the
+  limit fails the request.
+- There is no fallback: a failing, timed-out or invalid rewrite fails the request with the regular
+  speech error. Nothing is cached.
+
+Azure bills SSML markup (except `<speak>` and `<voice>`) as characters.
+
 ## Splitting
 
 Providers limit the input length of a single request, so the text is split before synthesis:
@@ -80,7 +111,10 @@ API adapter. The adapter calls
 `streamSpeechForModel`.
 
 The voice must be a configured voice name listed by `GET /v1/models` (custom `{ id }` voice
-objects are not accepted). Input is trimmed, must be non-empty, and is limited to 4096 characters.
+objects are not accepted). Input is trimmed and must be non-empty. There is no API character limit;
+the HTTP body-size limit still applies. The existing pipeline splits input into segments of up to
+10,000 characters. Providers enforce their limits per segment, and provider errors are handled
+through the usual API error mapping.
 Only MP3 output is supported. Responses can be an audio stream or speech-audio SSE events.
 
 Speech is billed per input character. Billing is finalized by the stream generator when generation

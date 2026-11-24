@@ -56,7 +56,6 @@ export async function fetchSharedConversationDownload({
       : sharedConversationName !== undefined
         ? `${currentDate}-Dialog über ${sharedConversationName}.docx`
         : 'AIS-chat-Konversation.docx';
-
   return {
     blob: await markdownToDocxBlob(
       formatConversationExport({
@@ -65,7 +64,6 @@ export async function fetchSharedConversationDownload({
         modelName: 'AIS.chat',
         conversationTitle: sharedConversationName ?? characterName,
       }),
-      { exportImages: true },
     ),
     fileName,
   };

@@ -16,6 +16,10 @@
       "description": "Graphique : {title}",
       "error": "Le graphique n'a pas pu être affiché."
     },
+    "document": {
+      "download": "Télécharger {fileName}",
+      "error": "Le document n'a pas pu être créé."
+    },
     "read-aloud": "Lire le message à voix haute",
     "pause-message": "Mettre la lecture en pause",
     "read-aloud-error": "La synthèse vocale a échoué.",
@@ -86,7 +90,8 @@
       "retrieve_entire_file": "Fichier entièrement lu",
       "mundo_search": "Recherche dans Mundo",
       "math_calculate": "Calcul effectué",
-      "create_plot": "Graphique créé"
+      "create_plot": "Graphique créé",
+      "generate_document": "Fichier créé"
     }
   }
 }

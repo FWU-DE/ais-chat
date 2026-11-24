@@ -7,11 +7,7 @@ import React from 'react';
 import ModelSelect from '../common/model-select';
 import { useLlmModels } from '../providers/llm-model-provider';
 
-type SelectLlmModelProps = {
-  isStudent?: boolean;
-};
-
-export default function SelectLlmModel({ isStudent = false }: SelectLlmModelProps) {
+export default function SelectLlmModel() {
   const { models, selectedModel, setSelectedModel } = useLlmModels();
   const t = useTranslations('common');
 
@@ -23,7 +19,6 @@ export default function SelectLlmModel({ isStudent = false }: SelectLlmModelProp
       modelType="text"
       label={t('current-language-model')}
       noModelsLabel={t('no-language-model-available')}
-      isStudent={isStudent}
       enableUrlParams={true}
     />
   );

@@ -40,6 +40,10 @@ const TOOLS: Record<AiActivityToolName, { args: unknown; prompt: string }> = {
     args: { description: 'y = x' },
     prompt: 'Zeichne den Graphen der Funktion y = x.',
   },
+  generate_document: {
+    args: { format: 'docx', title: 'Testdokument', content: '# Testdokument\n\nInhalt.' },
+    prompt: 'Erstelle ein Word-Dokument mit einem kurzen Testdokument.',
+  },
 };
 
 // These tools look up an uploaded file in the conversation.
@@ -49,7 +53,7 @@ for (const [tool, { args, prompt }] of Object.entries(TOOLS) as [
   AiActivityToolName,
   { args: unknown; prompt: string },
 ][]) {
-  test(`shows an AI activity step for ${tool}`, async ({ page }) => {
+  test(`shows an AI activity step for ${tool}`, { tag: '@smoke' }, async ({ page }) => {
     await page.goto('/');
 
     if (TOOLS_REQUIRING_FILE.includes(tool)) {

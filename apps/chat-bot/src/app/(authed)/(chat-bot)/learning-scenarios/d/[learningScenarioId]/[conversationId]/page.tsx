@@ -13,6 +13,7 @@ import { z } from 'zod';
 
 import { requireAuth } from '@/auth/requireAuth';
 import Chat from '@/components/chat/chat';
+import { toChatLearningScenarioDto } from '@/components/chat/chat-client-dto';
 import Logo from '@/components/common/logo';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
@@ -90,14 +91,13 @@ export default async function Page(
             chatId: chat.id,
             title: learningScenario.name,
             downloadConversationEnabled: rawChatMessages.length > 0,
-            userAndContext,
           },
         }}
       >
         <Chat
           id={chat.id}
           initialMessages={chatMessages}
-          learningScenario={learningScenario}
+          learningScenario={toChatLearningScenarioDto(learningScenario)}
           enableFileUpload={true}
           imageSource={avatarPictureUrl}
           logoElement={logoElement}

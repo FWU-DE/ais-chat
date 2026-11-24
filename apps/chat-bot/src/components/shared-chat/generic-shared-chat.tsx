@@ -352,6 +352,7 @@ export default function GenericSharedChat({
       entityType: sharedEntityType,
       entityId: entity.id,
       sharedSessionId,
+      forExport: true,
     });
 
   return (

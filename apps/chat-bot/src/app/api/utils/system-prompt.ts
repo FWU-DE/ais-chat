@@ -73,9 +73,18 @@ export function constructToolGuidelines(activeTools: ToolDefinition[]) {
     );
   }
 
-  sections.push(
-    '- Du gibst ausschließlich formatierte Textantworten aus und erstellst keine Dateien (Word, PDF, Excel, Bilder etc.). Biete das Erstellen von Dateien niemals an.',
-  );
+  if (hasTool(activeTools, TOOL_NAMES.generateDocument)) {
+    const plotHint =
+      ' Du kannst Zeichnungen einbetten: Rufe zuerst `' +
+      TOOL_NAMES.createPlot +
+      '` auf und füge das Ergebnis unverändert als Codeblock ```jsxgraph-json title="Kurzer Titel" ... ``` in den Inhalt ein, statt Werte nur als Tabelle zu beschreiben.';
+    sections.push(
+      `- Du kannst **Dokumente als Word-Datei (DOCX) oder HTML-Datei** bereitstellen, zum Beispiel Arbeitsblätter, Zusammenfassungen oder Unterrichtsmaterial. Wenn die Nutzerin oder der Nutzer eine Datei möchte, kläre bei unklarem Inhalt oder Format zuerst nach und rufe dann \`${TOOL_NAMES.generateDocument}\` mit Format, aussagekräftigem Titel und dem passenden vollständigen Inhalt auf.
+- Für **DOCX**: Verwende vollständiges Markdown als Inhalt. Verwende LaTeX für mathematische Formeln in Markdown: Inline-Formeln zwischen \`$...$\` und abgesetzte Formeln zwischen \`$$...$$\`.${plotHint}
+- Für **HTML**: Verwende ein vollständiges HTML-Dokument, das mit \`<!doctype html>\` beginnt und ein \`<html>\`-Element enthält. Verwende Inline-JavaScript, wenn Interaktivität benötigt wird. Weise in deiner Antwort nach dem Erstellen immer kurz darauf hin, dass HTML-Dateien mit JavaScript schädlichen Code enthalten können und nur mit Vorsicht geöffnet werden sollten.
+- Verwende für hochgeladene Bilder exakt die Referenz aus dem jeweiligen \`<attachment ref="...">\`-Attribut: für DOCX als Markdown-Bildziel, z. B. \`![Beschreibung](attachment://...)\`, und für HTML als \`src\` eines \`<img>\`-Elements, z. B. \`<img src="attachment://..." alt="Beschreibung">\`; verwende nicht den Dateinamen als Bildziel. Das Ergebnis des Tools enthält den Dateinamen der erstellten Datei. Der Download-Button wird in der Oberfläche automatisch direkt unter deiner Antwort angezeigt. Erzeuge daher KEINEN Download-Link und keinen Platzhalter-Link in deiner Antwort; verweise höchstens kurz auf die bereitgestellte Datei unter Nennung des Dateinamens. Schlägt der Aufruf fehl, korrigiere die Eingabe oder erkläre kurz, was nicht geklappt hat. Erwähne die Technik dahinter niemals. Andere Dateiformate (PDF, Excel, PowerPoint, Bilder etc.) kannst du nicht erstellen und bietest sie nicht an.`,
+    );
+  }
 
   if (activeTools.length > 0) {
     sections.push('', constructAgenticBudgetGuidelines());
@@ -96,7 +105,7 @@ export const FORMAT_GUIDELINES = `
 ## Formatierung
 - Antworten werden als Markdown gerendert (GitHub-Flavored Markdown, Codeblöcke, Mathematik in LaTeX/KaTeX). Nutze die Möglichkeiten von Markdown, um deine Antwort übersichtlich und gut strukturiert zu gestalten.
 - Nutze immer die passende Formatierung für technische Elemente, z.B. Markdown-Codeblöcke für Programmcode oder LaTeX für mathematische Formeln. Verwende in LaTeX-Formeln für natürlichsprachigen Text immer \\text{}. Benutze außerhalb von \\text{} nur Standard-LaTeX-Befehle.
-- Codeblöcke: Sprache immer angeben. Bei Dateien immer einen Titel (den Dateinamen) direkt dahinter angeben, sonst nur wenn sinnvoll, z.B. \`\`\`python title="hello.py".
+- Codeblöcke: Sprache immer angeben. Setze direkt dahinter einen Titel: bei Dateien den Dateinamen, sonst eine kurze Beschreibung, z.B. \`\`\`python title="hello.py" oder \`\`\`python title="Sortierfunktion". Nur bei Snippets (kurze Auszüge zur Veranschaulichung, z.B. ein einzelner Befehl oder ein Ausdruck, die nicht eigenständig gespeichert oder ausgeführt werden) entfällt der Titel.
 - Verwende, falls sinnvoll, formatierte Überschriften und Zwischenüberschriften.
 - Hebe wichtige Begriffe oder Kernaussagen **fett** hervor.
 - Nutze Aufzählungen und kurze Absätze, keine langen Fließtexte.
