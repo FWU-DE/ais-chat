@@ -15,7 +15,12 @@ import {
 import { createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 
 import { LlmModelProviderSettings, LlmProviderKeySettings } from './llm-model';
-import { ImageGenerationConfig, LlmModelPriceMetadata, SpeechConfig } from './types';
+import {
+  ImageGenerationConfig,
+  LlmModelPriceMetadata,
+  ReasoningConfig,
+  SpeechConfig,
+} from './types';
 
 export const projectTable = pgTable('project', {
   id: text('id').primaryKey(),
@@ -47,6 +52,8 @@ export const llmModelTable = pgTable('llm_model', {
   isNew: boolean('is_new').notNull().default(false),
   isDeleted: boolean('is_deleted').notNull().default(false),
   safetyFilterEnabled: boolean('safety_filter_enabled').notNull().default(true),
+  vendor: text('vendor'),
+  reasoning: jsonb('reasoning').$type<ReasoningConfig>(),
 });
 export const llmInsertModelSchema = createInsertSchema(llmModelTable);
 export const llmUpdateModelSchema = createUpdateSchema(llmModelTable).omit({

@@ -44,6 +44,8 @@ export async function createLargeLanguageModel(data: CreateLargeLanguageModel) {
       ? speechConfigSchema.parse(JSON.parse(data.modelConfig))
       : undefined,
     additionalParameters: data.additionalParameters ? JSON.parse(data.additionalParameters) : {},
+    vendor: data.vendor ?? null,
+    reasoning: data.reasoning ?? null,
     isNew: data.isNew,
     isDeleted: data.isDeleted,
     useBifrost: data.useBifrost,
@@ -86,6 +88,8 @@ export async function updateLargeLanguageModel(modelId: string, data: UpdateLarg
     additionalParameters: data.additionalParameters
       ? JSON.parse(data.additionalParameters)
       : undefined,
+    vendor: data.vendor ?? null,
+    reasoning: data.reasoning ?? null,
     isNew: data.isNew,
     isDeleted: data.isDeleted,
     useBifrost: data.useBifrost,

@@ -20,6 +20,8 @@ const baseModel: SensitiveLlmModel = {
   isDeleted: false,
   useBifrost: true,
   safetyFilterEnabled: true,
+  vendor: null,
+  reasoning: null,
 };
 
 describe('obscureModels', () => {

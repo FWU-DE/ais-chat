@@ -64,6 +64,7 @@ const mockLlm: LlmInsertModel = {
     completionTokenPrice: 0,
   },
   supportedImageFormats: ['jpeg', 'jpg', 'png', 'webp'],
+  vendor: 'openai',
 };
 
 const mockSpeech: LlmInsertModel = {
@@ -110,6 +111,8 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     id: '689342a5-89ed-4d43-bc8c-a1a00f464184',
     name: 'mock-echo-2',
     displayName: process.env.E2E_TEXT_MODEL_2 ?? 'Mock LLM (2)',
+    vendor: 'anthropic',
+    reasoning: { effort: 'low' },
     safetyFilterEnabled: false,
   },
   // Mock image model: always available regardless of real credentials, so that
@@ -158,6 +161,7 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
             type: 'embedding',
             promptTokenPrice: 0,
           },
+          vendor: 'baai',
         } satisfies LlmInsertModel,
       ]),
   // Realm LLMs
@@ -175,11 +179,13 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
       type: 'embedding',
       promptTokenPrice: 20, // 0.02 € per 1M tokens
     },
+    vendor: 'baai',
   },
   {
     id: '4f8a2c1e-93d7-4b6a-a5e0-d2f1c8b7e3a9',
     provider: 'azure',
     name: 'gpt-4o-mini',
+    vendor: 'openai',
     displayName: 'GPT-4o-mini',
     description: 'GPT-4o Mini model for testing',
     setting: {
@@ -198,6 +204,7 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     id: 'e7b3d9f2-1a4c-4e8b-b6d5-f0c2a9e8d1b7',
     provider: 'azure',
     name: 'gpt-5-nano',
+    vendor: 'openai',
     displayName: 'GPT-5 nano',
     description: 'GPT-5 nano model for testing',
     setting: {
@@ -210,12 +217,7 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
       promptTokenPrice: 44,
       completionTokenPrice: 334,
     },
-    additionalParameters: {
-      reasoning: {
-        effort: 'minimal',
-        summary: 'auto',
-      },
-    },
+    reasoning: { effort: 'minimal', summary: 'auto' },
     supportedImageFormats: ['jpg', 'jpeg', 'png', 'webp'],
   },
   {
@@ -242,6 +244,7 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
     id: 'f1c2d3e4-5b6a-7c8d-9e0f-1a2b3c4d5e6f',
     provider: 'azure',
     name: 'gpt-5-mini',
+    vendor: 'openai',
     displayName: 'GPT-5 mini',
     description: 'GPT-5 mini model for testing',
     setting: {
@@ -254,12 +257,7 @@ const BIFROST_MODELS: LlmInsertModel[] = normalizeSeedModelsForBifrost([
       promptTokenPrice: 211.2,
       completionTokenPrice: 1672,
     },
-    additionalParameters: {
-      reasoning: {
-        effort: 'low',
-        summary: 'auto',
-      },
-    },
+    reasoning: { effort: 'low', summary: 'auto' },
     supportedImageFormats: ['jpg', 'jpeg', 'png', 'webp'],
   },
 ]).filter(
@@ -282,6 +280,7 @@ const llamaGuardModel: LlmInsertModel | undefined =
         id: '08e5d73f-e582-44fe-a6e0-75350f8b1617',
         provider: 'google',
         name: 'meta-llama/Llama-Guard-4-12B',
+        vendor: 'meta',
         displayName: 'Llama Guard',
         description: 'Llama Guard safety model for conversation moderation',
         setting: {
@@ -394,6 +393,8 @@ export async function seedDatabase() {
             supportedImageFormats: model.supportedImageFormats,
             imageGenerationConfig: model.imageGenerationConfig,
             additionalParameters: model.additionalParameters,
+            vendor: model.vendor,
+            reasoning: model.reasoning ?? null,
             isNew: model.isNew,
             isDeleted: model.isDeleted,
             safetyFilterEnabled: model.safetyFilterEnabled,
@@ -424,6 +425,7 @@ export async function seedDatabase() {
             setting: model.setting,
             priceMetadata: model.priceMetadata,
             modelConfig: model.modelConfig,
+            vendor: model.vendor,
             isNew: model.isNew,
             isDeleted: model.isDeleted,
             safetyFilterEnabled: model.safetyFilterEnabled,
@@ -459,6 +461,7 @@ export async function seedDatabase() {
             setting: llamaGuardModel.setting,
             priceMetadata: llamaGuardModel.priceMetadata,
             additionalParameters: llamaGuardModel.additionalParameters,
+            vendor: llamaGuardModel.vendor,
             isNew: llamaGuardModel.isNew,
             isDeleted: llamaGuardModel.isDeleted,
             safetyFilterEnabled: llamaGuardModel.safetyFilterEnabled,
