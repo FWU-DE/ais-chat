@@ -1,0 +1,1 @@
+ALTER TABLE "conversation_message" ADD COLUMN "is_legacy_aggregated_content" boolean DEFAULT true NOT NULL;
