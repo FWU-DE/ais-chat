@@ -48,8 +48,13 @@ export const startStream = async (
     }
   }
 
+  const reportedChunks = chunksWithUsageReporting();
+  // Errors raised before the first audio chunk must surface here so the caller can retry.
+  // If this throws, the generator has already finished and reported its usage.
+  const firstChunk = await reportedChunks.next();
+
   return {
-    chunks: chunksWithUsageReporting(),
+    chunks: replayFirstChunk(firstChunk, reportedChunks),
     contentType: result.contentType,
     costsInCent: result.costsInCent,
     modelId: result.modelId,
@@ -57,3 +62,38 @@ export const startStream = async (
     provider: result.provider,
   };
 };
+
+/**
+ * Yields the already consumed first chunk before delegating to the remaining stream.
+ * Implemented manually instead of as a generator function, so `return()`/`throw()` reach the
+ * started inner stream even if the caller never calls `next()`, keeping cleanup and usage reporting.
+ */
+function replayFirstChunk(
+  firstChunk: IteratorResult<Buffer, void>,
+  rest: AsyncGenerator<Buffer, void, unknown>,
+): AsyncGenerator<Buffer, void, unknown> {
+  let pending: IteratorResult<Buffer, void> | undefined = firstChunk;
+  const generator: AsyncGenerator<Buffer, void, unknown> = {
+    next: async () => {
+      if (pending) {
+        const chunk = pending;
+        pending = undefined;
+        return chunk;
+      }
+      return rest.next();
+    },
+    return: async (value) => {
+      pending = undefined;
+      return rest.return(value);
+    },
+    throw: async (error) => {
+      pending = undefined;
+      return rest.throw(error);
+    },
+    [Symbol.asyncIterator]: () => generator,
+    [Symbol.asyncDispose]: async () => {
+      await generator.return();
+    },
+  };
+  return generator;
+}
