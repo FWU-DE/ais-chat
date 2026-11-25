@@ -58,11 +58,13 @@ describe('bifrostFetch timeout', () => {
   });
 
   test('aborts the read of a body that stops after the headers', async () => {
+    // The limit must outlast the arrival of the headers, also on a loaded CI runner. Otherwise
+    // `bifrostFetch` itself rejects and the test would not reach the body read.
     const response = await bifrostFetch({
       bifrostAdminUrl: url,
       path: '/stalled-body',
       init: { method: 'GET' },
-      timeoutMs: 150,
+      timeoutMs: 1500,
     });
     expect(response.status).toBe(200);
 
@@ -83,7 +85,7 @@ describe('bifrostFetch timeout', () => {
           bifrostAdminUrl: failingUrl,
           path: '/',
           init: { method: 'GET' },
-          timeoutMs: 150,
+          timeoutMs: 1500,
         }),
       ),
     ).rejects.toMatchObject({ name: 'TimeoutError' });
