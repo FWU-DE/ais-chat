@@ -458,6 +458,52 @@ describe('agent-loop', () => {
     });
   });
 
+  it('runs a tool called with an empty arguments string', async () => {
+    const onComplete = vi.fn();
+    const onError = vi.fn();
+    const handler = vi.fn(async () => ({ value: 'ok' }));
+
+    let callCount = 0;
+    mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+      callCount++;
+      if (callCount === 1) {
+        yield {
+          type: 'tool_call',
+          call: { id: 'call_1', name: 'test_tool', arguments: '' },
+        } satisfies StreamEvent;
+        yield { type: 'finish', usage } satisfies StreamEvent;
+      } else {
+        yield { type: 'text', delta: 'Done.' } satisfies StreamEvent;
+        yield { type: 'finish', usage } satisfies StreamEvent;
+      }
+    });
+
+    runAgentLoop({
+      modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+      apiKeyId: 'test-key',
+      messages: [{ role: 'user', content: 'Test query' }],
+      toolRegistry: {
+        test_tool: {
+          definition: { name: 'test_tool', description: 'Test', parameters: {} },
+          handler,
+        },
+      },
+      agentName: 'Test Agent',
+      onTextChunk: vi.fn(),
+      onComplete,
+      onError,
+    });
+
+    await vi.waitFor(() => {
+      expect(onComplete).toHaveBeenCalled();
+    });
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(handler).toHaveBeenCalledWith({}, expect.anything());
+    const toolMessage = onComplete.mock.calls[0]?.[0].agentLoopMessages[1];
+    expect(toolMessage?.content).toBe('{"value":"ok"}');
+  });
+
   it('returns error responses for over-budget tool calls', async () => {
     const messages: Message[] = [{ role: 'user', content: 'Test query' }];
     const onTextChunk = vi.fn();
