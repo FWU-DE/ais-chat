@@ -215,3 +215,62 @@ describe('buildBifrostProviderConfigs', () => {
     expect(configs[0]?.keys).toHaveLength(2);
   });
 });
+
+// The Bifrost sync keeps a provider's current `network_config` when the config omits it
+// (`getUpdateProviderPayload`), because a PUT without it resets timeouts and retries to 0. That is
+// only correct while one provider id never comes with and without `network_config`.
+describe('network_config presence per provider id', () => {
+  const key = (name: string, settings: LlmProviderKeyWithModels['settings']) =>
+    providerKey({ name, settings });
+
+  const keys = [
+    key('az', { provider: 'azure', apiKey: 'k', baseUrl: 'https://az.example/openai' }),
+    key('oa', { provider: 'openai', apiKey: 'k', baseUrl: 'https://api.openai.com/v1' }),
+    key('oa-custom-url', { provider: 'openai', apiKey: 'k', baseUrl: 'https://own.example/v1' }),
+    key('oa-other-url', { provider: 'openai', apiKey: 'k', baseUrl: 'https://other.example/v1/' }),
+    key('io', { provider: 'ionos', apiKey: 'k', baseUrl: 'https://ionos.example/v1' }),
+    key('io-2', { provider: 'ionos', apiKey: 'k', baseUrl: 'https://ionos.example/v1' }),
+    key('vx', { provider: 'google', projectId: 'p', location: 'l', authCredentials: '{}' }),
+    key('vx-2', { provider: 'google', projectId: 'p', location: 'l', authCredentials: '{}' }),
+    key('nat', { provider: 'mistral', apiKey: 'k', baseUrl: 'https://mistral.example' }),
+    key('nat-no-url', { provider: 'groq', apiKey: 'k' }),
+    key('nat-2', { provider: 'mistral', apiKey: 'k' }),
+  ];
+
+  test('each provider id has network_config on every key or on none', () => {
+    const presence = new Map<string, Set<boolean>>();
+    for (const providerKeyEntry of keys) {
+      for (const config of buildBifrostProviderConfigs([providerKeyEntry])) {
+        const seen = presence.get(config.provider) ?? new Set<boolean>();
+        seen.add(config.network_config !== undefined);
+        presence.set(config.provider, seen);
+      }
+    }
+
+    expect([...presence.keys()].sort()).toEqual(
+      [
+        'azure',
+        'groq',
+        'ionos',
+        'mistral',
+        'oa-custom-url-custom',
+        'oa-other-url-custom',
+        'openai',
+        'vertex',
+      ].sort(),
+    );
+    for (const [provider, seen] of presence) {
+      expect(seen.size, `${provider} mixes configs with and without network_config`).toBe(1);
+    }
+  });
+
+  test('azure, openai and vertex never set it, all other paths always set it', () => {
+    const configs = buildBifrostProviderConfigs(keys);
+    const withoutNetworkConfig = configs
+      .filter((config) => config.network_config === undefined)
+      .map((config) => config.provider)
+      .sort();
+
+    expect(withoutNetworkConfig).toEqual(['azure', 'openai', 'vertex']);
+  });
+});

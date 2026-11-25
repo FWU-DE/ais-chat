@@ -47,7 +47,7 @@ export async function syncBifrostProvider({
     provider: providerConfig.provider,
     logger,
   });
-  await Promise.all(
+  await allSettledOrThrow(
     providerConfig.keys.map((key) =>
       syncBifrostProviderKey({
         bifrostAdminUrl,
@@ -61,7 +61,7 @@ export async function syncBifrostProvider({
     ),
   );
   const desiredKeyNames = new Set(providerConfig.keys.map(({ name }) => name.toLowerCase()));
-  await Promise.all(
+  await allSettledOrThrow(
     existingKeysBeforeSync
       .filter(({ name, id }) => id && !desiredKeyNames.has(name.toLowerCase()))
       .map((key) =>
@@ -75,6 +75,16 @@ export async function syncBifrostProvider({
         }),
       ),
   );
+}
+
+/**
+ * Like `Promise.all`, but rejects only after every promise settled. A fail-fast `Promise.all`
+ * would let sibling writes run on while the caller already starts a rollback.
+ */
+async function allSettledOrThrow(promises: Promise<unknown>[]): Promise<void> {
+  const results = await Promise.allSettled(promises);
+  const failed = results.find((result) => result.status === 'rejected');
+  if (failed) throw failed.reason;
 }
 
 /**
@@ -273,7 +283,7 @@ async function syncBifrostProviderKey({
   );
 }
 
-async function listBifrostProviderKeys({
+export async function listBifrostProviderKeys({
   bifrostAdminUrl,
   bifrostAdminUsername,
   bifrostAdminPassword,

@@ -42,5 +42,5 @@ export async function assertBifrostResponse(
     status: response.status,
     response: responseText,
   });
-  throw new BifrostProviderSyncError();
+  throw new BifrostProviderSyncError(response.status);
 }
