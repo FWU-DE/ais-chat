@@ -1,3 +1,5 @@
+import { logError } from '@shared/logging';
+
 import { db } from '..';
 import {
   conversationUsageTracking,
@@ -5,8 +7,23 @@ import {
   type ToolCallName,
 } from '../schema';
 
+/** Returns 0 for non-finite costs, since a single NaN row breaks the summed budget. */
+export function sanitizeCostsInCent<T extends { costsInCent?: number }>(value: T): T {
+  if (value.costsInCent === undefined || Number.isFinite(value.costsInCent)) return value;
+
+  logError(
+    'Invalid costsInCent, writing 0 instead',
+    new TypeError(`Invalid costsInCent: ${value.costsInCent}`),
+  );
+
+  return { ...value, costsInCent: 0 };
+}
+
 export async function dbInsertConversationUsage(value: ConversationUsageTrackingInsertModel) {
-  const [insertedUsage] = await db.insert(conversationUsageTracking).values(value).returning();
+  const [insertedUsage] = await db
+    .insert(conversationUsageTracking)
+    .values(sanitizeCostsInCent(value))
+    .returning();
 
   if (insertedUsage === undefined) {
     throw new Error('Could not insert usage');
