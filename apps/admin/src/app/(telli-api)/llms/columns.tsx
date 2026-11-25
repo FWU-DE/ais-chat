@@ -5,6 +5,7 @@ import { formatDateToGermanTimestamp } from '@shared/utils/date';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import { Button } from '@ui/components/button';
 import { Checkbox } from '@ui/components/checkbox';
+import { Chip } from '@ui/components/chip';
 import type { DataTableFeatures } from '@ui/components/data-table';
 import { ArrowUpDownIcon } from 'lucide-react';
 
@@ -58,6 +59,12 @@ export function getColumns(showDeleted: boolean): Col[] {
           </div>
         );
       },
+    },
+    {
+      id: 'type',
+      accessorFn: (model) => model.priceMetadata.type,
+      header: sortableHeader('Typ'),
+      cell: ({ row }) => <Chip label={row.original.priceMetadata.type} size="sm" />,
     },
     booleanColumn('useBifrost', 'Bifrost'),
     {

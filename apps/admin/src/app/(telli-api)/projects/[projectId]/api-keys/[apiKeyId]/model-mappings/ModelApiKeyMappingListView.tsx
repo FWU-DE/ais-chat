@@ -3,6 +3,8 @@
 import type { SensitiveLlmModel } from '@ais-chat/api-database';
 import { isBifrostProviderSyncError } from '@ais-chat/api-database/bifrost-provider-sync/error';
 import { logError } from '@shared/logging';
+import { formatDateToGermanTimestamp } from '@shared/utils/date';
+import type { Column, ColumnDef } from '@tanstack/react-table';
 import { Button } from '@ui/components/button';
 import {
   Card,
@@ -13,15 +15,10 @@ import {
   CardTitle,
 } from '@ui/components/card';
 import { Checkbox } from '@ui/components/checkbox';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@ui/components/table';
-import { startTransition, useCallback, useEffect, useState } from 'react';
+import { Chip } from '@ui/components/chip';
+import { DataTable, type DataTableFeatures } from '@ui/components/data-table';
+import { ArrowUpDownIcon } from 'lucide-react';
+import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { ModelApiKeyMapping } from '@/types/model-mappings';
@@ -31,6 +28,88 @@ import {
   getModelMappingsAction,
   saveModelMappingsAction,
 } from './actions';
+
+type ModelRow = LargeLanguageModel & { isAssigned: boolean; assignedAt: Date | null };
+
+type Col = ColumnDef<DataTableFeatures, ModelRow>;
+
+function SortableHeader({
+  column,
+  label,
+}: {
+  column: Column<DataTableFeatures, ModelRow>;
+  label: string;
+}) {
+  return (
+    <Button
+      variant="link"
+      className="p-0"
+      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+    >
+      {label}
+      <ArrowUpDownIcon className="ml-2 h-4 w-4" />
+    </Button>
+  );
+}
+
+const sortableHeader = (label: string): Col['header'] =>
+  function Header({ column }) {
+    return <SortableHeader column={column} label={label} />;
+  };
+
+const columns: Col[] = [
+  {
+    id: 'assigned',
+    accessorFn: (model) => model.isAssigned,
+    header: sortableHeader('Zugeordnet'),
+    sortFn: 'basic',
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.original.isAssigned}
+        aria-label={`${row.original.displayName || row.original.name} zugeordnet`}
+      />
+    ),
+  },
+  {
+    id: 'name',
+    accessorFn: (model) => model.displayName || model.name,
+    header: sortableHeader('Name'),
+    cell: ({ row }) => {
+      const model = row.original;
+      return (
+        <div>
+          <div className="font-medium">{model.displayName || model.name}</div>
+          {model.displayName && model.name !== model.displayName && (
+            <div className="text-sm text-gray-500">{model.name}</div>
+          )}
+        </div>
+      );
+    },
+  },
+  {
+    id: 'type',
+    accessorFn: (model) => model.priceMetadata.type,
+    header: sortableHeader('Typ'),
+    cell: ({ row }) => <Chip label={row.original.priceMetadata.type} size="sm" />,
+  },
+  {
+    accessorKey: 'description',
+    header: sortableHeader('Beschreibung'),
+    cell: ({ row }) => (
+      <div className="max-w-xs truncate" title={row.original.description}>
+        {row.original.description || '-'}
+      </div>
+    ),
+  },
+  {
+    id: 'assignedAt',
+    accessorFn: (model) => model.assignedAt?.getTime() ?? 0,
+    header: sortableHeader('Zugeordnet am'),
+    sortFn: 'basic',
+    cell: ({ row }) =>
+      row.original.assignedAt ? formatDateToGermanTimestamp(row.original.assignedAt) : '-',
+  },
+];
 
 export type ModelApiKeyMappingListViewProps = {
   projectId: string;
@@ -86,6 +165,14 @@ export function ModelApiKeyMappingListView({
     });
   };
 
+  const handleSelectAll = () => {
+    setAssignedModelIds(new Set(availableModels.map((model) => model.id)));
+  };
+
+  const handleDeselectAll = () => {
+    setAssignedModelIds(new Set());
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -105,6 +192,17 @@ export function ModelApiKeyMappingListView({
       setIsSaving(false);
     }
   };
+
+  const rows = useMemo<ModelRow[]>(() => {
+    const assignedAtByModelId = new Map(
+      modelApiKeyMappings.map((mapping) => [mapping.llmModelId, new Date(mapping.createdAt)]),
+    );
+    return availableModels.map((model) => ({
+      ...model,
+      isAssigned: assignedModelIds.has(model.id),
+      assignedAt: assignedAtByModelId.get(model.id) ?? null,
+    }));
+  }, [availableModels, assignedModelIds, modelApiKeyMappings]);
 
   if (isLoading) {
     return (
@@ -136,56 +234,32 @@ export function ModelApiKeyMappingListView({
         </CardAction>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">Zugeordnet</TableHead>
-              <TableHead>Modell Name</TableHead>
-              <TableHead>Anbieter</TableHead>
-              <TableHead>Beschreibung</TableHead>
-              <TableHead>Erstellt am</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {availableModels.map((model) => {
-              const isAssigned = assignedModelIds.has(model.id);
-              const mapping = modelApiKeyMappings.find((m) => m.llmModelId === model.id);
-
-              return (
-                <TableRow key={model.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={isAssigned}
-                      onCheckedChange={(checked) => handleModelToggle(model.id, checked as boolean)}
-                      aria-label={`${model.displayName || model.name} zugeordnet`}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{model.displayName || model.name}</div>
-                      {model.displayName && model.name !== model.displayName && (
-                        <div className="text-sm text-gray-500">{model.name}</div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {model.provider}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="max-w-xs truncate" title={model.description}>
-                      {model.description || '-'}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {mapping ? new Date(mapping.createdAt).toLocaleString() : '-'}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+        <div className="flex gap-2 pb-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleSelectAll}
+            disabled={availableModels.length === 0}
+          >
+            Alle auswählen
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleDeselectAll}
+            disabled={availableModels.length === 0}
+          >
+            Alle abwählen
+          </Button>
+        </div>
+        <DataTable
+          columns={columns}
+          data={rows}
+          focusableRows={false}
+          rowClickHandler={(model) => handleModelToggle(model.id, !model.isAssigned)}
+        />
       </CardContent>
     </Card>
   );
