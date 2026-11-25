@@ -1,6 +1,6 @@
 # Container images
 
-Runtime images (`api`, `admin`, `chat-bot`, `mock-llm`) ship without shell, package manager or busybox, and
+Runtime images (`api`, `admin`, `chat-bot`, `mock-llm`, `bifrost-sync`) ship without shell, package manager or busybox, and
 can be pulled anonymously (no Docker account).
 
 ## Options

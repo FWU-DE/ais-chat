@@ -78,6 +78,12 @@ jobs:
             image_ref: ghcr.io/fwu-de/ais-chat-calculator
             sentry_project: ''
             server_actions_secret: ''
+          - image_name: ais-chat-bifrost-sync
+            package_name: '@ais-chat/bifrost-sync-service'
+            dockerfile: services/bifrost-sync/Dockerfile
+            image_ref: ghcr.io/fwu-de/ais-chat-bifrost-sync
+            sentry_project: ''
+            server_actions_secret: ''
 
     steps:
       - name: Checkout repository
