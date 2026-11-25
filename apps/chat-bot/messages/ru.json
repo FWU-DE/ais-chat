@@ -26,7 +26,10 @@
     "listen-to-answer": "Прослушать ответ",
     "pause-audio": "Пауза",
     "show-message-text": "Показать текст",
-    "hide-message-text": "Скрыть текст"
+    "hide-message-text": "Скрыть текст",
+    "playback-speed": "Скорость воспроизведения",
+    "audio-playback-position": "Позиция воспроизведения аудио",
+    "audio-waveform-loading": "Загрузка звуковой волны..."
   },
   "characters": {
     "shared": {

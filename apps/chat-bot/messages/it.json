@@ -26,7 +26,10 @@
     "listen-to-answer": "Ascolta la risposta",
     "pause-audio": "Pausa",
     "show-message-text": "Mostra il testo",
-    "hide-message-text": "Nascondi il testo"
+    "hide-message-text": "Nascondi il testo",
+    "playback-speed": "Velocità di riproduzione",
+    "audio-playback-position": "Posizione di riproduzione audio",
+    "audio-waveform-loading": "Caricamento della forma d'onda..."
   },
   "characters": {
     "shared": {

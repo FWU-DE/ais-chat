@@ -26,7 +26,10 @@
     "listen-to-answer": "الاستماع إلى الإجابة",
     "pause-audio": "إيقاف مؤقت",
     "show-message-text": "إظهار النص",
-    "hide-message-text": "إخفاء النص"
+    "hide-message-text": "إخفاء النص",
+    "playback-speed": "سرعة التشغيل",
+    "audio-playback-position": "موضع تشغيل الصوت",
+    "audio-waveform-loading": "جارٍ تحميل الموجة الصوتية..."
   },
   "characters": {
     "shared": {

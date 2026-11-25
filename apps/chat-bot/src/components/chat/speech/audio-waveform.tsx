@@ -151,50 +151,53 @@ export function AudioWaveform({
   }
 
   return (
-    <div
-      ref={containerRef}
-      className={cn(
-        'relative h-6 w-full',
-        isInteractive ? 'cursor-pointer touch-none' : '',
-        className,
-      )}
-      role="slider"
-      aria-label={t('audio-playback-position')}
-      aria-valuemin={0}
-      aria-valuemax={duration ?? 0}
-      aria-valuenow={isInteractive ? currentTime : undefined}
-      aria-valuetext={
-        isInteractive && duration !== null
-          ? `${formatTime(currentTime)} / ${formatTime(duration)}`
-          : undefined
-      }
-      aria-disabled={!isInteractive}
-      tabIndex={isInteractive ? 0 : -1}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerInterrupt}
-      onLostPointerCapture={handlePointerInterrupt}
-      onKeyDown={handleKeyDown}
-    >
-      {peaks === null ? (
-        <Bars
-          peaks={new Array(barCount).fill(PLACEHOLDER_BAR_HEIGHT) as number[]}
-          className={cn(
-            'text-muted-foreground/50',
-            isLoading && 'animate-pulse [animation-duration:1.2s]',
-          )}
-        />
-      ) : (
-        <>
-          <Bars peaks={peaks} className="text-muted-foreground/20" />
-          <div
-            className="absolute inset-0"
-            style={{ clipPath: `inset(0 ${(1 - progress) * 100}% 0 0)` }}
-          >
-            <Bars peaks={peaks} className="text-primary" />
-          </div>
-        </>
+    <div className={cn('relative w-full', className)}>
+      <div
+        ref={containerRef}
+        className={cn('relative h-6 w-full', isInteractive && 'cursor-pointer touch-none')}
+        role="slider"
+        aria-label={t('audio-playback-position')}
+        aria-valuemin={0}
+        aria-valuemax={duration ?? 0}
+        aria-valuenow={isInteractive ? currentTime : undefined}
+        aria-valuetext={
+          isInteractive && duration !== null
+            ? `${formatTime(currentTime)} / ${formatTime(duration)}`
+            : undefined
+        }
+        aria-disabled={!isInteractive}
+        tabIndex={isInteractive ? 0 : -1}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerInterrupt}
+        onLostPointerCapture={handlePointerInterrupt}
+        onKeyDown={handleKeyDown}
+      >
+        {peaks === null ? (
+          <Bars
+            peaks={new Array(barCount).fill(PLACEHOLDER_BAR_HEIGHT) as number[]}
+            className={cn(
+              'text-muted-foreground/50',
+              isLoading && 'animate-pulse [animation-duration:1.2s]',
+            )}
+          />
+        ) : (
+          <>
+            <Bars peaks={peaks} className="text-muted-foreground/20" />
+            <div
+              className="absolute inset-0"
+              style={{ clipPath: `inset(0 ${(1 - progress) * 100}% 0 0)` }}
+            >
+              <Bars peaks={peaks} className="text-primary" />
+            </div>
+          </>
+        )}
+      </div>
+      {isLoading && (
+        <span className="pointer-events-none block text-center text-xs text-muted-foreground">
+          {t('audio-waveform-loading')}
+        </span>
       )}
     </div>
   );
