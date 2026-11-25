@@ -26,7 +26,10 @@
     "listen-to-answer": "Listen to answer",
     "pause-audio": "Pause",
     "show-message-text": "Show text",
-    "hide-message-text": "Hide text"
+    "hide-message-text": "Hide text",
+    "playback-speed": "Playback speed",
+    "audio-playback-position": "Audio playback position",
+    "audio-waveform-loading": "Loading waveform..."
   },
   "characters": {
     "shared": {
