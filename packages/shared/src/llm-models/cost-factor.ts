@@ -1,4 +1,4 @@
-import type { LlmModelSelectModel } from '@shared/db/schema';
+import type { LlmModelSelectModel } from '../db/schema';
 
 function getCompletionTokenPrice(model: LlmModelSelectModel | undefined): number {
   return model?.priceMetadata.type === 'text' ? model.priceMetadata.completionTokenPrice : 0;
@@ -20,4 +20,11 @@ export function getCostFactor({
   if (price <= 0 || defaultPrice <= 0) return 0;
 
   return price / defaultPrice;
+}
+
+const MIN_DISPLAY_FACTOR = 0.1;
+
+/** Rounds to one decimal; a paid model never shows less than 0.1x. */
+export function roundCostFactor(factor: number): number {
+  return factor > 0 ? Math.max(MIN_DISPLAY_FACTOR, Math.round(factor * 10) / 10) : 0;
 }

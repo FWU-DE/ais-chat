@@ -1,7 +1,6 @@
 import { REASONING_EFFORTS } from '@ais-chat/api-database/types';
 import type { LlmModelSelectModel } from '@shared/db/schema';
-
-import { getCostFactor } from './cost-factor';
+import { getCostFactor } from '@shared/llm-models/cost-factor';
 
 export type ModelSortKey = 'name' | 'reasoning' | 'cost';
 export type SortDirection = 'asc' | 'desc';

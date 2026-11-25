@@ -17,6 +17,7 @@ export const AI_ACTIVITY_TOOL_NAMES = [
   TOOL_NAMES.mathCalculate,
   TOOL_NAMES.createPlot,
   TOOL_NAMES.generateDocument,
+  TOOL_NAMES.listModels,
 ] as const;
 
 export type AiActivityToolName = (typeof AI_ACTIVITY_TOOL_NAMES)[number];

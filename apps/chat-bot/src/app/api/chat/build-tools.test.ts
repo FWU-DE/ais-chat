@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   buildMundoSearchToolMock: vi.fn(),
   buildMathCalculateToolMock: vi.fn(),
   buildJsxgraphToolMock: vi.fn(),
+  buildListModelsToolMock: vi.fn(),
 }));
 
 vi.mock('./tools/web-search-tool', () => ({
@@ -46,6 +47,11 @@ vi.mock('./tools/math-calculate-tool', () => ({
 vi.mock('./tools/jsxgraph-tool', () => ({
   buildJsxgraphTool: mocks.buildJsxgraphToolMock,
   createPlotActivity: { createStep: vi.fn() },
+}));
+
+vi.mock('./tools/list-models-tool', () => ({
+  buildListModelsTool: mocks.buildListModelsToolMock,
+  listModelsActivity: { createStep: vi.fn() },
 }));
 
 const modelSelection = { modelIds: ['model-1'] as [string, ...string[]], modelName: 'model-1' };
@@ -128,6 +134,16 @@ beforeEach(() => {
       name: 'math_calculate',
       description: 'Calculate',
       parameters: { type: 'object' },
+    },
+    handler: vi.fn(),
+    activity: createActivity(),
+  });
+
+  mocks.buildListModelsToolMock.mockReturnValue({
+    definition: {
+      name: 'list_models',
+      description: 'List models',
+      parameters: { type: 'object', properties: {} },
     },
     handler: vi.fn(),
     activity: createActivity(),
@@ -292,6 +308,43 @@ describe('buildTools', () => {
     expect(mocks.buildJsxgraphToolMock).toHaveBeenCalledWith({
       modelSelection,
       apiKeyId: 'api-key-1',
+    });
+  });
+
+  it.each([[false], [undefined]])(
+    'does not add list_models when allowListModels is %s',
+    async (allow) => {
+      const { buildTools } = await import('./build-tools');
+
+      const { toolRegistry } = buildTools({
+        user,
+        relatedFileEntities,
+        allowWebTools: false,
+        allowListModels: allow,
+        modelSelection,
+        apiKeyId: 'api-key-1',
+      });
+
+      expect(toolRegistry).not.toHaveProperty('list_models');
+      expect(mocks.buildListModelsToolMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it('adds list_models for the federal state when allowListModels is true', async () => {
+    const { buildTools } = await import('./build-tools');
+
+    const { toolRegistry } = buildTools({
+      user,
+      relatedFileEntities,
+      allowWebTools: false,
+      allowListModels: true,
+      modelSelection,
+      apiKeyId: 'api-key-1',
+    });
+
+    expect(toolRegistry).toHaveProperty('list_models');
+    expect(mocks.buildListModelsToolMock).toHaveBeenCalledWith({
+      federalStateId: 'federal-state-1',
     });
   });
 });
