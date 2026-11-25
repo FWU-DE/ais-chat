@@ -1,8 +1,10 @@
 import {
   BIFROST_PROVIDERS,
   type BifrostKey,
+  type BifrostKeyAlias,
   type BifrostProviderConfig,
   type BifrostProviderResponse,
+  type BifrostSecret,
   listBifrostProviderKeys,
   listBifrostProviders,
   listBifrostVirtualKeys,
@@ -16,7 +18,8 @@ import type { SyncError } from './types';
  *
  * Only fields the sync sets are compared. Bifrost adds defaults of its own (`network_config`
  * timeouts and connection limits, key `status` and `description`, flags on virtual key access).
- * Key values are not compared: Bifrost returns them masked.
+ * Key values are not compared: Bifrost returns them masked. Of the Azure and Vertex key
+ * configs only the endpoint and the region come back readable, so only those are compared.
  *
  * This catches a write that Bifrost accepted but stored differently. It does not catch wrong
  * provider credentials, wrong model names at the provider, or a wrong `BIFROST_ENCRYPTION_KEY`:
@@ -37,6 +40,25 @@ const sorted = (values: string[] = []) => [...values].sort();
 const sameSet = (a: string[] = [], b: string[] = []) =>
   JSON.stringify(sorted(a)) === JSON.stringify(sorted(b));
 const trimSlash = (value: string | undefined | null) => (value ? value.replace(/\/+$/, '') : '');
+
+const secretText = (secret: BifrostSecret | undefined) =>
+  typeof secret === 'string' ? secret : (secret?.value ?? '');
+
+/**
+ * Bifrost returns `{ model_id }` without a speech flag as the plain string, and no aliases as
+ * `null` (measured on v2.5.1). Both forms are brought to one shape before they are compared.
+ */
+function normalizeAliases(aliases: Record<string, BifrostKeyAlias> | null | undefined): string {
+  const entries = Object.entries(aliases ?? {})
+    .map(([model, alias]): [string, { upstream: string; speech: boolean }] => [
+      model,
+      typeof alias === 'string'
+        ? { upstream: alias, speech: false }
+        : { upstream: alias.model_id, speech: alias.use_speech_endpoints === true },
+    ])
+    .sort(([a], [b]) => a.localeCompare(b));
+  return JSON.stringify(entries);
+}
 
 function trueKeys(requests: Record<string, boolean> | undefined): string[] {
   return Object.entries(requests ?? {})
@@ -101,6 +123,22 @@ function compareKeys(desired: BifrostProviderConfig, actualKeys: BifrostKey[]): 
     if (!sameSet(key.models, actual.models)) differs('models', 'differ');
     if (key.weight !== actual.weight) differs('weight');
     if ((key.enabled ?? true) !== (actual.enabled ?? true)) differs('enabled');
+    if (normalizeAliases(key.aliases) !== normalizeAliases(actual.aliases))
+      differs('aliases', 'differ');
+    // Bifrost returns the endpoint and the region readable. Project, credentials and the key value are masked.
+    if (
+      key.azure_key_config &&
+      trimSlash(secretText(key.azure_key_config.endpoint)) !==
+        trimSlash(secretText(actual.azure_key_config?.endpoint))
+    ) {
+      differs('azure_key_config.endpoint');
+    }
+    if (
+      key.vertex_key_config &&
+      secretText(key.vertex_key_config.region) !== secretText(actual.vertex_key_config?.region)
+    ) {
+      differs('vertex_key_config.region');
+    }
   }
   for (const name of actualByName.keys()) {
     if (!desiredNames.has(name)) {

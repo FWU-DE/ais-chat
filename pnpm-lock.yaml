@@ -1171,6 +1171,9 @@ importers:
       '@types/node':
         specifier: 24.19.2
         version: 24.19.2
+      '@vitest/coverage-v8':
+        specifier: 5.1.0
+        version: 5.1.0(vitest@5.1.0)
       eslint:
         specifier: 10.8.1
         version: 10.8.1(jiti@2.7.0)(supports-color@7.2.0)

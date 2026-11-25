@@ -26,6 +26,11 @@ export type OrchestratorOptions = {
   adminPassword: string;
   /** Time the rolling update may take before the run ends `failed`. */
   rolloutTimeoutMs: number;
+  /**
+   * The state could not be saved, so the persisted phase no longer matches the process. The
+   * process has to exit: the next start runs `recover()` from the persisted state.
+   */
+  onFatal: (error: unknown) => void;
 };
 
 type StatePatch = Partial<Omit<State, 'run'>> & {
@@ -103,8 +108,10 @@ export class Orchestrator {
     this.log.info({ phase: state.phase, runId: state.run?.id }, 'recover');
     const run = new RunState(this.store, state, version);
 
+    // The rollout runs in the background: it takes minutes, and the probes of this service must
+    // pass meanwhile. `POST /v1/syncs` answers 409 while the phase is `restarting`.
     if (state.phase === 'restarting') {
-      this.current = this.rollout(run).catch((e: unknown) => this.abortLog(run, e));
+      this.current = this.rollout(run).catch((e: unknown) => this.fatal(run, e));
     } else if (state.phase === 'syncing' || state.phase === 'rolling_back') {
       const outcome: RunOutcome = {
         result: 'failed',
@@ -117,12 +124,16 @@ export class Orchestrator {
         step: 'rollout',
         runPatch: { restartedAt: new Date().toISOString(), outcome },
       });
-      this.current = this.rollout(run).catch((e: unknown) => this.abortLog(run, e));
+      this.current = this.rollout(run).catch((e: unknown) => this.fatal(run, e));
     }
   }
 
-  private abortLog(run: RunState, error: unknown): void {
-    this.log.error({ runId: run.runId, error: errorText(error) }, 'rollout could not finish');
+  private fatal(run: RunState, error: unknown): void {
+    this.log.error(
+      { runId: run.runId, error: errorText(error) },
+      'state could not be saved, exiting so that recover() can finish the run',
+    );
+    this.options.onFatal(error);
   }
 
   /** Steps 1 to 3. Throws `ConflictError` (409), otherwise the run continues in the background. */
@@ -179,6 +190,9 @@ export class Orchestrator {
   /** Unexpected error inside a run. Pods may hold different states, so all of them restart. */
   private async abort(run: RunState, error: unknown): Promise<void> {
     this.log.error({ runId: run.runId, error: errorText(error) }, 'run failed unexpectedly');
+    // The phase is already `restarting`, so the rollout started and only its last write failed.
+    // A new patch would restart all pods a second time. `recover()` finishes the run.
+    if (run.state.phase === 'restarting') return this.fatal(run, error);
     try {
       await run.save({
         phase: 'restarting',
@@ -194,8 +208,8 @@ export class Orchestrator {
         },
       });
       await this.rollout(run);
-    } catch {
-      // The state is not writable. `recover()` marks the run on the next start.
+    } catch (e) {
+      this.fatal(run, e);
     }
   }
 

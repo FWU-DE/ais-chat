@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
+import type { BifrostKey } from '@ais-chat/api-database/bifrost-provider-sync/core';
+
 type Key = {
   id: string;
   name: string;
@@ -9,6 +11,9 @@ type Key = {
   models: string[];
   weight: number;
   enabled?: boolean;
+  aliases?: BifrostKey['aliases'];
+  azure_key_config?: BifrostKey['azure_key_config'];
+  vertex_key_config?: BifrostKey['vertex_key_config'];
 };
 type KeyValue = string | { value: string };
 const clearText = (value: KeyValue) => (typeof value === 'string' ? value : value.value);
@@ -58,6 +63,18 @@ const KEY_DEFAULTS = {
   blacklisted_models: [] as string[],
   use_for_batch_api: false,
 };
+
+/** Measured on v2.5.1: `{ model_id }` without a speech flag comes back as a string, no aliases as null. */
+function readAliases(aliases: Key['aliases']) {
+  const entries = Object.entries(aliases ?? {});
+  if (entries.length === 0) return null;
+  return Object.fromEntries(
+    entries.map(([model, alias]) => [
+      model,
+      typeof alias === 'object' && !alias.use_speech_endpoints ? alias.model_id : alias,
+    ]),
+  );
+}
 
 export const mask = (value: string) => `${value.slice(0, 4)}************${value.slice(-2)}`;
 
@@ -197,7 +214,14 @@ export class FakePod {
         if (req.method === 'GET') {
           return [
             200,
-            { keys: provider.keys.map((k) => ({ ...KEY_DEFAULTS, ...k, value: mask(k.value) })) },
+            {
+              keys: provider.keys.map((k) => ({
+                ...KEY_DEFAULTS,
+                ...k,
+                aliases: readAliases(k.aliases),
+                value: mask(k.value),
+              })),
+            },
           ];
         }
         const body = req.body as unknown as Omit<Key, 'id' | 'value'> & { value: KeyValue };
@@ -251,7 +275,7 @@ export class FakePod {
 }
 
 /** A pod that lost its extras: turns a field of a stored key into something else, to test the read back. */
-export const keyOf = (name: string, value: string, models = ['fast']): Omit<Key, 'id'> => ({
+export const keyOf = (name: string, value: string, models = ['fast']): BifrostKey => ({
   name,
   value,
   models,

@@ -380,6 +380,51 @@ describe('crash recovery', () => {
     expect(h.store.state.lastRun?.errors[0]?.provider).toBe('pd');
   });
 
+  test.each(['syncing', 'rolling_back'] as const)(
+    'a state that cannot be saved while recovering %s makes recover() reject',
+    async (phase) => {
+      h.store.state = { phase, run: run(phase) };
+      h.store.write = () => Promise.reject(new Error('etcd unavailable'));
+
+      await expect(h.makeOrchestrator().recover()).rejects.toThrow('etcd unavailable');
+      expect(h.cluster.patches).toHaveLength(0);
+    },
+  );
+
+  test('a state that cannot be saved at the end of a recovered rollout exits the process', async () => {
+    const restartedAt = '2026-11-25T08:00:00.000Z';
+    h.store.state = {
+      phase: 'restarting',
+      run: run('rollout', {
+        restartedAt,
+        outcome: { result: 'ok', errors: [], rollbackErrors: [] },
+      }),
+    };
+    h.store.write = () => Promise.reject(new Error('etcd unavailable'));
+    const orchestrator = h.makeOrchestrator();
+
+    await orchestrator.recover();
+    await orchestrator.whenIdle();
+
+    expect(h.fatalErrors).toHaveLength(1);
+    expect(h.logs.some((l) => l.level === 'error' && l.msg.includes('exiting'))).toBe(true);
+  });
+
+  test('a state that cannot be saved at the end of a run exits and does not patch a second time', async () => {
+    const original = h.store.write.bind(h.store);
+    h.store.write = (state, version) =>
+      state.phase === 'idle' || state.phase === 'failed'
+        ? Promise.reject(new Error('etcd unavailable'))
+        : original(state, version);
+
+    await h.post(syncRequest());
+    await h.runToEnd();
+
+    expect(h.fatalErrors).toHaveLength(1);
+    expect(h.cluster.patches).toHaveLength(1);
+    expect(h.store.state.phase).toBe('restarting');
+  });
+
   test('leaves idle and failed states untouched', async () => {
     h.store.state = { phase: 'idle', lastSyncedHash: 'x' };
     await h.makeOrchestrator().recover();

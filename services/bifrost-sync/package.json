@@ -8,6 +8,7 @@
     "build": "tsup",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
@@ -21,6 +22,7 @@
     "@ais-chat/eslint-config": "workspace:*",
     "@ais-chat/typescript-config": "workspace:*",
     "@types/node": "24.19.2",
+    "@vitest/coverage-v8": "5.1.0",
     "eslint": "10.8.1",
     "tsup": "9.0.0",
     "tsx": "4.23.15",

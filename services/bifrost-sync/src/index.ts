@@ -23,6 +23,7 @@ const orchestrator = new Orchestrator(
     adminUsername: env.bifrostAdminUsername,
     adminPassword: env.bifrostAdminPassword,
     rolloutTimeoutMs: env.rolloutTimeoutMs,
+    onFatal: () => process.exit(1),
   },
   logger,
 );

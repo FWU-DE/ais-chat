@@ -245,4 +245,102 @@ describe('verifyState', () => {
 
     expect(text).not.toContain('sk-test');
   });
+
+  describe('routing fields', () => {
+    const withAliases = (): Providers => [
+      {
+        provider: 'azure',
+        keys: [
+          {
+            ...keyOf('az', 'sk-test-az-1', ['m1', 'm2', 'm3']),
+            azure_key_config: { endpoint: 'https://my-res.openai.azure.com' },
+            aliases: {
+              m1: 'dep-1',
+              m2: { model_id: 'dep-2', use_speech_endpoints: true },
+              m3: { model_id: 'dep-3' },
+            },
+          },
+        ],
+      },
+    ];
+
+    test('reports no difference although Bifrost returns an object without speech flag as a string', async () => {
+      await syncAll(target(), withAliases());
+
+      expect(await verifyState(target(), withAliases())).toEqual([]);
+    });
+
+    test('reports no difference for a key without aliases, which Bifrost returns as null', async () => {
+      const desired = withAliases();
+      desired[0]!.keys[0]!.aliases = {};
+      await syncAll(target(), desired);
+
+      expect(await verifyState(target(), desired)).toEqual([]);
+    });
+
+    test('reports a wrong upstream model in an alias', async () => {
+      await syncAll(target(), withAliases());
+      const desired = withAliases();
+      desired[0]!.keys[0]!.aliases!.m1 = 'dep-other';
+
+      expect(await verifyState(target(), desired)).toContainEqual({
+        provider: 'azure',
+        step: 'verify',
+        message: 'key az: aliases differ',
+      });
+    });
+
+    test('reports a missing alias and a lost speech flag', async () => {
+      await syncAll(target(), withAliases());
+      const missing = withAliases();
+      delete missing[0]!.keys[0]!.aliases!.m1;
+      const noSpeech = withAliases();
+      noSpeech[0]!.keys[0]!.aliases!.m2 = { model_id: 'dep-2' };
+
+      for (const desired of [missing, noSpeech]) {
+        expect(await verifyState(target(), desired)).toContainEqual({
+          provider: 'azure',
+          step: 'verify',
+          message: 'key az: aliases differ',
+        });
+      }
+    });
+
+    test('reports a differing Azure endpoint and ignores a trailing slash', async () => {
+      await syncAll(target(), withAliases());
+      const slash = withAliases();
+      slash[0]!.keys[0]!.azure_key_config = { endpoint: 'https://my-res.openai.azure.com/' };
+      const other = withAliases();
+      other[0]!.keys[0]!.azure_key_config = { endpoint: 'https://other.openai.azure.com' };
+
+      expect(await verifyState(target(), slash)).toEqual([]);
+      expect(await verifyState(target(), other)).toContainEqual({
+        provider: 'azure',
+        step: 'verify',
+        message: 'key az: azure_key_config.endpoint differs',
+      });
+    });
+
+    test('reports a differing Vertex region and does not compare the masked project', async () => {
+      const vertex = (region: string, project: string): Providers => [
+        {
+          provider: 'vertex',
+          keys: [
+            {
+              ...keyOf('vx', '', ['g']),
+              vertex_key_config: { project_id: project, region, auth_credentials: '{}' },
+            },
+          ],
+        },
+      ];
+      await syncAll(target(), vertex('europe-west4', 'proj-1'));
+
+      expect(await verifyState(target(), vertex('europe-west4', 'proj-other'))).toEqual([]);
+      expect(await verifyState(target(), vertex('us-east1', 'proj-1'))).toContainEqual({
+        provider: 'vertex',
+        step: 'verify',
+        message: 'key vx: vertex_key_config.region differs',
+      });
+    });
+  });
 });

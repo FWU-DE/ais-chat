@@ -70,10 +70,21 @@ describe('authentication', () => {
 });
 
 describe('POST /v1/syncs validation', () => {
-  test('answers 422 for an empty provider list', async () => {
-    const response = await h.post(syncRequest({ providers: [] }));
+  test('answers 422 when providers and the baseline are both empty', async () => {
+    const response = await h.post(
+      syncRequest({ providers: [], baseline: { contentHash: 'b', providers: [] } }),
+    );
     expect(response.statusCode).toBe(422);
     expect((await h.status()).phase).toBe('idle');
+  });
+
+  test('accepts an empty provider list when the baseline has providers, to remove the last provider', async () => {
+    const response = await h.post(syncRequest({ providers: [] }));
+    expect(response.statusCode).toBe(202);
+    await h.runToEnd();
+
+    expect((await h.status()).lastRun?.result).toBe('ok');
+    expect(h.cluster.db.providers.size).toBe(0);
   });
 
   test.each([

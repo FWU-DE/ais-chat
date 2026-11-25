@@ -13,22 +13,24 @@ Applies the desired provider config to Bifrost through one pod, then restarts al
 
 `ok`: all steps worked. `rolled_back`: the sync failed, the rollback worked. `failed`: the rollback failed, the rollout hung or a pod answered 500. `lastSyncedHash` changes only on `ok`.
 
-After a crash, `recover()` runs before the port opens. `restarting` waits for the running rollout and patches only if `restartedAt` is not set yet. `syncing` and `rolling_back` end `failed` and restart all pods. If `recover()` fails, the process exits.
+After a crash, `recover()` runs before the port opens. `restarting` waits for the running rollout in the background, so the probes of the service pass meanwhile, and patches only if `restartedAt` is not set yet. `syncing` and `rolling_back` end `failed` and restart all pods. If the state cannot be saved, the process exits and the next start runs `recover()` again.
+
+Run the service as a single replica with `strategy: Recreate`. During a rolling update of the service itself, a second process would treat the `syncing` state of the first as a crash and restart Bifrost while the first still writes. The `resourceVersion` of the ConfigMap fences state writes, not the calls to Bifrost.
 
 ## API
 
 All calls except `/healthz` need `Authorization: Bearer <BIFROST_SYNC_TOKEN>`. Request bodies contain provider keys in clear text and are never logged.
 
-| Call             | Purpose                                                                                                                                                                                 |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /v1/syncs` | `{ contentHash, providers, baseline: { contentHash, providers } }`. `202 { runId }`, `409` while a run is active or pods are not Ready, `422` for an invalid body or empty `providers`. |
-| `GET /v1/status` | `phase`, `run`, `lastRun`, `lastSyncedHash`.                                                                                                                                            |
-| `GET /healthz`   | No token. Probe only.                                                                                                                                                                   |
-| `GET /metrics`   | `bifrost_sync_phase{phase}` and `bifrost_sync_last_success_timestamp_seconds`, both from the persisted state.                                                                           |
+| Call             | Purpose                                                                                                                                                                                                                                                                                                                                                                            |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /v1/syncs` | `{ contentHash, providers, baseline: { contentHash, providers } }`. `202 { runId }`, `409` while a run is active or pods are not Ready, `422` for an invalid body or when `providers` and `baseline.providers` are both empty. An empty `providers` with a non-empty baseline is valid: it removes the last provider. telli-admin should ask for confirmation before it sends one. |
+| `GET /v1/status` | `phase`, `run`, `lastRun`, `lastSyncedHash`.                                                                                                                                                                                                                                                                                                                                       |
+| `GET /healthz`   | No token. Probe only.                                                                                                                                                                                                                                                                                                                                                              |
+| `GET /metrics`   | `bifrost_sync_phase{phase}` and `bifrost_sync_last_success_timestamp_seconds`, both from the persisted state.                                                                                                                                                                                                                                                                      |
 
 ## What the read back catches
 
-It compares what the sync sets: provider name, `network_config` (if given), `custom_provider_config`, key name, `models`, `weight`, `enabled`, virtual key access. It ignores fields that Bifrost sets itself. Key values are not compared, Bifrost returns them masked.
+It compares what the sync sets: provider name, `network_config` (if given), `custom_provider_config`, key name, `models`, `weight`, `enabled`, `aliases`, virtual key access, and of the Azure and Vertex key configs the readable parts (`azure_key_config.endpoint`, `vertex_key_config.region`). It ignores fields that Bifrost sets itself. Key values, the Vertex project and the Vertex credentials are not compared, Bifrost returns them masked.
 
 It catches a write that Bifrost accepted but stored differently. It does **not** catch wrong provider credentials, wrong model names at the provider, an unreachable provider, or a wrong `BIFROST_ENCRYPTION_KEY`: the pod that wrote runs with the right key in memory, only restarted pods load with the wrong one.
 

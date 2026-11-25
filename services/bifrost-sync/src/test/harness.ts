@@ -51,6 +51,7 @@ export async function createHarness(
   await cluster.init();
   const store = new MemoryStateStore();
   const logs: LogLine[] = [];
+  const fatalErrors: unknown[] = [];
   const logger = {
     info: (obj: Record<string, unknown>, msg: string) => logs.push({ level: 'info', obj, msg }),
     error: (obj: Record<string, unknown>, msg: string) => logs.push({ level: 'error', obj, msg }),
@@ -59,6 +60,7 @@ export async function createHarness(
     adminUsername: 'admin',
     adminPassword: 'admin-test-password',
     rolloutTimeoutMs: 5000,
+    onFatal: (error) => fatalErrors.push(error),
     ...overrides,
   };
   const makeOrchestrator = () => new Orchestrator(cluster, store, orchestratorOptions, logger);
@@ -106,6 +108,7 @@ export async function createHarness(
     cluster,
     store,
     logs,
+    fatalErrors,
     orchestrator,
     makeOrchestrator,
     app,

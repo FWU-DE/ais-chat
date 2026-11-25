@@ -54,8 +54,9 @@ export function createServer(orchestrator: Orchestrator, options: ServerOptions)
     const parsed = parseSyncRequest(request.body);
     if (!parsed.ok)
       return reply.code(422).send({ error: 'invalid request', issues: parsed.issues });
-    if (parsed.request.providers.length === 0) {
-      return reply.code(422).send({ error: 'providers must not be empty' });
+    // An empty list is legitimate: it removes the last provider. Both lists empty means nothing to sync.
+    if (parsed.request.providers.length === 0 && parsed.request.baseline.providers.length === 0) {
+      return reply.code(422).send({ error: 'providers and baseline.providers are both empty' });
     }
     return reply.code(202).send(await orchestrator.start(parsed.request));
   });
