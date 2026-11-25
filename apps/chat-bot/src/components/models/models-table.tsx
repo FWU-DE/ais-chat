@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@ui/components/table';
-import { InfoTooltip } from '@ui/components/tooltip';
+import { InfoTooltip, Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/tooltip';
 import { cn } from '@ui/lib/utils';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
@@ -159,14 +159,19 @@ function ModelRow({
       onActivate={() => onSelect(model.name)}
     >
       <TableCell>
-        <RadioGroupItem
-          value={model.name}
-          aria-labelledby={labelId}
-          data-testid={`model-radio-${model.displayName}`}
-          onClick={(event) => event.stopPropagation()}
-        />
+        <Tooltip>
+          <TooltipTrigger asChild disableKeyboardToggle>
+            <RadioGroupItem
+              value={model.name}
+              aria-labelledby={labelId}
+              data-testid={`model-radio-${model.displayName}`}
+              onClick={(event) => event.stopPropagation()}
+            />
+          </TooltipTrigger>
+          <TooltipContent>{t('select-tooltip')}</TooltipContent>
+        </Tooltip>
       </TableCell>
-      <TableCell className="w-full max-w-0 whitespace-normal hyphens-auto break-words">
+      <TableCell className="w-full max-w-0 whitespace-normal hyphens-auto wrap-break-word">
         <div className="flex items-center gap-3">
           <ModelVendorTooltip vendor={model.vendor} />
           <div className="flex min-w-0 flex-col">
@@ -181,12 +186,13 @@ function ModelRow({
                   variant="neutral"
                   label={t('default-tag')}
                   className="font-semibold"
+                  tooltip={t('default-tooltip')}
                   data-testid="model-default-tag"
                 />
               )}
             </div>
             {model.description && (
-              <span className="text-sm text-text-secondary">{model.description}</span>
+              <span className="text-sm text-foreground/60">{model.description}</span>
             )}
           </div>
         </div>

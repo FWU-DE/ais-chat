@@ -9,9 +9,9 @@ export async function ModelsOverview() {
   return (
     <>
       <h1 className="mb-6 text-3xl">{t('title')}</h1>
-      <div className="mb-6 flex items-center gap-3 rounded-xl border border-secondary bg-secondary/35 px-6 py-4 text-base">
-        <EU className="h-4 w-6 shrink-0" aria-hidden />
-        <p>{t('eu-banner')}</p>
+      <div className="flex min-h-16 flex-col items-start px-6 pt-3 pb-4 text-base rounded-xl bg-secondary/30 sm:flex-row sm:items-center gap-4 mb-4">
+        <EU className="h-5 w-8 shrink-0 rounded-sm" aria-hidden />
+        <p className="whitespace-pre-line">{t('eu-banner')}</p>
       </div>
       <div className="pb-6">
         <ModelsTable />

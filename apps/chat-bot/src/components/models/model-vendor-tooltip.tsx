@@ -17,9 +17,9 @@ export function ModelVendorTooltip({ vendor }: { vendor: string | null }) {
       <Tooltip>
         <TooltipTrigger
           aria-label={label}
-          className="flex size-8 shrink-0 items-center justify-center rounded-full text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex size-6 shrink-0 items-center justify-center rounded-full text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          <ModelVendorIcon vendor={vendor} className="size-6" />
+          <ModelVendorIcon vendor={vendor} className="size-4.5" />
         </TooltipTrigger>
         <TooltipContent>{label}</TooltipContent>
       </Tooltip>

@@ -33,7 +33,7 @@ const chipVariants = cva(
           'bg-secondary/30 text-secondary-foreground border-secondary [a&]:hover:bg-secondary/20',
         destructive:
           'bg-destructive/10 text-destructive border-destructive/30 [a&]:hover:bg-destructive/20',
-        neutral: 'border-gray-200 bg-gray-200 text-black',
+        neutral: 'border-transparent bg-gray-300 text-black',
         success: 'border-transparent bg-success/20',
         warning: 'border-transparent bg-warning/40',
         danger: 'border-transparent bg-destructive/20',
@@ -41,7 +41,7 @@ const chipVariants = cva(
       size: {
         default: 'h-7 px-3 text-sm',
         sm: 'h-6 px-2 text-xs [&_svg:not([class*="size-"])]:size-3',
-        xs: 'h-4.5 px-2 text-xs [&_svg:not([class*="size-"])]:size-3',
+        xs: 'h-4.5 pb-0.25 px-2 text-xs [&_svg:not([class*="size-"])]:size-3',
       },
     },
     defaultVariants: {
