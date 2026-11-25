@@ -3,6 +3,7 @@
 import { runServerAction } from '@shared/actions/run-server-action';
 
 import { requireAdminAuth } from '@/auth/requireAdminAuth';
+import type { LlmModelInput } from '@/services/llm-service';
 import {
   createLargeLanguageModel,
   deleteLargeLanguageModel,
@@ -12,14 +13,13 @@ import {
   getLlmApiKeyAssignmentsData,
   saveApiKeysForModel,
 } from '@/services/model-api-key-mapping-service';
-import { CreateLargeLanguageModel, UpdateLargeLanguageModel } from '@/types/large-language-model';
 
-export async function createLLMAction(data: CreateLargeLanguageModel) {
+export async function createLLMAction(data: LlmModelInput) {
   await requireAdminAuth();
   return runServerAction('createLLMAction', createLargeLanguageModel)(data);
 }
 
-export async function updateLLMAction(llmId: string, data: UpdateLargeLanguageModel) {
+export async function updateLLMAction(llmId: string, data: LlmModelInput) {
   await requireAdminAuth();
   return runServerAction('updateLLMAction', updateLargeLanguageModel)(llmId, data);
 }

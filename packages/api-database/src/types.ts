@@ -52,6 +52,8 @@ export type ReasoningEffort = z.infer<typeof reasoningEffortSchema>;
 export type ReasoningSummary = z.infer<typeof reasoningSummarySchema>;
 export type ReasoningConfig = z.infer<typeof reasoningConfigSchema>;
 
+export const supportedImageFormatsSchema = z.array(z.string());
+
 /**
  * Model fields exposed by the API. Parsing strips everything else, such as provider settings and
  * internal speech config. Stored values are passed through as they are, so legacy data can't break
@@ -65,7 +67,7 @@ export const llmModelPublicSchema = z.object({
   description: z.string(),
   priceMetadata: z.unknown(),
   createdAt: z.date(),
-  supportedImageFormats: z.array(z.string()),
+  supportedImageFormats: supportedImageFormatsSchema,
   imageGenerationConfig: z.unknown(),
   modelConfig: speechConfigSchema.pick({ voices: true }).nullable(),
   additionalParameters: z.unknown(),

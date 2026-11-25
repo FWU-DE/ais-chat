@@ -1,5 +1,6 @@
 'use client';
 
+import type { SensitiveLlmModel } from '@ais-chat/api-database';
 import { isBifrostProviderSyncError } from '@ais-chat/api-database/bifrost-provider-sync/error';
 import { logError } from '@shared/logging';
 import { Button } from '@ui/components/button';
@@ -23,7 +24,6 @@ import {
 import { startTransition, useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
-import { LargeLanguageModel } from '@/types/large-language-model';
 import { ModelApiKeyMapping } from '@/types/model-mappings';
 
 import {
@@ -41,7 +41,7 @@ export function ModelApiKeyMappingListView({
   projectId,
   apiKeyId,
 }: ModelApiKeyMappingListViewProps) {
-  const [availableModels, setAvailableModels] = useState<LargeLanguageModel[]>([]);
+  const [availableModels, setAvailableModels] = useState<SensitiveLlmModel[]>([]);
   const [modelApiKeyMappings, setModelApiKeyMappings] = useState<ModelApiKeyMapping[]>([]);
   const [assignedModelIds, setAssignedModelIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
