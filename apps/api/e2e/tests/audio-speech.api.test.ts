@@ -11,7 +11,6 @@ const mockSpeechRequest = {
 
 type SpeechModel = {
   name: string;
-  provider?: string;
   priceMetadata?: {
     type?: string;
     priceInCentPer1MillionCharacters?: number;
@@ -22,7 +21,7 @@ type SpeechModel = {
 };
 
 async function getConfiguredSpeechModel(request: Parameters<typeof getSpeechModel>[0]) {
-  // E2E_SPEECH_MODEL (optionally E2E_SPEECH_VOICE) overrides the seeded Bifrost mock speech model.
+  // E2E_SPEECH_MODEL (optionally E2E_SPEECH_VOICE) overrides the default speech model selection.
   const configuredModelName = process.env['E2E_SPEECH_MODEL'];
 
   if (configuredModelName) {
@@ -32,10 +31,7 @@ async function getConfiguredSpeechModel(request: Parameters<typeof getSpeechMode
   const response = await request.get('/v1/models', { headers: authorizationHeader });
   const models = (await response.json()) as SpeechModel[];
 
-  // Speech generation currently only supports Bifrost; other providers cannot synthesize audio.
-  return models.find(
-    (model) => model.priceMetadata?.type === 'speech' && model.provider === 'bifrost',
-  );
+  return models.find((model) => model.priceMetadata?.type === 'speech');
 }
 
 async function getSpeechRequest(request: Parameters<typeof getSpeechModel>[0]) {
@@ -138,7 +134,7 @@ test.describe('speech model success responses', () => {
   test('returns chunked MP3 audio', { tag: '@smoke' }, async ({ request }) => {
     const speechRequest = await getSpeechRequest(request);
 
-    test.skip(!speechRequest, 'No configured Bifrost speech model with a voice is available');
+    test.skip(!speechRequest, 'No configured speech model with a voice is available');
 
     const response = await request.post('/v1/audio/speech', {
       headers: authorizationHeader,
@@ -159,7 +155,7 @@ test.describe('speech model success responses', () => {
   test('streams audio and a completion event as SSE', { tag: '@smoke' }, async ({ request }) => {
     const speechRequest = await getSpeechRequest(request);
 
-    test.skip(!speechRequest, 'No configured Bifrost speech model with a voice is available');
+    test.skip(!speechRequest, 'No configured speech model with a voice is available');
 
     const response = await request.post('/v1/audio/speech', {
       headers: authorizationHeader,
@@ -186,7 +182,7 @@ test.describe('speech model success responses', () => {
   test('records audio usage for the requesting API key', { tag: '@smoke' }, async ({ request }) => {
     const speechRequest = await getSpeechRequest(request);
 
-    test.skip(!speechRequest, 'No configured Bifrost speech model with a voice is available');
+    test.skip(!speechRequest, 'No configured speech model with a voice is available');
 
     await withIsolatedSpeechApiKey(
       speechRequest!.model,
