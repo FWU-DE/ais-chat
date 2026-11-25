@@ -1,8 +1,9 @@
-import { TokenPointsExceededError } from '@ais-chat/ai-core';
+import { AiGenerationError, TokenPointsExceededError } from '@ais-chat/ai-core';
 import { UserModel } from '@shared/auth/user-model';
 import { LlmModelSelectModel } from '@shared/db/schema';
 import { ForbiddenError, NotFoundError } from '@shared/error';
 import { FederalStateModel } from '@shared/federal-states/types';
+import { logWarning } from '@shared/logging/logging';
 
 import { rewriteTextToSsml } from '../ssml-rewrite/ssml-rewrite-service';
 import { ChatSpeechStreamResult, SpeechTextUsage } from '../types';
@@ -14,6 +15,9 @@ import {
   raiseBudgetExceededEvent,
   TokenAvailability,
 } from './utils';
+
+// Azure occasionally rejects generated SSML; a second rewrite usually succeeds.
+const MAX_SSML_ATTEMPTS = 2;
 
 export type SpeechStreamingPipelineParams = {
   user: UserModel;
@@ -88,20 +92,31 @@ export async function runSpeechPipeline<TContext extends { user: { id: string } 
   const model = await getSpeechModel();
   if (!model) throw new NotFoundError('No speech model configured');
 
-  let ssmlBody: string | undefined;
-  if (model.modelConfig?.enableSsmlRewrite === true) {
+  const onStreamFinished = async (result: ChatSpeechStreamResult) => {
+    await strategy.storeUsage(params, context, model, result);
+    await strategy.reportUsage(params, context, model, result);
+  };
+
+  if (model.modelConfig?.enableSsmlRewrite !== true) {
+    return startStream(params, model, undefined, onStreamFinished);
+  }
+
+  for (let attempt = 1; attempt <= MAX_SSML_ATTEMPTS; attempt++) {
     const rewrite = await rewriteTextToSsml({
       text: params.input,
       federalStateId: params.federalState.id,
       abortSignal: params.abortSignal,
     });
+    // Every rewrite was billed to the API key, so its usage is stored even if the SSML is rejected.
     await strategy.storeTextUsage(params, context, rewrite.usage);
-    ssmlBody = rewrite.ssmlBody;
+    try {
+      return await startStream(params, model, rewrite.ssmlBody, onStreamFinished);
+    } catch (error) {
+      if (!(error instanceof AiGenerationError) || params.abortSignal?.aborted) throw error;
+      // The SSML and error details are not logged, since they may contain user content.
+      logWarning('SSML speech request failed', { attempt, maxAttempts: MAX_SSML_ATTEMPTS });
+    }
   }
 
-  return startStream(params, model, ssmlBody, async (result) => {
-    // stream finished
-    await strategy.storeUsage(params, context, model, result);
-    await strategy.reportUsage(params, context, model, result);
-  });
+  return startStream(params, model, undefined, onStreamFinished);
 }

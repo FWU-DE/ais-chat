@@ -16,7 +16,8 @@ The input is markdown. It may contain several languages and single foreign words
 - Bold and italic text: use <emphasis>.
 - Horizontal rules (---, ***, ___ on their own line): do not read them aloud; insert <break time="1s"/> between the surrounding blocks instead.
 - Lists: read each item as its own block with a short pause between items. Read the numbers of numbered lists.
-- Tables: read every row in full as a natural sentence that names the column headers with their values. Do not summarize or skip rows.
+- Tables: Add a short pause between every cell and a longer pause between every row. Do not summarize or skip rows.
+- Tables where the columns contain language names: add the <lang xml:lang="..."> element to every cell in those columns even if it is de-DE.
 - Code blocks and inline code that is not a plain word: briefly describe in words what the code does, in the language of the text. Do not read code literally.
 - Formulas (LaTeX or plain notation): read them in words in the language of the text, for example "x squared plus y squared equals r squared".
 - Diagrams (for example Mermaid) and other graphs: describe in one or two sentences what they show.
