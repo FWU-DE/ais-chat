@@ -184,7 +184,6 @@ export async function sendCharacterMessage({
     attachedLinks: character.attachedLinks,
     sourceUrls: processedUrls,
     allowWebTools,
-    allowMundoSearch: false,
     modelSelection,
     apiKeyId,
   });

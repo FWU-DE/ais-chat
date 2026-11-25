@@ -54,8 +54,6 @@ type BuildToolsParams = {
   sourceUrls?: string[];
   attachedLinks?: string[];
   allowWebTools: boolean;
-  allowMundoSearch?: boolean;
-  allowListModels?: boolean;
   modelSelection: ModelSelection;
   apiKeyId: string;
 };
@@ -71,8 +69,6 @@ export function buildTools({
   sourceUrls = [],
   attachedLinks = [],
   allowWebTools,
-  allowMundoSearch,
-  allowListModels,
   modelSelection,
   apiKeyId,
 }: BuildToolsParams) {
@@ -95,10 +91,11 @@ export function buildTools({
   const webScraperTool = allowWebTools
     ? buildWebScraperTool({ sourceUrls, attachedLinks })
     : undefined;
-  const mundoSearchTool = allowMundoSearch ? buildMundoSearchTool() : undefined;
-  const listModelsTool = allowListModels
-    ? buildListModelsTool({ federalStateId: user.federalState.id })
-    : undefined;
+  const isCharacterOrLearningScenarioChat = !!(characterId || learningScenarioId);
+  const mundoSearchTool = isCharacterOrLearningScenarioChat ? undefined : buildMundoSearchTool();
+  const listModelsTool = isCharacterOrLearningScenarioChat
+    ? undefined
+    : buildListModelsTool({ federalStateId: user.federalState.id });
 
   const textFileEntities = relatedFileEntities.filter((file) => !isImageFile(file.name));
 

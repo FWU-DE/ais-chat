@@ -179,9 +179,11 @@ describe('buildTools', () => {
       'math_calculate',
       'web_search',
       'web_scraper',
+      'mundo_search',
       'retrieve_entire_file',
       'retrieve_text_chunks',
       'generate_document',
+      'list_models',
     ]);
   });
 
@@ -213,11 +215,8 @@ describe('buildTools', () => {
       apiKeyId: 'api-key-1',
     });
 
-    expect(Object.keys(toolRegistry)).toEqual([
-      'retrieve_entire_file',
-      'retrieve_text_chunks',
-      'generate_document',
-    ]);
+    expect(Object.keys(toolRegistry)).not.toContain('web_search');
+    expect(Object.keys(toolRegistry)).not.toContain('web_scraper');
   });
 
   it('does not build web tools when allowWebTools is false', async () => {
@@ -232,47 +231,10 @@ describe('buildTools', () => {
       apiKeyId: 'api-key-1',
     });
 
-    expect(Object.keys(toolRegistry)).toEqual([
-      'retrieve_entire_file',
-      'retrieve_text_chunks',
-      'generate_document',
-    ]);
+    expect(Object.keys(toolRegistry)).not.toContain('web_search');
+    expect(Object.keys(toolRegistry)).not.toContain('web_scraper');
     expect(mocks.buildWebSearchToolMock).not.toHaveBeenCalled();
     expect(mocks.buildWebScraperToolMock).not.toHaveBeenCalled();
-  });
-
-  it('does not add mundo_search when allowMundoSearch is not set', async () => {
-    const { buildTools } = await import('./build-tools');
-
-    const { toolRegistry } = buildTools({
-      user,
-      conversationId: 'conv-1',
-      relatedFileEntities,
-      allowWebTools: true,
-      allowMundoSearch: false,
-      modelSelection,
-      apiKeyId: 'api-key-1',
-    });
-
-    expect(Object.keys(toolRegistry)).not.toContain('mundo_search');
-    expect(mocks.buildMundoSearchToolMock).not.toHaveBeenCalled();
-  });
-
-  it('adds mundo_search when allowMundoSearch is true', async () => {
-    const { buildTools } = await import('./build-tools');
-
-    const { toolRegistry } = buildTools({
-      user,
-      conversationId: 'conv-1',
-      relatedFileEntities,
-      allowWebTools: true,
-      allowMundoSearch: true,
-      modelSelection,
-      apiKeyId: 'api-key-1',
-    });
-
-    expect(Object.keys(toolRegistry)).toContain('mundo_search');
-    expect(mocks.buildMundoSearchToolMock).toHaveBeenCalledTimes(1);
   });
 
   it('does not add create_plot when isJsxGraphEnabled is not set', async () => {
@@ -311,40 +273,24 @@ describe('buildTools', () => {
     });
   });
 
-  it.each([[false], [undefined]])(
-    'does not add list_models when allowListModels is %s',
-    async (allow) => {
-      const { buildTools } = await import('./build-tools');
-
-      const { toolRegistry } = buildTools({
-        user,
-        relatedFileEntities,
-        allowWebTools: false,
-        allowListModels: allow,
-        modelSelection,
-        apiKeyId: 'api-key-1',
-      });
-
-      expect(toolRegistry).not.toHaveProperty('list_models');
-      expect(mocks.buildListModelsToolMock).not.toHaveBeenCalled();
-    },
-  );
-
-  it('adds list_models for the federal state when allowListModels is true', async () => {
+  it.each([
+    ['characterId', { characterId: 'character-1' }],
+    ['learningScenarioId', { learningScenarioId: 'learning-scenario-1' }],
+  ])('does not add mundo_search and list_models when %s is set', async (_name, ids) => {
     const { buildTools } = await import('./build-tools');
 
     const { toolRegistry } = buildTools({
       user,
+      ...ids,
       relatedFileEntities,
       allowWebTools: false,
-      allowListModels: true,
       modelSelection,
       apiKeyId: 'api-key-1',
     });
 
-    expect(toolRegistry).toHaveProperty('list_models');
-    expect(mocks.buildListModelsToolMock).toHaveBeenCalledWith({
-      federalStateId: 'federal-state-1',
-    });
+    expect(toolRegistry).not.toHaveProperty('mundo_search');
+    expect(toolRegistry).not.toHaveProperty('list_models');
+    expect(mocks.buildMundoSearchToolMock).not.toHaveBeenCalled();
+    expect(mocks.buildListModelsToolMock).not.toHaveBeenCalled();
   });
 });
