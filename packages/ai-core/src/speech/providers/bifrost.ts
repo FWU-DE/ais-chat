@@ -193,7 +193,7 @@ export function constructBifrostStreamingSpeechGenerationFn(
     });
 
     async function* readChunks() {
-      let finalUsage: SpeechUsage = { characters: 0 };
+      let finalUsage: SpeechUsage | undefined;
       let receivedAudio = false;
 
       try {
@@ -207,7 +207,8 @@ export function constructBifrostStreamingSpeechGenerationFn(
           }
         }
       } finally {
-        resolveUsage(finalUsage);
+        // The provider bills the whole input once accepted, even if aborted before the usage event.
+        resolveUsage(finalUsage ?? { characters: text.length });
       }
 
       if (!receivedAudio) {
