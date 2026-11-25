@@ -7,6 +7,7 @@ implementing related features; open the linked doc for full details.
 | Doc | Use when |
 |-----|----------|
 | [tool-calls.md](tool-calls.md) | Adding or modifying chat tools in `apps/chat-bot/src/app/api/chat/tools/` (tool registration, AI Activity integration) |
+| [ai-activity.md](ai-activity.md) | Changing how tool calls and reasoning are shown to users (step building, streaming, reload, rendering) |
 | [ui-layout.md](ui-layout.md) | Building or changing responsive UI layouts (Tailwind breakpoints, mobile-first design, element reordering across breakpoints) |
 | [api-design.md](api-design.md) | Adding or modifying API routes |
 | [popularity.md](popularity.md) | Changing how assistants, characters and learning scenarios are ranked by popularity |
