@@ -44,6 +44,11 @@ const TOOLS: Record<AiActivityToolName, { args: unknown; prompt: string }> = {
     args: { format: 'docx', title: 'Testdokument', content: '# Testdokument\n\nInhalt.' },
     prompt: 'Erstelle ein Word-Dokument mit einem kurzen Testdokument.',
   },
+  list_models: {
+    args: {},
+    prompt:
+      'Welche KI-Modelle gibt es und welches passt am besten zum Erstellen von Arbeitsblättern?',
+  },
 };
 
 // These tools look up an uploaded file in the conversation.

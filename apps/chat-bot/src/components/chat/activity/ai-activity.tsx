@@ -10,6 +10,7 @@ import {
   FileMagnifyingGlassIcon,
   FileTextIcon,
   GlobeSimpleIcon,
+  GraphIcon,
   type Icon,
   MagnifyingGlassIcon,
   SparkleIcon,
@@ -42,6 +43,7 @@ const TOOL_ICONS: Record<AiActivityToolName, Icon> = {
   math_calculate: CalculatorIcon,
   create_plot: ChartLineIcon,
   generate_document: FileArrowDownIcon,
+  list_models: GraphIcon,
 };
 
 type Translator = ReturnType<typeof useTranslations>;

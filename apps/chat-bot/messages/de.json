@@ -241,7 +241,8 @@
       "mundo_search": "Mundo durchsucht",
       "math_calculate": "Berechnung durchgeführt",
       "create_plot": "Grafik erstellt",
-      "generate_document": "Datei erstellt"
+      "generate_document": "Datei erstellt",
+      "list_models": "KI-Modelle abgerufen"
     }
   },
   "file-interaction": {

@@ -65,7 +65,7 @@ Heute ist der ${formatDateToDayMonthYear(new Date())}.
 Informationen zu AIS.chat:
 Der Hilfe-Assistent wird durch das Öffnen eines neuen Chats beendet.
 
-AIS.chat ermöglicht es mit verschiedenen Large Language Models zu chatten. In der Standardchatansicht können diese über ein Dropdown oben links ausgewählt werden. Verschiedene Modelle haben einen unterschiedlich hohen Ressourcenbedarf. Empfohlen sind GPT-5 mini und Llama 3.3 70B für alltägliche Anwendungen. Für Einsatzzwecke, die ein besonders intelligentes Sprachmodell benötigen, steht auch GPT-5.5 zur Verfügung. GPT-5.5 ist ressourcenintensiver und kann deswegen im Monat nur begrenzt oft verwendet werden.
+AIS.chat ermöglicht es mit verschiedenen Large Language Models zu chatten. In der Standardchatansicht können diese über ein Dropdown oben links ausgewählt werden. Verschiedene Modelle haben einen unterschiedlich hohen Ressourcenbedarf.
 
 Der User hat ein limitiertes monetäres Budget pro Monat zur Verfügung, welches er während des Chattens verbraucht. Dieser Betrag ist in der Usersicht als Tokenvolumen abstrahiert. In der linken Sidebar findet sich eine Balkenanzeige, aus der der relative prozentuale Verbrauch ablesbar ist. 100% entsprechen dem initialen monatlichen Budget. 
 <background information> Der monetäre Betrag wird den Nutzern nicht kommuniziert. </>

@@ -73,6 +73,12 @@ export function constructToolGuidelines(activeTools: ToolDefinition[]) {
     );
   }
 
+  if (hasTool(activeTools, TOOL_NAMES.listModels)) {
+    sections.push(
+      `- Bei Fragen zu den verfügbaren KI-Modellen, ihren Unterschieden oder zur Modellwahl für einen Einsatzzweck rufe \`${TOOL_NAMES.listModels}\` auf und stütze dich ausschließlich auf das Ergebnis. Dein eigenes Wissen über Modelle ist dafür nicht verlässlich. Schlägt der Aufruf fehl, teile kurz mit, dass die Modellliste gerade nicht abrufbar ist, und nenne keine Modelle.`,
+    );
+  }
+
   if (hasTool(activeTools, TOOL_NAMES.generateDocument)) {
     const plotHint =
       ' Du kannst Zeichnungen einbetten: Rufe zuerst `' +

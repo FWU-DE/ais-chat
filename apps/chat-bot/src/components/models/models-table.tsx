@@ -2,6 +2,7 @@
 
 import { ArrowDownIcon, ArrowsDownUpIcon, ArrowUpIcon } from '@phosphor-icons/react';
 import type { LlmModelSelectModel } from '@shared/db/schema';
+import { getCostFactor } from '@shared/llm-models/cost-factor';
 import { getTextModels } from '@shared/llm-models/llm-model-utils';
 import { Chip } from '@ui/components/chip';
 import { RadioGroup, RadioGroupItem } from '@ui/components/radio-group';
@@ -22,7 +23,6 @@ import { useMemo, useState } from 'react';
 import { NewBadge } from '@/components/common/new-badge';
 import { useLlmModels } from '@/components/providers/llm-model-provider';
 
-import { getCostFactor } from './cost-factor';
 import { ModelCostChip } from './model-cost-chip';
 import { ModelVendorTooltip } from './model-vendor-tooltip';
 import {

@@ -7,6 +7,7 @@ export const TOOL_NAMES = {
   mathCalculate: 'math_calculate',
   createPlot: 'create_plot',
   generateDocument: 'generate_document',
+  listModels: 'list_models',
 } as const;
 
 export type ToolName = (typeof TOOL_NAMES)[keyof typeof TOOL_NAMES];

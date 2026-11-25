@@ -435,6 +435,7 @@ export async function sendChatMessage({
     sourceUrls: ingestResult.processedUrls,
     allowWebTools,
     allowMundoSearch: true,
+    allowListModels: true,
     modelSelection,
     apiKeyId,
   });

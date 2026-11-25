@@ -11,6 +11,7 @@ import {
   generateDocumentActivity,
 } from './tools/generate-document-tool';
 import { buildJsxgraphTool, createPlotActivity } from './tools/jsxgraph-tool';
+import { buildListModelsTool, listModelsActivity } from './tools/list-models-tool';
 import { buildMathCalculateTool, mathCalculateActivity } from './tools/math-calculate-tool';
 import { buildMundoSearchTool, mundoSearchActivity } from './tools/mundo-search-tool';
 import {
@@ -39,6 +40,7 @@ export const toolActivityRegistry = {
   [TOOL_NAMES.retrieveEntireFile]: retrieveEntireFileActivity,
   [TOOL_NAMES.retrieveTextChunks]: retrieveTextChunksActivity,
   [TOOL_NAMES.generateDocument]: generateDocumentActivity,
+  [TOOL_NAMES.listModels]: listModelsActivity,
 } satisfies Record<AiActivityToolName, ToolActivity>;
 
 type BuildToolsParams = {
@@ -53,6 +55,7 @@ type BuildToolsParams = {
   attachedLinks?: string[];
   allowWebTools: boolean;
   allowMundoSearch?: boolean;
+  allowListModels?: boolean;
   modelSelection: ModelSelection;
   apiKeyId: string;
 };
@@ -69,6 +72,7 @@ export function buildTools({
   attachedLinks = [],
   allowWebTools,
   allowMundoSearch,
+  allowListModels,
   modelSelection,
   apiKeyId,
 }: BuildToolsParams) {
@@ -92,6 +96,9 @@ export function buildTools({
     ? buildWebScraperTool({ sourceUrls, attachedLinks })
     : undefined;
   const mundoSearchTool = allowMundoSearch ? buildMundoSearchTool() : undefined;
+  const listModelsTool = allowListModels
+    ? buildListModelsTool({ federalStateId: user.federalState.id })
+    : undefined;
 
   const textFileEntities = relatedFileEntities.filter((file) => !isImageFile(file.name));
 
@@ -117,6 +124,7 @@ export function buildTools({
     ...(retrieveEntireFileTool && { [TOOL_NAMES.retrieveEntireFile]: retrieveEntireFileTool }),
     ...(retrieveTextChunksTool && { [TOOL_NAMES.retrieveTextChunks]: retrieveTextChunksTool }),
     ...(generateDocumentTool && { [TOOL_NAMES.generateDocument]: generateDocumentTool }),
+    ...(listModelsTool && { [TOOL_NAMES.listModels]: listModelsTool }),
   };
 
   return { toolRegistry };

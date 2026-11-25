@@ -1,6 +1,6 @@
-import type { LlmModelSelectModel } from '@shared/db/schema';
 import { describe, expect, it } from 'vitest';
 
+import type { LlmModelSelectModel } from '../db/schema';
 import { getCostFactor } from './cost-factor';
 
 const model = (completionTokenPrice: number): LlmModelSelectModel => ({
