@@ -257,7 +257,6 @@ beforeEach(() => {
   mocks.runAgentLoopMock.mockImplementation(
     ({ onComplete }: Parameters<typeof runAgentLoop>[0]) => {
       void onComplete({
-        fullText: 'shared response',
         usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
         priceInCents: 4,
         modelId: model.id,
@@ -270,7 +269,7 @@ beforeEach(() => {
             modelName: model.name,
           },
         ],
-        agentLoopMessages: [],
+        agentLoopMessages: [{ role: 'assistant', content: 'shared response' }],
       });
     },
   );

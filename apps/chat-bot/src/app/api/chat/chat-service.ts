@@ -505,43 +505,35 @@ export async function sendChatMessage({
   }
 
   async function persistAssistantMessage({
-    fullText,
     usage,
     priceInCents,
     agentLoopMessages,
     modelUsages,
     reasoningSummary,
   }: {
-    fullText: string;
     usage: TokenUsage;
     priceInCents: number;
     agentLoopMessages: AiCoreMessage[];
     modelUsages: ModelUsage[];
     reasoningSummary?: string;
   }) {
-    // Persist intermediate tool call/result messages and the final assistant message in one query
-    const messagesToInsert = [
-      ...agentLoopMessages.map((msg, index) => ({
-        content: msg.content,
-        role: msg.role,
-        userId: user.id,
-        orderNumber: assistantMessageOrderNumber + index,
-        modelName: definedModel.name,
-        conversationId: activeConversation.id,
-        toolCalls: msg.toolCalls ?? null,
-        toolCallId: msg.toolCallId ?? null,
-      })),
-      {
-        id: assistantMessageId,
-        content: fullText,
-        role: 'assistant' as const,
-        userId: user.id,
-        orderNumber: assistantMessageOrderNumber + agentLoopMessages.length,
-        modelName: definedModel.name,
-        conversationId: activeConversation.id,
-        reasoningSummary: reasoningSummary ?? null,
-      },
-    ];
+    const finalMessageIndex = agentLoopMessages.length - 1;
+    // Persist tool call/result messages and the final assistant message in one query
+    const messagesToInsert = agentLoopMessages.map((msg, index) => ({
+      // The final assistant message gets the ID that was returned to the client for streaming
+      ...(index === finalMessageIndex
+        ? { id: assistantMessageId, reasoningSummary: reasoningSummary ?? null }
+        : {}),
+      content: msg.content,
+      role: msg.role,
+      userId: user.id,
+      orderNumber: assistantMessageOrderNumber + index,
+      modelName: definedModel.name,
+      conversationId: activeConversation.id,
+      toolCalls: msg.toolCalls ?? null,
+      toolCallId: msg.toolCallId ?? null,
+      isLegacyAggregatedContent: false,
+    }));
 
     await dbInsertChatContentBatch(messagesToInsert);
 
@@ -570,6 +562,7 @@ export async function sendChatMessage({
       orderNumber: assistantMessageOrderNumber,
       modelName: definedModel.name,
       conversationId: activeConversation.id,
+      isLegacyAggregatedContent: false,
     });
   }
 
@@ -586,11 +579,10 @@ export async function sendChatMessage({
     onReasoningSummary: aiActivity.onReasoningSummary,
     onToolCalls: aiActivity.onToolCalls,
     onToolResult: aiActivity.onToolResult,
-    onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {
+    onComplete: async ({ usage, priceInCents, modelUsages, agentLoopMessages }) => {
       try {
         aiActivity.finish();
         await persistAssistantMessage({
-          fullText,
           usage,
           priceInCents,
           modelUsages,

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parseGenericPersistedToolResult } from '@/app/api/chat/tools/parse-persisted-tool-result';
 import type { ToolActivity } from '@/app/api/chat/tools/types';
 
-import { convertMessageModelToMessage } from './messages';
+import { convertMessageModelToDisplayMessages, convertMessageModelToMessage } from './messages';
 
 // Mutable so each test can register exactly the activity it needs.
 const mockToolActivityRegistry: Record<string, ToolActivity> = vi.hoisted(() => ({}));
@@ -34,6 +34,7 @@ function baseMessage(overrides: Partial<ConversationMessageModel>): Conversation
     toolCalls: null,
     toolCallId: null,
     reasoningSummary: null,
+    isLegacyAggregatedContent: false,
     ...overrides,
   };
 }
@@ -109,5 +110,32 @@ describe('convertMessageModelToMessage', () => {
       { kind: 'tool', id: 'call-1', tool: 'math_calculate' },
       { kind: 'done' },
     ]);
+  });
+});
+
+describe('convertMessageModelToDisplayMessages', () => {
+  it('merges tool-call text for display while the LLM history keeps each text once', () => {
+    const messages = [
+      baseMessage({ id: 'user-1', role: 'user', content: 'Question', orderNumber: 0 }),
+      baseMessage({
+        id: 'tool-call-1',
+        content: 'Let me check.',
+        toolCalls: [{ id: 'call-1', name: 'math_calculate', arguments: '{}' }],
+        orderNumber: 1,
+      }),
+      baseMessage({
+        id: 'tool-result-1',
+        role: 'tool',
+        content: '{}',
+        toolCallId: 'call-1',
+        orderNumber: 2,
+      }),
+      baseMessage({ id: 'final-1', content: 'Answer.', orderNumber: 3 }),
+    ];
+
+    expect(convertMessageModelToDisplayMessages(messages).at(-1)?.content).toBe(
+      'Let me check.\n\nAnswer.',
+    );
+    expect(convertMessageModelToMessage(messages).at(-1)?.content).toBe('Answer.');
   });
 });

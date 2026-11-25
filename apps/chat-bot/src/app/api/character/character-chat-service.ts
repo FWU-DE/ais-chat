@@ -258,12 +258,11 @@ export async function sendCharacterMessage({
     onReasoningSummary: aiActivity.onReasoningSummary,
     onToolCalls: aiActivity.onToolCalls,
     onToolResult: aiActivity.onToolResult,
-    onComplete: async ({ fullText, usage, priceInCents, modelUsages, agentLoopMessages }) => {
+    onComplete: async ({ usage, priceInCents, modelUsages, agentLoopMessages }) => {
       try {
         aiActivity.finish();
         await sharedChatConversation.persistResponse({
           assistantMessageId,
-          fullText,
           agentLoopMessages,
         });
         await persistUsage({ usage, priceInCents, modelUsages });

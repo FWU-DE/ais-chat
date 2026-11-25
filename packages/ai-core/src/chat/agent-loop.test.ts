@@ -97,17 +97,18 @@ describe('agent-loop', () => {
     const allChunks = onTextChunk.mock.calls.map((call) => call[0]).join('');
     expect(allChunks).toBe('Hello world.\n\nMore info.');
 
-    // Verify onComplete received the correct fullText
+    // Each message keeps only its own text, the final assistant message comes last
     expect(onComplete).toHaveBeenCalledWith(
       expect.objectContaining({
-        fullText: 'Hello world.\n\nMore info.',
-        agentLoopMessages: expect.arrayContaining([
+        agentLoopMessages: [
+          expect.objectContaining({ role: 'assistant', content: 'Hello world.' }),
           expect.objectContaining({
             role: 'tool',
             content: '{"value":"tool result"}',
             toolCallId: 'call_123',
           }),
-        ]),
+          { role: 'assistant', content: 'More info.' },
+        ],
       }),
     );
     expect(onToolResult).toHaveBeenCalledWith({
@@ -231,11 +232,10 @@ describe('agent-loop', () => {
     const allChunks = onTextChunk.mock.calls.map((call) => call[0]).join('');
     expect(allChunks).toBe('Single response.');
 
-    expect(onComplete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        fullText: 'Single response.',
-      }),
-    );
+    expect(onComplete.mock.calls[0]?.[0].agentLoopMessages.at(-1)).toEqual({
+      role: 'assistant',
+      content: 'Single response.',
+    });
   });
 
   it('forwards each text delta before the provider stream completes', async () => {
@@ -327,11 +327,10 @@ describe('agent-loop', () => {
     const allChunks = onTextChunk.mock.calls.map((call) => call[0]).join('');
     expect(allChunks).toBe('Result after tool.');
 
-    expect(onComplete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        fullText: 'Result after tool.',
-      }),
-    );
+    expect(onComplete.mock.calls[0]?.[0].agentLoopMessages.at(-1)).toEqual({
+      role: 'assistant',
+      content: 'Result after tool.',
+    });
   });
 
   it('does not double-space when model already ends with double newlines', async () => {
@@ -390,11 +389,10 @@ describe('agent-loop', () => {
     // Should NOT have quadruple newlines
     expect(allChunks).toBe('First response.\n\nSecond response.');
 
-    expect(onComplete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        fullText: 'First response.\n\nSecond response.',
-      }),
-    );
+    expect(onComplete.mock.calls[0]?.[0].agentLoopMessages.at(-1)).toEqual({
+      role: 'assistant',
+      content: 'Second response.',
+    });
   });
 
   it('inserts separators between all three iterations when all produce text', async () => {
@@ -454,11 +452,10 @@ describe('agent-loop', () => {
     const allChunks = onTextChunk.mock.calls.map((call) => call[0]).join('');
     expect(allChunks).toBe('First.\n\nSecond.\n\nThird.');
 
-    expect(onComplete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        fullText: 'First.\n\nSecond.\n\nThird.',
-      }),
-    );
+    expect(onComplete.mock.calls[0]?.[0].agentLoopMessages.at(-1)).toEqual({
+      role: 'assistant',
+      content: 'Third.',
+    });
   });
 
   it('returns error responses for over-budget tool calls', async () => {
@@ -844,7 +841,14 @@ describe('agent-loop', () => {
       expect(onError).not.toHaveBeenCalled();
       expect(mockGenerateAgenticStreamWithBilling).toHaveBeenCalledTimes(1);
       expect(onComplete).toHaveBeenCalledWith(
-        expect.objectContaining({ fullText: 'Partial answer.' }),
+        expect.objectContaining({
+          // The partial text belongs to the tool-call message, not to the final message.
+          agentLoopMessages: [
+            expect.objectContaining({ role: 'assistant', content: 'Partial answer.' }),
+            expect.objectContaining({ role: 'tool', toolCallId: 'call_123' }),
+            { role: 'assistant', content: '' },
+          ],
+        }),
       );
     });
 
@@ -921,9 +925,10 @@ describe('agent-loop', () => {
       expect(handler).not.toHaveBeenCalled();
       expect(mockGenerateAgenticStreamWithBilling).toHaveBeenCalledTimes(1);
       expect(onError).not.toHaveBeenCalled();
-      expect(onComplete).toHaveBeenCalledWith(
-        expect.objectContaining({ fullText: 'Partial answer.' }),
-      );
+      expect(onComplete.mock.calls[0]?.[0].agentLoopMessages.at(-1)).toEqual({
+        role: 'assistant',
+        content: 'Partial answer.',
+      });
     });
 
     it('keeps the partial text when the stream throws because of the abort', async () => {
@@ -954,7 +959,10 @@ describe('agent-loop', () => {
       });
 
       expect(onError).not.toHaveBeenCalled();
-      expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({ fullText: 'Partial.' }));
+      expect(onComplete.mock.calls[0]?.[0].agentLoopMessages.at(-1)).toEqual({
+        role: 'assistant',
+        content: 'Partial.',
+      });
     });
 
     it('reports nothing when the stream throws after an abort without any text', async () => {
@@ -1030,11 +1038,14 @@ describe('agent-loop', () => {
       expect(onError).not.toHaveBeenCalled();
       expect(onComplete).toHaveBeenCalledWith(
         expect.objectContaining({
-          fullText: '',
           priceInCents: 7,
           modelUsages: [{ modelId: 'test-model', usage, priceInCents: 7 }],
         }),
       );
+      expect(onComplete.mock.calls[0]?.[0].agentLoopMessages.at(-1)).toEqual({
+        role: 'assistant',
+        content: '',
+      });
     });
   });
 

@@ -359,7 +359,6 @@ beforeEach(() => {
 
       onTextChunk('agentic chunk');
       void onComplete({
-        fullText: 'agentic chunk',
         usage: { promptTokens: 11, completionTokens: 22, totalTokens: 33 },
         priceInCents: 44,
         modelId: mainModel.id,
@@ -372,7 +371,7 @@ beforeEach(() => {
             modelName: mainModel.name,
           },
         ],
-        agentLoopMessages: [],
+        agentLoopMessages: [{ role: 'assistant', content: 'agentic chunk' }],
       });
     },
   );
@@ -536,7 +535,6 @@ describe('sendChatMessage', () => {
     mocks.runAgentLoopMock.mockImplementationOnce(
       ({ onComplete }: Parameters<typeof runAgentLoop>[0]) => {
         void onComplete({
-          fullText: 'agentic chunk',
           usage: { promptTokens: 11, completionTokens: 22, totalTokens: 33 },
           priceInCents: 44,
           modelId: mainModel.id,
@@ -544,7 +542,7 @@ describe('sendChatMessage', () => {
           agentLoopMessages: [
             {
               role: 'assistant',
-              content: '',
+              content: 'Let me look.',
               toolCalls: [
                 {
                   id: 'call-retrieve-entire-file',
@@ -568,6 +566,7 @@ describe('sendChatMessage', () => {
               content: 'search content',
               toolCallId: 'call-web-search',
             },
+            { role: 'assistant', content: 'agentic chunk' },
           ],
         });
       },
@@ -616,6 +615,8 @@ describe('sendChatMessage', () => {
         expect.objectContaining({
           role: 'assistant',
           id: result.messageId,
+          content: 'agentic chunk',
+          isLegacyAggregatedContent: false,
         }),
       ]),
     );

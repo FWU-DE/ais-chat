@@ -123,31 +123,6 @@ export async function dbGetConversationMessages({
   return messages.map((message) => message.conversation_message);
 }
 
-export async function dbGetConversationMessageById({
-  userId,
-  conversationId,
-  messageId,
-}: {
-  userId: string;
-  conversationId: string;
-  messageId: string;
-}) {
-  const [message] = await db
-    .select({ message: conversationMessageTable })
-    .from(conversationMessageTable)
-    .innerJoin(conversationTable, eq(conversationMessageTable.conversationId, conversationTable.id))
-    .where(
-      and(
-        eq(conversationMessageTable.id, messageId),
-        eq(conversationMessageTable.conversationId, conversationId),
-        eq(conversationTable.userId, userId),
-        isNull(conversationMessageTable.deletedAt),
-      ),
-    );
-
-  return message?.message;
-}
-
 export async function dbInsertChatContent(chatContent: InsertConversationMessageModel) {
   const [insertedMessage] = await db
     .insert(conversationMessageTable)

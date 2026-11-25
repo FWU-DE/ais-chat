@@ -13,7 +13,7 @@ import Logo from '@/components/common/logo';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
 import { LlmModelsProvider } from '@/components/providers/llm-model-provider';
 import { handleErrorInServerComponent } from '@/error/handle-error-in-server-component';
-import { convertMessageModelToMessage } from '@/utils/chat/messages';
+import { convertMessageModelToDisplayMessages } from '@/utils/chat/messages';
 import { parseSearchParams } from '@/utils/parse-search-params';
 
 export const dynamic = 'force-dynamic';
@@ -40,7 +40,7 @@ export default async function Page(
     userId: user.id,
   }).catch(handleErrorInServerComponent);
 
-  const chatMessages = convertMessageModelToMessage(messages);
+  const chatMessages = convertMessageModelToDisplayMessages(messages);
 
   const models = await dbGetLlmModelsByFederalStateId({
     federalStateId: federalState.id,

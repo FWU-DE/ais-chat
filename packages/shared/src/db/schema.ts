@@ -191,6 +191,12 @@ export const conversationMessageTable = pgTable(
     toolCalls: json('tool_calls').$type<ToolCall[]>(),
     toolCallId: text('tool_call_id'),
     reasoningSummary: text('reasoning_summary'),
+    /**
+     * Legacy marker for messages with the old aggregated content format.
+     * `true`: the final assistant message content already contains the text of the preceding
+     * tool-call messages of the same agent loop.
+     */
+    isLegacyAggregatedContent: boolean('is_legacy_aggregated_content').notNull().default(true),
   },
   (table) => [
     index().on(table.conversationId),
