@@ -1,85 +1,133 @@
+import {
+  dbGetDirectModelConfiguration,
+  dbGetModelById,
+  dbGetModelByNameAndApiKeyId,
+} from '@ais-chat/api-database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getImageModelById, getSpeechModelByName } from './index';
+import {
+  getEmbeddingModelById,
+  getEmbeddingModelByName,
+  getImageModelById,
+  getImageModelByName,
+  getSafetyModelById,
+  getSafetyModelByName,
+  getSpeechModelById,
+  getSpeechModelByName,
+  getTextModelById,
+  getTextModelByName,
+} from './index';
 
-// Mock the api-database functions
 vi.mock('@ais-chat/api-database', () => ({
   dbGetModelById: vi.fn(),
   dbGetModelByNameAndApiKeyId: vi.fn(),
   dbGetDirectModelConfiguration: vi.fn(),
 }));
 
-import { dbGetModelById, dbGetModelByNameAndApiKeyId } from '@ais-chat/api-database';
-
 const mockDbGetModelById = vi.mocked(dbGetModelById);
 const mockDbGetModelByNameAndApiKeyId = vi.mocked(dbGetModelByNameAndApiKeyId);
+const mockDbGetDirectModelConfiguration = vi.mocked(dbGetDirectModelConfiguration);
 
-describe('getImageModelById', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should return model when found', async () => {
-    const mockModel = {
-      id: 'model-123',
-      name: 'test-model',
-      provider: 'ionos',
-      priceMetadata: {
-        type: 'image',
-        pricePerImageInCent: 50,
-      },
-    };
-
-    mockDbGetModelById.mockResolvedValue(mockModel as never);
-
-    const result = await getImageModelById('model-123');
-
-    expect(result).toEqual(mockModel);
-    expect(mockDbGetModelById).toHaveBeenCalledWith('model-123');
-  });
-
-  it('should throw error when model is not found', async () => {
-    mockDbGetModelById.mockResolvedValue(null as never);
-
-    await expect(getImageModelById('non-existent-model')).rejects.toThrow(
-      'Model with id non-existent-model not found',
-    );
-    expect(mockDbGetModelById).toHaveBeenCalledWith('non-existent-model');
-  });
+beforeEach(() => {
+  vi.resetAllMocks();
 });
 
-describe('getSpeechModelByName', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe.each([
+  { type: 'text', byId: getTextModelById, byName: getTextModelByName },
+  { type: 'image', byId: getImageModelById, byName: getImageModelByName },
+  { type: 'embedding', byId: getEmbeddingModelById, byName: getEmbeddingModelByName },
+  { type: 'safety', byId: getSafetyModelById, byName: getSafetyModelByName },
+  { type: 'speech', byId: getSpeechModelById, byName: getSpeechModelByName },
+])('$type model lookups', ({ type, byId, byName }) => {
+  const model = {
+    id: 'model-123',
+    name: 'test-model',
+    provider: 'bifrost',
+    useBifrost: true,
+    priceMetadata: { type },
+  };
+
+  it('returns a matching model by ID', async () => {
+    mockDbGetModelById.mockResolvedValue(model as never);
+
+    await expect(byId(model.id)).resolves.toEqual(model);
+    expect(mockDbGetModelById).toHaveBeenCalledWith(model.id);
+    expect(mockDbGetDirectModelConfiguration).not.toHaveBeenCalled();
   });
 
-  it('should return a speech model when found', async () => {
-    const mockModel = {
-      id: 'speech-model',
-      name: 'speech',
-      provider: 'ionos',
-      priceMetadata: { type: 'speech', priceInCentPer1MillionCharacters: 100 },
-    };
-    mockDbGetModelByNameAndApiKeyId.mockResolvedValue(mockModel as never);
+  it('returns a matching model by name for the API key', async () => {
+    mockDbGetModelByNameAndApiKeyId.mockResolvedValue(model as never);
 
-    await expect(getSpeechModelByName('speech', 'api-key')).resolves.toEqual(mockModel);
+    await expect(byName(model.name, 'api-key')).resolves.toEqual(model);
     expect(mockDbGetModelByNameAndApiKeyId).toHaveBeenCalledWith({
-      name: 'speech',
+      name: model.name,
       apiKeyId: 'api-key',
     });
+    expect(mockDbGetDirectModelConfiguration).not.toHaveBeenCalled();
   });
 
-  it('should reject missing and incorrectly typed models', async () => {
-    mockDbGetModelByNameAndApiKeyId.mockResolvedValue(null as never);
-    await expect(getSpeechModelByName('missing', 'api-key')).rejects.toThrow(
-      'No speech model with name missing found for this API key',
-    );
+  it('rejects a missing model by ID', async () => {
+    mockDbGetModelById.mockResolvedValue(null as never);
 
-    mockDbGetModelByNameAndApiKeyId.mockResolvedValue({
-      priceMetadata: { type: 'text' },
+    await expect(byId(model.id)).rejects.toThrow(`Model with id ${model.id} not found`);
+  });
+
+  it('rejects a missing model by name', async () => {
+    mockDbGetModelByNameAndApiKeyId.mockResolvedValue(null as never);
+
+    await expect(byName(model.name, 'api-key')).rejects.toThrow(
+      `No ${type} model with name ${model.name} found for this API key`,
+    );
+  });
+
+  it('rejects an incorrectly typed model by ID', async () => {
+    mockDbGetModelById.mockResolvedValue({
+      ...model,
+      priceMetadata: { type: type === 'text' ? 'image' : 'text' },
     } as never);
-    await expect(getSpeechModelByName('text', 'api-key')).rejects.toThrow(
-      'Model text is not a speech model',
+
+    await expect(byId(model.id)).rejects.toThrow(
+      `Model with id ${model.id} is not of type ${type}`,
+    );
+    expect(mockDbGetDirectModelConfiguration).not.toHaveBeenCalled();
+  });
+
+  it('rejects an incorrectly typed model by name', async () => {
+    mockDbGetModelByNameAndApiKeyId.mockResolvedValue({
+      ...model,
+      priceMetadata: { type: type === 'text' ? 'image' : 'text' },
+    } as never);
+
+    await expect(byName(model.name, 'api-key')).rejects.toThrow(
+      `Model ${model.name} is not of type ${type}`,
+    );
+    expect(mockDbGetDirectModelConfiguration).not.toHaveBeenCalled();
+  });
+
+  it('resolves direct routing by ID when Bifrost is disabled', async () => {
+    const directModel = { ...model, provider: 'openai', useBifrost: false };
+    mockDbGetModelById.mockResolvedValue({ ...model, useBifrost: false } as never);
+    mockDbGetDirectModelConfiguration.mockResolvedValue(directModel as never);
+
+    await expect(byId(model.id)).resolves.toEqual(directModel);
+    expect(mockDbGetDirectModelConfiguration).toHaveBeenCalledWith(model.id);
+  });
+
+  it('resolves direct routing by name when Bifrost is disabled', async () => {
+    const directModel = { ...model, provider: 'openai', useBifrost: false };
+    mockDbGetModelByNameAndApiKeyId.mockResolvedValue({ ...model, useBifrost: false } as never);
+    mockDbGetDirectModelConfiguration.mockResolvedValue(directModel as never);
+
+    await expect(byName(model.name, 'api-key')).resolves.toEqual(directModel);
+    expect(mockDbGetDirectModelConfiguration).toHaveBeenCalledWith(model.id);
+  });
+
+  it('rejects missing direct routing configuration', async () => {
+    mockDbGetModelById.mockResolvedValue({ ...model, useBifrost: false } as never);
+    mockDbGetDirectModelConfiguration.mockResolvedValue(undefined);
+
+    await expect(byId(model.id)).rejects.toThrow(
+      `Model ${model.id} requires exactly one enabled provider key when Bifrost is disabled`,
     );
   });
 });

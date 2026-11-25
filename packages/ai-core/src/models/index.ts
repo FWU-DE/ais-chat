@@ -21,14 +21,6 @@ type ModelByType = {
   speech: SpeechAiModel;
 };
 
-const MODEL_ARTICLES: Record<ModelType, string> = {
-  text: 'a',
-  image: 'an',
-  embedding: 'an',
-  safety: 'a',
-  speech: 'a',
-};
-
 export async function getImageModelById(modelId: string): Promise<ImageAiModel> {
   return getModelById(modelId, 'image');
 }
@@ -93,9 +85,7 @@ async function getModelById<T extends ModelType>(
     throw new InvalidModelError(`Model with id ${modelId} not found`);
   }
   if (model.priceMetadata.type !== type) {
-    throw new InvalidModelError(
-      `Model with id ${modelId} is not ${MODEL_ARTICLES[type]} ${type} model`,
-    );
+    throw new InvalidModelError(`Model with id ${modelId} is not of type ${type}`);
   }
   return resolveRoutingModel(model) as Promise<ModelByType[T]>;
 }
@@ -110,7 +100,7 @@ async function getModelByName<T extends ModelType>(
     throw new InvalidModelError(`No ${type} model with name ${modelName} found for this API key`);
   }
   if (model.priceMetadata.type !== type) {
-    throw new InvalidModelError(`Model ${modelName} is not ${MODEL_ARTICLES[type]} ${type} model`);
+    throw new InvalidModelError(`Model ${modelName} is not of type ${type}`);
   }
   return resolveRoutingModel(model) as Promise<ModelByType[T]>;
 }
