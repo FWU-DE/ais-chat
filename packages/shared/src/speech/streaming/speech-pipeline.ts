@@ -107,7 +107,6 @@ export async function runSpeechPipeline<TContext extends { user: { id: string } 
       federalStateId: params.federalState.id,
       abortSignal: params.abortSignal,
     });
-    console.log('SSML rewrite attempt', { attempt, ssmlBody: rewrite.ssmlBody });
     // Every rewrite was billed to the API key, so its usage is stored even if the SSML is rejected.
     await strategy.storeTextUsage(params, context, rewrite.usage);
     try {
