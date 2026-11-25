@@ -1144,6 +1144,49 @@ importers:
         specifier: 6.0.3
         version: 6.0.3
 
+  services/bifrost-sync:
+    dependencies:
+      '@t3-oss/env-core':
+        specifier: 0.13.11
+        version: 0.13.11(typescript@6.0.3)(zod@4.6.7)
+      fastify:
+        specifier: 5.12.8
+        version: 5.12.8
+      pino:
+        specifier: 10.4.0
+        version: 10.4.0
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@ais-chat/api-database':
+        specifier: workspace:*
+        version: link:../../packages/api-database
+      '@ais-chat/eslint-config':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config
+      '@ais-chat/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      '@types/node':
+        specifier: 24.19.2
+        version: 24.19.2
+      eslint:
+        specifier: 10.8.1
+        version: 10.8.1(jiti@2.7.0)(supports-color@7.2.0)
+      tsup:
+        specifier: 9.0.0
+        version: 9.0.0(@swc/core@1.16.21(@swc/helpers@0.5.23))(jiti@2.7.0)(postcss@8.5.25)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
+      tsx:
+        specifier: 4.23.15
+        version: 4.23.15
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 5.1.0
+        version: 5.1.0(@opentelemetry/api@1.10.0)(@types/node@24.19.2)(@vitest/coverage-v8@5.1.0)(jsdom@31.0.1(@noble/hashes@1.8.0))(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
   services/calculator:
     dependencies:
       execa:

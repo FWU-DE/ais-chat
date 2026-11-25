@@ -1,0 +1,9 @@
+{
+  "extends": "@ais-chat/typescript-config/api-base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "noEmit": true,
+    "types": ["node", "vitest/globals"]
+  },
+  "include": ["src", "*.ts"]
+}
