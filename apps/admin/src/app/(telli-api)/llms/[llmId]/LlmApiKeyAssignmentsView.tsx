@@ -13,9 +13,10 @@ import {
 } from '@ui/components/card';
 import { Checkbox } from '@ui/components/checkbox';
 import { DataTable, type DataTableFeatures } from '@ui/components/data-table';
-import { ArrowUpDownIcon } from 'lucide-react';
 import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+
+import { sortableHeader } from '@/components/common/SortableHeader';
 
 import { getLlmApiKeyAssignmentsDataAction, saveApiKeysForModelAction } from './actions';
 
@@ -106,15 +107,7 @@ export function LlmApiKeyAssignmentsView({ modelId }: LlmApiKeyAssignmentsViewPr
       {
         id: 'assigned',
         accessorFn: (apiKey) => assignedApiKeyIds.has(apiKey.id),
-        header: ({ column }) => (
-          <Button
-            variant="link"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          >
-            Zugeordnet
-            <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-          </Button>
-        ),
+        header: sortableHeader('Zugeordnet'),
         sortingFn: 'basic',
         cell: ({ row }) => (
           <Checkbox
@@ -125,27 +118,11 @@ export function LlmApiKeyAssignmentsView({ modelId }: LlmApiKeyAssignmentsViewPr
       },
       {
         accessorKey: 'name',
-        header: ({ column }) => (
-          <Button
-            variant="link"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          >
-            Name
-            <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-          </Button>
-        ),
+        header: sortableHeader('Name'),
       },
       {
         accessorKey: 'projectName',
-        header: ({ column }) => (
-          <Button
-            variant="link"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          >
-            Projekt
-            <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-          </Button>
-        ),
+        header: sortableHeader('Projekt'),
       },
     ],
     [assignedApiKeyIds],

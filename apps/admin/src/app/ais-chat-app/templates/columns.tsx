@@ -3,79 +3,34 @@
 import { TemplateModel } from '@shared/templates/template';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
 import { ColumnDef } from '@tanstack/react-table';
-import { Button } from '@ui/components/button';
 import { DataTableFeatures } from '@ui/components/data-table';
-import { ArrowUpDownIcon } from 'lucide-react';
+
+import { sortableHeader } from '@/components/common/SortableHeader';
 
 import { getTemplateTypeName } from './templateTypeName';
 
 export const columns: ColumnDef<DataTableFeatures, TemplateModel>[] = [
   {
     accessorKey: 'id',
-    header: ({ column }) => (
-      <Button
-        variant="link"
-        className="p-0"
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      >
-        Id
-        <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-      </Button>
-    ),
+    header: sortableHeader('Id'),
   },
   {
     accessorKey: 'originalId',
-    header: ({ column }) => (
-      <Button
-        variant="link"
-        className="p-0"
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      >
-        Original Id
-        <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-      </Button>
-    ),
+    header: sortableHeader('Original Id'),
     cell: ({ row }) => row.original.originalId ?? '—',
   },
   {
     accessorKey: 'type',
-    header: ({ column }) => (
-      <Button
-        variant="link"
-        className="p-0"
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      >
-        Typ
-        <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-      </Button>
-    ),
+    header: sortableHeader('Typ'),
     cell: ({ row }) => getTemplateTypeName(row.original.type),
   },
   {
     accessorKey: 'name',
-    header: ({ column }) => (
-      <Button
-        variant="link"
-        className="p-0"
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      >
-        Name
-        <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-      </Button>
-    ),
+    header: sortableHeader('Name'),
   },
   {
     accessorKey: 'createdAt',
-    header: ({ column }) => (
-      <Button
-        variant="link"
-        className="p-0"
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      >
-        Erstellt am
-        <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-      </Button>
-    ),
+    header: sortableHeader('Erstellt am'),
     cell: ({ row }) => formatDateToGermanTimestamp(row.original.createdAt),
   },
 ];
