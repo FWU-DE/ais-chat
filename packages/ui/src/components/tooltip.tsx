@@ -208,7 +208,7 @@ function InfoTooltip({
           aria-label={resolvedAriaLabel}
           className="rounded-full focus-visible:outline-primary focus-visible:outline-1 hover:bg-muted dark:hover:bg-muted/50 focus-visible:ring-3 focus-visible:border-ring focus-visible:ring-ring/50"
         >
-          <InfoIcon className={'size-5 text-icon'} aria-hidden="true" />
+          <InfoIcon className="size-5 text-icon" aria-hidden="true" />
         </TooltipTrigger>
         <TooltipContent>{tooltip}</TooltipContent>
       </Tooltip>

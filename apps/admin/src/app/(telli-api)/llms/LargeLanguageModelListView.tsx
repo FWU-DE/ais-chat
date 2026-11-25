@@ -58,9 +58,9 @@ export function LargeLanguageModelListView({ initialData }: LargeLanguageModelLi
           Liste aller verfügbaren Sprachmodelle für diese Organisation.
         </CardDescription>
         <CardAction>
-          <Link href={ROUTES.api.llmNew}>
-            <Button>Neues Modell</Button>
-          </Link>
+          <Button asChild>
+            <Link href={ROUTES.api.llmNew}>Neues Modell</Link>
+          </Button>
           <Button className="ml-2" onClick={handleRefresh} disabled={isRefreshing}>
             Aktualisieren
           </Button>

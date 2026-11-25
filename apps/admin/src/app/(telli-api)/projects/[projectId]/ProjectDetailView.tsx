@@ -165,9 +165,9 @@ export default function ProjectDetailView(props: ProjectDetailViewProps) {
               <CardTitle>API-Schlüssel</CardTitle>
               <CardDescription>API-Schlüssel für dieses Projekt</CardDescription>
             </div>
-            <Link href={ROUTES.api.apiKeyNew(projectId)}>
-              <Button disabled={apiKeysLoading}>Neuen API-Schlüssel erstellen</Button>
-            </Link>
+            <Button asChild>
+              <Link href={ROUTES.api.apiKeyNew(projectId)}>Neuen API-Schlüssel erstellen</Link>
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -203,9 +203,11 @@ export default function ProjectDetailView(props: ProjectDetailViewProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
-                        <Link href={ROUTES.api.apiKeyModelMappings(projectId, apiKey.id)}>
-                          <Button>Sprachmodelle</Button>
-                        </Link>
+                        <Button asChild>
+                          <Link href={ROUTES.api.apiKeyModelMappings(projectId, apiKey.id)}>
+                            Sprachmodelle
+                          </Link>
+                        </Button>
                         <Button asChild>
                           <Link href={ROUTES.api.apiKeyDetails(projectId, apiKey.id)}>
                             Bearbeiten
