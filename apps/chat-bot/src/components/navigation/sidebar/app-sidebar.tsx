@@ -96,13 +96,13 @@ export function AppSidebar({ federalState, user, usedBudget, maxBudget }: AppSid
                 {user.userRole === 'teacher' && federalState.featureToggles?.isCharacterEnabled && (
                   <AppMenuItem href="/characters" icon={<StudentIcon />} text={t('characters')} />
                 )}
+                <SidebarSeparator className="my-6" />
                 <AppMenuItem
                   href="/models"
                   icon={<GraphIcon />}
                   text={t('models')}
                   testId="sidebar-models"
                 />
-                <SidebarSeparator className="my-6" />
                 {user.userRole === 'teacher' && federalState.featureToggles?.isCustomGptEnabled && (
                   <AppMenuItem
                     href={`/assistants/d/${HELP_MODE_ASSISTANT_ID}`}

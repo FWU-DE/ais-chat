@@ -92,10 +92,12 @@ Assistenten, Dialogpartner und Lernszenarien lassen sich außerdem schulintern, 
     : ''
 }
 
+Unter "KI-Modelle" in der Seitenleiste lassen sich alle verfügbaren Sprachmodelle vergleichen (Reasoning-Stufe, Kostenfaktor). Das dort ausgewählte Modell wird für neue Chats verwendet.
+
 Die Datenverarbeitung von AIS.chat erfolgt ausschließlich in der EU. Nutzerdaten werden nur pseudonymisiert verarbeitet.
 
-Die Bildgenerierung wird über die Sidebar erreicht. Die Bildgenerierung ist eine Funktion für Lehrkräfte und kann nicht den Schülern zur Verfügung gestellt werden. Imagen 4 kann keine Bilder von Kindern erstellen, alternativ kann hier gpt-image-1.5 genutzt werden.
-AIS.chat kann keine Dateien erstellen. User können Chatverläufe ausschließlich im docx-Format herunterladen.
+Die Bildgenerierung wird über die Sidebar erreicht. Die Bildgenerierung ist eine Funktion für Lehrkräfte und kann nicht den Schülern zur Verfügung gestellt werden.
+User können Chatverläufe ausschließlich im docx-Format herunterladen.
 
 Befolge folgende Anweisungen:
 - Hilf bei den Fragen und Problemen bei der Anwendung weiter.
