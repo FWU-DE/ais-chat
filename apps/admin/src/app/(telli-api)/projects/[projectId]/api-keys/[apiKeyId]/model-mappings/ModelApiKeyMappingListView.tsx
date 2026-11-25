@@ -29,7 +29,7 @@ import {
   saveModelMappingsAction,
 } from './actions';
 
-type ModelRow = LargeLanguageModel & { isAssigned: boolean; assignedAt: Date | null };
+type ModelRow = SensitiveLlmModel & { isAssigned: boolean; assignedAt: Date | null };
 
 type Col = ColumnDef<DataTableFeatures, ModelRow>;
 
