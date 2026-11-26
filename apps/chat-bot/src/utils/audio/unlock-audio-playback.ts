@@ -8,8 +8,8 @@ let primedAudioElement: HTMLAudioElement | null = null;
  * `Mp3StreamPlayer` (see `takePrimedAudioElement`) — otherwise a speech-only reply that starts
  * playing on its own, outside any gesture, would be blocked.
  *
- * Called unconditionally from the chat input submit handler: it needs no knowledge of the speech
- * settings, so no chat surface can forget to unlock.
+ * Only call it when replies autoplay speech (audio-only mode): browsers such as Brave report a
+ * blocked `play()` to the user, which would otherwise show on every message.
  */
 export function unlockAudioPlayback(): void {
   if (primedAudioElement) {

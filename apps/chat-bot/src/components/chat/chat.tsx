@@ -94,7 +94,8 @@ export default function Chat({
     assistant?.speechOnly ?? character?.speechOnly ?? learningScenario?.speechOnly;
   const isSpeechModelEnabled =
     federalState?.featureToggles?.isSpeechModelEnabled === true && (entitySpeechEnabled ?? true);
-  const speechOnly = entitySpeechOnly ?? settings.defaultIsSpeechOnly ?? false;
+  const speechOnly =
+    isSpeechModelEnabled && (entitySpeechOnly ?? settings.defaultIsSpeechOnly ?? false);
   const speechVoice =
     assistant?.voice ?? character?.voice ?? learningScenario?.voice ?? settings.defaultSpeechVoice;
   const conversationPath = getConversationPath({
@@ -447,6 +448,7 @@ export default function Chat({
               handleInputChange={handleInputChange}
               input={input}
               isGenerating={isGenerating}
+              unlockAudioOnSubmit={speechOnly}
             />
           </div>
         </div>

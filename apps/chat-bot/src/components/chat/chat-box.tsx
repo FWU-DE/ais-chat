@@ -168,7 +168,7 @@ export function ChatBox({
     [message.content, tCommon],
   );
 
-  const isAssistantSpeechOnly = message.role === 'assistant' && speechOnly && isSpeechModelEnabled;
+  const isAssistantSpeechOnly = message.role === 'assistant' && speechOnly;
   const isInitialMessage = message.id === 'initial-message';
   const actionsVisible = message.role === 'assistant' && (!isLastNonUser || status !== 'streaming');
 
