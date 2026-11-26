@@ -53,6 +53,133 @@ describe('streamOpenAICompatibleAgenticResponse', () => {
     },
   );
 
+  describe('tool calls', () => {
+    const usage = { input_tokens: 1, output_tokens: 2, total_tokens: 3 };
+    const expectedUsage = { promptTokens: 1, completionTokens: 2, totalTokens: 3 };
+
+    async function collect(events: unknown[]) {
+      const collected = [];
+      for await (const event of streamOpenAICompatibleAgenticResponse({
+        client: createClient(events),
+        messages: [{ role: 'user', content: 'Hi' }],
+        modelName: 'test-model',
+        providerName: 'Test',
+      })) {
+        collected.push(event);
+      }
+      return collected;
+    }
+
+    it('yields a tool call without arguments when the stream has no argument or done events', async () => {
+      const item = {
+        type: 'function_call',
+        id: 'call-1',
+        call_id: 'call-1',
+        name: 'test_tool',
+        arguments: '',
+      };
+
+      const events = await collect([
+        { type: 'response.output_item.added', output_index: 1, item },
+        { type: 'response.completed', response: { usage, output: [item] } },
+      ]);
+
+      expect(events).toEqual([
+        { type: 'tool_call', call: { id: 'call-1', name: 'test_tool', arguments: '' } },
+        { type: 'finish', usage: expectedUsage },
+      ]);
+    });
+
+    it('yields a tool call that is only present in the completed response', async () => {
+      const events = await collect([
+        {
+          type: 'response.completed',
+          response: {
+            usage,
+            output: [
+              { type: 'message', id: 'msg-1' },
+              {
+                type: 'function_call',
+                id: 'call-1',
+                call_id: 'call-1',
+                name: 'test_tool',
+                arguments: '',
+              },
+            ],
+          },
+        },
+      ]);
+
+      expect(events).toEqual([
+        { type: 'tool_call', call: { id: 'call-1', name: 'test_tool', arguments: '' } },
+        { type: 'finish', usage: expectedUsage },
+      ]);
+    });
+
+    it('does not duplicate the arguments of a streamed tool call', async () => {
+      const args = '{"input": "value", "optional": null}';
+      const item = {
+        type: 'function_call',
+        id: 'call-1',
+        call_id: 'call-1',
+        name: 'test_tool',
+        arguments: args,
+      };
+
+      const events = await collect([
+        {
+          type: 'response.output_item.added',
+          output_index: 1,
+          item: { ...item, arguments: '' },
+        },
+        {
+          type: 'response.function_call_arguments.delta',
+          output_index: 1,
+          delta: args.slice(0, 20),
+        },
+        {
+          type: 'response.function_call_arguments.delta',
+          output_index: 1,
+          delta: args.slice(20),
+        },
+        { type: 'response.function_call_arguments.done', output_index: 1, arguments: args },
+        { type: 'response.output_item.done', output_index: 1, item },
+        { type: 'response.completed', response: { usage, output: [item] } },
+      ]);
+
+      expect(events).toEqual([
+        { type: 'tool_call', call: { id: 'call-1', name: 'test_tool', arguments: args } },
+        { type: 'finish', usage: expectedUsage },
+      ]);
+    });
+
+    it('keeps the arguments of a streamed tool call when output_item.done is missing', async () => {
+      const args = '{"input": "value"}';
+      const item = {
+        type: 'function_call',
+        id: 'call-1',
+        call_id: 'call-1',
+        name: 'test_tool',
+        arguments: args,
+      };
+
+      const events = await collect([
+        {
+          type: 'response.output_item.added',
+          output_index: 0,
+          item: { ...item, arguments: '' },
+        },
+        { type: 'response.function_call_arguments.delta', output_index: 0, delta: args },
+        { type: 'response.completed', response: { usage, output: [item] } },
+      ]);
+
+      expect(events).toEqual([
+        { type: 'tool_call', call: { id: 'call-1', name: 'test_tool', arguments: args } },
+        { type: 'finish', usage: expectedUsage },
+      ]);
+    });
+  });
+
   it('passes the raw HTTP response headers to getUsageInfo', async () => {
     const client = {
       responses: {
