@@ -265,7 +265,11 @@ export function runAgentLoop({
 
                     try {
                       if (registryEntry) {
-                        const args = JSON.parse(toolCall.arguments) as Record<string, unknown>;
+                        // Some providers (e.g. Anthropic) send an empty string for tools called without parameters.
+                        const args = JSON.parse(toolCall.arguments || '{}') as Record<
+                          string,
+                          unknown
+                        >;
                         result = await registryEntry.handler(args, {
                           abortSignal,
                           reportUsage: (modelUsage) => {
