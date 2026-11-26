@@ -81,11 +81,6 @@ export function defineTemplateAuthorshipTests(entity: TemplateAuthorshipEntity) 
       await entity.configure(page, name);
     }
 
-    async function attachScreenshot(page: Page, name: string, text: string, testInfo: TestInfo) {
-      await page.getByText(text, { exact: true }).first().scrollIntoViewIfNeeded();
-      await testInfo.attach(name, { body: await page.screenshot(), contentType: 'image/png' });
-    }
-
     test.afterEach(async ({ page }) => {
       if (createdEditorPath === undefined) {
         return;
@@ -124,31 +119,22 @@ export function defineTemplateAuthorshipTests(entity: TemplateAuthorshipEntity) 
       await expect(author).toHaveValue(initialAuthor);
       await author.scrollIntoViewIfNeeded();
       await expect(author).toBeInViewport();
-      await testInfo.attach('author-editor', {
-        body: await author.screenshot(),
-        contentType: 'image/png',
-      });
 
       // A whitespace-only credit is stored but not shown in the shared view
       await saveAuthor(page, author, '   ');
       await page.reload();
       await expect(author).toHaveValue('   ');
-      const blankViewPage = await newAuthenticatedPage(browser, page, AUTH_FILES.teacher2);
-      try {
-        await blankViewPage.goto(page.url().replace('/editor', ''));
-        await expect(blankViewPage.locator('body')).toContainText(name);
-        await expect(blankViewPage.locator('body')).not.toContainText('Erstellt von');
-      } finally {
-        await blankViewPage.context().close();
-      }
-
-      await saveAuthor(page, author, initialAuthor);
-      await saveAuthor(page, author, updatedAuthor);
-      await page.reload();
-      await expect(author).toHaveValue(updatedAuthor);
-
       const sharedPage = await newAuthenticatedPage(browser, page, AUTH_FILES.teacher2);
       try {
+        await sharedPage.goto(page.url().replace('/editor', ''));
+        await expect(sharedPage.locator('body')).toContainText(name);
+        await expect(sharedPage.locator('body')).not.toContainText('Erstellt von');
+
+        await saveAuthor(page, author, initialAuthor);
+        await saveAuthor(page, author, updatedAuthor);
+        await page.reload();
+        await expect(author).toHaveValue(updatedAuthor);
+
         await sharedPage.goto(`${entity.listPath}?filter=all`);
         await sharedPage.waitForURL(`${entity.listPath}**`);
         const card = sharedPage.getByTestId('entity-card').filter({ hasText: name }).first();
@@ -156,55 +142,48 @@ export function defineTemplateAuthorshipTests(entity: TemplateAuthorshipEntity) 
         await card.getByTestId('entity-link').click();
         await sharedPage.waitForURL(`${entity.listPath}/**`);
         await expect(sharedPage.locator('body')).toContainText(updatedAuthor);
-        await attachScreenshot(sharedPage, 'shared-author-credit', updatedAuthor, testInfo);
+
+        // Withdrawing all sharing hides the field but keeps the credit
+        await setSharingState(page, sharing, false);
+        await waitForAutosave(page);
+        await page.reload();
+        await expect(author).toBeHidden();
+
+        await setSharingState(page, sharing, true);
+        await expect(author).toBeVisible();
+        await expect(author).toHaveValue(updatedAuthor);
+        await waitForAutosave(page);
+
+        const linkSharing = page.getByRole('checkbox', { name: 'Via Link', exact: true });
+        await setSharingState(page, linkSharing, true);
+        await expect(author).toBeVisible();
+
+        // The field stays visible while link sharing remains active
+        await setSharingState(page, sharing, false);
+        await saveAuthor(page, author, finalAuthor);
+        await expect(author).toBeVisible();
+        await page.reload();
+        await expect(author).toBeVisible();
+        await expect(author).toHaveValue(finalAuthor);
+
+        await sharedPage.goto(page.url().replace('/editor', ''));
+        await expect(sharedPage.locator('body')).toContainText(finalAuthor);
+
+        // An unsaved edit right before withdrawing the last scope is still persisted
+        await author.fill(retainedAuthor);
+        await setSharingState(page, linkSharing, false);
+        await waitForAutosave(page);
+        await expect(author).toBeHidden();
+        await page.reload();
+        await expect(author).toBeHidden();
+
+        await setSharingState(page, linkSharing, true);
+        await expect(author).toBeVisible();
+        await expect(author).toHaveValue(retainedAuthor);
+        await waitForAutosave(page);
       } finally {
         await sharedPage.context().close();
       }
-
-      // Withdrawing all sharing hides the field but keeps the credit
-      await setSharingState(page, sharing, false);
-      await waitForAutosave(page);
-      await page.reload();
-      await expect(author).toBeHidden();
-
-      await setSharingState(page, sharing, true);
-      await expect(author).toBeVisible();
-      await expect(author).toHaveValue(updatedAuthor);
-      await waitForAutosave(page);
-
-      const linkSharing = page.getByRole('checkbox', { name: 'Via Link', exact: true });
-      await setSharingState(page, linkSharing, true);
-      await expect(author).toBeVisible();
-
-      // The field stays visible while link sharing remains active
-      await setSharingState(page, sharing, false);
-      await saveAuthor(page, author, finalAuthor);
-      await expect(author).toBeVisible();
-      await page.reload();
-      await expect(author).toBeVisible();
-      await expect(author).toHaveValue(finalAuthor);
-
-      const linkSharedPage = await newAuthenticatedPage(browser, page, AUTH_FILES.teacher2);
-      try {
-        await linkSharedPage.goto(page.url().replace('/editor', ''));
-        await expect(linkSharedPage.locator('body')).toContainText(finalAuthor);
-        await attachScreenshot(linkSharedPage, 'link-shared-author-credit', finalAuthor, testInfo);
-      } finally {
-        await linkSharedPage.context().close();
-      }
-
-      // An unsaved edit right before withdrawing the last scope is still persisted
-      await author.fill(retainedAuthor);
-      await setSharingState(page, linkSharing, false);
-      await waitForAutosave(page);
-      await expect(author).toBeHidden();
-      await page.reload();
-      await expect(author).toBeHidden();
-
-      await setSharingState(page, linkSharing, true);
-      await expect(author).toBeVisible();
-      await expect(author).toHaveValue(retainedAuthor);
-      await waitForAutosave(page);
     });
 
     test('keeps the optional author credit in the community lifecycle', async ({
@@ -251,51 +230,36 @@ export function defineTemplateAuthorshipTests(entity: TemplateAuthorshipEntity) 
         await card.getByTestId('entity-link').click();
         await sharedPage.waitForURL(`${entity.listPath}/**`);
         await expect(sharedPage.locator('body')).toContainText(requestAuthor);
-        await attachScreenshot(
-          sharedPage,
-          'community-shared-author-credit',
-          requestAuthor,
-          testInfo,
-        );
+
+        await saveAuthor(page, author, activeAuthor);
+        await sharedPage.goto(page.url().replace('/editor', ''));
+        await expect(sharedPage.locator('body')).toContainText(name);
+        await expect(sharedPage.locator('body')).toContainText(activeAuthor);
+
+        await page.getByTestId('community-sharing-checkbox').click();
+        const removalDialog = page.getByRole('alertdialog');
+        await expect(removalDialog).toBeVisible();
+        await removalDialog
+          .getByRole('button', { name: 'Freigabe entfernen', exact: true })
+          .click();
+        await waitForSharingSettled(page);
+
+        const schoolSharing = page.getByTestId('school-sharing-checkbox');
+        const linkSharing = page.getByRole('checkbox', { name: 'Via Link', exact: true });
+        await setSharingState(page, schoolSharing, false);
+        await setSharingState(page, linkSharing, false);
+        await waitForAutosave(page);
+        await expect(author).toBeHidden();
+        await page.reload();
+        await expect(author).toBeHidden();
+
+        await setSharingState(page, schoolSharing, true);
+        await expect(author).toBeVisible();
+        await expect(author).toHaveValue(activeAuthor);
+        await waitForAutosave(page);
       } finally {
         await sharedPage.context().close();
       }
-
-      await saveAuthor(page, author, activeAuthor);
-      const activeViewPage = await newAuthenticatedPage(browser, page, AUTH_FILES.teacher2);
-      try {
-        await activeViewPage.goto(page.url().replace('/editor', ''));
-        await expect(activeViewPage.locator('body')).toContainText(name);
-        await expect(activeViewPage.locator('body')).toContainText(activeAuthor);
-        await attachScreenshot(
-          activeViewPage,
-          'community-edited-author-credit',
-          activeAuthor,
-          testInfo,
-        );
-      } finally {
-        await activeViewPage.context().close();
-      }
-
-      await page.getByTestId('community-sharing-checkbox').click();
-      const removalDialog = page.getByRole('alertdialog');
-      await expect(removalDialog).toBeVisible();
-      await removalDialog.getByRole('button', { name: 'Freigabe entfernen', exact: true }).click();
-      await waitForSharingSettled(page);
-
-      const schoolSharing = page.getByTestId('school-sharing-checkbox');
-      const linkSharing = page.getByRole('checkbox', { name: 'Via Link', exact: true });
-      await setSharingState(page, schoolSharing, false);
-      await setSharingState(page, linkSharing, false);
-      await waitForAutosave(page);
-      await expect(author).toBeHidden();
-      await page.reload();
-      await expect(author).toBeHidden();
-
-      await setSharingState(page, schoolSharing, true);
-      await expect(author).toBeVisible();
-      await expect(author).toHaveValue(activeAuthor);
-      await waitForAutosave(page);
     });
   });
 }
