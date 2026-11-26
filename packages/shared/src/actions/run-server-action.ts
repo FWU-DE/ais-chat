@@ -2,7 +2,7 @@ import { AiGenerationError } from '@ais-chat/ai-core/errors';
 import * as Sentry from '@sentry/nextjs';
 import { BusinessError } from '@shared/error/business-error';
 import { UnexpectedError } from '@shared/error/unexpected-error';
-import { logError } from '@shared/logging';
+import { logError, logMessage } from '@shared/logging';
 
 import { ServerActionResult } from './server-action-result';
 
@@ -13,6 +13,16 @@ function serializeError(error: BusinessError | AiGenerationError, statusCode: nu
     message: error.message,
     statusCode,
   };
+}
+
+// Errors below 'error' level are expected outcomes (e.g. token limit reached) and are logged as
+// messages instead of being captured as exceptions.
+function logServerActionError(message: string, error: BusinessError | AiGenerationError) {
+  if (error.logLevel === 'error' || error.logLevel === 'fatal') {
+    logError(message, error);
+    return;
+  }
+  logMessage(message, error.logLevel, { errorName: error.name, errorMessage: error.message });
 }
 
 /**
@@ -34,13 +44,13 @@ export function runServerAction<TReturn, TArgs extends readonly unknown[]>(
       } catch (error) {
         if (error instanceof BusinessError) {
           // It is safe to log BusinessError messages because they are meant to be user-friendly
-          logError(error.message, error);
+          logServerActionError(error.message, error);
           return {
             success: false as const,
             error: serializeError(error, error.statusCode),
           };
         } else if (error instanceof AiGenerationError) {
-          logError('AI generation error occurred during server action.', error);
+          logServerActionError('AI generation error occurred during server action.', error);
           return {
             success: false as const,
             error: serializeError(error, 500),

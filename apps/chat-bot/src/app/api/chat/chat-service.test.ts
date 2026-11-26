@@ -378,20 +378,20 @@ beforeEach(() => {
 });
 
 describe('sendChatMessage', () => {
-  it('returns responsible AI errors before creating the response stream', async () => {
+  it('throws responsible AI errors before creating the response stream', async () => {
     const safetyError = new Error('Input was blocked by the safety model');
     safetyError.name = 'ResponsibleAIError';
     mocks.checkTextInputSafetyMock.mockRejectedValueOnce(safetyError);
 
     const { sendChatMessage } = await import('./chat-service');
-    const result = await sendChatMessage({
-      conversationId: conversation.id,
-      messages,
-      modelId: mainModel.id,
-      user: createUser(),
-    });
-
-    expect(result.error).toEqual({
+    await expect(
+      sendChatMessage({
+        conversationId: conversation.id,
+        messages,
+        modelId: mainModel.id,
+        user: createUser(),
+      }),
+    ).rejects.toMatchObject({
       name: 'ResponsibleAIError',
       message: 'Input was blocked by the safety model',
     });

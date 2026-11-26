@@ -1,6 +1,10 @@
+import type { SeverityLevel } from '@sentry/nextjs';
+
 import { BusinessError } from './business-error';
 
 export class ForbiddenError extends BusinessError {
+  override readonly logLevel: SeverityLevel = 'info';
+
   constructor(message = 'Forbidden') {
     super(message, 403);
     this.name = 'ForbiddenError';

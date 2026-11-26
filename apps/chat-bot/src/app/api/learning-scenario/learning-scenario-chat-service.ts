@@ -1,6 +1,5 @@
 import {
   type ModelUsage,
-  ResponsibleAIError,
   runAgentLoop,
   SharedChatExpiredError,
   TokenPointsExceededError,
@@ -25,7 +24,7 @@ import {
 } from '@shared/users/usage';
 
 import { getUserAndContextByUserId } from '@/auth/utils';
-import { ChatMessage, createErrorResult, SendMessageResult } from '@/types/chat';
+import { ChatMessage, SendMessageResult } from '@/types/chat';
 import { createTextStream } from '@/utils/streaming';
 import { checkProductAccess } from '@/utils/vidis/access';
 
@@ -70,7 +69,7 @@ export async function sendLearningScenarioMessage({
     inviteCode,
   });
   if (learningScenario === undefined || learningScenario.suspended) {
-    return createErrorResult(new NotFoundError('Learning scenario not found'));
+    throw new NotFoundError('Learning scenario not found');
   }
 
   // Get teacher user context
@@ -106,7 +105,7 @@ export async function sendLearningScenarioMessage({
 
   // Check expiry
   if (sharedChatHasExpired(learningScenario)) {
-    return createErrorResult(new SharedChatExpiredError());
+    throw new SharedChatExpiredError();
   }
 
   // Check limits
@@ -123,7 +122,7 @@ export async function sendLearningScenarioMessage({
   }
 
   if (sharedChatLimitReached || tokenPointsLimitReached) {
-    return createErrorResult(new TokenPointsExceededError());
+    throw new TokenPointsExceededError();
   }
 
   const sharedChatConversation = await prepareSharedChatConversation({
@@ -160,22 +159,14 @@ export async function sendLearningScenarioMessage({
     annotateMessageAttachmentNames(sharedChatConversation.messages, relatedFileEntities),
   );
 
-  let messagesWithImages: ChatMessage[];
-  try {
-    messagesWithImages = await prepareAgentMessages({
-      messages: prunedMessages,
-      relatedFileEntities,
-      model: definedModel,
-      modelSelection,
-      safetyModelName: safetyModel?.name,
-      apiKeyId,
-    });
-  } catch (error) {
-    if (ResponsibleAIError.is(error)) {
-      return createErrorResult(error);
-    }
-    throw error;
-  }
+  const messagesWithImages = await prepareAgentMessages({
+    messages: prunedMessages,
+    relatedFileEntities,
+    model: definedModel,
+    modelSelection,
+    safetyModelName: safetyModel?.name,
+    apiKeyId,
+  });
 
   const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
   const assistantMessageId = crypto.randomUUID();
