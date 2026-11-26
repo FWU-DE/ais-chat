@@ -187,7 +187,9 @@ export const conversationMessageTable = pgTable(
     orderNumber: integer('order_number').notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp('deleted_at', { mode: 'date', withTimezone: true }),
+    // Intentionally json, not jsonb: converting rewrites and locks this large table on deploy.
     parameters: json('parameters').$type<ConversationMessageParameters>(),
+    // Intentionally json, not jsonb: converting rewrites and locks this large table on deploy.
     toolCalls: json('tool_calls').$type<ToolCall[]>(),
     toolCallId: text('tool_call_id'),
     reasoningSummary: text('reasoning_summary'),
@@ -262,14 +264,14 @@ export const federalStateTable = pgTable('federal_state', {
   // vidis things
   mandatoryCertificationTeacher: boolean('mandatory_certification_teacher').default(false),
   chatStorageTime: integer('chat_storage_time').notNull().default(120),
-  supportContacts: json('support_contacts').$type<string[]>(),
+  supportContacts: jsonb('support_contacts').$type<string[]>(),
   trainingLink: text('training_link'),
   // whitelabel configuration
-  designConfiguration: json('design_configuration').$type<DesignConfiguration>(),
+  designConfiguration: jsonb('design_configuration').$type<DesignConfiguration>(),
   appName: text('app_name'),
-  pictureUrls: json('picture_urls').$type<FederalStatePictureUrls>(),
+  pictureUrls: jsonb('picture_urls').$type<FederalStatePictureUrls>(),
   // feature toggles
-  featureToggles: json('feature_toggles').$type<FederalStateFeatureToggles>().notNull(),
+  featureToggles: jsonb('feature_toggles').$type<FederalStateFeatureToggles>().notNull(),
 });
 export const federalStateSelectSchema = createSelectSchema(federalStateTable).extend({
   id: z.string(),
@@ -584,10 +586,10 @@ export const characterTable = pgTable(
     instructions: text('instructions').notNull().default(''),
     learningContext: text('learning_context').notNull().default(''),
     competence: text('competence').notNull().default(''),
-    filterGroup: json('filter_attributes')
+    filterGroup: jsonb('filter_attributes')
       .$type<FilterGroup>()
       .notNull()
-      .default(sql`'{}'::json`),
+      .default(sql`'{}'::jsonb`),
     // not required
     specifications: text('specifications'),
     restrictions: text('restrictions'),
@@ -781,7 +783,7 @@ export const llmModelTable = pgTable(
     description: text('description').notNull().default(''),
     priceMetadata: jsonb('price_metadata').$type<LlmModelPriceMetadata>().notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-    supportedImageFormats: json('supported_image_formats').$type<string[]>(),
+    supportedImageFormats: jsonb('supported_image_formats').$type<string[]>(),
     imageGenerationConfig: jsonb('image_generation_config').$type<ImageGenerationConfig>(),
     modelConfig: jsonb('model_config').$type<SpeechConfig>(),
     isNew: boolean('is_new').notNull().default(false),
@@ -812,7 +814,7 @@ export type LlmModelUpdateModel = z.infer<typeof llmModelUpdateSchema>;
 export type ConfigurationValue = Record<string, unknown>;
 export const configurationTable = pgTable('configuration', {
   key: text('key').primaryKey(),
-  value: json('value').$type<ConfigurationValue>().notNull(),
+  value: jsonb('value').$type<ConfigurationValue>().notNull(),
 });
 export type Configuration = typeof configurationTable.$inferSelect;
 
@@ -885,10 +887,10 @@ export const learningScenarioTable = pgTable(
     userId: uuid('user_id')
       .references(() => userTable.id)
       .notNull(),
-    filterGroup: json('filter_attributes')
+    filterGroup: jsonb('filter_attributes')
       .$type<FilterGroup>()
       .notNull()
-      .default(sql`'{}'::json`),
+      .default(sql`'{}'::jsonb`),
     studentExercise: text('student_exercise').default('').notNull(),
     licenseInformation: text('license_information').notNull().default(''),
     didacticCommentary: text('didactic_commentary').notNull().default(''),
@@ -1083,6 +1085,7 @@ export const sharedChatConversationMessageTable = pgTable(
     content: text('content').notNull(),
     role: conversationRoleEnum('role').notNull(),
     orderNumber: integer('order_number').notNull(),
+    // Intentionally json, not jsonb: converting rewrites and locks this large table on deploy.
     toolCalls: json('tool_calls').$type<ToolCall[]>(),
     toolCallId: text('tool_call_id'),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
@@ -1437,10 +1440,10 @@ export const assistantTable = pgTable(
     instructions: text('instructions'),
     licenseInformation: text('license_information').notNull().default(''),
     didacticCommentary: text('didactic_commentary').notNull().default(''),
-    filterGroup: json('filter_attributes')
+    filterGroup: jsonb('filter_attributes')
       .$type<FilterGroup>()
       .notNull()
-      .default(sql`'{}'::json`),
+      .default(sql`'{}'::jsonb`),
     promptSuggestions: text('prompt_suggestions')
       .array()
       .notNull()
@@ -1634,7 +1637,7 @@ export const fileTable = pgTable(
     size: integer('size').notNull(),
     type: text('type').notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-    metadata: json('metadata').$type<FileMetadata>(),
+    metadata: jsonb('metadata').$type<FileMetadata>(),
     userId: uuid('user_id').references(() => userTable.id),
   },
   (table) => [index().on(table.userId)],
