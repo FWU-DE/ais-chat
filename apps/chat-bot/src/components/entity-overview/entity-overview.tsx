@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@ais-chat/ui/components/select';
 import { CaretDownIcon, InfoIcon, MagnifyingGlassIcon, XCircleIcon } from '@phosphor-icons/react';
+import type { ServerActionResult } from '@shared/actions/server-action-result';
 import type { EntityType } from '@shared/entities/entity-types';
 import { OverviewFilter, overviewFilterSchema } from '@shared/overview-filter';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -40,7 +41,7 @@ type EntityOverviewProps<T extends OverviewEntity> = {
   infoTooltip: React.ReactNode;
   searchPlaceholder: string;
   createButton: React.ReactNode;
-  fetchEntities: (filter: OverviewFilter) => Promise<T[]>;
+  fetchEntities: (filter: OverviewFilter) => Promise<ServerActionResult<T[]>>;
   renderItem: (
     entity: T,
     onToggleFavorite: (isFavorite: boolean) => Promise<void>,
@@ -89,7 +90,11 @@ export default function EntityOverview<T extends OverviewEntity>({
   );
   const { data: entities = [] } = useQuery({
     queryKey,
-    queryFn: () => fetchEntities(activeFilter),
+    queryFn: async () => {
+      const result = await fetchEntities(activeFilter);
+      if (!result.success) throw new Error(result.error.message);
+      return result.value;
+    },
     enabled: isActiveFilterResolved,
     placeholderData: keepPreviousData,
   });

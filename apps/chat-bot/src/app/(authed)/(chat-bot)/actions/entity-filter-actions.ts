@@ -1,5 +1,6 @@
 'use server';
 
+import { runServerAction } from '@shared/actions/run-server-action';
 import { getAssistantsByOverviewFilter } from '@shared/assistants/assistant-service';
 import { requireTeacherRole } from '@shared/auth/authorization-service';
 import { getCharactersByOverviewFilter } from '@shared/characters/character-service';
@@ -17,6 +18,12 @@ import { requireAuth } from '@/auth/requireAuth';
 
 import { type AssistantWithImage, enrichAssistantsWithImage } from '../assistants/utils';
 import { type CharacterWithImage, enrichCharactersWithImage } from '../characters/utils';
+
+type FilterContext = {
+  filter: OverviewFilter;
+  user: Awaited<ReturnType<typeof requireAuth>>['user'];
+  federalState: Awaited<ReturnType<typeof requireAuth>>['federalState'];
+};
 
 function resolveFilter(filter: OverviewFilter, isSchoolSharingEnabled: boolean): OverviewFilter {
   return !isSchoolSharingEnabled && filter === 'school' ? 'mine' : filter;
@@ -37,10 +44,11 @@ async function getIsFavoritePredicate({
   return (entityId) => favoriteIds.has(entityId);
 }
 
-export async function getCharactersByFilterAction(
-  filter: OverviewFilter,
-): Promise<WithFavorite<CharacterWithImage>[]> {
-  const { user, federalState } = await requireAuth();
+async function getCharactersByFilter({
+  filter,
+  user,
+  federalState,
+}: FilterContext): Promise<WithFavorite<CharacterWithImage>[]> {
   requireTeacherRole(user.userRole);
   const effectiveFilter = resolveFilter(
     filter,
@@ -65,10 +73,11 @@ export async function getCharactersByFilterAction(
   return enrichedCharacters.map((c) => ({ ...c, isFavorite: isFavorite(c.id) }));
 }
 
-export async function getLearningScenariosByFilterAction(
-  filter: OverviewFilter,
-): Promise<WithFavorite<LearningScenarioWithImage>[]> {
-  const { user, federalState } = await requireAuth();
+async function getLearningScenariosByFilter({
+  filter,
+  user,
+  federalState,
+}: FilterContext): Promise<WithFavorite<LearningScenarioWithImage>[]> {
   requireTeacherRole(user.userRole);
   const effectiveFilter = resolveFilter(
     filter,
@@ -93,10 +102,11 @@ export async function getLearningScenariosByFilterAction(
   return enrichedLearningScenarios.map((s) => ({ ...s, isFavorite: isFavorite(s.id) }));
 }
 
-export async function getAssistantsByFilterAction(
-  filter: OverviewFilter,
-): Promise<WithFavorite<AssistantWithImage>[]> {
-  const { user, federalState } = await requireAuth();
+async function getAssistantsByFilter({
+  filter,
+  user,
+  federalState,
+}: FilterContext): Promise<WithFavorite<AssistantWithImage>[]> {
   const effectiveFilter = resolveFilter(
     filter,
     federalState.featureToggles.isShareTemplateWithSchoolEnabled,
@@ -118,4 +128,28 @@ export async function getAssistantsByFilterAction(
     assistants: assistants.filter((a) => a.name.trim() !== '' && a.id !== HELP_MODE_ASSISTANT_ID),
   });
   return enrichedAssistants.map((a) => ({ ...a, isFavorite: isFavorite(a.id) }));
+}
+
+export async function getCharactersByFilterAction(filter: OverviewFilter) {
+  const { user, federalState } = await requireAuth();
+  return runServerAction(
+    'getCharactersByFilterAction',
+    getCharactersByFilter,
+  )({ filter, user, federalState });
+}
+
+export async function getLearningScenariosByFilterAction(filter: OverviewFilter) {
+  const { user, federalState } = await requireAuth();
+  return runServerAction(
+    'getLearningScenariosByFilterAction',
+    getLearningScenariosByFilter,
+  )({ filter, user, federalState });
+}
+
+export async function getAssistantsByFilterAction(filter: OverviewFilter) {
+  const { user, federalState } = await requireAuth();
+  return runServerAction(
+    'getAssistantsByFilterAction',
+    getAssistantsByFilter,
+  )({ filter, user, federalState });
 }

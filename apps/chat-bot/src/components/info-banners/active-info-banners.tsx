@@ -79,8 +79,10 @@ export default function ActiveInfoBanners({ infoBanners }: { infoBanners: InfoBa
     pendingTrackedInfoBannerIds.add(currentInfoBannerId);
 
     void trackInfoBannerViewAction(currentInfoBannerId)
-      .then(() => {
-        persistStoredInfoBannerId(TRACKED_INFO_BANNERS_STORAGE_KEY, currentInfoBannerId);
+      .then((result) => {
+        if (result.success) {
+          persistStoredInfoBannerId(TRACKED_INFO_BANNERS_STORAGE_KEY, currentInfoBannerId);
+        }
       })
       .finally(() => {
         pendingTrackedInfoBannerIds.delete(currentInfoBannerId);

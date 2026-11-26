@@ -1,5 +1,6 @@
 'use client';
 
+import type { ServerActionResult } from '@shared/actions/server-action-result';
 import { logError } from '@shared/logging';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -26,7 +27,7 @@ export type SendMessageFn = (params: {
   modelId: string;
   fileIds?: string[];
   sharedSessionId?: string;
-}) => Promise<SendMessageResult>;
+}) => Promise<ServerActionResult<SendMessageResult>>;
 
 type ChatRequestContext = Pick<Parameters<SendMessageFn>[0], 'fileIds' | 'sharedSessionId'>;
 
@@ -131,13 +132,18 @@ export function useAisChat({
       lastUserMessageRef.current = userMessage;
 
       try {
-        const result = await sendMessage({
+        const actionResult = await sendMessage({
           messages: newMessages,
           modelId,
           fileIds,
           sharedSessionId,
         });
 
+        if (!actionResult.success) {
+          throw deserializeError(actionResult.error);
+        }
+
+        const result = actionResult.value;
         if (result.error) {
           throw deserializeError(result.error);
         }
