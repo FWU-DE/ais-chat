@@ -3,10 +3,12 @@
 import { runServerAction } from '@shared/actions/run-server-action';
 import { getAssistantsByOverviewFilter } from '@shared/assistants/assistant-service';
 import { requireTeacherRole } from '@shared/auth/authorization-service';
+import { UserModel } from '@shared/auth/user-model';
 import { getCharactersByOverviewFilter } from '@shared/characters/character-service';
 import { HELP_MODE_ASSISTANT_ID } from '@shared/db/const';
 import type { EntityType } from '@shared/entities/entity-types';
 import { getFavoriteEntityIds, type WithFavorite } from '@shared/favorites/favorite-service';
+import { FederalStateModel } from '@shared/federal-states/types';
 import {
   enrichLearningScenarioWithPictureUrl,
   getLearningScenariosByOverviewFilter,
@@ -21,8 +23,8 @@ import { type CharacterWithImage, enrichCharactersWithImage } from '../character
 
 type FilterContext = {
   filter: OverviewFilter;
-  user: Awaited<ReturnType<typeof requireAuth>>['user'];
-  federalState: Awaited<ReturnType<typeof requireAuth>>['federalState'];
+  user: UserModel;
+  federalState: FederalStateModel;
 };
 
 function resolveFilter(filter: OverviewFilter, isSchoolSharingEnabled: boolean): OverviewFilter {
