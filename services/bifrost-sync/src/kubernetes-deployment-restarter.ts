@@ -4,7 +4,7 @@ import type { Instance } from './types';
 
 /*
  * RBAC the service needs, in the namespace of the Bifrost Deployment:
- *   pods         get, list   (`creationTimestamp` tells whether a pod started after the last write)
+ *   pods         get, list
  *   deployments  get, patch   (only the Bifrost Deployment, via resourceNames)
  *   configmaps   get, update  (only the state ConfigMap, via resourceNames)
  * The service does not evict pods, so it needs no `pods/eviction`.
@@ -13,7 +13,7 @@ import type { Instance } from './types';
 const RESTARTED_AT = 'kubectl.kubernetes.io/restartedAt';
 
 type Pod = {
-  metadata: { uid: string; name: string; deletionTimestamp?: string; creationTimestamp: string };
+  metadata: { uid: string; name: string; deletionTimestamp?: string };
   status?: {
     phase?: string;
     podIP?: string;
@@ -100,7 +100,6 @@ export class KubernetesDeploymentRestarter implements Restarter {
           baseUrl: ip ? `http://${ip.includes(':') ? `[${ip}]` : ip}:${this.options.port}` : '',
           ready,
           terminating,
-          createdAt: pod.metadata.creationTimestamp,
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));

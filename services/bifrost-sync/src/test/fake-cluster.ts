@@ -8,7 +8,6 @@ type Entry = {
   uid: string;
   pod: FakePod;
   ready: boolean;
-  createdAt: string;
   terminating?: boolean;
 };
 
@@ -17,9 +16,6 @@ type Entry = {
  * replaces every pod by a new one that loads the DB state, like Kubernetes does after the patch.
  */
 export class FakeCluster implements Restarter {
-  /** The clock of the cluster and of the service under test. Starts at a fixed date. */
-  time = Date.parse('2026-11-26T10:00:00.700Z');
-  readonly clock = () => new Date(this.time);
   readonly db = new FakeDb();
   readonly events: string[] = [];
   readonly requests: FakeRequest[] = [];
@@ -35,6 +31,7 @@ export class FakeCluster implements Restarter {
   private annotation?: string;
   private rolloutPending = false;
   private entries: Entry[] = [];
+  private removedEntries: Entry[] = [];
   private counter = 0;
   private readonly all: FakePod[] = [];
 
@@ -57,11 +54,7 @@ export class FakeCluster implements Restarter {
     pod.healthy = initial ? true : this.newPodHealthy(name);
     await pod.listen();
     this.all.push(pod);
-    // A pod that exists at the start is older than any run, a replacement is created now.
-    const createdAt = initial
-      ? new Date(this.time - 3_600_000).toISOString()
-      : this.clock().toISOString();
-    const entry = { uid: `uid-${name}-${randomUUID().slice(0, 4)}`, pod, ready: true, createdAt };
+    const entry = { uid: `uid-${name}-${randomUUID().slice(0, 4)}`, pod, ready: true };
     this.entries.push(entry);
     return entry;
   }
@@ -91,7 +84,6 @@ export class FakeCluster implements Restarter {
           baseUrl: e.pod.baseUrl,
           ready: e.ready,
           terminating: e.terminating ?? false,
-          createdAt: e.createdAt,
         }))
         .sort((a, b) => a.name.localeCompare(b.name)),
     );
@@ -99,6 +91,20 @@ export class FakeCluster implements Restarter {
 
   rolloutComplete(): Promise<boolean> {
     return Promise.resolve(!this.rolloutPending && !this.rolloutBlocked);
+  }
+
+  /** Keeps a pod that was replaced in the list as Terminating, like a pod during its grace period. */
+  keepAsTerminating(uid: string): void {
+    const entry = this.removedEntries.find((e) => e.uid === uid);
+    if (!entry) throw new Error(`no removed pod with uid ${uid}`);
+    entry.ready = false;
+    entry.terminating = true;
+    this.entries.push(entry);
+  }
+
+  /** UIDs of the pods that exist now. */
+  uids(): string[] {
+    return this.entries.map((e) => e.uid);
   }
 
   desiredReplicas(): Promise<number> {
@@ -122,6 +128,7 @@ export class FakeCluster implements Restarter {
     // A rollout that someone starts and that finishes also completes the update that hung.
     this.rolloutPending = false;
     const old = this.entries;
+    this.removedEntries.push(...old);
     this.entries = [];
     for (let i = 0; i < old.length; i++) {
       const replacement = await this.addPod(false);
@@ -131,13 +138,10 @@ export class FakeCluster implements Restarter {
 
   /** Replaces one pod now. The others keep their creation time. */
   async replaceOnePod(name: string): Promise<void> {
+    this.removedEntries.push(...this.entries.filter((e) => e.pod.name === name));
     this.entries = this.entries.filter((e) => e.pod.name !== name);
     const replacement = await this.addPod(false);
     replacement.pod.reload();
-  }
-
-  setCreatedAt(name: string, createdAt: string): void {
-    this.entries.find((e) => e.pod.name === name)!.createdAt = createdAt;
   }
 
   restart(restartedAt: string): Promise<void> {

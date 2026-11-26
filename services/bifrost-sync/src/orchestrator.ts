@@ -34,8 +34,6 @@ export type OrchestratorOptions = {
   onFatal: (error: unknown) => void;
   /** Wait between two attempts to patch the Deployment. */
   restartRetryDelayMs: number;
-  /** Clock of the service. Tests replace it. */
-  now?: () => Date;
 };
 
 /** Attempts to patch the Deployment before the run ends `failed`. */
@@ -79,8 +77,6 @@ function isTransient(error: unknown): boolean {
   return !(error instanceof KubeError) || error.status === 429 || error.status >= 500;
 }
 
-const seconds = (iso: string) => Math.floor(Date.parse(iso) / 1000);
-
 export class Orchestrator {
   private current?: Promise<void>;
 
@@ -92,7 +88,12 @@ export class Orchestrator {
   ) {}
 
   private now(): string {
-    return (this.options.now?.() ?? new Date()).toISOString();
+    return new Date().toISOString();
+  }
+
+  /** The pods that exist when the writes end. All of them hold a state from before or during the writes. */
+  private async podsNow(): Promise<string[]> {
+    return (await this.restarter.listInstances()).map((pod) => pod.id);
   }
 
   /** Resolves when the background run ends. For tests and graceful shutdown. */
@@ -142,7 +143,7 @@ export class Orchestrator {
       await run.save({
         phase: 'restarting',
         step: 'rollout',
-        lastWriteAt: at,
+        podsAtLastWrite: await this.podsNow(),
         runPatch: { restartedAt: at, outcome },
       });
       this.current = this.rollout(run).catch((e: unknown) => this.fatal(run, e));
@@ -183,19 +184,16 @@ export class Orchestrator {
         pods: instances.map((i) => ({ name: i.name, ready: i.ready, terminating: i.terminating })),
       });
     }
-    // A pod that started before the last write holds old key IDs, and a sync through it would
-    // delete keys. After a rejected patch or a hung rollout the old pods are still Ready, so
-    // readiness proves nothing. Pods that Kubernetes created after the last write are safe, so
-    // a restart by hand (or a rollout by someone else) lifts the block without a call to the service.
-    // `creationTimestamp` has second resolution, so both sides are compared in whole seconds.
-    const lastWriteAt = state.lastWriteAt;
-    const stale = lastWriteAt
-      ? instances.filter((i) => !(seconds(i.createdAt) >= seconds(lastWriteAt)))
-      : [];
+    // A pod that existed when the last write ended holds old key IDs, and a sync through it would
+    // delete keys. After a rejected patch or a hung rollout such pods are still Ready, so readiness
+    // proves nothing. Pods that Kubernetes created later are safe. A restart by hand (or a rollout
+    // by someone else) replaces them and lifts the block without a call to the service.
+    const written = new Set(state.podsAtLastWrite ?? []);
+    const stale = instances.filter((pod) => written.has(pod.id));
     if (stale.length > 0) {
       throw new ConflictError(
-        'bifrost pods started before the last write; restart them (for example `kubectl rollout restart`)',
-        { stalePods: stale.map((i) => i.name), lastWriteAt },
+        'bifrost pods are older than the last write; restart them (for example `kubectl rollout restart`)',
+        { stalePods: stale.map((pod) => pod.name) },
       );
     }
 
@@ -258,7 +256,7 @@ export class Orchestrator {
       await run.save({
         phase: 'restarting',
         step: 'rollout',
-        lastWriteAt: at,
+        podsAtLastWrite: await this.podsNow(),
         runPatch: {
           restartedAt: at,
           outcome: {
@@ -298,14 +296,13 @@ export class Orchestrator {
       };
     }
 
-    // The writes are over. A pod created before this moment holds a state from before or during
-    // them, and every pod the rollout creates comes after it.
-    const at = this.now();
+    // The writes are over. The pods that exist now hold a state from before or during them, and
+    // every pod the rollout creates comes after it.
     await run.save({
       phase: 'restarting',
       step: 'rollout',
-      lastWriteAt: at,
-      runPatch: { restartedAt: at, outcome },
+      podsAtLastWrite: await this.podsNow(),
+      runPatch: { restartedAt: this.now(), outcome },
     });
     await this.rollout(run);
   }

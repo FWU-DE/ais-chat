@@ -400,7 +400,7 @@ describe('locking and preconditions', () => {
   });
 });
 
-describe('pods that started before the last write', () => {
+describe('pods that existed when the last write ended', () => {
   const rejected = () => new KubeError(403, 'PATCH', '/deployments/bifrost');
   // A 403 is not retried, so one failure ends the run `failed`.
   const patchFails = () => {
@@ -408,19 +408,31 @@ describe('pods that started before the last write', () => {
   };
 
   test('a rejected restart patch blocks the next sync, because the old pods are still Ready', async () => {
+    const oldPods = h.cluster.uids();
     patchFails();
     await h.post(syncRequest());
     await h.runToEnd();
     expect((await h.status()).phase).toBe('failed');
-    expect(h.store.state.lastWriteAt).toBeDefined();
+    expect(h.store.state.podsAtLastWrite).toEqual(oldPods);
     h.cluster.requests.length = 0;
 
     const response = await h.post(syncRequest());
 
     expect(response.statusCode).toBe(409);
-    expect(response.json().error).toContain('started before the last write');
+    expect(response.json().error).toContain('older than the last write');
     expect(response.json().stalePods).toEqual(['bifrost-a', 'bifrost-b']);
     expect(h.cluster.requests).toHaveLength(0);
+  });
+
+  test('a pod that was already running when the writes ended stays blocked, however old or new it looks', async () => {
+    // The case a timestamp cannot tell: a pod that started in the same second as the end of the writes.
+    // Its UID is in the list, so it is stale. No clock is involved.
+    patchFails();
+    await h.post(syncRequest());
+    await h.runToEnd();
+
+    expect((await h.post(syncRequest())).statusCode).toBe(409);
+    expect(h.store.state.podsAtLastWrite).toHaveLength(2);
   });
 
   test('a restart by hand lifts the block without a call to the service', async () => {
@@ -429,7 +441,6 @@ describe('pods that started before the last write', () => {
     await h.runToEnd();
     expect((await h.post(syncRequest())).statusCode).toBe(409);
 
-    h.cluster.time += 5_000;
     await h.cluster.replaceAllPods();
     const response = await h.post(syncRequest());
 
@@ -442,14 +453,26 @@ describe('pods that started before the last write', () => {
     patchFails();
     await h.post(syncRequest());
     await h.runToEnd();
-    h.cluster.time += 5_000;
-    // Only one pod is replaced; bifrost-b keeps its old creation time.
     await h.cluster.replaceOnePod('bifrost-a');
 
     const response = await h.post(syncRequest());
 
     expect(response.statusCode).toBe(409);
     expect(response.json().stalePods).toEqual(['bifrost-b']);
+  });
+
+  test('an old pod that is still shutting down blocks, too (by the readiness check, which comes first)', async () => {
+    patchFails();
+    await h.post(syncRequest());
+    await h.runToEnd();
+    await h.cluster.replaceAllPods();
+    // The old pod is replaced but still listed while it terminates.
+    h.cluster.keepAsTerminating(h.store.state.podsAtLastWrite![0]!);
+
+    const response = await h.post(syncRequest());
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error).toContain('not all bifrost pods are ready');
   });
 
   test('a hung rollout blocks, too, and a finished one lifts the block', async () => {
@@ -459,7 +482,6 @@ describe('pods that started before the last write', () => {
     expect((await h.post(syncRequest())).statusCode).toBe(409);
 
     h.cluster.rolloutStuck = false;
-    h.cluster.time += 5_000;
     await h.cluster.replaceAllPods();
 
     expect((await h.post(syncRequest())).statusCode).toBe(202);
@@ -467,74 +489,95 @@ describe('pods that started before the last write', () => {
   });
 
   test('a successful run leaves new pods behind, so the next sync starts', async () => {
+    const oldPods = h.cluster.uids();
     await h.post(syncRequest());
     await h.runToEnd();
     expect((await h.status()).lastRun?.result).toBe('ok');
+    expect(h.store.state.podsAtLastWrite).toEqual(oldPods);
+    expect(h.cluster.uids().some((uid) => oldPods.includes(uid))).toBe(false);
 
-    h.cluster.time += 5_000;
     const response = await h.post(syncRequest());
 
     expect(response.statusCode).toBe(202);
     await h.runToEnd();
   });
 
-  test('a pod created in the same second as the last write, but a moment earlier, is not stale', async () => {
-    await h.post(syncRequest());
-    await h.runToEnd();
-    const written = Date.parse(h.store.state.lastWriteAt!);
-    // `creationTimestamp` has whole seconds, the last write has milliseconds. A pod that Kubernetes
-    // created right after the write shows up as created a few hundred milliseconds before it.
-    const sameSecondEarlier = new Date(Math.floor(written / 1000) * 1000).toISOString();
-    expect(Date.parse(sameSecondEarlier)).toBeLessThanOrEqual(written);
-    for (const name of ['bifrost-c', 'bifrost-d']) h.cluster.setCreatedAt(name, sameSecondEarlier);
+  test('before the first run there is no list and every pod is accepted', async () => {
+    expect(h.store.state.podsAtLastWrite).toBeUndefined();
 
     expect((await h.post(syncRequest())).statusCode).toBe(202);
     await h.runToEnd();
   });
 
-  test('a pod created a second before the last write is stale', async () => {
-    await h.post(syncRequest());
-    await h.runToEnd();
-    const written = Date.parse(h.store.state.lastWriteAt!);
-    h.cluster.time = written + 10_000;
-    await h.cluster.replaceAllPods();
-    h.cluster.setCreatedAt('bifrost-e', new Date(written - 1_000).toISOString());
-
-    const response = await h.post(syncRequest());
-
-    expect(response.statusCode).toBe(409);
-    expect(response.json().stalePods).toEqual(['bifrost-e']);
-  });
-
-  test('before the first run there is no last write and every pod is accepted', async () => {
-    expect(h.store.state.lastWriteAt).toBeUndefined();
-
-    expect((await h.post(syncRequest())).statusCode).toBe(202);
-    await h.runToEnd();
-  });
-
-  test('a crash during the sync sets the last write, so the stale pods block afterwards', async () => {
+  test('a crash during the sync stores the pods, so they block afterwards', async () => {
+    const oldPods = h.cluster.uids();
     h.store.state = {
       phase: 'syncing',
-      run: { id: 'run-1', startedAt: new Date(h.cluster.time).toISOString(), step: 'sync' },
+      run: { id: 'run-1', startedAt: new Date().toISOString(), step: 'sync' },
     };
-    h.cluster.restartFailures = [rejected()];
+    patchFails();
     const orchestrator = h.makeOrchestrator();
 
     await orchestrator.recover();
     await orchestrator.whenIdle();
 
-    expect(h.store.state.lastWriteAt).toBeDefined();
+    expect(h.store.state.podsAtLastWrite).toEqual(oldPods);
     expect((await h.post(syncRequest())).statusCode).toBe(409);
   });
 
-  test('the last write is also set after a rollback', async () => {
+  test('an unexpected error in a run stores the pods, too', async () => {
+    const oldPods = h.cluster.uids();
+    h.cluster.faults = [failWritesOn('pd')];
+    const original = h.store.write.bind(h.store);
+    // The sync fails, and saving the `rolling_back` phase fails as well: the run throws and abort() takes over.
+    h.store.write = (state, version) =>
+      state.phase === 'rolling_back'
+        ? Promise.reject(new Error('etcd unavailable'))
+        : original(state, version);
+    patchFails();
+
+    await h.post(syncRequest());
+    await h.runToEnd();
+
+    expect(h.logs.some((l) => l.msg === 'run failed unexpectedly')).toBe(true);
+    expect(h.store.state.podsAtLastWrite).toEqual(oldPods);
+    expect((await h.post(syncRequest())).statusCode).toBe(409);
+  });
+
+  test('a pod that is not Ready when the writes end is stored too, so it cannot escape the block', async () => {
+    const notReady = h.cluster.uids()[1]!;
+    // The pod drops out of Ready while the sync writes, for example because it is restarting.
+    h.cluster.faults = [
+      () => {
+        h.cluster.setReady('bifrost-b', false);
+        return false;
+      },
+    ];
+    patchFails();
+
+    await h.post(syncRequest());
+    await h.runToEnd();
+
+    expect(h.store.state.podsAtLastWrite).toContain(notReady);
+  });
+
+  test('the list is also stored after a rollback', async () => {
+    const oldPods = h.cluster.uids();
     h.cluster.faults = [failWritesOn('pd')];
     await h.post(syncRequest());
     await h.runToEnd();
 
     expect((await h.status()).lastRun?.result).toBe('rolled_back');
-    expect(h.store.state.lastWriteAt).toBe(new Date(h.cluster.time).toISOString());
+    expect(h.store.state.podsAtLastWrite).toEqual(oldPods);
+  });
+
+  test('the list holds only identifiers, no names, addresses or keys', async () => {
+    await h.post(syncRequest());
+    await h.runToEnd();
+
+    const stored = JSON.stringify(h.store.state);
+    expect(stored).not.toContain('127.0.0.1');
+    for (const secret of Object.values(SECRET)) expect(stored).not.toContain(secret);
   });
 });
 

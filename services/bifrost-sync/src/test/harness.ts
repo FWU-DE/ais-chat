@@ -62,7 +62,6 @@ export async function createHarness(
     rolloutTimeoutMs: 5000,
     onFatal: (error) => fatalErrors.push(error),
     restartRetryDelayMs: 1,
-    now: cluster.clock,
     ...overrides,
   };
   const makeOrchestrator = () => new Orchestrator(cluster, store, orchestratorOptions, logger);

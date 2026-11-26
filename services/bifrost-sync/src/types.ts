@@ -39,11 +39,12 @@ export type State = {
   lastSyncedHash?: string;
   lastSuccessAt?: string;
   /**
-   * When the service last wrote to Bifrost, or may have (set before the first write of a run).
-   * A pod that started before this moment holds an older DB state and older key IDs. A sync
-   * through it would delete keys, so a run starts only if every pod started after this moment.
+   * UIDs of the pods that existed when the service last wrote to Bifrost, or may have (taken
+   * before the rollout, and after a crash). Such a pod holds the state from before the writes and
+   * the old key IDs, and a sync through it would delete keys. A run starts only if none of them
+   * exists anymore. The UID is exact: no clock and no timestamp with a resolution of seconds.
    */
-  lastWriteAt?: string;
+  podsAtLastWrite?: string[];
 };
 
 export type Instance = {
@@ -52,8 +53,6 @@ export type Instance = {
   baseUrl: string;
   ready: boolean;
   terminating: boolean;
-  /** When Kubernetes created the pod. The container starts and loads the DB state after that. */
-  createdAt: string;
 };
 
 export class ConflictError extends Error {
