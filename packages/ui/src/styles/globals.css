@@ -106,12 +106,12 @@
     --destructive: #7f1d1dff;
     --destructive-foreground: #f8fafcff;
 
-    --success: #ffffff;
-    --success-foreground: #ffffff;
+    --success: #2dd4bf;
+    --success-foreground: #042f2e;
     --error: #9f070d;
     --error-foreground: #ffffff;
-    --warning: #ffffff;
-    --warning-foreground: #ffffff;
+    --warning: #facc15;
+    --warning-foreground: #fef3c7;
 
     --icon: #999999;
     --border: #1e293bff;

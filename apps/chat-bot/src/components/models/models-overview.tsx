@@ -1,3 +1,4 @@
+import { Alert, AlertDescription, AlertIcon } from '@ui/components/alert';
 import EU from 'country-flag-icons/react/3x2/EU';
 import { getTranslations } from 'next-intl/server';
 
@@ -9,10 +10,12 @@ export async function ModelsOverview() {
   return (
     <>
       <h1 className="mb-6 text-3xl">{t('title')}</h1>
-      <div className="mb-6 flex items-center gap-3 rounded-xl border border-secondary bg-secondary/35 px-6 py-4 text-base">
-        <EU className="h-4 w-6 shrink-0" aria-hidden />
-        <p>{t('eu-banner')}</p>
-      </div>
+      <Alert className="mb-4">
+        <AlertIcon>
+          <EU className="h-5 w-8 rounded-sm" />
+        </AlertIcon>
+        <AlertDescription className="whitespace-pre-line">{t('eu-banner')}</AlertDescription>
+      </Alert>
       <div className="pb-6">
         <ModelsTable />
       </div>

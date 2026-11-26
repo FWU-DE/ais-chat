@@ -588,6 +588,7 @@
       "invalid-code-toast": "Der Code der eingegeben wurde, ist entweder abgelaufen oder ungültig."
     },
     "chat": "Chatten",
+    "last-update": "Letzte Aktualisierung",
     "duplicate": "Duplizieren",
     "delete": "Löschen",
     "save": "Speichern",
@@ -996,7 +997,7 @@
   "models": {
     "page-title": "KI-Modelle",
     "title": "KI-Modelle",
-    "eu-banner": "Alle KI-Modelle werden in der EU gehostet und können DSGVO-konform eingesetzt werden.",
+    "eu-banner": "Alle KI-Modelle werden in der EU gehostet und können DSGVO-konform eingesetzt werden.\nEs werden keine Daten zum Training von KI-Modellen verwendet.",
     "columns": {
       "model": "Modell",
       "reasoning": "Reasoning",
@@ -1005,7 +1006,9 @@
     },
     "sort-by": "Nach {column} sortieren",
     "select-model": "{model} auswählen",
+    "select-tooltip": "Für neue Chats verwenden",
     "default-tag": "Standard",
+    "default-tooltip": "Das voreingestellte Standardmodell, das über ein gutes Preis-Leistungs-Verhältnis verfügt",
     "reasoning-tooltip": "Durch Reasoning erfolgt zunächst eine schrittweise Analyse. Höheres Reasoning eignet sich für anspruchsvolle Aufgaben, kann aber mehr Zeit und Kosten verursachen.",
     "cost-tooltip": "Der Kostenfaktor zeigt, wie viel Tokenvolumen ein Modell im Vergleich zum Standardmodell verbraucht. Beim Standardmodell beträgt er 1x.",
     "cost-factor": "{factor}x",

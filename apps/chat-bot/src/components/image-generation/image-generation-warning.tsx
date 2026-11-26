@@ -1,7 +1,7 @@
 'use client';
 
 import { WarningIcon } from '@phosphor-icons/react';
-import React from 'react';
+import { Alert, AlertDescription, AlertIcon } from '@ui/components/alert';
 
 interface ImageGenerationWarningProps {
   message: string;
@@ -9,13 +9,11 @@ interface ImageGenerationWarningProps {
 
 export function ImageGenerationWarning({ message }: ImageGenerationWarningProps) {
   return (
-    <div className="mt-6 w-full">
-      <div className="border text-yellow-500 border-yellow-500 bg-yellow-50 rounded-xl py-4 px-6 flex flex-row items-center gap-4">
-        <WarningIcon size={32} aria-hidden="true" />
-        <p className="text-sm text-black" role="alert">
-          {message}
-        </p>
-      </div>
-    </div>
+    <Alert variant="warning" className="mt-6">
+      <AlertIcon>
+        <WarningIcon className="text-warning" size={24} />
+      </AlertIcon>
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   );
 }
