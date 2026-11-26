@@ -12,6 +12,7 @@ import { requireAuth } from '@/auth/requireAuth';
 import { ImageAspectRatioProvider } from '@/components/image-generation/image-aspect-ratio-provider';
 import ImageGenerationChat from '@/components/image-generation/image-generation-chat';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { ImageAssistantProvider } from '@/components/providers/image-assistant-provider';
 import { ImageModelsProvider } from '@/components/providers/image-model-provider';
 import { ImageStyleProvider } from '@/components/providers/image-style-provider';
 
@@ -74,19 +75,23 @@ export default async function Page(props: PageProps) {
   return (
     <ImageModelsProvider models={imageModels} defaultImageModel={selectedModel}>
       <ImageStyleProvider defaultImageStyle={lastUsedStyleInChat}>
-        <ImageAspectRatioProvider defaultAspectRatio={defaultAspectRatio}>
-          <DefaultPageLayout layoutConfig={{ layout: 'image' }}>
-            <div className="flex flex-col h-full">
-              <div className="flex-1 overflow-auto">
-                <ImageGenerationChat
-                  conversationId={conversationId}
-                  initialMessages={messages}
-                  fileMapping={fileMapping}
-                />
+        <ImageAssistantProvider
+          isEnabled={federalState.featureToggles.isImageAssistantEnabled ?? false}
+        >
+          <ImageAspectRatioProvider defaultAspectRatio={defaultAspectRatio}>
+            <DefaultPageLayout layoutConfig={{ layout: 'image' }}>
+              <div className="flex flex-col h-full">
+                <div className="flex-1 overflow-auto">
+                  <ImageGenerationChat
+                    conversationId={conversationId}
+                    initialMessages={messages}
+                    fileMapping={fileMapping}
+                  />
+                </div>
               </div>
-            </div>
-          </DefaultPageLayout>
-        </ImageAspectRatioProvider>
+            </DefaultPageLayout>
+          </ImageAspectRatioProvider>
+        </ImageAssistantProvider>
       </ImageStyleProvider>
     </ImageModelsProvider>
   );

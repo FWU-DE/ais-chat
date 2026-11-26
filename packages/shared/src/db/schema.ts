@@ -243,6 +243,7 @@ export const federalStateFeatureTogglesSchema = z.object({
   isCalculatorEnabled: z.boolean().optional(),
   isSpeechModelEnabled: z.boolean().optional(),
   isJsxGraphEnabled: z.boolean().optional(),
+  isImageAssistantEnabled: z.boolean().optional(),
 });
 export type FederalStateFeatureToggles = z.infer<typeof federalStateFeatureTogglesSchema>;
 

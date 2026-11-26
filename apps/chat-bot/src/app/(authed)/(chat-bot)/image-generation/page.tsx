@@ -11,6 +11,7 @@ import { requireAuth } from '@/auth/requireAuth';
 import { ImageAspectRatioProvider } from '@/components/image-generation/image-aspect-ratio-provider';
 import ImageGenerationChat from '@/components/image-generation/image-generation-chat';
 import { DefaultPageLayout } from '@/components/layout/default-page-layout';
+import { ImageAssistantProvider } from '@/components/providers/image-assistant-provider';
 import { ImageModelsProvider } from '@/components/providers/image-model-provider';
 import { ImageStyleProvider } from '@/components/providers/image-style-provider';
 
@@ -45,15 +46,19 @@ export default async function ImageGenerationPage() {
       defaultImageModel={selectedModel}
     >
       <ImageStyleProvider>
-        <ImageAspectRatioProvider>
-          <DefaultPageLayout layoutConfig={{ layout: 'image' }}>
-            <div className="flex flex-col h-full">
-              <div className="flex-1 overflow-auto">
-                <ImageGenerationChat />
+        <ImageAssistantProvider
+          isEnabled={federalState.featureToggles.isImageAssistantEnabled ?? false}
+        >
+          <ImageAspectRatioProvider>
+            <DefaultPageLayout layoutConfig={{ layout: 'image' }}>
+              <div className="flex flex-col h-full">
+                <div className="flex-1 overflow-auto">
+                  <ImageGenerationChat />
+                </div>
               </div>
-            </div>
-          </DefaultPageLayout>
-        </ImageAspectRatioProvider>
+            </DefaultPageLayout>
+          </ImageAspectRatioProvider>
+        </ImageAssistantProvider>
       </ImageStyleProvider>
     </ImageModelsProvider>
   );

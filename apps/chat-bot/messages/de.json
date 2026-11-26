@@ -572,7 +572,24 @@
     "version-option-label": "Version {n}",
     "version-select-aria-label": "Version auswählen",
     "generated-image-alt": "Generiertes Bild",
-    "ai-badge-toggle-label": "KI-Kennzeichnung"
+    "ai-badge-toggle-label": "KI-Kennzeichnung",
+    "assistant-hint": "Hilfe beim Prompt? Bildassistenten nutzen →",
+    "assistant-title": "Bildassistent",
+    "assistant-description": "Schritt-für-Schritt-Hilfe für einen guten Bildprompt.",
+    "assistant-input-placeholder": "Antwort...",
+    "assistant-use-prompt": "Prompt verwenden & Bild generieren",
+    "assistant-insert-prompt": "Prompt einfügen und weiter bearbeiten",
+    "assistant-generated-prompt-label": "Bildprompt:",
+    "assistant-error": "Der Assistent konnte keine Antwort generieren. Bitte erneut versuchen.",
+    "assistant-send": "Senden",
+    "assistant-or-type-own": "Oder eigene Antwort unten eintippen ↓",
+    "assistant-show-english-prompt": "Englischen Prompt anzeigen",
+    "assistant-hint-button": "Prompt-Assistent",
+    "assistant-opening-question": "Was soll auf dem Bild zu sehen sein? Beispiele für das Hauptmotiv: eine Person, ein Tier, eine Landschaft oder ein Objekt.",
+    "edit-assistant-title": "Bild anpassen",
+    "edit-assistant-description": "Verfeinerung des Bildes durch einen verbesserten Prompt.",
+    "edit-assistant-button": "Bild anpassen",
+    "edit-assistant-opening-question": "Was soll am Bild verändert werden? Mögliche Anpassungen: Stil, Farben, Stimmung, Details oder Perspektive."
   },
   "authentication": {
     "login-error": {
