@@ -16,7 +16,7 @@ type LlmModelsContextProps = {
   models: LlmModelSelectModel[];
   defaultModel: LlmModelSelectModel | undefined;
   selectedModel: LlmModelSelectModel | undefined;
-  setSelectedModel: (model: LlmModelSelectModel) => Promise<void>;
+  setSelectedModel: (model: LlmModelSelectModel) => Promise<boolean>;
   downloadConversationEnabled: boolean;
   setDownloadConversationEnabled: (value: boolean) => void;
 };
@@ -41,7 +41,7 @@ export function LlmModelsProvider({
     initialDownloadConversationEnabled,
   );
 
-  async function setSelectedModel(model: LlmModelSelectModel) {
+  async function setSelectedModel(model: LlmModelSelectModel): Promise<boolean> {
     // optimistically update selected model
     const previousModel = selectedModel;
     setSelectedModelState(model);
@@ -56,9 +56,12 @@ export function LlmModelsProvider({
 
       if (!response.ok) {
         setSelectedModelState(previousModel);
+        return false;
       }
+      return true;
     } catch {
       setSelectedModelState(previousModel);
+      return false;
     }
   }
 

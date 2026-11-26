@@ -21,6 +21,7 @@ import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 
 import { NewBadge } from '@/components/common/new-badge';
+import { useToast } from '@/components/common/toast';
 import { useLlmModels } from '@/components/providers/llm-model-provider';
 
 import { ModelCostChip } from './model-cost-chip';
@@ -79,6 +80,7 @@ function SortableHead({
 export function ModelsTable() {
   const t = useTranslations('models');
   const { models, defaultModel, selectedModel, setSelectedModel } = useLlmModels();
+  const toast = useToast();
   const [sort, setSort] = useState<ModelSort>(INITIAL_MODEL_SORT);
 
   const rows = useMemo(
@@ -86,9 +88,10 @@ export function ModelsTable() {
     [models, sort, defaultModel],
   );
 
-  function handleSelect(modelName: string) {
+  async function handleSelect(modelName: string) {
     const model = rows.find((row) => row.name === modelName);
-    if (model && model.id !== selectedModel?.id) void setSelectedModel(model);
+    if (!model || model.id === selectedModel?.id) return;
+    if (await setSelectedModel(model)) toast.success(t('selected-toast'));
   }
 
   return (
