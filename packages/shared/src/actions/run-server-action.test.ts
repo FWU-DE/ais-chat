@@ -1,4 +1,4 @@
-import { ProviderRateLimitExceededError, TokenPointsExceededError } from '@ais-chat/ai-core/errors';
+import { InvalidModelError, TokenPointsExceededError } from '@ais-chat/ai-core/errors';
 import { InvalidArgumentError, NotFoundError } from '@shared/error';
 import { logError, logMessage } from '@shared/logging';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -47,7 +47,7 @@ describe('runServerAction', () => {
 
   it.each([
     ['business error', new InvalidArgumentError('Bad input')],
-    ['AI generation error', new ProviderRateLimitExceededError('Rate limit')],
+    ['AI generation error', new InvalidModelError('Invalid model')],
   ])('logs a %s with error level through logError', async (_name, error) => {
     const result = await failWith(error);
 
