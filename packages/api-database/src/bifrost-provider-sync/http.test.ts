@@ -1,10 +1,7 @@
-import { createServer, type Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
-
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { BifrostProviderSyncError } from './error';
-import { assertBifrostResponse, bifrostFetch } from './http';
+import { assertBifrostResponse, BIFROST_REQUEST_TIMEOUT_MS, bifrostFetch } from './http';
 
 describe('assertBifrostResponse', () => {
   test('throws a sync error that carries the HTTP status but not the response body', async () => {
@@ -18,107 +15,102 @@ describe('assertBifrostResponse', () => {
   });
 });
 
-describe('bifrostFetch timeout', () => {
-  let server: Server;
-  let url: string;
-  const open = new Set<() => void>();
-
-  beforeEach(async () => {
-    server = createServer((req, res) => {
-      if (req.url === '/silent') return; // never answers
-      // Sends the headers and a first chunk, then stops.
-      res.writeHead(200, { 'content-type': 'application/json' });
-      res.write('{"providers":[');
-      open.add(() => res.end());
+/**
+ * A fetch that never finishes on its own. It rejects when the signal it was given aborts, and its
+ * body stream errors the same way. The tests use no socket. A response resolves in a microtask,
+ * which always runs before a timer, so the headers arrive before the limit however slow the
+ * runner is. Only the abort itself waits for the (short) limit.
+ */
+function stubFetch(
+  behaviour: 'no-response' | { status: number; stalledBody: string },
+): ReturnType<typeof vi.fn> {
+  const fetchMock = vi.fn((_url: URL, init: RequestInit) => {
+    const signal = init.signal!;
+    if (behaviour === 'no-response') {
+      return new Promise<Response>((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(signal.reason as Error));
+      });
+    }
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(behaviour.stalledBody));
+        signal.addEventListener('abort', () => controller.error(signal.reason));
+      },
     });
-    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-    url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    return Promise.resolve(new Response(body, { status: behaviour.status }));
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
+const SHORT_LIMIT_MS = 20;
+
+const request = (extra: { timeoutMs?: number; signal?: AbortSignal } = {}) =>
+  bifrostFetch({
+    bifrostAdminUrl: 'http://bifrost.test',
+    path: '/api/providers',
+    init: { method: 'GET', signal: extra.signal },
+    timeoutMs: extra.timeoutMs,
   });
 
-  afterEach(async () => {
-    for (const release of open) release();
-    open.clear();
-    server.closeAllConnections();
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+describe('bifrostFetch timeout', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   test('aborts a request that gets no response', async () => {
-    const started = Date.now();
+    stubFetch('no-response');
 
-    await expect(
-      bifrostFetch({
-        bifrostAdminUrl: url,
-        path: '/silent',
-        init: { method: 'GET' },
-        timeoutMs: 100,
-      }),
-    ).rejects.toMatchObject({ name: 'TimeoutError' });
-
-    expect(Date.now() - started).toBeLessThan(2000);
+    await expect(request({ timeoutMs: SHORT_LIMIT_MS })).rejects.toMatchObject({
+      name: 'TimeoutError',
+    });
   });
 
   test('aborts the read of a body that stops after the headers', async () => {
-    // The limit must outlast the arrival of the headers, also on a loaded CI runner. Otherwise
-    // `bifrostFetch` itself rejects and the test would not reach the body read.
-    const response = await bifrostFetch({
-      bifrostAdminUrl: url,
-      path: '/stalled-body',
-      init: { method: 'GET' },
-      timeoutMs: 1500,
-    });
+    stubFetch({ status: 200, stalledBody: '{"providers":[' });
+    const response = await request({ timeoutMs: SHORT_LIMIT_MS });
     expect(response.status).toBe(200);
 
     await expect(response.json()).rejects.toMatchObject({ name: 'TimeoutError' });
   });
 
   test('also aborts the body read through assertBifrostResponse for an error response', async () => {
-    const failing = createServer((_req, res) => {
-      res.writeHead(500);
-      res.write('partial');
-    });
-    await new Promise<void>((resolve) => failing.listen(0, '127.0.0.1', resolve));
-    const failingUrl = `http://127.0.0.1:${(failing.address() as AddressInfo).port}`;
+    stubFetch({ status: 500, stalledBody: 'partial' });
 
     await expect(
-      assertBifrostResponse(
-        bifrostFetch({
-          bifrostAdminUrl: failingUrl,
-          path: '/',
-          init: { method: 'GET' },
-          timeoutMs: 1500,
-        }),
-      ),
+      assertBifrostResponse(request({ timeoutMs: SHORT_LIMIT_MS })),
     ).rejects.toMatchObject({ name: 'TimeoutError' });
+  });
 
-    failing.closeAllConnections();
-    await new Promise<void>((resolve) => failing.close(() => resolve()));
+  test('uses 30 seconds when the caller sets no limit', async () => {
+    stubFetch({ status: 200, stalledBody: '{}' });
+    const timeout = vi.spyOn(AbortSignal, 'timeout');
+
+    await request();
+
+    expect(BIFROST_REQUEST_TIMEOUT_MS).toBe(30_000);
+    expect(timeout).toHaveBeenCalledWith(30_000);
   });
 
   test('a caller signal still aborts', async () => {
+    stubFetch('no-response');
     const controller = new AbortController();
-    const request = bifrostFetch({
-      bifrostAdminUrl: url,
-      path: '/silent',
-      init: { method: 'GET', signal: controller.signal },
-      timeoutMs: 10_000,
-    });
+    const result = request({ timeoutMs: 10 * 60_000, signal: controller.signal });
+
     controller.abort();
 
-    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(result).rejects.toMatchObject({ name: 'AbortError' });
   });
 
   test('lets a fast response through', async () => {
-    const fast = createServer((_req, res) => res.end('{"ok":true}'));
-    await new Promise<void>((resolve) => fast.listen(0, '127.0.0.1', resolve));
-    const fastUrl = `http://127.0.0.1:${(fast.address() as AddressInfo).port}`;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response('{"ok":true}'))),
+    );
 
-    const response = await bifrostFetch({
-      bifrostAdminUrl: fastUrl,
-      path: '/',
-      init: { method: 'GET' },
-    });
+    const response = await request({ timeoutMs: 30_000 });
 
     expect(await response.json()).toEqual({ ok: true });
-    await new Promise<void>((resolve) => fast.close(() => resolve()));
   });
 });
