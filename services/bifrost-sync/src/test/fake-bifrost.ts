@@ -168,6 +168,7 @@ export class FakePod {
         keys: [],
         extra: {
           network_config: withNetworkDefaults(req.body!.network_config),
+          ...(req.body!.prompt_cache ? { prompt_cache: req.body!.prompt_cache } : {}),
           ...(req.body!.custom_provider_config
             ? {
                 custom_provider_config: {
@@ -199,12 +200,20 @@ export class FakePod {
           return [500, { error: 'API key names must be unique across providers' }];
         }
         // Measured: a PUT without `network_config` resets it.
+        // A PUT without `prompt_cache` keeps it, one without `allowed_requests` lifts the restriction.
         const { network_config: networkConfig, ...rest } = req.body!;
         provider.extra = {
           ...provider.extra,
           ...rest,
           network_config: withNetworkDefaults(networkConfig),
         };
+        const sentCustom = rest.custom_provider_config as
+          { allowed_requests?: unknown } | undefined;
+        const storedCustom = provider.extra.custom_provider_config as
+          { allowed_requests?: unknown } | undefined;
+        if (sentCustom && storedCustom && !sentCustom.allowed_requests) {
+          delete storedCustom.allowed_requests;
+        }
         this.db.providers.get(name)!.extra = structuredClone(provider.extra);
         return [200, {}];
       }

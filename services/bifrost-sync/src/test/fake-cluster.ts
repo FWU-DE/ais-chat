@@ -21,6 +21,8 @@ export class FakeCluster implements Restarter {
   newPodHealthy: (name: string) => boolean = () => true;
   /** The rolling update never completes (stuck pod). */
   rolloutStuck = false;
+  /** An old pod is still around: Ready, but the Deployment reports an unfinished update. */
+  rolloutBlocked = false;
   private annotation?: string;
   private rolloutPending = false;
   private entries: Entry[] = [];
@@ -79,6 +81,10 @@ export class FakeCluster implements Restarter {
         }))
         .sort((a, b) => a.name.localeCompare(b.name)),
     );
+  }
+
+  rolloutComplete(): Promise<boolean> {
+    return Promise.resolve(!this.rolloutPending && !this.rolloutBlocked);
   }
 
   desiredReplicas(): Promise<number> {

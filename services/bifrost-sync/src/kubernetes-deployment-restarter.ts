@@ -105,6 +105,10 @@ export class KubernetesDeploymentRestarter implements Restarter {
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  async rolloutComplete(): Promise<boolean> {
+    return isRolloutComplete(await this.getDeployment());
+  }
+
   async desiredReplicas(): Promise<number> {
     return (await this.getDeployment()).spec.replicas ?? 1;
   }

@@ -343,4 +343,130 @@ describe('verifyState', () => {
       });
     });
   });
+
+  describe('custom provider requests and prompt cache', () => {
+    const custom = (allowedRequests?: Record<string, boolean>): Providers => [
+      {
+        provider: 'cp',
+        network_config: { base_url: 'https://upstream.example' },
+        custom_provider_config: {
+          base_provider_type: 'openai',
+          ...(allowedRequests
+            ? {
+                allowed_requests: allowedRequests as NonNullable<
+                  Providers[number]['custom_provider_config']
+                >['allowed_requests'],
+              }
+            : {}),
+        },
+        keys: [keyOf('k', 'sk-test-cp-1', ['m'])],
+      },
+    ];
+    const restricted = { chat_completion: true, embedding: true, responses: false };
+
+    test('reports no difference when neither side restricts the requests', async () => {
+      await syncAll(target(), custom());
+
+      expect(await verifyState(target(), custom())).toEqual([]);
+    });
+
+    test('reports a restriction that Bifrost still has although the desired config omits it', async () => {
+      await syncAll(target(), custom(restricted));
+      // Bifrost keeps what was written; the desired state (unrestricted) differs from it.
+      const errors = await verifyState(target(), custom());
+
+      expect(errors).toContainEqual({
+        provider: 'cp',
+        step: 'verify',
+        message: 'custom_provider_config.allowed_requests differs',
+      });
+    });
+
+    test('reports a missing restriction and different restrictions', async () => {
+      await syncAll(target(), custom());
+      const other = { chat_completion: true, embedding: false };
+
+      for (const desired of [custom(restricted), custom(other)]) {
+        await syncAll(target(), custom());
+        expect(await verifyState(target(), desired)).toContainEqual({
+          provider: 'cp',
+          step: 'verify',
+          message: 'custom_provider_config.allowed_requests differs',
+        });
+      }
+    });
+
+    test('a restriction that allows nothing is not the same as no restriction', async () => {
+      const nothing = {
+        list_models: false,
+        chat_completion: false,
+        chat_completion_stream: false,
+        responses: false,
+        responses_stream: false,
+        embedding: false,
+        image_generation: false,
+      };
+      // Bifrost has no restriction (the field is absent), but the desired config forbids every request.
+      await syncAll(target(), custom());
+
+      expect(await verifyState(target(), custom(nothing))).toContainEqual({
+        provider: 'cp',
+        step: 'verify',
+        message: 'custom_provider_config.allowed_requests differs',
+      });
+    });
+
+    test('a rollback that omits the restriction lifts it, and the read back accepts that', async () => {
+      await syncAll(target(), custom(restricted));
+      await syncAll(target(), custom());
+
+      expect(await verifyState(target(), custom())).toEqual([]);
+    });
+
+    const cached = (autoInject: boolean): Providers => [
+      {
+        provider: 'vertex',
+        prompt_cache: {
+          auto_inject: autoInject,
+          cache_control_injection_points: [
+            { location: 'message', role: 'system' },
+            { location: 'message', role: 'user', index: -1 },
+          ],
+        },
+        keys: [keyOf('vx', '', ['g'])],
+      },
+    ];
+
+    test('reports no difference for an equal prompt cache config', async () => {
+      await syncAll(target(), cached(true));
+
+      expect(await verifyState(target(), cached(true))).toEqual([]);
+    });
+
+    test('reports a lost auto_inject flag and a changed injection point', async () => {
+      await syncAll(target(), cached(false));
+      const changedPoint = cached(false);
+      changedPoint[0]!.prompt_cache!.auto_inject = true;
+      changedPoint[0]!.prompt_cache!.cache_control_injection_points![1]!.index = 0;
+
+      expect(await verifyState(target(), cached(true))).toContainEqual({
+        provider: 'vertex',
+        step: 'verify',
+        message: 'prompt_cache differs',
+      });
+      expect(await verifyState(target(), changedPoint)).toContainEqual({
+        provider: 'vertex',
+        step: 'verify',
+        message: 'prompt_cache differs',
+      });
+    });
+
+    test('does not compare the prompt cache when the desired config omits it', async () => {
+      await syncAll(target(), cached(true));
+      const omitted = cached(true);
+      delete omitted[0]!.prompt_cache;
+
+      expect(await verifyState(target(), omitted)).toEqual([]);
+    });
+  });
 });

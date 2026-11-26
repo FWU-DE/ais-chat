@@ -2,6 +2,7 @@ import {
   BIFROST_PROVIDERS,
   type BifrostKey,
   type BifrostKeyAlias,
+  type BifrostPromptCacheConfig,
   type BifrostProviderConfig,
   type BifrostProviderResponse,
   type BifrostSecret,
@@ -60,10 +61,30 @@ function normalizeAliases(aliases: Record<string, BifrostKeyAlias> | null | unde
   return JSON.stringify(entries);
 }
 
-function trueKeys(requests: Record<string, boolean> | undefined): string[] {
-  return Object.entries(requests ?? {})
+/**
+ * The request types a custom provider allows. `null` means unrestricted: Bifrost omits
+ * `allowed_requests` for a provider created without it (measured on v2.5.1), and a PUT without it
+ * lifts an earlier restriction.
+ */
+function allowedRequests(requests: Record<string, boolean> | undefined | null): string[] | null {
+  if (!requests) return null;
+  return Object.entries(requests)
     .filter(([, allowed]) => allowed)
-    .map(([name]) => name);
+    .map(([name]) => name)
+    .sort();
+}
+
+/** Bifrost returns the prompt cache config as it was sent. Injection points are an ordered list. */
+function normalizePromptCache(cache: BifrostPromptCacheConfig | undefined | null): string {
+  return JSON.stringify({
+    auto_inject: cache?.auto_inject ?? false,
+    ttl: cache?.ttl ?? null,
+    points: (cache?.cache_control_injection_points ?? []).map((point) => ({
+      location: point.location,
+      role: point.role ?? null,
+      index: point.index ?? null,
+    })),
+  });
 }
 
 function compareProvider(
@@ -86,16 +107,24 @@ function compareProvider(
     }
   }
 
+  // An omitted `prompt_cache` keeps the current value on update, so only a given one is compared.
+  if (
+    desired.prompt_cache &&
+    normalizePromptCache(desired.prompt_cache) !== normalizePromptCache(actual.prompt_cache)
+  ) {
+    errors.push(mismatch('prompt_cache differs'));
+  }
+
   const wantedCustom = desired.custom_provider_config;
   const actualCustom = actual.custom_provider_config;
   if (wantedCustom) {
     if (wantedCustom.base_provider_type !== actualCustom?.base_provider_type) {
       errors.push(mismatch('custom_provider_config.base_provider_type differs'));
     }
-    // Absent `allowed_requests` means "all allowed" and Bifrost may omit it on read.
+    // Absent means unrestricted on both sides, so a lost or an added restriction is a difference.
     if (
-      wantedCustom.allowed_requests &&
-      !sameSet(trueKeys(wantedCustom.allowed_requests), trueKeys(actualCustom?.allowed_requests))
+      JSON.stringify(allowedRequests(wantedCustom.allowed_requests)) !==
+      JSON.stringify(allowedRequests(actualCustom?.allowed_requests))
     ) {
       errors.push(mismatch('custom_provider_config.allowed_requests differs'));
     }

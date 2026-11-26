@@ -199,6 +199,17 @@ describe('KubernetesDeploymentRestarter pods', () => {
     expect(instances[3]!.baseUrl).toBe('http://[fd00::1]:8080');
   });
 
+  test('rolloutComplete is false while an old pod is counted and true when it is gone', async () => {
+    const unfinished = deployment({ replicas: 3, updatedReplicas: 2, availableReplicas: 2 });
+    const finished = deployment({ replicas: 2, updatedReplicas: 2, availableReplicas: 2 });
+    let current = unfinished;
+    const { restarter: r } = restarter(() => ({ status: 200, json: current }));
+
+    expect(await r.rolloutComplete()).toBe(false);
+    current = finished;
+    expect(await r.rolloutComplete()).toBe(true);
+  });
+
   test('reads the desired replicas from the Deployment', async () => {
     const { restarter: r } = restarter(() => ({
       status: 200,

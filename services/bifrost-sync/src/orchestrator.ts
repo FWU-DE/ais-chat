@@ -143,6 +143,14 @@ export class Orchestrator {
       throw new ConflictError(`run in progress (phase=${state.phase})`, { runId: state.run?.id });
     }
 
+    // After a restart that hung or a patch that failed, an old pod can still be Ready and be the
+    // first pod. It holds the old key IDs, and a sync on it would delete keys. A complete rollout
+    // is the proof that every pod loaded the current DB state, readiness is not.
+    if (!(await this.restarter.rolloutComplete())) {
+      throw new ConflictError('a rollout is not complete; all pods must run the current template', {
+        runId: state.run?.id,
+      });
+    }
     const [instances, wanted] = await Promise.all([
       this.restarter.listInstances(),
       this.restarter.desiredReplicas(),

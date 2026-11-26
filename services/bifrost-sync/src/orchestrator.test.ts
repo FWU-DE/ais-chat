@@ -281,6 +281,41 @@ describe('locking and preconditions', () => {
     expect((await h.post(syncRequest())).statusCode).toBe(409);
   });
 
+  test('answers 409 after a rollout that did not finish, although all pods are Ready', async () => {
+    h.cluster.rolloutStuck = true;
+    await h.post(syncRequest());
+    await h.runToEnd();
+    expect((await h.status()).phase).toBe('failed');
+    h.cluster.requests.length = 0;
+
+    const response = await h.post(syncRequest());
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error).toContain('rollout is not complete');
+    expect(h.cluster.requests).toHaveLength(0);
+  });
+
+  test('answers 409 while an old pod is still around and the Deployment reports an unfinished update', async () => {
+    h.cluster.rolloutBlocked = true;
+
+    const response = await h.post(syncRequest());
+
+    expect(response.statusCode).toBe(409);
+    expect(h.cluster.requests).toHaveLength(0);
+    expect((await h.status()).phase).toBe('idle');
+  });
+
+  test('accepts a new sync once the rollout is complete again', async () => {
+    h.cluster.rolloutBlocked = true;
+    expect((await h.post(syncRequest())).statusCode).toBe(409);
+
+    h.cluster.rolloutBlocked = false;
+
+    expect((await h.post(syncRequest())).statusCode).toBe(202);
+    await h.runToEnd();
+    expect((await h.status()).lastRun?.result).toBe('ok');
+  });
+
   test('POST /v1/resume and POST /v1/restart-all do not exist', async () => {
     for (const url of ['/v1/resume', '/v1/restart-all']) {
       const response = await h.app.inject({ method: 'POST', url, headers: h.auth });

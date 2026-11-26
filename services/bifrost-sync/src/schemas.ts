@@ -1,7 +1,23 @@
 import type { BifrostProviderConfig } from '@ais-chat/api-database/bifrost-provider-sync/core';
 import { z } from 'zod';
 
-const secretSchema = z.union([z.string(), z.looseObject({ value: z.string() })]);
+// The shapes mirror `BifrostProviderConfig` in `@ais-chat/api-database`. A field that the sync or
+// the read back uses must be valid here, otherwise a bad value fails only after the first writes
+// and costs a rollback and a restart of all pods instead of a 422. Unknown fields pass through.
+
+const secretSchema = z.union([
+  z.string(),
+  z.looseObject({
+    value: z.string(),
+    env_var: z.string().optional(),
+    from_env: z.boolean().optional(),
+  }),
+]);
+
+const aliasSchema = z.union([
+  z.string().min(1),
+  z.looseObject({ model_id: z.string().min(1), use_speech_endpoints: z.boolean().optional() }),
+]);
 
 const keySchema = z.looseObject({
   id: z.string().optional(),
@@ -10,11 +26,57 @@ const keySchema = z.looseObject({
   models: z.array(z.string()),
   weight: z.number(),
   enabled: z.boolean().optional(),
+  aliases: z.record(z.string(), aliasSchema).optional(),
+  azure_key_config: z.looseObject({ endpoint: secretSchema }).optional(),
+  vertex_key_config: z
+    .looseObject({
+      project_id: secretSchema,
+      region: secretSchema,
+      auth_credentials: secretSchema.optional(),
+    })
+    .optional(),
+});
+
+const allowedRequestsSchema = z.looseObject({
+  list_models: z.boolean(),
+  chat_completion: z.boolean(),
+  chat_completion_stream: z.boolean(),
+  responses: z.boolean(),
+  responses_stream: z.boolean(),
+  embedding: z.boolean(),
+  image_generation: z.boolean(),
+});
+
+const promptCacheSchema = z.looseObject({
+  auto_inject: z.boolean(),
+  ttl: z.literal('1h').optional(),
+  cache_control_injection_points: z
+    .array(
+      z.looseObject({
+        location: z.literal('message'),
+        role: z.enum(['system', 'developer', 'user', 'assistant']).optional(),
+        index: z.number().int().optional(),
+      }),
+    )
+    .optional(),
 });
 
 const providerSchema = z.looseObject({
   provider: z.string().min(1),
   keys: z.array(keySchema),
+  prompt_cache: promptCacheSchema.optional(),
+  network_config: z
+    .looseObject({
+      base_url: z.string().optional(),
+      allow_private_network: z.boolean().optional(),
+    })
+    .optional(),
+  custom_provider_config: z
+    .looseObject({
+      base_provider_type: z.literal('openai'),
+      allowed_requests: allowedRequestsSchema.optional(),
+    })
+    .optional(),
 });
 
 const providersSchema = z.array(providerSchema);
