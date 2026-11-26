@@ -67,6 +67,8 @@ export class ResponsibleAIError extends AiGenerationError {
  * Base class for rate limit errors. Throw one of its subclasses instead.
  */
 export abstract class RateLimitExceededError extends AiGenerationError {
+  override readonly logLevel: SeverityLevel = 'info';
+
   constructor(message: string) {
     super(message);
     this.name = 'RateLimitExceededError';
