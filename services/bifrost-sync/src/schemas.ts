@@ -79,7 +79,31 @@ const providerSchema = z.looseObject({
     .optional(),
 });
 
-const providersSchema = z.array(providerSchema);
+// Two entries for one provider id, or two keys that differ only in case, make the sync write the
+// same key twice at once. The key name is the identity the sync matches on, in lower case. A
+// duplicate in the baseline would break the rollback in the same way.
+const providersSchema = z.array(providerSchema).superRefine((providers, ctx) => {
+  const providerIds = new Set<string>();
+  providers.forEach((config, index) => {
+    if (providerIds.has(config.provider)) {
+      ctx.addIssue({ code: 'custom', path: [index, 'provider'], message: 'duplicate provider id' });
+    }
+    providerIds.add(config.provider);
+
+    const keyNames = new Set<string>();
+    config.keys.forEach((key, keyIndex) => {
+      const name = key.name.toLowerCase();
+      if (keyNames.has(name)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [index, 'keys', keyIndex, 'name'],
+          message: 'duplicate key name (case-insensitive) within the provider',
+        });
+      }
+      keyNames.add(name);
+    });
+  });
+});
 
 export const syncRequestSchema = z.object({
   contentHash: z.string().min(1),

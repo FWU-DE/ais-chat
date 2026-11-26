@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 
+import { KubeError } from './kube-client';
 import { keyOf } from './test/fake-bifrost';
 import { createHarness, type Harness, SECRET, syncRequest } from './test/harness';
 import type { State } from './types';
@@ -224,6 +225,24 @@ describe('check after the rollout', () => {
     expect(logged).toBeDefined();
   });
 
+  test('does not check a pod that is shutting down when the rollout returns', async () => {
+    // Measured in kind: the last old pod is still listed as Terminating when the Deployment is complete.
+    const original = h.cluster.waitForRollout.bind(h.cluster);
+    h.cluster.waitForRollout = async () => {
+      await original();
+      await h.cluster.addTerminatingPod();
+    };
+
+    await h.post(syncRequest());
+    await h.runToEnd();
+
+    const status = await h.status();
+    expect(status.lastRun?.result).toBe('ok');
+    expect(status.lastRun?.errors).toEqual([]);
+    const checked = h.cluster.events.filter((e) => e.startsWith('GET /api/providers')).length;
+    expect(checked).toBeGreaterThanOrEqual(2);
+  });
+
   test('a rollout that does not finish ends the run failed', async () => {
     h.cluster.rolloutStuck = true;
     await h.post(syncRequest());
@@ -316,6 +335,266 @@ describe('locking and preconditions', () => {
     expect((await h.status()).lastRun?.result).toBe('ok');
   });
 
+  test('answers 409 and saves no state when the Deployment is scaled to zero', async () => {
+    await h.close();
+    h = await createHarness({ replicas: 0 });
+
+    for (let i = 0; i < 2; i++) {
+      const response = await h.post(syncRequest());
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json().error).toContain('no bifrost pod');
+    }
+    expect(h.store.state.phase).toBe('idle');
+    expect(h.cluster.patches).toHaveLength(0);
+  });
+
+  test('exits when the first state save committed but its response was lost, and recover() finishes the run', async () => {
+    const original = h.store.write.bind(h.store);
+    let first = true;
+    h.store.write = async (state, version) => {
+      const written = await original(state, version);
+      if (first) {
+        first = false;
+        throw new Error('timeout');
+      }
+      return written;
+    };
+
+    const response = await h.post(syncRequest());
+
+    expect(response.statusCode).toBe(500);
+    expect(h.fatalErrors).toHaveLength(1);
+    expect(h.store.state.phase).toBe('syncing');
+    expect(h.logs.some((l) => l.level === 'error' && l.msg.includes('exiting'))).toBe(true);
+
+    // The next process starts, finds `syncing` and restarts all pods.
+    h.store.write = original;
+    const next = h.makeOrchestrator();
+    await next.recover();
+    await next.whenIdle();
+
+    expect(h.store.state.phase).toBe('failed');
+    expect(h.store.state.lastRun?.note).toContain('restarted during syncing');
+    expect(h.cluster.patches).toHaveLength(1);
+  });
+
+  test('exits when the first state save fails without committing', async () => {
+    h.store.write = () => Promise.reject(new Error('etcd unavailable'));
+
+    const response = await h.post(syncRequest());
+
+    expect(response.statusCode).toBe(500);
+    expect(h.fatalErrors).toHaveLength(1);
+    expect(h.store.state.phase).toBe('idle');
+  });
+
+  test('a lost lock is a 409 and does not exit', async () => {
+    const original = h.store.write.bind(h.store);
+    h.store.write = async (state, version) => original(state, `${version}-stale`);
+
+    const response = await h.post(syncRequest());
+
+    expect(response.statusCode).toBe(409);
+    expect(h.fatalErrors).toHaveLength(0);
+  });
+});
+
+describe('pods that started before the last write', () => {
+  const rejected = () => new KubeError(403, 'PATCH', '/deployments/bifrost');
+  // A 403 is not retried, so one failure ends the run `failed`.
+  const patchFails = () => {
+    h.cluster.restartFailures = [rejected()];
+  };
+
+  test('a rejected restart patch blocks the next sync, because the old pods are still Ready', async () => {
+    patchFails();
+    await h.post(syncRequest());
+    await h.runToEnd();
+    expect((await h.status()).phase).toBe('failed');
+    expect(h.store.state.lastWriteAt).toBeDefined();
+    h.cluster.requests.length = 0;
+
+    const response = await h.post(syncRequest());
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error).toContain('started before the last write');
+    expect(response.json().stalePods).toEqual(['bifrost-a', 'bifrost-b']);
+    expect(h.cluster.requests).toHaveLength(0);
+  });
+
+  test('a restart by hand lifts the block without a call to the service', async () => {
+    patchFails();
+    await h.post(syncRequest());
+    await h.runToEnd();
+    expect((await h.post(syncRequest())).statusCode).toBe(409);
+
+    h.cluster.time += 5_000;
+    await h.cluster.replaceAllPods();
+    const response = await h.post(syncRequest());
+
+    expect(response.statusCode).toBe(202);
+    await h.runToEnd();
+    expect((await h.status()).lastRun?.result).toBe('ok');
+  });
+
+  test('one pod that was not restarted is enough to block, and it is named', async () => {
+    patchFails();
+    await h.post(syncRequest());
+    await h.runToEnd();
+    h.cluster.time += 5_000;
+    // Only one pod is replaced; bifrost-b keeps its old creation time.
+    await h.cluster.replaceOnePod('bifrost-a');
+
+    const response = await h.post(syncRequest());
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().stalePods).toEqual(['bifrost-b']);
+  });
+
+  test('a hung rollout blocks, too, and a finished one lifts the block', async () => {
+    h.cluster.rolloutStuck = true;
+    await h.post(syncRequest());
+    await h.runToEnd();
+    expect((await h.post(syncRequest())).statusCode).toBe(409);
+
+    h.cluster.rolloutStuck = false;
+    h.cluster.time += 5_000;
+    await h.cluster.replaceAllPods();
+
+    expect((await h.post(syncRequest())).statusCode).toBe(202);
+    await h.runToEnd();
+  });
+
+  test('a successful run leaves new pods behind, so the next sync starts', async () => {
+    await h.post(syncRequest());
+    await h.runToEnd();
+    expect((await h.status()).lastRun?.result).toBe('ok');
+
+    h.cluster.time += 5_000;
+    const response = await h.post(syncRequest());
+
+    expect(response.statusCode).toBe(202);
+    await h.runToEnd();
+  });
+
+  test('a pod created in the same second as the last write, but a moment earlier, is not stale', async () => {
+    await h.post(syncRequest());
+    await h.runToEnd();
+    const written = Date.parse(h.store.state.lastWriteAt!);
+    // `creationTimestamp` has whole seconds, the last write has milliseconds. A pod that Kubernetes
+    // created right after the write shows up as created a few hundred milliseconds before it.
+    const sameSecondEarlier = new Date(Math.floor(written / 1000) * 1000).toISOString();
+    expect(Date.parse(sameSecondEarlier)).toBeLessThanOrEqual(written);
+    for (const name of ['bifrost-c', 'bifrost-d']) h.cluster.setCreatedAt(name, sameSecondEarlier);
+
+    expect((await h.post(syncRequest())).statusCode).toBe(202);
+    await h.runToEnd();
+  });
+
+  test('a pod created a second before the last write is stale', async () => {
+    await h.post(syncRequest());
+    await h.runToEnd();
+    const written = Date.parse(h.store.state.lastWriteAt!);
+    h.cluster.time = written + 10_000;
+    await h.cluster.replaceAllPods();
+    h.cluster.setCreatedAt('bifrost-e', new Date(written - 1_000).toISOString());
+
+    const response = await h.post(syncRequest());
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().stalePods).toEqual(['bifrost-e']);
+  });
+
+  test('before the first run there is no last write and every pod is accepted', async () => {
+    expect(h.store.state.lastWriteAt).toBeUndefined();
+
+    expect((await h.post(syncRequest())).statusCode).toBe(202);
+    await h.runToEnd();
+  });
+
+  test('a crash during the sync sets the last write, so the stale pods block afterwards', async () => {
+    h.store.state = {
+      phase: 'syncing',
+      run: { id: 'run-1', startedAt: new Date(h.cluster.time).toISOString(), step: 'sync' },
+    };
+    h.cluster.restartFailures = [rejected()];
+    const orchestrator = h.makeOrchestrator();
+
+    await orchestrator.recover();
+    await orchestrator.whenIdle();
+
+    expect(h.store.state.lastWriteAt).toBeDefined();
+    expect((await h.post(syncRequest())).statusCode).toBe(409);
+  });
+
+  test('the last write is also set after a rollback', async () => {
+    h.cluster.faults = [failWritesOn('pd')];
+    await h.post(syncRequest());
+    await h.runToEnd();
+
+    expect((await h.status()).lastRun?.result).toBe('rolled_back');
+    expect(h.store.state.lastWriteAt).toBe(new Date(h.cluster.time).toISOString());
+  });
+});
+
+describe('restart patch retries', () => {
+  const unavailable = () => new KubeError(503, 'PATCH', '/deployments/bifrost');
+
+  test('a patch that fails twice and then works does not fail the run', async () => {
+    h.cluster.restartFailures = [unavailable(), unavailable()];
+
+    await h.post(syncRequest());
+    await h.runToEnd();
+
+    expect(h.cluster.restartCalls).toBe(3);
+    expect((await h.status()).lastRun?.result).toBe('ok');
+    expect(h.logs.filter((l) => l.msg === 'restart patch failed, retrying')).toHaveLength(2);
+  });
+
+  test('a patch that fails three times ends the run failed with the reason', async () => {
+    h.cluster.restartFailures = [unavailable(), unavailable(), unavailable()];
+
+    await h.post(syncRequest());
+    await h.runToEnd();
+
+    expect(h.cluster.restartCalls).toBe(3);
+    const status = await h.status();
+    expect(status.phase).toBe('failed');
+    expect(status.lastRun?.note).toContain('kube PATCH /deployments/bifrost -> 503');
+  });
+
+  test('a 403 is not retried, because it will not pass', async () => {
+    h.cluster.restartFailures = [new KubeError(403, 'PATCH', '/deployments/bifrost')];
+
+    await h.post(syncRequest());
+    await h.runToEnd();
+
+    expect(h.cluster.restartCalls).toBe(1);
+    expect((await h.status()).lastRun?.note).toContain('403');
+  });
+
+  test('a network error is retried', async () => {
+    h.cluster.restartFailures = [new Error('fetch failed')];
+
+    await h.post(syncRequest());
+    await h.runToEnd();
+
+    expect(h.cluster.restartCalls).toBe(2);
+    expect((await h.status()).lastRun?.result).toBe('ok');
+  });
+
+  test('the retries do not log the request or any key', async () => {
+    h.cluster.restartFailures = [unavailable(), unavailable()];
+    await h.post(syncRequest());
+    await h.runToEnd();
+
+    const output = JSON.stringify(h.logs);
+    for (const secret of Object.values(SECRET)) expect(output).not.toContain(secret);
+  });
+});
+
+describe('endpoints that were removed', () => {
   test('POST /v1/resume and POST /v1/restart-all do not exist', async () => {
     for (const url of ['/v1/resume', '/v1/restart-all']) {
       const response = await h.app.inject({ method: 'POST', url, headers: h.auth });

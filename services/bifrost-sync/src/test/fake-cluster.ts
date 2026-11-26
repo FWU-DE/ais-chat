@@ -4,13 +4,22 @@ import type { Restarter } from '../restarter';
 import type { Instance } from '../types';
 import { FakeDb, FakePod, type FakeRequest, type FaultRule, type Quirks } from './fake-bifrost';
 
-type Entry = { uid: string; pod: FakePod; ready: boolean };
+type Entry = {
+  uid: string;
+  pod: FakePod;
+  ready: boolean;
+  createdAt: string;
+  terminating?: boolean;
+};
 
 /**
  * Bifrost Deployment with a rolling update. `restart()` sets the annotation, `waitForRollout()`
  * replaces every pod by a new one that loads the DB state, like Kubernetes does after the patch.
  */
 export class FakeCluster implements Restarter {
+  /** The clock of the cluster and of the service under test. Starts at a fixed date. */
+  time = Date.parse('2026-11-26T10:00:00.700Z');
+  readonly clock = () => new Date(this.time);
   readonly db = new FakeDb();
   readonly events: string[] = [];
   readonly requests: FakeRequest[] = [];
@@ -48,7 +57,11 @@ export class FakeCluster implements Restarter {
     pod.healthy = initial ? true : this.newPodHealthy(name);
     await pod.listen();
     this.all.push(pod);
-    const entry = { uid: `uid-${name}-${randomUUID().slice(0, 4)}`, pod, ready: true };
+    // A pod that exists at the start is older than any run, a replacement is created now.
+    const createdAt = initial
+      ? new Date(this.time - 3_600_000).toISOString()
+      : this.clock().toISOString();
+    const entry = { uid: `uid-${name}-${randomUUID().slice(0, 4)}`, pod, ready: true, createdAt };
     this.entries.push(entry);
     return entry;
   }
@@ -77,7 +90,8 @@ export class FakeCluster implements Restarter {
           name: e.pod.name,
           baseUrl: e.pod.baseUrl,
           ready: e.ready,
-          terminating: false,
+          terminating: e.terminating ?? false,
+          createdAt: e.createdAt,
         }))
         .sort((a, b) => a.name.localeCompare(b.name)),
     );
@@ -91,7 +105,45 @@ export class FakeCluster implements Restarter {
     return Promise.resolve(this.replicas);
   }
 
+  /** Calls of `restart()` that fail before they patch. Each entry is one failure, then it passes. */
+  restartFailures: Error[] = [];
+  restartCalls = 0;
+
+  /** A pod that is shutting down: still listed, no longer Ready, its port already closed. */
+  async addTerminatingPod(): Promise<void> {
+    const entry = await this.addPod(false);
+    entry.ready = false;
+    entry.terminating = true;
+    await entry.pod.close();
+  }
+
+  /** Replaces all pods now, like a rollout someone else started. Creates them at the current time. */
+  async replaceAllPods(): Promise<void> {
+    // A rollout that someone starts and that finishes also completes the update that hung.
+    this.rolloutPending = false;
+    const old = this.entries;
+    this.entries = [];
+    for (let i = 0; i < old.length; i++) {
+      const replacement = await this.addPod(false);
+      replacement.pod.reload();
+    }
+  }
+
+  /** Replaces one pod now. The others keep their creation time. */
+  async replaceOnePod(name: string): Promise<void> {
+    this.entries = this.entries.filter((e) => e.pod.name !== name);
+    const replacement = await this.addPod(false);
+    replacement.pod.reload();
+  }
+
+  setCreatedAt(name: string, createdAt: string): void {
+    this.entries.find((e) => e.pod.name === name)!.createdAt = createdAt;
+  }
+
   restart(restartedAt: string): Promise<void> {
+    this.restartCalls++;
+    const failure = this.restartFailures.shift();
+    if (failure) return Promise.reject(failure);
     if (this.annotation === restartedAt) return Promise.resolve();
     this.annotation = restartedAt;
     this.patches.push(restartedAt);

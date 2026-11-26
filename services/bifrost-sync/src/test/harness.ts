@@ -61,6 +61,8 @@ export async function createHarness(
     adminPassword: 'admin-test-password',
     rolloutTimeoutMs: 5000,
     onFatal: (error) => fatalErrors.push(error),
+    restartRetryDelayMs: 1,
+    now: cluster.clock,
     ...overrides,
   };
   const makeOrchestrator = () => new Orchestrator(cluster, store, orchestratorOptions, logger);

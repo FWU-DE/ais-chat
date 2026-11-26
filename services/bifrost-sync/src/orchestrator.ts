@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
 import { type BifrostTarget, providersHealthy, syncAll } from './bifrost-sync-core';
-import type { Restarter } from './restarter';
+import { KubeError } from './kube-client';
+import { type Restarter, sleep } from './restarter';
 import type { SyncRequest } from './schemas';
 import { LockError, type StateStore } from './state-store';
 import {
@@ -31,7 +32,14 @@ export type OrchestratorOptions = {
    * process has to exit: the next start runs `recover()` from the persisted state.
    */
   onFatal: (error: unknown) => void;
+  /** Wait between two attempts to patch the Deployment. */
+  restartRetryDelayMs: number;
+  /** Clock of the service. Tests replace it. */
+  now?: () => Date;
 };
+
+/** Attempts to patch the Deployment before the run ends `failed`. */
+const RESTART_ATTEMPTS = 3;
 
 type StatePatch = Partial<Omit<State, 'run'>> & {
   /** Starts a run. `step` is set here, like for every other change of the run. */
@@ -66,6 +74,13 @@ class RunState {
 
 const errorText = (error: unknown) => (error instanceof Error ? error.message : 'unknown error');
 
+/** A patch can fail for a moment (API server busy or unreachable). A 403 or 404 will not pass by retrying. */
+function isTransient(error: unknown): boolean {
+  return !(error instanceof KubeError) || error.status === 429 || error.status >= 500;
+}
+
+const seconds = (iso: string) => Math.floor(Date.parse(iso) / 1000);
+
 export class Orchestrator {
   private current?: Promise<void>;
 
@@ -75,6 +90,10 @@ export class Orchestrator {
     private readonly options: OrchestratorOptions,
     private readonly log: Logger,
   ) {}
+
+  private now(): string {
+    return (this.options.now?.() ?? new Date()).toISOString();
+  }
 
   /** Resolves when the background run ends. For tests and graceful shutdown. */
   whenIdle(): Promise<void> {
@@ -119,10 +138,12 @@ export class Orchestrator {
         rollbackErrors: [],
         note: `service restarted during ${state.phase}; state unknown`,
       };
+      const at = this.now();
       await run.save({
         phase: 'restarting',
         step: 'rollout',
-        runPatch: { restartedAt: new Date().toISOString(), outcome },
+        lastWriteAt: at,
+        runPatch: { restartedAt: at, outcome },
       });
       this.current = this.rollout(run).catch((e: unknown) => this.fatal(run, e));
     }
@@ -162,7 +183,30 @@ export class Orchestrator {
         pods: instances.map((i) => ({ name: i.name, ready: i.ready, terminating: i.terminating })),
       });
     }
-    const writer = instances[0]!;
+    // A pod that started before the last write holds old key IDs, and a sync through it would
+    // delete keys. After a rejected patch or a hung rollout the old pods are still Ready, so
+    // readiness proves nothing. Pods that Kubernetes created after the last write are safe, so
+    // a restart by hand (or a rollout by someone else) lifts the block without a call to the service.
+    // `creationTimestamp` has second resolution, so both sides are compared in whole seconds.
+    const lastWriteAt = state.lastWriteAt;
+    const stale = lastWriteAt
+      ? instances.filter((i) => !(seconds(i.createdAt) >= seconds(lastWriteAt)))
+      : [];
+    if (stale.length > 0) {
+      throw new ConflictError(
+        'bifrost pods started before the last write; restart them (for example `kubectl rollout restart`)',
+        { stalePods: stale.map((i) => i.name), lastWriteAt },
+      );
+    }
+
+    // A Deployment scaled to zero passes both checks above. Without a pod there is no writer, and
+    // the state would be saved as `syncing` for a run that never starts.
+    const writer = instances[0];
+    if (!writer) {
+      throw new ConflictError('there is no bifrost pod to write through', {
+        desiredReplicas: wanted,
+      });
+    }
 
     const runId = randomUUID();
     const run = new RunState(this.store, state, version);
@@ -172,7 +216,7 @@ export class Orchestrator {
         step: 'sync',
         newRun: {
           id: runId,
-          startedAt: new Date().toISOString(),
+          startedAt: this.now(),
           contentHash: request.contentHash,
         },
       });
@@ -180,6 +224,14 @@ export class Orchestrator {
       if (e instanceof LockError) {
         throw new ConflictError('run in progress (lock lost)', { runId: state.run?.id });
       }
+      // The PUT may have committed although the call failed (lost response, timeout). The state
+      // would then say `syncing` for a run that never started, and every request would get 409.
+      // Exit, so that the next process runs `recover()` on whatever was saved.
+      this.log.error(
+        { runId, error: errorText(e) },
+        'state could not be saved, exiting so that recover() can finish the run',
+      );
+      this.options.onFatal(e);
       throw e;
     }
     this.log.info({ runId, writer: writer.name, pods: instances.length }, 'sync started');
@@ -202,11 +254,13 @@ export class Orchestrator {
     // A new patch would restart all pods a second time. `recover()` finishes the run.
     if (run.state.phase === 'restarting') return this.fatal(run, error);
     try {
+      const at = this.now();
       await run.save({
         phase: 'restarting',
         step: 'rollout',
+        lastWriteAt: at,
         runPatch: {
-          restartedAt: new Date().toISOString(),
+          restartedAt: at,
           outcome: {
             result: 'failed',
             errors: [],
@@ -244,10 +298,14 @@ export class Orchestrator {
       };
     }
 
+    // The writes are over. A pod created before this moment holds a state from before or during
+    // them, and every pod the rollout creates comes after it.
+    const at = this.now();
     await run.save({
       phase: 'restarting',
       step: 'rollout',
-      runPatch: { restartedAt: new Date().toISOString(), outcome },
+      lastWriteAt: at,
+      runPatch: { restartedAt: at, outcome },
     });
     await this.rollout(run);
   }
@@ -275,7 +333,7 @@ export class Orchestrator {
     const base: RunOutcome = outcome ?? { result: 'failed', errors: [], rollbackErrors: [] };
 
     try {
-      await this.restarter.restart(restartedAt!);
+      await this.restartWithRetry(restartedAt!, runId);
       await this.restarter.waitForRollout(this.options.rolloutTimeoutMs);
     } catch (e) {
       await this.finish(run, {
@@ -302,6 +360,20 @@ export class Orchestrator {
     await this.finish(run, base);
   }
 
+  /** Patching is idempotent for one `restartedAt`, so a retry after a lost response is safe. */
+  private async restartWithRetry(restartedAt: string, runId: string): Promise<void> {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await this.restarter.restart(restartedAt);
+        return;
+      } catch (e) {
+        if (attempt >= RESTART_ATTEMPTS || !isTransient(e)) throw e;
+        this.log.error({ runId, attempt, error: errorText(e) }, 'restart patch failed, retrying');
+        await sleep(this.options.restartRetryDelayMs);
+      }
+    }
+  }
+
   /** `GET /api/providers` on every pod. A pod without a working encryption key stays Ready but answers 500. */
   private async checkPods(): Promise<SyncError[]> {
     let pods: Instance[];
@@ -311,7 +383,10 @@ export class Orchestrator {
       return [{ provider: '*', step: 'pod-check', message: `cannot list pods: ${errorText(e)}` }];
     }
     const errors: SyncError[] = [];
-    for (const pod of pods) {
+    // `waitForRollout` returns as soon as the Deployment no longer counts the last old pod, which
+    // is then still listed as Terminating (measured in kind: for up to the grace period). Its
+    // port may already be closed, and it is not a pod of the new rollout.
+    for (const pod of pods.filter((p) => !p.terminating)) {
       const healthy = pod.baseUrl !== '' && (await providersHealthy(this.target(pod)));
       if (!healthy) {
         errors.push({
@@ -340,7 +415,7 @@ export class Orchestrator {
     const lastRun: LastRun = {
       id: run.runId,
       startedAt: run.state.run?.startedAt,
-      finishedAt: new Date().toISOString(),
+      finishedAt: this.now(),
       result: outcome.result,
       errors: outcome.errors,
       rollbackErrors: outcome.rollbackErrors,
@@ -351,7 +426,7 @@ export class Orchestrator {
       phase: failed ? 'failed' : 'idle',
       lastRun,
       ...(outcome.result === 'ok' && hash
-        ? { lastSyncedHash: hash, lastSuccessAt: new Date().toISOString() }
+        ? { lastSyncedHash: hash, lastSuccessAt: this.now() }
         : {}),
     });
   }

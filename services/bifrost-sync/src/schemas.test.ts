@@ -205,4 +205,77 @@ describe('parseSyncRequest', () => {
     expect(parsed.ok).toBe(false);
     expect(JSON.stringify(parsed)).not.toContain('sk-test-secret-value');
   });
+
+  describe('duplicate identities', () => {
+    const provider = (name: string, keys: object[] = [key()]) => ({ provider: name, keys });
+
+    test('rejects a provider id that appears twice in the desired state', () => {
+      const parsed = parseSyncRequest({
+        contentHash: 'h',
+        providers: [provider('p'), provider('p')],
+        baseline: { contentHash: 'b', providers: [provider('p')] },
+      });
+
+      expect(parsed.ok).toBe(false);
+      expect(!parsed.ok && parsed.issues.join(' ')).toContain(
+        'providers.1.provider: duplicate provider id',
+      );
+    });
+
+    test('rejects key names that differ only in case within a provider', () => {
+      const parsed = parseSyncRequest({
+        contentHash: 'h',
+        providers: [
+          provider('p', [key({ name: 'Foo' }), key({ name: 'foo', value: 'sk-test-2' })]),
+        ],
+        baseline: { contentHash: 'b', providers: [provider('p')] },
+      });
+
+      expect(parsed.ok).toBe(false);
+      expect(!parsed.ok && parsed.issues.join(' ')).toContain('providers.0.keys.1.name');
+    });
+
+    test('rejects the same duplicates in the baseline, which would break the rollback', () => {
+      const parsed = parseSyncRequest({
+        contentHash: 'h',
+        providers: [provider('p')],
+        baseline: {
+          contentHash: 'b',
+          providers: [provider('p'), provider('q', [key({ name: 'k' }), key({ name: 'K' })])],
+        },
+      });
+
+      expect(parsed.ok).toBe(false);
+      expect(!parsed.ok && parsed.issues.join(' ')).toContain('baseline.providers.1.keys.1.name');
+    });
+
+    test('accepts the same key name in different providers and different names in one provider', () => {
+      const parsed = parseSyncRequest({
+        contentHash: 'h',
+        providers: [
+          provider('p', [key({ name: 'a' }), key({ name: 'b' })]),
+          provider('q', [key({ name: 'a' })]),
+        ],
+        baseline: { contentHash: 'b', providers: [provider('p')] },
+      });
+
+      expect(parsed.ok).toBe(true);
+    });
+
+    test('the messages name the position, not the key name or value', () => {
+      const parsed = parseSyncRequest({
+        contentHash: 'h',
+        providers: [
+          provider('p', [
+            key({ name: 'secret-name' }),
+            key({ name: 'SECRET-NAME', value: 'sk-test-leak' }),
+          ]),
+        ],
+        baseline: { contentHash: 'b', providers: [provider('p')] },
+      });
+
+      expect(JSON.stringify(parsed)).not.toContain('sk-test-leak');
+      expect(JSON.stringify(parsed)).not.toContain('secret-name');
+    });
+  });
 });
