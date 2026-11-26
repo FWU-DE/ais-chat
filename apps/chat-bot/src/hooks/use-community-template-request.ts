@@ -5,7 +5,7 @@ import {
   CommunityTemplateRequestWithEvents,
   EntitySharingSnapshot,
 } from '@shared/community-templates/community-template-service';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 export type CommunitySharingState = {
   request: CommunityTemplateRequestWithEvents | null;
@@ -28,7 +28,6 @@ type UseCommunityTemplateRequestResult = {
   createRequest: () => Promise<CommunityTemplateRequestMutationResult>;
   cancelRequest: () => Promise<CommunityTemplateRequestMutationResult>;
   sendMessage: (message: string) => Promise<CommunityTemplateRequestMutationResult>;
-  isPending: boolean;
 };
 
 /**
@@ -47,40 +46,15 @@ export function useCommunityTemplateRequest({
 }: UseCommunityTemplateRequestOptions): UseCommunityTemplateRequestResult {
   const [communityTemplateRequest, setCommunityTemplateRequest] =
     useState<CommunityTemplateRequestWithEvents | null>(initialRequest);
-  const [isPending, setIsPending] = useState(false);
-  const pendingCount = useRef(0);
-  const mutationQueue = useRef(Promise.resolve());
-
-  const runMutation = <T>(mutation: () => Promise<T>, applyResult: (result: T) => void) => {
-    pendingCount.current += 1;
-    setIsPending(true);
-
-    const queuedMutation = mutationQueue.current
-      .catch(() => undefined)
-      .then(async () => {
-        const result = await mutation();
-        applyResult(result);
-        return result;
-      })
-      .finally(() => {
-        pendingCount.current -= 1;
-        if (pendingCount.current === 0) {
-          setIsPending(false);
-        }
-      });
-
-    mutationQueue.current = queuedMutation.then(
-      () => undefined,
-      () => undefined,
-    );
-
-    return queuedMutation;
+  const runMutation = async <T>(mutation: () => Promise<T>, applyResult: (result: T) => void) => {
+    const result = await mutation();
+    applyResult(result);
+    return result;
   };
 
   return {
     communityTemplateRequest,
     setCommunityTemplateRequest,
-    isPending,
     createRequest: () =>
       runMutation(createRequest, (result) => {
         if (result.success) {

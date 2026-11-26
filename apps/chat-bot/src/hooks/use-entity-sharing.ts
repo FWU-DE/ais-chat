@@ -29,7 +29,7 @@ type UseEntitySharingOptions<TFormValues extends SharingFormFields> = {
     updateSchoolSharing: (isSchoolShared: boolean) => Promise<{ success: boolean }>;
   };
   onError: () => void;
-  onSuccess: () => Promise<unknown>;
+  flushAutoSave: () => Promise<unknown>;
 };
 
 /**
@@ -41,7 +41,7 @@ export function useEntitySharing<TFormValues extends SharingFormFields>({
   initialRequest,
   actions,
   onError,
-  onSuccess,
+  flushAutoSave,
 }: UseEntitySharingOptions<TFormValues>) {
   const applySharingState = useCallback(
     ({ entity, request }: CommunitySharingState) => {
@@ -67,7 +67,6 @@ export function useEntitySharing<TFormValues extends SharingFormFields>({
     createRequest,
     cancelRequest,
     sendMessage,
-    isPending: isCommunityRequestPending,
   } = useCommunityTemplateRequest({
     initialRequest,
     createRequest: actions.createCommunityTemplateRequest,
@@ -80,18 +79,25 @@ export function useEntitySharing<TFormValues extends SharingFormFields>({
   const pendingOperationCount = useRef(0);
   const sharingOperationQueue = useRef(Promise.resolve());
 
-  const runSharingOperation = <T>(operation: () => Promise<T>) => {
+  // One queue orders all request snapshots; only sharing changes need form flushes.
+  const runSharingOperation = <T>(
+    operation: () => Promise<T>,
+    { flushForm = true }: { flushForm?: boolean } = {},
+  ) => {
     pendingOperationCount.current += 1;
     setIsSharingPending(true);
 
     const queuedOperation = sharingOperationQueue.current
-      .catch(() => undefined)
       .then(async () => {
-        await onSuccess();
+        if (flushForm) {
+          await flushAutoSave();
+        }
         try {
           return await operation();
         } finally {
-          await onSuccess();
+          if (flushForm) {
+            await flushAutoSave();
+          }
         }
       })
       .finally(() => {
@@ -138,8 +144,9 @@ export function useEntitySharing<TFormValues extends SharingFormFields>({
   return {
     communityTemplateRequest,
     createCommunityTemplateRequest,
-    sendMessageToEditor: sendMessage,
+    sendMessageToEditor: (message: string) =>
+      runSharingOperation(() => sendMessage(message), { flushForm: false }),
     handleSharingChange,
-    isSharingPending: isSharingPending || isCommunityRequestPending,
+    isSharingPending,
   };
 }

@@ -98,9 +98,7 @@ export function AssistantView({
         </CardContent>
       </Card>
 
-      {(assistant.isGlobal ||
-        ((assistant.isSchoolShared || assistant.isCommunityShared || assistant.hasLinkAccess) &&
-          assistant.author.trim() !== '')) && (
+      {(assistant.isGlobal || assistant.author.trim() !== '') && (
         <CustomChatAuthorInfo
           authorLabel={t('author-label')}
           authorText={assistant.author !== '' ? assistant.author : t('author-text')}

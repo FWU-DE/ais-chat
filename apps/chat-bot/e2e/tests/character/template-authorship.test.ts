@@ -6,6 +6,7 @@ import {
 import { defineTemplateAuthorshipTests } from '../../utils/template-authorship';
 
 defineTemplateAuthorshipTests({
+  entityType: 'character',
   title: 'character',
   label: 'character',
   listPath: '/characters',

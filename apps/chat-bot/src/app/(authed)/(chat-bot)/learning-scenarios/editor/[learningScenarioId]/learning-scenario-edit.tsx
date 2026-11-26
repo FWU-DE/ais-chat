@@ -304,7 +304,7 @@ export function LearningScenarioEdit({
         }),
     },
     onError: () => toast.error(tToast('edit-toast-error')),
-    onSuccess: flushAutoSave,
+    flushAutoSave,
   });
 
   const name = useWatch({ control, name: 'name' });

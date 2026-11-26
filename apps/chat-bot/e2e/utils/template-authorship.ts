@@ -1,14 +1,14 @@
 import type { Browser, Locator, Page, TestInfo } from '@playwright/test';
+import type { EntityType } from '@shared/entities/entity-types';
 import { nanoid } from 'nanoid';
 
 import { expect, test } from '../fixtures/test';
 import {
-  approveRequestInAdmin,
+  approveRequestForEntity,
   expectNoRequestCard,
-  openRequestInAdmin,
   submitToCommunity,
 } from './community-template';
-import { ADMIN_BASE_URL, AUTH_FILES, EDITOR_AUTH_FILE } from './const';
+import { AUTH_FILES } from './const';
 import { waitForAutosave, waitForToast } from './utils';
 
 /**
@@ -16,6 +16,7 @@ import { waitForAutosave, waitForToast } from './utils';
  * (assistants, characters and learning scenarios share the same author field behaviour).
  */
 export type TemplateAuthorshipEntity = {
+  entityType: EntityType;
   /** Used in describe blocks, e.g. "assistant" */
   title: string;
   /** Used in generated names and author credits, e.g. "assistant" */
@@ -205,19 +206,10 @@ export function defineTemplateAuthorshipTests(entity: TemplateAuthorshipEntity) 
       await page.reload();
       await expect(author).toHaveValue(requestAuthor);
 
-      const adminContext = await browser.newContext({
-        storageState: EDITOR_AUTH_FILE,
-        baseURL: ADMIN_BASE_URL,
+      await approveRequestForEntity({
+        entityType: entity.entityType,
+        entityId: new URL(editorPath).pathname.split('/').at(-1) ?? '',
       });
-      const adminListPage = await adminContext.newPage();
-
-      try {
-        // The request detail view opens in a new tab
-        const adminPage = await openRequestInAdmin(adminListPage, name);
-        await approveRequestInAdmin(adminPage);
-      } finally {
-        await adminContext.close();
-      }
 
       await page.goto(editorPath);
       await expectNoRequestCard(page);

@@ -171,9 +171,7 @@ export function CharacterView({
           </CardContent>
         </Card>
 
-        {(character.isGlobal ||
-          ((character.isSchoolShared || character.isCommunityShared || character.hasLinkAccess) &&
-            character.author.trim() !== '')) && (
+        {(character.isGlobal || character.author.trim() !== '') && (
           <CustomChatAuthorInfo
             authorLabel={t('author-label')}
             authorText={character.author !== '' ? character.author : t('author-text')}

@@ -54,7 +54,7 @@ function renderSharingHook(options: {
   actions: Parameters<typeof useEntitySharing<TestFormValues>>[0]['actions'];
   initialRequest?: Parameters<typeof useEntitySharing<TestFormValues>>[0]['initialRequest'];
   onError?: () => void;
-  onSuccess?: () => Promise<unknown>;
+  flushAutoSave?: () => Promise<unknown>;
 }) {
   const setValue = vi.fn();
   const result: { current: HookResult | undefined } = { current: undefined };
@@ -66,7 +66,7 @@ function renderSharingHook(options: {
       initialRequest: options.initialRequest ?? null,
       actions: options.actions,
       onError: options.onError ?? vi.fn(),
-      onSuccess: options.onSuccess ?? (async () => undefined),
+      flushAutoSave: options.flushAutoSave ?? (async () => undefined),
     });
 
     return children ?? null;
@@ -105,7 +105,7 @@ describe('useEntitySharing mutation lifecycle', () => {
     const initialFlush = deferred<unknown>();
     const mutation = deferred<ReturnType<typeof success>>();
     const finalFlush = deferred<unknown>();
-    const onSuccess = vi
+    const flushAutoSave = vi
       .fn<() => Promise<unknown>>()
       .mockImplementationOnce(() => initialFlush.promise)
       .mockImplementationOnce(() => finalFlush.promise);
@@ -116,7 +116,7 @@ describe('useEntitySharing mutation lifecycle', () => {
       getEntitySharingState: vi.fn(),
       updateSchoolSharing: vi.fn(),
     };
-    const harness = renderSharingHook({ actions, onSuccess });
+    const harness = renderSharingHook({ actions, flushAutoSave });
     mounted.push(harness.unmount);
 
     let operation!: Promise<unknown>;
@@ -190,11 +190,12 @@ describe('useEntitySharing mutation lifecycle', () => {
     expect(getResult(harness.result).isSharingPending).toBe(false);
   });
 
-  it('serializes competing sharing actions without allowing an earlier completion to clear pending state', async () => {
+  it('serializes messages and sharing actions without allowing an earlier completion to clear pending state', async () => {
+    const messageMutation = deferred<ReturnType<typeof success>>();
     const firstMutation = deferred<ReturnType<typeof success>>();
     const secondMutation = deferred<{ success: boolean }>();
     const finalFlush = deferred<unknown>();
-    const onSuccess = vi
+    const flushAutoSave = vi
       .fn<() => Promise<unknown>>()
       .mockResolvedValueOnce(undefined)
       .mockImplementationOnce(() => finalFlush.promise)
@@ -202,16 +203,18 @@ describe('useEntitySharing mutation lifecycle', () => {
     const actions = {
       createCommunityTemplateRequest: vi.fn(),
       cancelCommunityTemplateRequest: vi.fn(() => firstMutation.promise),
-      sendMessageToEditor: vi.fn(),
+      sendMessageToEditor: vi.fn(() => messageMutation.promise),
       getEntitySharingState: vi.fn(),
       updateSchoolSharing: vi.fn(() => secondMutation.promise),
     };
-    const harness = renderSharingHook({ actions, onSuccess });
+    const harness = renderSharingHook({ actions, flushAutoSave });
     mounted.push(harness.unmount);
 
     let first!: Promise<unknown>;
     let second!: Promise<unknown>;
+    let message!: Promise<unknown>;
     await act(async () => {
+      message = getResult(harness.result).sendMessageToEditor('Review my template');
       first = getResult(harness.result).handleSharingChange({
         name: 'isCommunityShared',
         checked: false,
@@ -224,6 +227,18 @@ describe('useEntitySharing mutation lifecycle', () => {
     });
 
     expect(actions.updateSchoolSharing).not.toHaveBeenCalled();
+    expect(actions.cancelCommunityTemplateRequest).not.toHaveBeenCalled();
+    expect(actions.sendMessageToEditor).toHaveBeenCalledTimes(1);
+    expect(flushAutoSave).not.toHaveBeenCalled();
+    expect(getResult(harness.result).isSharingPending).toBe(true);
+
+    await act(async () => {
+      messageMutation.resolve(success(sharingState({ hasLinkAccess: true })));
+      await message;
+    });
+
+    expect(actions.cancelCommunityTemplateRequest).toHaveBeenCalledTimes(1);
+    expect(harness.setValue).not.toHaveBeenCalled();
     expect(getResult(harness.result).isSharingPending).toBe(true);
 
     await act(async () => {
@@ -247,9 +262,11 @@ describe('useEntitySharing mutation lifecycle', () => {
     });
 
     expect(getResult(harness.result).isSharingPending).toBe(false);
+    expect(flushAutoSave).toHaveBeenCalledTimes(4);
   });
 
   it('preserves the direct create mutation result while exposing its pending lifecycle', async () => {
+    const flushAutoSave = vi.fn(async () => false);
     const mutationResult = success(sharingState({ isCommunityShared: true }));
     const actions = {
       createCommunityTemplateRequest: vi.fn(async () => mutationResult),
@@ -258,7 +275,7 @@ describe('useEntitySharing mutation lifecycle', () => {
       getEntitySharingState: vi.fn(),
       updateSchoolSharing: vi.fn(),
     };
-    const harness = renderSharingHook({ actions });
+    const harness = renderSharingHook({ actions, flushAutoSave });
     mounted.push(harness.unmount);
 
     let result: unknown;
@@ -267,19 +284,22 @@ describe('useEntitySharing mutation lifecycle', () => {
     });
 
     expect(result).toBe(mutationResult);
+    expect(actions.createCommunityTemplateRequest).toHaveBeenCalledTimes(1);
+    expect(flushAutoSave).toHaveBeenCalledTimes(2);
     expect(getResult(harness.result).isSharingPending).toBe(false);
 
-    let resubmitResult: unknown;
+    let messageResult: unknown;
     await act(async () => {
-      resubmitResult = await getResult(harness.result).sendMessageToEditor('resubmit');
+      messageResult = await getResult(harness.result).sendMessageToEditor('Review my template');
     });
 
-    expect(resubmitResult).toBe(mutationResult);
+    expect(messageResult).toBe(mutationResult);
+    expect(flushAutoSave).toHaveBeenCalledTimes(2);
   });
 
   it('clears pending after a rejected flush and can run the next queued action', async () => {
     const flushFailure = new Error('author save failed');
-    const onSuccess = vi
+    const flushAutoSave = vi
       .fn<() => Promise<unknown>>()
       .mockRejectedValueOnce(flushFailure)
       .mockResolvedValue(undefined);
@@ -290,7 +310,7 @@ describe('useEntitySharing mutation lifecycle', () => {
       getEntitySharingState: vi.fn(),
       updateSchoolSharing: vi.fn(async () => ({ success: true })),
     };
-    const harness = renderSharingHook({ actions, onSuccess });
+    const harness = renderSharingHook({ actions, flushAutoSave });
     mounted.push(harness.unmount);
 
     await expect(

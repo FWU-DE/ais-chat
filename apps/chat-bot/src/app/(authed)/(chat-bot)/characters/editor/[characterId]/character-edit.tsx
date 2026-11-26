@@ -296,7 +296,7 @@ export function CharacterEdit({
         updateCharacterSchoolSharingAction({ characterId: character.id, isSchoolShared }),
     },
     onError: () => toast.error(t('toasts.edit-toast-error')),
-    onSuccess: flushAutoSave,
+    flushAutoSave,
   });
 
   const name = useWatch({ control, name: 'name' });

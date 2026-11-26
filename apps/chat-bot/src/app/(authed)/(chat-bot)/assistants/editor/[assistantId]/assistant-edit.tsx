@@ -289,7 +289,7 @@ export function AssistantEdit({
         updateAssistantSchoolSharingAction({ assistantId: assistant.id, isSchoolShared }),
     },
     onError: () => toast.error(t('toasts.edit-toast-error')),
-    onSuccess: flushAutoSave,
+    flushAutoSave,
   });
 
   const name = useWatch({ control, name: 'name' });
