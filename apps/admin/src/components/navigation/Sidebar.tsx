@@ -29,10 +29,8 @@ export type SidebarItemProps = {
 
 export function SidebarItem({ label, href }: SidebarItemProps) {
   return (
-    <Link href={href}>
-      <Button variant="link" className="pl-0">
-        {label}
-      </Button>
-    </Link>
+    <Button variant="link" className="self-start pl-0" asChild>
+      <Link href={href}>{label}</Link>
+    </Button>
   );
 }

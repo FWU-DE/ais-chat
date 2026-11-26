@@ -11,20 +11,18 @@ export async function Header() {
 
   return (
     <header className="flex gap-6 items-center">
-      <Link href={ROUTES.home} className="flex-none">
-        <Button variant="link" className="text-xl font-bold">
-          AIS.chat-admin
-        </Button>
-      </Link>
+      <Button variant="link" className="flex-none text-xl font-bold" asChild>
+        <Link href={ROUTES.home}>AIS.chat-admin</Link>
+      </Button>
       <div className="flex-1 flex flex-row gap-4">
         {session?.adminRole === 'Admin' && (
-          <Link href={ROUTES.api.llms}>
-            <Button variant={'link'}>AIS.chat-api</Button>
-          </Link>
+          <Button variant="link" asChild>
+            <Link href={ROUTES.api.llms}>AIS.chat-api</Link>
+          </Button>
         )}
-        <Link href={ROUTES.app.page}>
-          <Button variant={'link'}>AIS.chat-app</Button>
-        </Link>
+        <Button variant="link" asChild>
+          <Link href={ROUTES.app.page}>AIS.chat-app</Link>
+        </Button>
       </div>
       {session?.adminRole && (
         <span className="text-sm text-stone-500">Rolle: {session.adminRole}</span>

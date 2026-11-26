@@ -71,9 +71,9 @@ export default function InfoBannerListView() {
         <CardTitle>Info-Banner</CardTitle>
         <CardDescription>Liste aller Info- und Warnbanner für ais-chat-app.</CardDescription>
         <CardAction>
-          <Link href={ROUTES.app.infoBannerNew}>
-            <Button>Neues Info-Banner</Button>
-          </Link>
+          <Button asChild>
+            <Link href={ROUTES.app.infoBannerNew}>Neues Info-Banner</Link>
+          </Button>
           <Button disabled={isPending} onClick={loadInfoBanners} className="ml-2">
             {isPending ? 'Lädt...' : 'Aktualisieren'}
           </Button>

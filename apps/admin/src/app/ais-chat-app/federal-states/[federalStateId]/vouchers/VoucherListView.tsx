@@ -18,9 +18,9 @@ export default function VoucherListView({
     <div>
       <div className="flex items-center justify-between w-full gap-4 mb-4">
         <h1>Guthaben Codes Übersicht</h1>
-        <Link href={ROUTES.app.voucherNew(federalStateId)}>
-          <Button>Neue erstellen</Button>
-        </Link>
+        <Button asChild>
+          <Link href={ROUTES.app.voucherNew(federalStateId)}>Neue erstellen</Link>
+        </Button>
       </div>
       <VoucherList vouchers={vouchers} />
     </div>
