@@ -2,38 +2,13 @@
 
 import type { SensitiveLlmModel } from '@ais-chat/api-database';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
-import type { Column, ColumnDef } from '@tanstack/react-table';
-import { Button } from '@ui/components/button';
 import { Checkbox } from '@ui/components/checkbox';
-import { Chip } from '@ui/components/chip';
-import type { DataTableFeatures } from '@ui/components/data-table';
-import { ArrowUpDownIcon } from 'lucide-react';
 
-type Col = ColumnDef<DataTableFeatures, SensitiveLlmModel>;
+import { sortableHeader } from '@/components/common/SortableHeader';
 
-function SortableHeader({
-  column,
-  label,
-}: {
-  column: Column<DataTableFeatures, SensitiveLlmModel>;
-  label: string;
-}) {
-  return (
-    <Button
-      variant="link"
-      className="p-0"
-      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-    >
-      {label}
-      <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-    </Button>
-  );
-}
+import { type ModelColumn, nameColumn, typeColumn } from './model-columns';
 
-const sortableHeader = (label: string): Col['header'] =>
-  function Header({ column }) {
-    return <SortableHeader column={column} label={label} />;
-  };
+type Col = ModelColumn<SensitiveLlmModel>;
 
 const booleanColumn = (key: 'useBifrost' | 'isNew' | 'isDeleted', label: string): Col => ({
   accessorKey: key,
@@ -44,28 +19,8 @@ const booleanColumn = (key: 'useBifrost' | 'isNew' | 'isDeleted', label: string)
 
 export function getColumns(showDeleted: boolean): Col[] {
   return [
-    {
-      id: 'name',
-      accessorFn: (model) => model.displayName || model.name,
-      header: sortableHeader('Name'),
-      cell: ({ row }) => {
-        const model = row.original;
-        return (
-          <div>
-            <div className="font-medium">{model.displayName || model.name}</div>
-            {model.displayName && model.displayName !== model.name && (
-              <div className="text-sm text-gray-500">{model.name}</div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      id: 'type',
-      accessorFn: (model) => model.priceMetadata.type,
-      header: sortableHeader('Typ'),
-      cell: ({ row }) => <Chip label={row.original.priceMetadata.type} size="sm" />,
-    },
+    nameColumn(),
+    typeColumn(),
     booleanColumn('useBifrost', 'Bifrost'),
     {
       accessorKey: 'description',

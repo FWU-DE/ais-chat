@@ -4,7 +4,6 @@ import type { SensitiveLlmModel } from '@ais-chat/api-database';
 import { isBifrostProviderSyncError } from '@ais-chat/api-database/bifrost-provider-sync/error';
 import { logError } from '@shared/logging';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
-import type { Column, ColumnDef } from '@tanstack/react-table';
 import { Button } from '@ui/components/button';
 import {
   Card,
@@ -15,12 +14,12 @@ import {
   CardTitle,
 } from '@ui/components/card';
 import { Checkbox } from '@ui/components/checkbox';
-import { Chip } from '@ui/components/chip';
-import { DataTable, type DataTableFeatures } from '@ui/components/data-table';
-import { ArrowUpDownIcon } from 'lucide-react';
+import { DataTable } from '@ui/components/data-table';
 import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { type ModelColumn, nameColumn, typeColumn } from '@/app/(telli-api)/llms/model-columns';
+import { sortableHeader } from '@/components/common/SortableHeader';
 import { ModelApiKeyMapping } from '@/types/model-mappings';
 
 import {
@@ -31,36 +30,12 @@ import {
 
 type ModelRow = SensitiveLlmModel & { isAssigned: boolean; assignedAt: Date | null };
 
-type Col = ColumnDef<DataTableFeatures, ModelRow>;
-
-function SortableHeader({
-  column,
-  label,
-}: {
-  column: Column<DataTableFeatures, ModelRow>;
-  label: string;
-}) {
-  return (
-    <Button
-      variant="link"
-      className="p-0"
-      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-    >
-      {label}
-      <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-    </Button>
-  );
-}
-
-const sortableHeader = (label: string): Col['header'] =>
-  function Header({ column }) {
-    return <SortableHeader column={column} label={label} />;
-  };
+type Col = ModelColumn<ModelRow>;
 
 const columns: Col[] = [
   {
     id: 'assigned',
-    accessorFn: (model) => model.isAssigned,
+    accessorFn: (model) => model.assignedAt !== null,
     header: sortableHeader('Zugeordnet'),
     sortFn: 'basic',
     cell: ({ row }) => (
@@ -70,28 +45,8 @@ const columns: Col[] = [
       />
     ),
   },
-  {
-    id: 'name',
-    accessorFn: (model) => model.displayName || model.name,
-    header: sortableHeader('Name'),
-    cell: ({ row }) => {
-      const model = row.original;
-      return (
-        <div>
-          <div className="font-medium">{model.displayName || model.name}</div>
-          {model.displayName && model.name !== model.displayName && (
-            <div className="text-sm text-gray-500">{model.name}</div>
-          )}
-        </div>
-      );
-    },
-  },
-  {
-    id: 'type',
-    accessorFn: (model) => model.priceMetadata.type,
-    header: sortableHeader('Typ'),
-    cell: ({ row }) => <Chip label={row.original.priceMetadata.type} size="sm" />,
-  },
+  nameColumn(),
+  typeColumn(),
   {
     accessorKey: 'description',
     header: sortableHeader('Beschreibung'),

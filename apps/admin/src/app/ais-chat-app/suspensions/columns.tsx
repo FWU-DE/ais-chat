@@ -3,10 +3,9 @@
 import { SuspensionRequestEntityOverview } from '@shared/suspension/suspension-service';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
 import { ColumnDef } from '@tanstack/react-table';
-import { Button } from '@ui/components/button';
 import { DataTableFeatures } from '@ui/components/data-table';
-import { ArrowUpDownIcon } from 'lucide-react';
 
+import { sortableHeader } from '@/components/common/SortableHeader';
 import { mapEntityTypeToLabel } from '@/utils/mapEntityTypeToLabel';
 
 import { mapStatusToLabel } from './utils';
@@ -14,84 +13,29 @@ import { mapStatusToLabel } from './utils';
 export const columns: ColumnDef<DataTableFeatures, SuspensionRequestEntityOverview>[] = [
   {
     accessorKey: 'entityName',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="link"
-          className="p-0"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Name
-          <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: sortableHeader('Name'),
   },
   {
     accessorKey: 'entityType',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="link"
-          className="p-0"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Typ
-          <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: sortableHeader('Typ'),
     cell: ({ row }) => {
       return mapEntityTypeToLabel(row.original.entityType);
     },
   },
   {
     accessorKey: 'latestRequestAt',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="link"
-          className="p-0"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          zuletzt gemeldet am
-          <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: sortableHeader('zuletzt gemeldet am'),
     cell: ({ row }) => {
       return formatDateToGermanTimestamp(row.original.latestRequestAt);
     },
   },
   {
     accessorKey: 'requestCount',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="link"
-          className="p-0"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Anzahl Meldungen
-          <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: sortableHeader('Anzahl Meldungen'),
   },
   {
     accessorKey: 'status',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="link"
-          className="p-0"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Status
-          <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: sortableHeader('Status'),
     cell: ({ row }) => {
       return mapStatusToLabel(row.original.status);
     },

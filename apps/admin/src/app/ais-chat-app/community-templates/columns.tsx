@@ -3,10 +3,9 @@
 import type { CommunityTemplateRequestSummary } from '@shared/community-templates/community-template-service.admin';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
 import { ColumnDef } from '@tanstack/react-table';
-import { Button } from '@ui/components/button';
 import { DataTableFeatures } from '@ui/components/data-table';
-import { ArrowUpDownIcon } from 'lucide-react';
 
+import { sortableHeader } from '@/components/common/SortableHeader';
 import { mapEntityTypeToAbbreviation } from '@/utils/mapEntityTypeToLabel';
 
 export type CommunityTemplateRequestStatus = CommunityTemplateRequestSummary['state'];
@@ -24,70 +23,26 @@ export const communityTemplateRequestStatusOptions: Array<{
 export const columns: ColumnDef<DataTableFeatures, CommunityTemplateRequestSummary>[] = [
   {
     accessorKey: 'entityName',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="link"
-          className="p-0"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Name
-          <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: sortableHeader('Name'),
   },
 
   {
     accessorKey: 'entityType',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="link"
-          className="p-0"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Typ
-          <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: sortableHeader('Typ'),
     cell: ({ row }) => {
       return mapEntityTypeToAbbreviation(row.original.entityType);
     },
   },
   {
     accessorKey: 'latestEventCreatedAt',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="link"
-          className="p-0"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Zuletzt aktualisiert am
-          <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: sortableHeader('Zuletzt aktualisiert am'),
     cell: ({ row }) => {
       return formatDateToGermanTimestamp(row.original.latestEventCreatedAt);
     },
   },
   {
     accessorKey: 'latestEventCreatedByName',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="link"
-          className="p-0"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Zuletzt aktualisiert von
-          <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: sortableHeader('Zuletzt aktualisiert von'),
     cell: ({ row }) => {
       return buildCreatedByRoleAndNameLabel(
         row.original.latestEventCreatedByRole,
@@ -99,18 +54,7 @@ export const columns: ColumnDef<DataTableFeatures, CommunityTemplateRequestSumma
     accessorKey: 'state',
     filterFn: (row, _columnId, selectedStatuses: CommunityTemplateRequestStatus[]) =>
       selectedStatuses.length === 0 || selectedStatuses.includes(row.original.state),
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="link"
-          className="p-0"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Status
-          <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: sortableHeader('Status'),
     cell: ({ row }) => {
       return mapStateToLabel(row.original.state);
     },
