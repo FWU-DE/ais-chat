@@ -544,17 +544,6 @@ export function LearningScenarioEdit({
                     testId="learning-scenario-name-input"
                     onBlur={handleAutoSave}
                   />
-                  {(isSchoolShared || isCommunityShared || hasLinkAccess) && (
-                    <FormField
-                      name="author"
-                      control={control}
-                      label={tCommon('author-form-label')}
-                      placeholder={tCommon('author-form-placeholder')}
-                      tooltip={tCommon('author-form-tooltip')}
-                      testId="learning-scenario-author-input"
-                      onBlur={handleAutoSave}
-                    />
-                  )}
                   <FormField
                     name="description"
                     control={control}
@@ -658,7 +647,19 @@ export function LearningScenarioEdit({
               onShareChange={handleSharingChange}
               sharingPending={isSharingPending}
               suspended={learningScenario.suspended}
-            />
+            >
+              {(isSchoolShared || isCommunityShared || hasLinkAccess) && (
+                <FormField
+                  name="author"
+                  control={control}
+                  label={tCommon('author-form-label')}
+                  placeholder={tCommon('author-form-placeholder')}
+                  tooltip={tCommon('author-form-tooltip')}
+                  testId="learning-scenario-author-input"
+                  onBlur={handleAutoSave}
+                />
+              )}
+            </CustomShareSection>
             {communityTemplateRequest && (
               <CommunityTemplateRequest
                 requestWithEvents={communityTemplateRequest}

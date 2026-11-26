@@ -40,17 +40,16 @@ function Harness({ sharingPending }: { sharingPending: boolean }) {
   });
 
   return (
-    <>
+    <CustomShareSection
+      control={control}
+      schoolSharingName="isSchoolShared"
+      communitySharingName="isCommunityShared"
+      linkSharingName="hasLinkAccess"
+      linkToShare="/shared/entity"
+      sharingPending={sharingPending}
+    >
       <input aria-label="author" defaultValue="Author stays editable" />
-      <CustomShareSection
-        control={control}
-        schoolSharingName="isSchoolShared"
-        communitySharingName="isCommunityShared"
-        linkSharingName="hasLinkAccess"
-        linkToShare="/shared/entity"
-        sharingPending={sharingPending}
-      />
-    </>
+    </CustomShareSection>
   );
 }
 
@@ -110,6 +109,13 @@ describe('CustomChatShareSection pending state', () => {
     expectDisabled(controls.link, true);
     expectDisabled(controls.copyLink, true);
     expectDisabled(controls.author, false);
+    expect(controls.root?.contains(controls.author)).toBe(true);
+    expect(controls.author?.closest('[data-slot="card"]')).toBe(
+      controls.school?.closest('[data-slot="card"]'),
+    );
+    expect(
+      controls.school!.compareDocumentPosition(controls.author!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('restores sharing controls when pending completes', async () => {

@@ -110,7 +110,7 @@ export function defineTemplateAuthorshipTests(entity: TemplateAuthorshipEntity) 
       const updatedAuthor = `TD-1710 updated ${entity.label} author ${nanoid(8)}`;
       const finalAuthor = `TD-1710 final ${entity.label} author ${nanoid(8)}`;
       const retainedAuthor = `${finalAuthor} & Coauthor`;
-      const author = page.getByLabel(/Autorinnen und Autoren/i).first();
+      const author = page.getByLabel('Autor/Autorin dieser Vorlage', { exact: true });
 
       await createEntity(page, name, testInfo);
       await expect(author).toBeHidden();
@@ -214,7 +214,7 @@ export function defineTemplateAuthorshipTests(entity: TemplateAuthorshipEntity) 
       const name = `Community authorship ${entity.label} ${nanoid(8)}`;
       const requestAuthor = `TD-1710 community ${entity.label} author ${nanoid(8)}`;
       const activeAuthor = `TD-1710 active ${entity.label} author ${nanoid(8)}`;
-      const author = page.getByLabel(/Autorinnen und Autoren/i).first();
+      const author = page.getByLabel('Autor/Autorin dieser Vorlage', { exact: true });
 
       await createEntity(page, name, testInfo);
       const editorPath = page.url();

@@ -2,12 +2,12 @@
 
 import { LinkIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
-import { Card, CardRow } from '@ui/components/card';
+import { Card, CardContent, CardRow } from '@ui/components/card';
 import { Checkbox } from '@ui/components/checkbox';
 import CheckboxWithInfo from '@ui/components/common/checkbox-with-info';
-import { FieldLabel } from '@ui/components/field';
+import { FieldGroup, FieldLabel } from '@ui/components/field';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Control, FieldValues, Path, useController, useWatch } from 'react-hook-form';
 
 import { useToast } from '@/components/common/toast';
@@ -26,6 +26,7 @@ type CustomShareSectionProps<T extends FieldValues> = {
   onShareChange?: (change: { name: Path<T>; checked: boolean }) => void;
   suspended?: boolean;
   sharingPending?: boolean;
+  children?: ReactNode;
 };
 
 export default function CustomShareSection<T extends FieldValues>({
@@ -37,6 +38,7 @@ export default function CustomShareSection<T extends FieldValues>({
   onShareChange,
   suspended,
   sharingPending,
+  children,
 }: CustomShareSectionProps<T>) {
   const t = useTranslations('sharing');
   const toast = useToast();
@@ -151,6 +153,11 @@ export default function CustomShareSection<T extends FieldValues>({
             {t('copy-link')}
           </Button>
         </CardRow>
+        {children && (
+          <CardContent>
+            <FieldGroup>{children}</FieldGroup>
+          </CardContent>
+        )}
       </Card>
 
       {communitySharingName && (

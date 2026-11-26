@@ -459,17 +459,6 @@ export function AssistantEdit({
                   testId="assistant-name-input"
                   onBlur={handleAutoSave}
                 />
-                {(isSchoolShared || isCommunityShared || hasLinkAccess) && (
-                  <FormField
-                    name="author"
-                    control={control}
-                    label={tCommon('author-form-label')}
-                    placeholder={tCommon('author-form-placeholder')}
-                    tooltip={tCommon('author-form-tooltip')}
-                    testId="assistant-author-input"
-                    onBlur={handleAutoSave}
-                  />
-                )}
                 <FormField
                   name="description"
                   control={control}
@@ -552,7 +541,19 @@ export function AssistantEdit({
             onShareChange={handleSharingChange}
             sharingPending={isSharingPending}
             suspended={assistant.suspended}
-          />
+          >
+            {(isSchoolShared || isCommunityShared || hasLinkAccess) && (
+              <FormField
+                name="author"
+                control={control}
+                label={tCommon('author-form-label')}
+                placeholder={tCommon('author-form-placeholder')}
+                tooltip={tCommon('author-form-tooltip')}
+                testId="assistant-author-input"
+                onBlur={handleAutoSave}
+              />
+            )}
+          </CustomShareSection>
           {communityTemplateRequest && (
             <CommunityTemplateRequest
               requestWithEvents={communityTemplateRequest}

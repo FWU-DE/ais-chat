@@ -521,17 +521,6 @@ export function CharacterEdit({
                   testId="character-name-input"
                   onBlur={handleAutoSave}
                 />
-                {(isSchoolShared || isCommunityShared || hasLinkAccess) && (
-                  <FormField
-                    name="author"
-                    control={control}
-                    label={tCommon('author-form-label')}
-                    placeholder={tCommon('author-form-placeholder')}
-                    tooltip={tCommon('author-form-tooltip')}
-                    testId="character-author-input"
-                    onBlur={handleAutoSave}
-                  />
-                )}
                 <FormField
                   name="description"
                   control={control}
@@ -633,7 +622,19 @@ export function CharacterEdit({
             onShareChange={handleSharingChange}
             sharingPending={isSharingPending}
             suspended={character.suspended}
-          />
+          >
+            {(isSchoolShared || isCommunityShared || hasLinkAccess) && (
+              <FormField
+                name="author"
+                control={control}
+                label={tCommon('author-form-label')}
+                placeholder={tCommon('author-form-placeholder')}
+                tooltip={tCommon('author-form-tooltip')}
+                testId="character-author-input"
+                onBlur={handleAutoSave}
+              />
+            )}
+          </CustomShareSection>
           {communityTemplateRequest && (
             <CommunityTemplateRequest
               requestWithEvents={communityTemplateRequest}
