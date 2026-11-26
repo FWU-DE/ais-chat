@@ -2,6 +2,7 @@ import {
   ApiKeyQuotaExceededError,
   ApiKeyUnusableError,
   EmptyResponseError,
+  GenerationTimeoutError,
   InvalidModelError,
   ProviderRateLimitExceededError,
   ResponsibleAIError,
@@ -35,6 +36,7 @@ describe('getErrorMessageByType', () => {
     expect(getErrorMessageByType(new InvalidModelError('Invalid model'))).toBe(
       'invalid-model-error',
     );
+    expect(getErrorMessageByType(new GenerationTimeoutError())).toBe('generation-timeout-error');
   });
 
   it('returns not-found key for NotFoundError', () => {
