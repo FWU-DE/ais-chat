@@ -115,6 +115,7 @@ function createAssistantFieldValidationConfig(t: AssistantTranslator) {
 function createAssistantFormValuesSchema(t: AssistantTranslator) {
   return z.object({
     name: z.string().trim().min(1, t('name-required')).max(SMALL_TEXT_INPUT_FIELDS_LIMIT),
+    author: z.string(),
     description: z.string(),
     instructions: z.string(),
     didacticCommentary: z.string().max(DIDACTIC_COMMENTARY_LENGTH_LIMIT),
@@ -174,6 +175,7 @@ export function AssistantEdit({
   const router = useRouter();
   const toast = useToast();
   const t = useTranslations('assistants');
+  const tCommon = useTranslations('common');
   const tChat = useTranslations('custom-chat');
   const assistantFormValuesSchema = useMemo(() => createAssistantFormValuesSchema(t), [t]);
   const assistantFieldValidationConfig = useMemo(
@@ -183,6 +185,7 @@ export function AssistantEdit({
   const filterValues = extractFilterValues(assistant);
   const initialValues: AssistantFormValues = {
     name: assistant.name,
+    author: assistant.author ?? '',
     description: assistant.description ?? '',
     instructions: assistant.instructions ?? '',
     didacticCommentary: assistant.didacticCommentary,
@@ -243,6 +246,7 @@ export function AssistantEdit({
         const updateResult = await updateAssistantAction({
           assistantId: assistant.id,
           name: data.name.trim(),
+          author: data.author,
           description: data.description,
           instructions: data.instructions,
           didacticCommentary: data.didacticCommentary.trimEnd(),
@@ -269,6 +273,7 @@ export function AssistantEdit({
     createCommunityTemplateRequest,
     sendMessageToEditor,
     handleSharingChange,
+    isSharingPending,
   } = useEntitySharing({
     setValue,
     initialRequest: initialCommunityTemplateRequest,
@@ -284,7 +289,7 @@ export function AssistantEdit({
         updateAssistantSchoolSharingAction({ assistantId: assistant.id, isSchoolShared }),
     },
     onError: () => toast.error(t('toasts.edit-toast-error')),
-    onSuccess: flushAutoSave,
+    flushAutoSave,
   });
 
   const name = useWatch({ control, name: 'name' });
@@ -534,8 +539,21 @@ export function AssistantEdit({
             linkSharingName="hasLinkAccess"
             linkToShare={`/assistants/${assistant.id}`}
             onShareChange={handleSharingChange}
+            sharingPending={isSharingPending}
             suspended={assistant.suspended}
-          />
+          >
+            {(isSchoolShared || isCommunityShared || hasLinkAccess) && (
+              <FormField
+                name="author"
+                control={control}
+                label={tCommon('author-form-label')}
+                placeholder={tCommon('author-form-placeholder')}
+                tooltip={tCommon('author-form-tooltip')}
+                testId="assistant-author-input"
+                onBlur={handleAutoSave}
+              />
+            )}
+          </CustomShareSection>
           {communityTemplateRequest && (
             <CommunityTemplateRequest
               requestWithEvents={communityTemplateRequest}

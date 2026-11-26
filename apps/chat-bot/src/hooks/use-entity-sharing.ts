@@ -3,7 +3,7 @@
 import { ServerActionResult } from '@shared/actions/server-action-result';
 import { isCommunitySharingActive } from '@shared/community-templates/community-sharing-state';
 import { CommunityTemplateRequestWithEvents } from '@shared/community-templates/community-template-service';
-import { useCallback } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { UseFormSetValue } from 'react-hook-form';
 
 import {
@@ -29,7 +29,7 @@ type UseEntitySharingOptions<TFormValues extends SharingFormFields> = {
     updateSchoolSharing: (isSchoolShared: boolean) => Promise<{ success: boolean }>;
   };
   onError: () => void;
-  onSuccess: () => Promise<unknown>;
+  flushAutoSave: () => Promise<unknown>;
 };
 
 /**
@@ -41,7 +41,7 @@ export function useEntitySharing<TFormValues extends SharingFormFields>({
   initialRequest,
   actions,
   onError,
-  onSuccess,
+  flushAutoSave,
 }: UseEntitySharingOptions<TFormValues>) {
   const applySharingState = useCallback(
     ({ entity, request }: CommunitySharingState) => {
@@ -75,6 +75,46 @@ export function useEntitySharing<TFormValues extends SharingFormFields>({
     onSharingStateChange: applySharingState,
   });
 
+  const [isSharingPending, setIsSharingPending] = useState(false);
+  const pendingOperationCount = useRef(0);
+  const sharingOperationQueue = useRef(Promise.resolve());
+
+  // One queue orders all request snapshots; only sharing changes need form flushes.
+  const runSharingOperation = <T>(
+    operation: () => Promise<T>,
+    { flushForm = true }: { flushForm?: boolean } = {},
+  ) => {
+    pendingOperationCount.current += 1;
+    setIsSharingPending(true);
+
+    const queuedOperation = sharingOperationQueue.current
+      .then(async () => {
+        if (flushForm) {
+          await flushAutoSave();
+        }
+        try {
+          return await operation();
+        } finally {
+          if (flushForm) {
+            await flushAutoSave();
+          }
+        }
+      })
+      .finally(() => {
+        pendingOperationCount.current -= 1;
+        if (pendingOperationCount.current === 0) {
+          setIsSharingPending(false);
+        }
+      });
+
+    sharingOperationQueue.current = queuedOperation.then(
+      () => undefined,
+      () => undefined,
+    );
+
+    return queuedOperation;
+  };
+
   // Resyncs only the sharing fields after a failed mutation, leaving other unsaved fields untouched.
   const refreshSharingState = async () => {
     const result = await actions.getEntitySharingState();
@@ -84,27 +124,29 @@ export function useEntitySharing<TFormValues extends SharingFormFields>({
     }
   };
 
-  const handleSharingChange = async ({ name, checked }: { name: string; checked: boolean }) => {
-    let result: { success: boolean } | undefined;
-    if (name === 'isCommunityShared') {
-      result = checked ? await createRequest() : await cancelRequest();
-    } else if (name === 'isSchoolShared') {
-      result = await actions.updateSchoolSharing(checked);
-    }
+  const handleSharingChange = ({ name, checked }: { name: string; checked: boolean }) =>
+    runSharingOperation(async () => {
+      let result: { success: boolean } | undefined;
+      if (name === 'isCommunityShared') {
+        result = checked ? await createRequest() : await cancelRequest();
+      } else if (name === 'isSchoolShared') {
+        result = await actions.updateSchoolSharing(checked);
+      }
 
-    if (result && !result.success) {
-      await refreshSharingState();
-      onError();
-      return;
-    }
+      if (result && !result.success) {
+        await refreshSharingState();
+        onError();
+      }
+    });
 
-    await onSuccess();
-  };
+  const createCommunityTemplateRequest = () => runSharingOperation(() => createRequest());
 
   return {
     communityTemplateRequest,
-    createCommunityTemplateRequest: createRequest,
-    sendMessageToEditor: sendMessage,
+    createCommunityTemplateRequest,
+    sendMessageToEditor: (message: string) =>
+      runSharingOperation(() => sendMessage(message), { flushForm: false }),
     handleSharingChange,
+    isSharingPending,
   };
 }

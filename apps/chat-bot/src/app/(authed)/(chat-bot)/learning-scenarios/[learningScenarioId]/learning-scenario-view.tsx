@@ -194,7 +194,7 @@ export function LearningScenarioView({
           </CardContent>
         </Card>
 
-        {learningScenario.isGlobal && (
+        {(learningScenario.isGlobal || learningScenario.author.trim() !== '') && (
           <CustomChatAuthorInfo
             authorLabel={t('author-label')}
             authorText={learningScenario.author !== '' ? learningScenario.author : t('author-text')}

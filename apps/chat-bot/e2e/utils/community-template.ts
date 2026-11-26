@@ -1,4 +1,9 @@
+import { randomUUID } from 'node:crypto';
+
 import { expect, Page } from '@playwright/test';
+import { approveRequest } from '@shared/community-templates/community-template-service.admin';
+import { dbGetTemplateRequestForEntity } from '@shared/community-templates/db-functions';
+import type { EntityRef } from '@shared/entities/entity-types';
 
 /**
  * Helpers for the community template workflow, shared between the chat-bot
@@ -8,6 +13,16 @@ import { expect, Page } from '@playwright/test';
  */
 
 const CONFIRMATION_CHECKBOX_SELECTOR = '[data-testid^="community-confirmation-items-"]';
+
+/** Approves test setup through the real service without repeating the admin UI workflow. */
+export async function approveRequestForEntity(entityRef: EntityRef): Promise<void> {
+  const request = await dbGetTemplateRequestForEntity(entityRef);
+  if (!request) {
+    throw new Error(`No community template request found for ${entityRef.entityId}`);
+  }
+
+  await approveRequest(request.id, randomUUID(), 'E2E editor');
+}
 
 /**
  * Submits the currently open character/assistant/learning-scenario to the

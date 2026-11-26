@@ -73,6 +73,9 @@ vi.mock('../db/functions/character', () => ({
 vi.mock('../db/functions/files', () => ({
   dbGetRelatedCharacterFiles: vi.fn(),
 }));
+vi.mock('@shared/community-templates/community-template-service', () => ({
+  verifyCommunitySharingInactive: vi.fn(),
+}));
 vi.mock('@shared/db/functions/user-favorites', () => ({
   dbIsUserFavorite: vi.fn().mockResolvedValue(false),
 }));
@@ -283,7 +286,7 @@ describe('character-service', () => {
           updateCharacter({
             id: generateUUID(),
             user: { id: 'different-user-id' },
-            name: 'new-name',
+            author: 'Unauthorized credit',
           }),
       },
       {
@@ -385,29 +388,32 @@ describe('character-service', () => {
   });
 
   describe('sharing updates preserve updatedAt', () => {
-    it('preserves updatedAt when only isSchoolShared changes', async () => {
+    it('retains the author when withdrawing school sharing and preserves updatedAt', async () => {
       const userId = generateUUID();
       const characterId = generateUUID();
       const updatedAt = new Date('2026-06-01T10:00:00.000Z');
       const character = {
         id: characterId,
         userId,
+        author: 'Existing credited author',
+        isSchoolShared: true,
         hasLinkAccess: false,
         updatedAt,
       } as Partial<CharacterSelectModel>;
 
       vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
       mockDbReturning.mockResolvedValue([
-        { ...character, isSchoolShared: true } as CharacterSelectModel,
+        { ...character, isSchoolShared: false } as CharacterSelectModel,
       ]);
 
-      await updateCharacterSchoolSharing({
+      const result = await updateCharacterSchoolSharing({
         characterId,
         user: { id: userId },
-        isSchoolShared: true,
+        isSchoolShared: false,
       });
 
-      expect(mockDbSet).toHaveBeenCalledWith({ isSchoolShared: true, updatedAt });
+      expect(mockDbSet).toHaveBeenCalledWith({ isSchoolShared: false, updatedAt });
+      expect(result.author).toBe('Existing credited author');
     });
 
     it('preserves updatedAt when only hasLinkAccess changes', async () => {
@@ -429,6 +435,39 @@ describe('character-service', () => {
       await updateCharacter({ id: characterId, user: { id: userId }, hasLinkAccess: true });
 
       expect(mockDbSet).toHaveBeenCalledWith({ id: characterId, hasLinkAccess: true, updatedAt });
+    });
+
+    it('updates an existing author credit without changing sharing state', async () => {
+      const userId = generateUUID();
+      const characterId = generateUUID();
+      const character = { id: characterId, userId, author: 'Old credit' };
+
+      vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
+      mockDbReturning.mockResolvedValue([{ ...character, author: 'Ada Lovelace & Alan Turing' }]);
+
+      await updateCharacter({
+        id: characterId,
+        user: { id: userId },
+        author: 'Ada Lovelace & Alan Turing',
+      });
+
+      expect(mockDbSet).toHaveBeenCalledWith({
+        id: characterId,
+        author: 'Ada Lovelace & Alan Turing',
+      });
+    });
+
+    it('allows clearing an existing author credit with an empty string', async () => {
+      const userId = generateUUID();
+      const characterId = generateUUID();
+      const character = { id: characterId, userId, author: 'Existing credit' };
+
+      vi.mocked(dbGetCharacterById).mockResolvedValue(character as never);
+      mockDbReturning.mockResolvedValue([{ ...character, author: '' }]);
+
+      await updateCharacter({ id: characterId, user: { id: userId }, author: '' });
+
+      expect(mockDbSet).toHaveBeenCalledWith({ id: characterId, author: '' });
     });
 
     it('ignores a popularity value sent by the owner', async () => {

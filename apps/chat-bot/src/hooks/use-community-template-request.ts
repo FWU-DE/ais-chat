@@ -46,32 +46,37 @@ export function useCommunityTemplateRequest({
 }: UseCommunityTemplateRequestOptions): UseCommunityTemplateRequestResult {
   const [communityTemplateRequest, setCommunityTemplateRequest] =
     useState<CommunityTemplateRequestWithEvents | null>(initialRequest);
+  const runMutation = async <T>(mutation: () => Promise<T>, applyResult: (result: T) => void) => {
+    const result = await mutation();
+    applyResult(result);
+    return result;
+  };
 
   return {
     communityTemplateRequest,
     setCommunityTemplateRequest,
-    createRequest: async () => {
-      const result = await createRequest();
-      if (result.success) {
-        setCommunityTemplateRequest(result.value.request);
-        onSharingStateChange(result.value);
-      }
-      return result;
-    },
-    cancelRequest: async () => {
-      const result = await cancelRequest();
-      if (result.success) {
-        setCommunityTemplateRequest(result.value.request);
-        onSharingStateChange(result.value);
-      }
-      return result;
-    },
-    sendMessage: async (message: string) => {
-      const result = await sendMessage(message);
-      if (result.success) {
-        setCommunityTemplateRequest(result.value.request);
-      }
-      return result;
-    },
+    createRequest: () =>
+      runMutation(createRequest, (result) => {
+        if (result.success) {
+          setCommunityTemplateRequest(result.value.request);
+          onSharingStateChange(result.value);
+        }
+      }),
+    cancelRequest: () =>
+      runMutation(cancelRequest, (result) => {
+        if (result.success) {
+          setCommunityTemplateRequest(result.value.request);
+          onSharingStateChange(result.value);
+        }
+      }),
+    sendMessage: (message: string) =>
+      runMutation(
+        () => sendMessage(message),
+        (result) => {
+          if (result.success) {
+            setCommunityTemplateRequest(result.value.request);
+          }
+        },
+      ),
   };
 }

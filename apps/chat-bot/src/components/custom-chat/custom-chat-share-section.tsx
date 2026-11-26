@@ -2,12 +2,12 @@
 
 import { LinkIcon } from '@phosphor-icons/react';
 import { Button } from '@ui/components/button';
-import { Card, CardRow } from '@ui/components/card';
+import { Card, CardContent, CardRow } from '@ui/components/card';
 import { Checkbox } from '@ui/components/checkbox';
 import CheckboxWithInfo from '@ui/components/common/checkbox-with-info';
-import { FieldLabel } from '@ui/components/field';
+import { FieldGroup, FieldLabel } from '@ui/components/field';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Control, FieldValues, Path, useController, useWatch } from 'react-hook-form';
 
 import { useToast } from '@/components/common/toast';
@@ -25,6 +25,8 @@ type CustomShareSectionProps<T extends FieldValues> = {
   linkToShare: string;
   onShareChange?: (change: { name: Path<T>; checked: boolean }) => void;
   suspended?: boolean;
+  sharingPending?: boolean;
+  children?: ReactNode;
 };
 
 export default function CustomShareSection<T extends FieldValues>({
@@ -35,9 +37,12 @@ export default function CustomShareSection<T extends FieldValues>({
   linkToShare,
   onShareChange,
   suspended,
+  sharingPending,
+  children,
 }: CustomShareSectionProps<T>) {
   const t = useTranslations('sharing');
   const toast = useToast();
+  const [isClientMounted, setIsClientMounted] = useState(false);
   const [isCommunityConfirmOpen, setIsCommunityConfirmOpen] = useState(false);
   const [isCommunityRemovalConfirmOpen, setIsCommunityRemovalConfirmOpen] = useState(false);
   const { field: communityField } = useController({
@@ -58,6 +63,13 @@ export default function CustomShareSection<T extends FieldValues>({
   );
 
   const federalState = useFederalState();
+  const isBusy = !isClientMounted || Boolean(sharingPending);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      setIsClientMounted(true);
+    });
+  }, []);
 
   async function handleCopyLink() {
     const url = new URL(linkToShare, window.location.origin);
@@ -70,7 +82,7 @@ export default function CustomShareSection<T extends FieldValues>({
   }
 
   return (
-    <div className="flex flex-col gap-3 mt-10" id="share-settings">
+    <div className="flex flex-col gap-3 mt-10" id="share-settings" aria-busy={isBusy}>
       <CustomChatHeading2 text={t('label')} />
       <Card>
         <CardRow className="justify-center sm:justify-start">
@@ -81,7 +93,7 @@ export default function CustomShareSection<T extends FieldValues>({
               label={t('school')}
               tooltip={t('school-tooltip')}
               testId="school-sharing-checkbox"
-              disabled={suspended || isCommunityShared}
+              disabled={suspended || isBusy || isCommunityShared}
               onCheckedChange={(checked) => {
                 onShareChange?.({ name: schoolSharingName, checked });
               }}
@@ -95,7 +107,7 @@ export default function CustomShareSection<T extends FieldValues>({
                   aria-label={t('community')}
                   data-testid="community-sharing-checkbox"
                   checked={communityField.value}
-                  disabled={suspended}
+                  disabled={suspended || isBusy}
                   onCheckedChange={(checked) => {
                     const nextChecked = checked === true;
                     if (!nextChecked) {
@@ -124,7 +136,7 @@ export default function CustomShareSection<T extends FieldValues>({
             control={control}
             label={t('link')}
             tooltip={t('link-tooltip')}
-            disabled={suspended || isCommunityShared}
+            disabled={suspended || isBusy || isCommunityShared}
             onCheckedChange={(checked) => {
               onShareChange?.({ name: linkSharingName, checked });
             }}
@@ -132,7 +144,7 @@ export default function CustomShareSection<T extends FieldValues>({
 
           <Button
             className="shrink-0"
-            disabled={(!isLinkSharingEnabled && !isCommunityShared) || suspended}
+            disabled={(!isLinkSharingEnabled && !isCommunityShared) || suspended || isBusy}
             onClick={handleCopyLink}
             aria-label={t('copy-link')}
             type="button"
@@ -141,6 +153,11 @@ export default function CustomShareSection<T extends FieldValues>({
             {t('copy-link')}
           </Button>
         </CardRow>
+        {children && (
+          <CardContent>
+            <FieldGroup>{children}</FieldGroup>
+          </CardContent>
+        )}
       </Card>
 
       {communitySharingName && (
