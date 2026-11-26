@@ -50,7 +50,7 @@ export async function syncBifrostProviders(
     throw new BifrostProviderSyncError();
   }
 
-  await deleteStaleManagedProviders(providerConfigs, options);
+  await deleteStaleManagedProviders(providerConfigs, { ...options, bifrostAdminUrl });
 
   await ensureBifrostVirtualKeyProviderAccess({
     bifrostAdminUrl,
