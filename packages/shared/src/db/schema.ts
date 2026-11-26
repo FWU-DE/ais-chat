@@ -187,9 +187,9 @@ export const conversationMessageTable = pgTable(
     orderNumber: integer('order_number').notNull(),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp('deleted_at', { mode: 'date', withTimezone: true }),
-    // Intentionally json, not jsonb: converting rewrites and locks this large table on deploy.
+    // Intentionally json, not jsonb: conversion rewrites this large table and holds a lock on deploy, making the app unavailable for a potentially long time.
     parameters: json('parameters').$type<ConversationMessageParameters>(),
-    // Intentionally json, not jsonb: converting rewrites and locks this large table on deploy.
+    // Intentionally json, not jsonb: conversion rewrites this large table and holds a lock on deploy, making the app unavailable for a potentially long time.
     toolCalls: json('tool_calls').$type<ToolCall[]>(),
     toolCallId: text('tool_call_id'),
     reasoningSummary: text('reasoning_summary'),
@@ -1085,7 +1085,7 @@ export const sharedChatConversationMessageTable = pgTable(
     content: text('content').notNull(),
     role: conversationRoleEnum('role').notNull(),
     orderNumber: integer('order_number').notNull(),
-    // Intentionally json, not jsonb: converting rewrites and locks this large table on deploy.
+    // Intentionally json, not jsonb: conversion rewrites this large table and holds a lock on deploy, making the app unavailable for a potentially long time.
     toolCalls: json('tool_calls').$type<ToolCall[]>(),
     toolCallId: text('tool_call_id'),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
