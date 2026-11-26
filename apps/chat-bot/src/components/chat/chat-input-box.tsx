@@ -40,6 +40,7 @@ export function ChatInputBox({
   enableFileUpload = false,
   fileUploadFn,
   showPlaceholder = true,
+  unlockAudioOnSubmit = false,
 }: {
   files?: Map<string, LocalFileState>;
   setFiles?: Dispatch<SetStateAction<Map<string, LocalFileState>>>;
@@ -52,6 +53,8 @@ export function ChatInputBox({
   enableFileUpload?: boolean;
   fileUploadFn?: (file: File) => Promise<FileUploadResponse>;
   showPlaceholder?: boolean;
+  /** Set when replies autoplay speech (audio-only mode), so playback is unlocked on submit. */
+  unlockAudioOnSubmit?: boolean;
 }) {
   const tChat = useTranslations('chat');
   const tCommon = useTranslations('common');
@@ -105,9 +108,11 @@ export function ChatInputBox({
   const canSubmit = input.trim().length > 0 && !hasUploadingFiles;
 
   // Single entry point for every submit, so speech that autoplays later (speech-only replies have
-  // no user gesture of their own) is always unlocked while this gesture is still active.
+  // no user gesture of their own) is unlocked while this gesture is still active.
   async function handleSubmit(e: SyntheticEvent) {
-    unlockAudioPlayback();
+    if (unlockAudioOnSubmit) {
+      unlockAudioPlayback();
+    }
     await customHandleSubmit(e);
   }
 

@@ -134,6 +134,7 @@ export default function GenericSharedChat({
   const tCustomChat = useTranslations('custom-chat.shared');
   const { shareSessionState } = calculateShareSessionState(entity);
   const chatActive = shareSessionState === ShareSessionState.RUNNING;
+  const isSpeechOnly = speechOnly && isSpeechModelEnabled;
 
   const [explicitDialogStarted, setExplicitDialogStarted] = useState(false);
   const [sharedSessionId, setSharedSessionId] = useState(
@@ -422,7 +423,7 @@ export default function GenericSharedChat({
                 showActivityDialog={showActivityDialog}
                 generateSpeechStreamFn={generateSpeechStreamFn}
                 isSpeechModelEnabled={isSpeechModelEnabled}
-                speechOnly={speechOnly}
+                speechOnly={isSpeechOnly}
                 sharedChat={{
                   inviteCode,
                   entityType: sharedEntityType,
@@ -458,6 +459,7 @@ export default function GenericSharedChat({
                   }
                   handleDeattachFile={handleDeattachFile}
                   showPlaceholder={false}
+                  unlockAudioOnSubmit={isSpeechOnly}
                 />
               </div>
             )}
