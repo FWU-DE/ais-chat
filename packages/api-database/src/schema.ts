@@ -3,7 +3,6 @@ import {
   doublePrecision,
   index,
   integer,
-  json,
   jsonb,
   pgEnum,
   pgTable,
@@ -38,14 +37,14 @@ export const llmModelTable = pgTable('llm_model', {
   name: text('name').notNull(),
   displayName: text('display_name').notNull(),
   description: text('description').notNull().default(''),
-  setting: json('settings').$type<LlmModelProviderSettings>().notNull(),
+  setting: jsonb('settings').$type<LlmModelProviderSettings>().notNull(),
   useBifrost: boolean('use_bifrost').notNull().default(true),
   priceMetadata: jsonb('price_metadata').$type<LlmModelPriceMetadata>().notNull(),
   createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-  supportedImageFormats: json('supported_image_formats').$type<string[]>().notNull().default([]),
+  supportedImageFormats: jsonb('supported_image_formats').$type<string[]>().notNull().default([]),
   imageGenerationConfig: jsonb('image_generation_config').$type<ImageGenerationConfig>(),
   modelConfig: jsonb('model_config').$type<SpeechConfig>(),
-  additionalParameters: json('additional_parameters')
+  additionalParameters: jsonb('additional_parameters')
     .$type<Record<string, unknown>>()
     .notNull()
     .default({}),
@@ -74,7 +73,7 @@ export const llmProviderKeyTable = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
     provider: text('provider').notNull(),
-    settings: json('settings').$type<LlmProviderKeySettings>().notNull(),
+    settings: jsonb('settings').$type<LlmProviderKeySettings>().notNull(),
     weight: doublePrecision('weight').notNull().default(1),
     isEnabled: boolean('is_enabled').notNull().default(true),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
