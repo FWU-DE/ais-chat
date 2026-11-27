@@ -211,16 +211,17 @@ export function runAgentLoop({
                 } else if (event.type === 'reasoning_summary') {
                   onReasoningSummary?.(event.delta, event.part);
                 } else if (event.type === 'tool_call') {
+                  const call = {
+                    ...event.call,
+                    arguments: unwrapTypedArguments(event.call.arguments),
+                  };
                   if (pendingToolCalls.length < MAX_TOOL_CALLS_PER_ITERATION) {
                     // On last iteration, tools are disabled but model might still emit tool calls
                     if (!isLastIteration) {
-                      pendingToolCalls.push({
-                        ...event.call,
-                        arguments: unwrapTypedArguments(event.call.arguments),
-                      });
+                      pendingToolCalls.push(call);
                     }
                   } else {
-                    overBudgetToolCalls.push(event.call);
+                    overBudgetToolCalls.push(call);
                   }
                 }
               }

@@ -633,6 +633,52 @@ describe('agent-loop', () => {
     expect(toolResultMessages[9].content).toContain('Tool call budget exceeded');
   });
 
+  it('unwraps arguments of over-budget tool calls in the generated messages', async () => {
+    const onComplete = vi.fn();
+    const wrappedArguments = '{"input": {"type": "string", "value": "value"}}';
+
+    let callCount = 0;
+    mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+      callCount++;
+      if (callCount === 1) {
+        for (let toolIndex = 1; toolIndex <= 10; toolIndex++) {
+          yield {
+            type: 'tool_call',
+            call: { id: `call_${toolIndex}`, name: 'test_tool', arguments: wrappedArguments },
+          } satisfies StreamEvent;
+        }
+        yield { type: 'finish', usage } satisfies StreamEvent;
+      } else {
+        yield { type: 'text', delta: 'Done.' } satisfies StreamEvent;
+        yield { type: 'finish', usage } satisfies StreamEvent;
+      }
+    });
+
+    runAgentLoop({
+      modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+      apiKeyId: 'test-key',
+      messages: [{ role: 'user', content: 'Test query' }],
+      toolRegistry: {
+        test_tool: {
+          definition: { name: 'test_tool', description: 'Test', parameters: {} },
+          handler: async () => ({ value: 'ok' }),
+        },
+      },
+      agentName: 'Test Agent',
+      onTextChunk: vi.fn(),
+      onComplete,
+      onError: vi.fn(),
+    });
+
+    await expect.poll(() => onComplete).toHaveBeenCalled();
+
+    const toolCalls = onComplete.mock.calls[0]?.[0].agentLoopMessages[0]?.toolCalls;
+    expect(toolCalls).toHaveLength(10);
+    expect(toolCalls.map((call: { arguments: string }) => call.arguments)).toEqual(
+      Array(10).fill('{"input":"value"}'),
+    );
+  });
+
   describe('Sentry instrumentation', () => {
     it('creates Sentry span for agent invocation', async () => {
       const messages: Message[] = [{ role: 'user', content: 'Test query' }];
