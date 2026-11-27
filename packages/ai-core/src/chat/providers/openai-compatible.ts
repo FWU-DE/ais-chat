@@ -161,18 +161,22 @@ export async function* streamOpenAICompatibleAgenticResponse({
     return;
   }
 
-  const knownCallIds = new Set(
-    [...toolCalls.values()].flatMap(({ id, callId }) => [id, callId]).filter(Boolean),
-  );
-  // Some providers only report a call in the completed response, without any item events.
+  // The completed response is the final state of every call. It updates calls already seen in
+  // item events and adds calls that were only reported there, without any item events.
   for (const item of completedFunctionCalls) {
-    if (knownCallIds.has(item.call_id) || (item.id && knownCallIds.has(item.id))) {
-      continue;
-    }
+    const knownToolCall = [...toolCalls.values()].find(
+      ({ id, callId }) =>
+        (id && (id === item.id || id === item.call_id)) ||
+        (callId && (callId === item.call_id || callId === item.id)),
+    );
 
-    const toolCall = createToolCallAccumulator();
-    applyFunctionCallItem(toolCall, item);
-    toolCalls.set(Math.max(-1, ...toolCalls.keys()) + 1, toolCall);
+    if (knownToolCall) {
+      applyFunctionCallItem(knownToolCall, item);
+    } else {
+      const toolCall = createToolCallAccumulator();
+      applyFunctionCallItem(toolCall, item);
+      toolCalls.set(Math.max(-1, ...toolCalls.keys()) + 1, toolCall);
+    }
   }
 
   const resolvedToolCalls: ToolCall[] = [];

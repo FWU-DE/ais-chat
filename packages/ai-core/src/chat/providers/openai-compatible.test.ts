@@ -116,6 +116,32 @@ describe('streamOpenAICompatibleAgenticResponse', () => {
       ]);
     });
 
+    it('takes the final arguments from the completed response for a call seen in item events', async () => {
+      const item = {
+        type: 'function_call',
+        id: 'call-1',
+        call_id: 'call-1',
+        name: 'test_tool',
+        arguments: '',
+      };
+
+      const events = await collect([
+        { type: 'response.output_item.added', output_index: 0, item },
+        {
+          type: 'response.completed',
+          response: { usage, output: [{ ...item, arguments: '{"input":"value"}' }] },
+        },
+      ]);
+
+      expect(events).toEqual([
+        {
+          type: 'tool_call',
+          call: { id: 'call-1', name: 'test_tool', arguments: '{"input":"value"}' },
+        },
+        { type: 'finish', usage: expectedUsage },
+      ]);
+    });
+
     it('does not duplicate the arguments of a streamed tool call', async () => {
       const args = '{"input": "value", "optional": null}';
       const item = {
