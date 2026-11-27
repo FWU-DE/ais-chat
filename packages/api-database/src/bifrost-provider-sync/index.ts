@@ -1,8 +1,9 @@
 import { dbGetAllProviderKeysWithModels, type LlmProviderKeyWithModels } from '../functions';
-import { deleteBifrostProvider, listBifrostProviders, syncBifrostProvider } from './client';
+import { syncBifrostProvider } from './client';
 import { BifrostProviderSyncError } from './error';
 import { buildBifrostProviderConfigs } from './provider-config-builder';
-import { type BifrostProviderConfig, type BifrostProviderSyncOptions } from './types';
+import { deleteStaleManagedProviders } from './stale-providers';
+import { type BifrostProviderSyncOptions } from './types';
 import { ensureBifrostVirtualKeyProviderAccess } from './virtual-key-sync';
 
 /**
@@ -49,47 +50,15 @@ export async function syncBifrostProviders(
     throw new BifrostProviderSyncError();
   }
 
-  await deleteStaleManagedProviders(providerConfigs, options);
+  await deleteStaleManagedProviders(providerConfigs, { ...options, bifrostAdminUrl });
 
   await ensureBifrostVirtualKeyProviderAccess({
     bifrostAdminUrl,
     bifrostAdminUsername,
     bifrostAdminPassword,
+    providerConfigs,
     logger,
   });
-}
-
-/**
- * Deletes providers from Bifrost once they have no more provider keys in the DB.
- *
- * Fetches the actual providers configured in Bifrost rather than relying on a static list, so
- * any provider not currently configured by ais-chat-admin gets removed.
- */
-async function deleteStaleManagedProviders(
-  providerConfigs: BifrostProviderConfig[],
-  options: BifrostProviderSyncOptions,
-): Promise<void> {
-  const configuredProviders = new Set<string>(providerConfigs.map(({ provider }) => provider));
-  const existingProviders = await listBifrostProviders({
-    bifrostAdminUrl: options.bifrostAdminUrl!,
-    bifrostAdminUsername: options.bifrostAdminUsername,
-    bifrostAdminPassword: options.bifrostAdminPassword,
-    logger: options.logger,
-  });
-
-  const staleProviders = existingProviders
-    .map(({ name }) => name)
-    .filter((provider): provider is string => !!provider && !configuredProviders.has(provider));
-
-  for (const provider of staleProviders) {
-    await deleteBifrostProvider({
-      bifrostAdminUrl: options.bifrostAdminUrl!,
-      bifrostAdminUsername: options.bifrostAdminUsername,
-      bifrostAdminPassword: options.bifrostAdminPassword,
-      provider,
-      logger: options.logger,
-    });
-  }
 }
 
 export async function syncAllBifrostProviders(options: BifrostProviderSyncOptions): Promise<void> {

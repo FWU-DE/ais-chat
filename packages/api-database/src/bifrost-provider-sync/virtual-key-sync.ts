@@ -1,7 +1,5 @@
-import { dbGetAllProviderKeysWithModels } from '../functions';
 import { BifrostProviderSyncError } from './error';
-import { buildBifrostProviderConfigs } from './provider-config-builder';
-import type { BifrostVirtualKey } from './types';
+import type { BifrostProviderConfig, BifrostVirtualKey } from './types';
 import {
   BIFROST_PROVIDERS,
   BifrostProviderSyncLogger,
@@ -30,18 +28,15 @@ export async function ensureBifrostVirtualKeyProviderAccess({
   bifrostAdminUrl,
   bifrostAdminUsername,
   bifrostAdminPassword,
+  providerConfigs,
   logger,
 }: {
   bifrostAdminUrl: string;
   bifrostAdminUsername?: string;
   bifrostAdminPassword?: string;
+  providerConfigs: BifrostProviderConfig[];
   logger?: BifrostProviderSyncLogger;
 }): Promise<void> {
-  const providerConfigs = buildBifrostProviderConfigs(
-    await dbGetAllProviderKeysWithModels(),
-    logger,
-  );
-
   const allowedModelsByProvider = new Map<string, string[]>(
     providerConfigs.map((providerConfig) => [
       providerConfig.provider,
