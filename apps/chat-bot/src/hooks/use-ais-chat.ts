@@ -180,6 +180,10 @@ export function useAisChat({
           if (content !== undefined && content !== null) {
             const streamEvent = decodeChatStreamEvent(content);
 
+            if (streamEvent?.type === 'error') {
+              throw deserializeError(streamEvent.error);
+            }
+
             if (streamEvent?.type === 'ai_activity') {
               assistantActivitySteps = streamEvent.steps;
               setActivitySteps(assistantActivitySteps);

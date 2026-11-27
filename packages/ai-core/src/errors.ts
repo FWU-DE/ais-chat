@@ -215,6 +215,23 @@ export class SharedChatExpiredError extends AiGenerationError {
   }
 }
 
+/**
+ * Error thrown when a streamed generation is stopped because it ran too long or went idle.
+ */
+export class GenerationTimeoutError extends AiGenerationError {
+  constructor(message: string = 'Generation timed out') {
+    super(message);
+    this.name = 'GenerationTimeoutError';
+  }
+
+  static is(error: unknown): error is GenerationTimeoutError {
+    if (error && typeof error === 'object') {
+      return 'name' in error && error.name === 'GenerationTimeoutError';
+    }
+    return false;
+  }
+}
+
 const RESPONSIBLE_AI_ERROR_CODES = new Set([
   'content_policy_violation',
   'moderation_blocked',
@@ -310,6 +327,7 @@ export const aiGenerationErrorTypes = [
   ProviderConfigurationError,
   TokenPointsExceededError,
   SharedChatExpiredError,
+  GenerationTimeoutError,
 ] as const satisfies ReadonlyArray<AiGenerationErrorType>;
 
 export type KnownAiGenerationError = {

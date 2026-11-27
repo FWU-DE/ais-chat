@@ -1,3 +1,9 @@
+import {
+  AiGenerationError,
+  GenerationTimeoutError,
+  ProviderRateLimitExceededError,
+} from '@ais-chat/ai-core/errors';
+import { ForbiddenError } from '@shared/error';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ChatStreamEvent } from './streaming';
@@ -6,7 +12,16 @@ import {
   decodeChatStreamEvent,
   encodeChatStreamEvent,
   readTextStream,
+  serializeStreamError,
 } from './streaming';
+
+async function readAll(stream: ReadableStream<string>): Promise<string[]> {
+  const chunks: string[] = [];
+  for await (const chunk of readTextStream(stream)) {
+    chunks.push(chunk);
+  }
+  return chunks;
+}
 
 vi.mock('@shared/logging', () => ({
   logError: vi.fn(),
@@ -22,10 +37,43 @@ describe('encodeChatStreamEvent / decodeChatStreamEvent', () => {
     expect(decodeChatStreamEvent(encodeChatStreamEvent(event))).toEqual(event);
   });
 
+  it('round-trips an error event', () => {
+    const event: ChatStreamEvent = {
+      type: 'error',
+      error: { name: 'ProviderRateLimitExceededError', message: 'Rate limit' },
+    };
+
+    expect(decodeChatStreamEvent(encodeChatStreamEvent(event))).toEqual(event);
+  });
+
   it('returns null for plain text chunks and malformed events', () => {
     expect(decodeChatStreamEvent('just some streamed text')).toBeNull();
     expect(decodeChatStreamEvent('\u001enot json')).toBeNull();
     expect(decodeChatStreamEvent('\u001e{"type":"something_else"}')).toBeNull();
+    expect(decodeChatStreamEvent('\u001e{"type":"error"}')).toBeNull();
+    expect(decodeChatStreamEvent('\u001e{"type":"error","error":{"name":1}}')).toBeNull();
+  });
+});
+
+describe('serializeStreamError', () => {
+  it('keeps name and message of known AI errors and business errors', () => {
+    expect(serializeStreamError(new ProviderRateLimitExceededError('Rate limit'))).toEqual({
+      name: 'ProviderRateLimitExceededError',
+      message: 'Rate limit',
+    });
+    expect(serializeStreamError(new ForbiddenError('Not allowed'))).toEqual({
+      name: 'ForbiddenError',
+      message: 'Not allowed',
+    });
+  });
+
+  it('replaces unknown errors and the generic AiGenerationError with UnexpectedError', () => {
+    const unexpected = { name: 'UnexpectedError', message: 'Unexpected Error' };
+
+    expect(serializeStreamError(new Error('db password leaked'))).toEqual(unexpected);
+    expect(serializeStreamError(new AiGenerationError('provider: raw details'))).toEqual(
+      unexpected,
+    );
   });
 });
 
@@ -78,6 +126,21 @@ describe('createTextStream', () => {
     }).not.toThrow();
   });
 
+  it('sends an error event and closes the stream normally on error()', async () => {
+    const { stream, update, error } = createTextStream();
+
+    update('Partial');
+    error(new ProviderRateLimitExceededError('Rate limit'));
+
+    const chunks = await readAll(stream);
+
+    expect(chunks[0]).toBe('Partial');
+    expect(decodeChatStreamEvent(chunks[1]!)).toEqual({
+      type: 'error',
+      error: { name: 'ProviderRateLimitExceededError', message: 'Rate limit' },
+    });
+  });
+
   it('abandons the stream once the consumer stops draining it', () => {
     const { signal, update } = createTextStream();
 
@@ -110,6 +173,25 @@ describe('createTextStream', () => {
 
       expect(signal.aborted).toBe(true);
       expect((signal.reason as Error).message).toBe('generation exceeded maximum duration');
+    });
+
+    it.each([
+      ['maximum duration', { maxDurationMs: 1_000, idleTimeoutMs: 60_000 }],
+      ['idle timeout', { maxDurationMs: 60_000, idleTimeoutMs: 1_000 }],
+    ])('sends a GenerationTimeoutError event on %s', async (_name, options) => {
+      const { stream, update } = createTextStream(options);
+
+      update('Partial');
+      vi.advanceTimersByTime(1_000);
+
+      const chunks = await readAll(stream);
+      const timeoutError = new GenerationTimeoutError();
+
+      expect(chunks[0]).toBe('Partial');
+      expect(decodeChatStreamEvent(chunks[1]!)).toMatchObject({
+        type: 'error',
+        error: { name: timeoutError.name },
+      });
     });
 
     it('aborts the signal when the producer goes idle, and resets on each update', () => {
@@ -146,7 +228,7 @@ describe('createTextStream', () => {
     });
 
     it('does not abort after error(), even if a late update arrives', () => {
-      const { stream, signal, update, error } = createTextStream({
+      const { signal, update, error } = createTextStream({
         maxDurationMs: 60_000,
         idleTimeoutMs: 1_000,
       });
@@ -157,9 +239,6 @@ describe('createTextStream', () => {
       vi.advanceTimersByTime(60_000);
 
       expect(signal.aborted).toBe(false);
-
-      // Keep the rejected stream from surfacing as an unhandled rejection.
-      void stream.cancel().catch(() => {});
     });
   });
 });

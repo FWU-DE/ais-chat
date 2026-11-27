@@ -10,6 +10,7 @@ type ErrorMessageTranslationKey =
   | 'chat-expired-error'
   | 'empty-response-error'
   | 'not-found-error'
+  | 'generation-timeout-error'
   | 'generic-error';
 
 const aiErrorNameToMessageKeyMap = {
@@ -22,6 +23,7 @@ const aiErrorNameToMessageKeyMap = {
   ProviderRateLimitExceededError: 'provider-rate-limit-error',
   RateLimitExceededError: 'provider-rate-limit-error',
   InvalidModelError: 'invalid-model-error',
+  GenerationTimeoutError: 'generation-timeout-error',
 } as const satisfies Partial<Record<KnownAiGenerationError['name'], ErrorMessageTranslationKey>>;
 
 function isMappedAiErrorName(name: string): name is keyof typeof aiErrorNameToMessageKeyMap {

@@ -87,6 +87,7 @@
     "responsible-ai-error": "Diese Anfrage wurde nicht ausgeführt, da sie möglicherweise gegen die Nutzungsrichtlinien verstößt.",
     "invalid-model-error": "Das ausgewählte Modell ist nicht verfügbar.",
     "not-found-error": "Diese Ressource existiert nicht oder ist nicht freigegeben.",
+    "generation-timeout-error": "Die Antwort wurde wegen Zeitüberschreitung abgebrochen.",
     "generic-error": "Ein Fehler ist aufgetreten",
     "retry-button": "Erneut versuchen",
     "please-select": "Bitte auswählen",

@@ -518,7 +518,10 @@ describe('sendChatMessage', () => {
       user: createUser(),
     });
 
-    await expect(collectStream(result.stream)).rejects.toThrow('provider exploded');
+    expect(decodeChatStreamEvent(await collectStream(result.stream))).toEqual({
+      type: 'error',
+      error: { name: 'UnexpectedError', message: 'Unexpected Error' },
+    });
 
     expect(mocks.dbInsertConversationUsageMock).toHaveBeenCalledWith(
       expect.objectContaining({
