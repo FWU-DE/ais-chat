@@ -1,4 +1,5 @@
 import type { runAgentLoop } from '@ais-chat/ai-core';
+import { toolParameters } from '@ais-chat/ai-core/chat/tool-parameters';
 import { ForbiddenError } from '@shared/error';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -12,7 +13,7 @@ const buildToolsOutput = {
       definition: {
         name: 'web_search',
         description: 'web search tool',
-        parameters: {},
+        parameters: toolParameters({}),
       },
       handler: vi.fn(),
     },
@@ -21,7 +22,7 @@ const buildToolsOutput = {
     {
       name: 'web_search',
       description: 'web search tool',
-      parameters: {},
+      parameters: toolParameters({}),
     },
   ],
 };

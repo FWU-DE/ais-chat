@@ -1,4 +1,5 @@
 import { generateTextWithBilling } from '@ais-chat/ai-core';
+import { toolParameters } from '@ais-chat/ai-core/chat/tool-parameters';
 import type {
   Message,
   ModelSelection,
@@ -109,29 +110,24 @@ export function buildJsxgraphTool({
     name: TOOL_NAMES.createPlot,
     description:
       'Creates a graphical drawing (function graph, chart, geometry, 3D surface) from a text description. Each call produces exactly one drawing; call it once per drawing. Write the description in the language of the conversation, so that labels and captions in the drawing match it. The result is either the final JSON (use it as-is) or a JSON object with "error" and, only when the error is repairable, "invalidJson". When "invalidJson" is present, you may call this tool again with the same description plus "previousAttempt" set to that "invalidJson" and "previousError" set to that "error", so the drawing can be repaired instead of starting over. When "invalidJson" is absent, retrying will not help; explain the error to the user instead.',
-    parameters: {
-      type: 'object',
-      properties: {
-        description: {
-          type: 'string',
-          description:
-            'Precise description of the desired drawing: which elements, values, and relationships it should contain.',
-          minLength: 1,
-        },
-        previousAttempt: {
-          type: ['string', 'null'],
-          description:
-            'The "invalidJson" from the previous error result for this same drawing, or null on the first call.',
-        },
-        previousError: {
-          type: ['string', 'null'],
-          description:
-            'The "error" from the previous error result for this same drawing, or null on the first call.',
-        },
+    parameters: toolParameters({
+      description: {
+        type: 'string',
+        description:
+          'Precise description of the desired drawing: which elements, values, and relationships it should contain.',
+        minLength: 1,
       },
-      required: ['description', 'previousAttempt', 'previousError'],
-      additionalProperties: false,
-    },
+      previousAttempt: {
+        type: ['string', 'null'],
+        description:
+          'The "invalidJson" from the previous error result for this same drawing, or null on the first call.',
+      },
+      previousError: {
+        type: ['string', 'null'],
+        description:
+          'The "error" from the previous error result for this same drawing, or null on the first call.',
+      },
+    }),
   };
 
   const handler = async (

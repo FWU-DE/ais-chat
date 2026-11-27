@@ -1,6 +1,8 @@
 import type { SensitiveLlmModel } from '@ais-chat/api-database';
 import { z } from 'zod';
 
+import type { ToolParameters } from './tool-parameters';
+
 export const CONVERSATION_ROLES = ['system', 'user', 'assistant', 'tool'] as const;
 export type ConversationRole = (typeof CONVERSATION_ROLES)[number];
 
@@ -41,7 +43,7 @@ export type ToolCall = {
 export type ToolDefinition = {
   name: string;
   description: string;
-  parameters: Record<string, unknown>;
+  parameters: ToolParameters;
 };
 
 /** Standard shape for a failed tool call, used both by tool handlers and the agent loop's catch-all. */

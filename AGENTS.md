@@ -267,6 +267,9 @@ apps/<app_name>/src/components/utils/  # Custom utility functions
 
 **All UI text must be internationalized** — chat-bot uses `next-intl`
 
+- The whole app is in German: add new keys to `de.json` only.
+- The only exception is the shared chat with a character or learning scenario, which can optionally be in another language. Add keys to the other language files only for strings shown there.
+
 Example: See `apps/chat-bot/src/components/**` for `useTranslations(...)` pattern
 
 ### Validation
