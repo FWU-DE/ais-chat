@@ -69,7 +69,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod --shamefully-hoist --prefer-offline
 
 # Distroless runtime image: no shell, package manager or busybox
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:6abfcb367ebc291572c774c1592a986be2ab26a2486f73093401327495a5962a AS runner
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:675c532423b908f9e56f9d60a4e62309b63cd2a3175acb90a46b96f7ee68e121 AS runner
 
 # distroless has no node on PATH; keeps `node` resolvable for exec hooks like preStop
 ENV PATH=/nodejs/bin:$PATH
