@@ -145,7 +145,7 @@ Sie finden den Zugang zu AIS.chat auf unserer Homepage [https://www.lernen-digit
 
 ### Was ist das Tokenvolumen?
 
-Das Tokenvolumen ist eine Art von virtuellem Guthaben, das Sie beim Chatten mit AIS.chat verwenden. Jeder Chat verbraucht eine bestimmte Anzahl an Tokenvolumen, abhängig vom verwendeten Sprachmodell und dem Tokenverbrauch. Sie haben ein limitiertes Budget pro Monat, und der Verbrauch wird in einer Balkenanzeige in der linken Sidebar angezeigt. 100% entsprechen einem initialen monatlichen Budget.
+Das Tokenvolumen ist eine Art von virtuellem Guthaben, das Sie beim Chatten mit AIS.chat verwenden. Jeder Chat verbraucht eine bestimmte Anzahl an Tokenvolumen, abhängig vom verwendeten Sprachmodell und dem Tokenverbrauch. Sie haben ein limitiertes Budget pro Monat, und der Verbrauch wird in einer Balkenanzeige unter dem Menüpunkt "Tokenvolumen" im Usermenü rechts oben angezeigt. 100% entsprechen einem initialen monatlichen Budget.
 
 ### Was kann ich tun, wenn mein Tokenvolumen zur Neige geht?
 

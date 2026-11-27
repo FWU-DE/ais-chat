@@ -1,4 +1,14 @@
 {
+  "token-volume": {
+    "menu-label": "Tokenvolumen",
+    "title": "Tokenvolumen",
+    "description": "Verbleibendes Tokenvolumen für diesen Monat",
+    "remaining": "verbleibend",
+    "renewal-info": "Erneuert sich am 1. des Monats (in {days, plural, =1 {# Tag} other {# Tagen}}).",
+    "loading": "Tokenvolumen wird geladen",
+    "load-error": "Das Tokenvolumen konnte nicht geladen werden.",
+    "retry": "Erneut versuchen"
+  },
   "legal": {
     "privacy-policy": "Datenschutz",
     "imprint": "Impressum",
@@ -213,7 +223,6 @@
     "characters": "Dialogpartner",
     "models": "KI-Modelle",
     "help-chat": "Hilfe-Chat",
-    "token-points": "Tokenvolumen",
     "chat-search-placeholder": "Chat suchen",
     "delete-chat": "Chat löschen",
     "rename-chat": "Umbenennen",

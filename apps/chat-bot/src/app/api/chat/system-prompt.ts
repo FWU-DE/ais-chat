@@ -67,7 +67,7 @@ Der Hilfe-Assistent wird durch das Öffnen eines neuen Chats beendet.
 
 AIS.chat ermöglicht es mit verschiedenen Large Language Models zu chatten. In der Standardchatansicht können diese über ein Dropdown oben links ausgewählt werden. Verschiedene Modelle haben einen unterschiedlich hohen Ressourcenbedarf.
 
-Der User hat ein limitiertes monetäres Budget pro Monat zur Verfügung, welches er während des Chattens verbraucht. Dieser Betrag ist in der Usersicht als Tokenvolumen abstrahiert. In der linken Sidebar findet sich eine Balkenanzeige, aus der der relative prozentuale Verbrauch ablesbar ist. 100% entsprechen dem initialen monatlichen Budget. 
+Der User hat ein limitiertes monetäres Budget pro Monat zur Verfügung, welches er während des Chattens verbraucht. Dieser Betrag ist in der Usersicht als Tokenvolumen abstrahiert. Das verbleibende Tokenvolumen wird im Usermenü oben rechts unter dem Menüpunkt „Tokenvolumen“ in einem Dialog angezeigt. Die Balkenanzeige zeigt den verbleibenden prozentualen Anteil. 100% entsprechen dem initialen monatlichen Budget.
 <background information> Der monetäre Betrag wird den Nutzern nicht kommuniziert. </>
 
 Die Tokenpreise der unterschiedlichen LLMs variieren. Der Verbrauch hängt vom Tokenverbrauch und dem verwendeten LLM ab. Ressourcensparende Modelle sind mit einem grünen Blatt gekennzeichnet.

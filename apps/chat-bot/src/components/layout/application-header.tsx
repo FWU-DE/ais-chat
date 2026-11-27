@@ -10,6 +10,7 @@ import ProfileMenu from '@/components/navigation/profile-menu';
 import { ToggleSidebarButton } from '@/components/navigation/sidebar/collapsible-sidebar';
 import { ThemeToggleButton } from '@/components/navigation/theme-toggle-button';
 import { ThreeDotsProfileMenu } from '@/components/navigation/three-dots-profile-menu';
+import { TokenVolumeDialog } from '@/components/navigation/token-volume/token-volume-dialog';
 import { SettingsDialog } from '@/components/settings/settings-dialog';
 import { reductionBreakpoint } from '@/utils/tailwind/layout';
 
@@ -27,13 +28,20 @@ export type HeaderActionConfig = {
   menuItem?: Omit<ApplicationHeaderMenuItem, 'id'>;
 };
 
-export function ApplicationHeader({ userAndContext }: { userAndContext?: UserAndContext }) {
+export function ApplicationHeader({
+  userAndContext,
+  initialDaysUntilRenewal,
+}: {
+  userAndContext?: UserAndContext;
+  initialDaysUntilRenewal: number;
+}) {
   const { setHeaderMountNode, compactMenuItems } = useHeaderExtension();
   const { isBelow } = useBreakpoints();
   const isCompact = isBelow[reductionBreakpoint];
   const headerMountNodeRef = useRef<HTMLDivElement | null>(null);
-  const settingsTriggerRef = useRef<HTMLButtonElement>(null);
+  const profileMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const [isTokenVolumeOpen, setIsTokenVolumeOpen] = React.useState(false);
 
   const headerMountRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -60,21 +68,31 @@ export function ApplicationHeader({ userAndContext }: { userAndContext?: UserAnd
           customItems={compactMenuItems}
           userAndContext={userAndContext}
           onOpenSettings={() => setIsSettingsOpen(true)}
-          triggerRef={settingsTriggerRef}
+          onOpenTokenVolume={() => setIsTokenVolumeOpen(true)}
+          triggerRef={profileMenuTriggerRef}
         />
       ) : (
         <ProfileMenu
           userAndContext={userAndContext}
           onOpenSettings={() => setIsSettingsOpen(true)}
-          triggerRef={settingsTriggerRef}
+          onOpenTokenVolume={() => setIsTokenVolumeOpen(true)}
+          triggerRef={profileMenuTriggerRef}
         />
       )}
       {userAndContext !== undefined && (
-        <SettingsDialog
-          open={isSettingsOpen}
-          onOpenChange={setIsSettingsOpen}
-          restoreFocusRef={settingsTriggerRef}
-        />
+        <>
+          <SettingsDialog
+            open={isSettingsOpen}
+            onOpenChange={setIsSettingsOpen}
+            restoreFocusRef={profileMenuTriggerRef}
+          />
+          <TokenVolumeDialog
+            initialDaysUntilRenewal={initialDaysUntilRenewal}
+            open={isTokenVolumeOpen}
+            onOpenChange={setIsTokenVolumeOpen}
+            restoreFocusRef={profileMenuTriggerRef}
+          />
+        </>
       )}
     </header>
   );

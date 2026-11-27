@@ -31,16 +31,12 @@ import LogoWithName from '@/assets/logo-with-name.svg';
 
 import { AppMenuItem } from './app-menu-item';
 import { ChatHistory } from './chat-history';
-import { MyTokenPoints } from './my-token-points';
-
 type AppSidebarProps = {
   federalState: FederalStateModel;
   user: UserModel;
-  usedBudget: number;
-  maxBudget: number;
 };
 
-export function AppSidebar({ federalState, user, usedBudget, maxBudget }: AppSidebarProps) {
+export function AppSidebar({ federalState, user }: AppSidebarProps) {
   const { toggleSidebar, open } = useSidebar();
   const t = useTranslations('sidebar');
   const [sidebarContentEl, setSidebarContentEl] = useState<HTMLDivElement | null>(null);
@@ -112,10 +108,6 @@ export function AppSidebar({ federalState, user, usedBudget, maxBudget }: AppSid
                 )}
               </SidebarMenu>
             </nav>
-          </SidebarGroup>
-
-          <SidebarGroup className="mt-2">
-            <MyTokenPoints text={t('token-points')} usedBudget={usedBudget} maxBudget={maxBudget} />
           </SidebarGroup>
 
           <SidebarGroup className="mt-4">

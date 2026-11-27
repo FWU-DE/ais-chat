@@ -14,10 +14,12 @@ export function ApplicationLayout({
   children,
   userAndContext,
   infoBanners,
+  initialDaysUntilRenewal,
 }: {
   children: ReactNode;
   userAndContext?: UserAndContext;
   infoBanners?: InfoBanner[];
+  initialDaysUntilRenewal: number;
 }) {
   const pathname = useCustomPathname();
   const mainScrollContainerRef = useRef<HTMLElement | null>(null);
@@ -36,7 +38,10 @@ export function ApplicationLayout({
       <ChatOverlayRootContext value={overlayRoot}>
         <div className="relative flex flex-col h-dvh w-dvw overflow-hidden bg-background-2">
           {infoBanners !== undefined && <ActiveInfoBanners infoBanners={infoBanners} />}
-          <ApplicationHeader userAndContext={userAndContext} />
+          <ApplicationHeader
+            userAndContext={userAndContext}
+            initialDaysUntilRenewal={initialDaysUntilRenewal}
+          />
           <div className="relative min-h-0 flex-1">
             <main
               ref={mainScrollContainerRef}

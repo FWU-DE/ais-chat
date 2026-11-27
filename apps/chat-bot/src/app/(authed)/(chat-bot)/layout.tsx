@@ -7,10 +7,7 @@ import {
   getSpeechModelVoices,
 } from '@shared/llm-models/llm-model-service';
 import { logError } from '@shared/logging';
-import {
-  getMaxBudgetInCentByUser,
-  getUsedBudgetInCentByUser,
-} from '@shared/users/user-budget-service';
+import { getBudgetRenewal } from '@shared/users/user-budget-renewal';
 import { getUserSettings } from '@shared/users/user-settings-service';
 import { getTranslations } from 'next-intl/server';
 import React from 'react';
@@ -37,41 +34,31 @@ export default async function ChatLayout({ children }: { children: React.ReactNo
   const user = await getUser();
   if (!user.federalState.hasApiKeyAssigned) throw new Error(t('no-api-key'));
 
-  const [
-    federalState,
-    models,
-    usedBudget,
-    maxBudget,
-    hasCompletedTraining,
-    activeBanners,
-    settings,
-    speechVoices,
-  ] = await Promise.all([
-    // These are required for the app to work -> if any of these fail, we show a generic error blocking UI
-    getFederalStateById(user.federalState.id),
-    dbGetLlmModelsByFederalStateId({ federalStateId: user.federalState.id }),
-    getUsedBudgetInCentByUser({ user }),
-    getMaxBudgetInCentByUser({ user, federalState: user.federalState }),
-    userHasCompletedTraining(),
-    // These are optional -> if any of these fail, we log the error and continue with default values
-    getActiveBannersForUser({
-      federalStateId: user.federalState.id,
-      userId: user.id,
-    }).catch((error: unknown) => {
-      logError('Failed to load active info banners', error);
-      return [];
-    }),
-    getUserSettings({ userId: user.id }).catch((error: unknown) => {
-      logError('Failed to load user settings', error);
-      return undefined;
-    }),
-    user.federalState.featureToggles.isSpeechModelEnabled === true
-      ? getSpeechModelVoices().catch((error: unknown) => {
-          logError('Failed to load speech model voices', error);
-          return [];
-        })
-      : Promise.resolve([]),
-  ]);
+  const [federalState, models, hasCompletedTraining, activeBanners, settings, speechVoices] =
+    await Promise.all([
+      // These are required for the app to work -> if any of these fail, we show a generic error blocking UI
+      getFederalStateById(user.federalState.id),
+      dbGetLlmModelsByFederalStateId({ federalStateId: user.federalState.id }),
+      userHasCompletedTraining(),
+      // These are optional -> if any of these fail, we log the error and continue with default values
+      getActiveBannersForUser({
+        federalStateId: user.federalState.id,
+        userId: user.id,
+      }).catch((error: unknown) => {
+        logError('Failed to load active info banners', error);
+        return [];
+      }),
+      getUserSettings({ userId: user.id }).catch((error: unknown) => {
+        logError('Failed to load user settings', error);
+        return undefined;
+      }),
+      user.federalState.featureToggles.isSpeechModelEnabled === true
+        ? getSpeechModelVoices().catch((error: unknown) => {
+            logError('Failed to load speech model voices', error);
+            return [];
+          })
+        : Promise.resolve([]),
+    ]);
 
   const productAccess = checkProductAccess({ ...user, hasCompletedTraining });
   const defaultModelName = await getDefaultModelNameByFederalStateId(user.federalState.id, models);
@@ -96,13 +83,12 @@ export default async function ChatLayout({ children }: { children: React.ReactNo
               initialModelName={user.lastUsedModel ?? defaultModelName}
               defaultModelName={defaultModelName}
             >
-              <AppSidebar
-                user={user}
-                federalState={federalState}
-                usedBudget={usedBudget ?? 0}
-                maxBudget={maxBudget ?? 500}
-              />
-              <ApplicationLayout userAndContext={userAndContext} infoBanners={activeBanners}>
+              <AppSidebar user={user} federalState={federalState} />
+              <ApplicationLayout
+                userAndContext={userAndContext}
+                infoBanners={activeBanners}
+                initialDaysUntilRenewal={getBudgetRenewal().daysUntilRenewal}
+              >
                 {children}
               </ApplicationLayout>
             </LlmModelsProvider>

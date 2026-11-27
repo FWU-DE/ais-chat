@@ -1,12 +1,13 @@
 type TokenPointsProgressBarProps = {
+  /** A normalized whole percentage between 0 and 100. */
   percentage: number;
+  ariaLabel?: string;
 };
 
 export default function TokenPointsProgressBar({
-  percentage: _percentage,
+  percentage,
+  ariaLabel,
 }: TokenPointsProgressBarProps) {
-  const percentage = Math.max(Math.floor(_percentage), 0);
-
   function getColorByProgress() {
     if (percentage > 20) {
       return '#02A59B';
@@ -19,17 +20,23 @@ export default function TokenPointsProgressBar({
   return (
     <div className="flex flex-col w-full">
       <div className="w-full">
-        <div className="w-full h-3 relative">
+        <div
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={percentage}
+          aria-label={ariaLabel}
+          className="w-full h-[9px] relative rounded-[2px] overflow-hidden"
+        >
           <div
-            className="bg-slate-100 h-3 transition-all duration-500 ease-in-out absolute left-0"
+            className="bg-[#D9D9D9] h-full transition-all duration-500 ease-in-out absolute left-0"
             style={{ width: '100%' }}
           ></div>
           <div
-            className="h-3 transition-all duration-500 ease-in-out absolute left-0 rounded-1"
-            style={{ width: `${Math.min(percentage, 100)}%`, backgroundColor: color }}
+            className="h-full transition-all duration-500 ease-in-out absolute left-0 rounded-[2px]"
+            style={{ width: `${percentage}%`, backgroundColor: color }}
           ></div>
         </div>
-        <div className="mt-1 text-xs text-right text-gray-600">{percentage} %</div>
       </div>
     </div>
   );
