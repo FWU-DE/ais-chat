@@ -42,7 +42,10 @@ describe('entity filter actions', () => {
   ] as const)(
     'rejects student access to %s before service calls',
     async (_name, action, service) => {
-      await expect(action('official')).rejects.toMatchObject({ name: 'ForbiddenError' });
+      await expect(action('official')).resolves.toMatchObject({
+        success: false,
+        error: { name: 'ForbiddenError' },
+      });
       expect(service).not.toHaveBeenCalled();
     },
   );
@@ -52,7 +55,10 @@ describe('entity filter actions', () => {
     vi.mocked(getFavoriteEntityIds).mockResolvedValue([]);
     vi.mocked(enrichAssistantsWithImage).mockResolvedValue([]);
 
-    await expect(getAssistantsByFilterAction('official')).resolves.toEqual([]);
+    await expect(getAssistantsByFilterAction('official')).resolves.toEqual({
+      success: true,
+      value: [],
+    });
     expect(getAssistantsByOverviewFilter).toHaveBeenCalledWith({
       filter: 'official',
       user: { id: 'student', schoolIds: [], federalStateId: 'test' },

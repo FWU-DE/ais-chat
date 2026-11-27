@@ -1,5 +1,6 @@
 'use server';
 
+import { runServerAction } from '@shared/actions/run-server-action';
 import { dbVerifyFileOwnership } from '@shared/db/functions/files';
 import { ForbiddenError } from '@shared/error';
 import { getReadOnlySignedUrl } from '@shared/s3';
@@ -23,16 +24,18 @@ export async function getReadOnlySignedUrlAction({
 }) {
   const { user } = await requireAuth();
 
-  if (key && key.startsWith(MESSAGE_ATTACHMENTS_PREFIX)) {
-    const fileId = key.slice(MESSAGE_ATTACHMENTS_PREFIX.length);
-    const isOwner = await dbVerifyFileOwnership({ fileId, userId: user.id });
-    if (!isOwner) {
-      throw new ForbiddenError('Not authorized to access this file');
+  return runServerAction('getReadOnlySignedUrlAction', async () => {
+    if (key && key.startsWith(MESSAGE_ATTACHMENTS_PREFIX)) {
+      const fileId = key.slice(MESSAGE_ATTACHMENTS_PREFIX.length);
+      const isOwner = await dbVerifyFileOwnership({ fileId, userId: user.id });
+      if (!isOwner) {
+        throw new ForbiddenError('Not authorized to access this file');
+      }
+    } else if (key) {
+      // Only message_attachments keys are allowed from client actions
+      throw new ForbiddenError('Not authorized to access this resource');
     }
-  } else if (key) {
-    // Only message_attachments keys are allowed from client actions
-    throw new ForbiddenError('Not authorized to access this resource');
-  }
 
-  return getReadOnlySignedUrl({ key, filename, contentType, attachment, options });
+    return getReadOnlySignedUrl({ key, filename, contentType, attachment, options });
+  })();
 }

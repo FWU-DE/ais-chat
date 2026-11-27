@@ -39,13 +39,14 @@ async function buildInitialVersions(
       if (!imageFile) return null;
 
       try {
-        const signedUrl = await getReadOnlySignedUrlAction({
+        const signedUrlResult = await getReadOnlySignedUrlAction({
           key: `message_attachments/${imageFile.id}`,
           contentType: imageFile.type,
           attachment: false,
         });
 
-        if (!signedUrl) return null;
+        if (!signedUrlResult.success || !signedUrlResult.value) return null;
+        const signedUrl = signedUrlResult.value;
 
         return {
           userMessageId: user.id,

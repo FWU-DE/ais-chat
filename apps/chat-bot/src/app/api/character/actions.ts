@@ -1,10 +1,10 @@
 'use server';
 import { SharedChatExpiredError } from '@ais-chat/ai-core/errors';
-import * as Sentry from '@sentry/nextjs';
+import { runServerAction } from '@shared/actions/run-server-action';
 
 import { requireValidInviteCode } from '@/auth/requireValidInviteCode';
 import { SEND_CHARACTER_MESSAGE_ACTION_NAME } from '@/server-action-names';
-import { ChatMessage, createErrorResult, SendMessageResult } from '@/types/chat';
+import { ChatMessage, createErrorResult } from '@/types/chat';
 
 import { sendCharacterMessage } from './character-chat-service';
 
@@ -22,20 +22,20 @@ export async function sendCharacterMessageAction({
   messages: ChatMessage[];
   fileIds?: string[];
   sharedSessionId?: string;
-}): Promise<SendMessageResult> {
-  try {
-    await requireValidInviteCode(inviteCode);
-  } catch {
-    return createErrorResult(new SharedChatExpiredError());
-  }
+}) {
+  return runServerAction(SEND_CHARACTER_MESSAGE_ACTION_NAME, async () => {
+    try {
+      await requireValidInviteCode(inviteCode);
+    } catch {
+      return createErrorResult(new SharedChatExpiredError());
+    }
 
-  return Sentry.withServerActionInstrumentation(SEND_CHARACTER_MESSAGE_ACTION_NAME, () =>
-    sendCharacterMessage({
+    return sendCharacterMessage({
       characterId,
       inviteCode,
       messages,
       fileIds,
       sharedSessionId,
-    }),
-  );
+    });
+  })();
 }

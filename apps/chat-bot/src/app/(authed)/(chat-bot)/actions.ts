@@ -66,10 +66,10 @@ export async function refetchFileMapping(conversationId: string) {
   })();
 }
 
-export async function trackInfoBannerViewAction(infoBannerId: string): Promise<void> {
+export async function trackInfoBannerViewAction(infoBannerId: string) {
   const { user } = await requireAuth();
 
-  await runServerAction(
+  return runServerAction(
     'trackInfoBannerViewAction',
     trackInfoBannerView,
   )({
