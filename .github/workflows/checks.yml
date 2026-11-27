@@ -189,4 +189,4 @@ jobs:
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./apps/api/coverage/lcov.info,./apps/chat-bot/coverage/lcov.info,./packages/ai-core/coverage/lcov.info,./packages/shared/coverage/lcov.info,./packages/shared-core/coverage/lcov.info
+          files: ./apps/api/coverage/lcov.info,./apps/chat-bot/coverage/lcov.info,./packages/ai-core/coverage/lcov.info,./packages/shared/coverage/lcov.info,./packages/shared-core/coverage/lcov.info,./services/bifrost-sync/coverage/lcov.info

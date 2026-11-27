@@ -12,6 +12,7 @@ updates:
       - '/apps/admin'
       - '/apps/api'
       - '/apps/chat-bot'
+      - '/services/bifrost-sync'
       - '/services/calculator'
       - '/services/mock-llm'
     labels: ['dependencies']

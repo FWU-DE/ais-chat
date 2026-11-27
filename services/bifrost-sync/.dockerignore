@@ -1,0 +1,7 @@
+node_modules/
+dist/
+src/**/*.test.ts
+*.log
+.git/
+.gitignore
+src/test/
