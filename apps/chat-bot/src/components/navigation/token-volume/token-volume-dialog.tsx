@@ -1,5 +1,6 @@
 'use client';
 
+import type { BudgetRenewal } from '@shared/users/user-budget-renewal';
 import { Button } from '@ui/components/button';
 import {
   Dialog,
@@ -17,11 +18,10 @@ import React from 'react';
 import { getTokenVolumeAction } from '@/app/(authed)/(chat-bot)/actions';
 import TokenPointsProgressBar from '@/components/token-points-progress-bar';
 
-const RENEWAL_TIME_ZONE = 'Europe/Berlin';
-
 type TokenVolume = {
   usedBudgetInCent: number;
   maxBudgetInCent: number;
+  renewal: BudgetRenewal;
 };
 
 type TokenVolumeState =
@@ -31,22 +31,31 @@ export function TokenVolumeDialog({
   open,
   onOpenChange,
   restoreFocusRef,
+  initialRenewal,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   restoreFocusRef?: React.RefObject<HTMLElement | null>;
+  initialRenewal: BudgetRenewal;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {open && <TokenVolumeDialogContent restoreFocusRef={restoreFocusRef} />}
+      {open && (
+        <TokenVolumeDialogContent
+          restoreFocusRef={restoreFocusRef}
+          initialRenewal={initialRenewal}
+        />
+      )}
     </Dialog>
   );
 }
 
 function TokenVolumeDialogContent({
   restoreFocusRef,
+  initialRenewal,
 }: {
   restoreFocusRef?: React.RefObject<HTMLElement | null>;
+  initialRenewal: BudgetRenewal;
 }) {
   const t = useTranslations('token-volume');
   const tCommon = useTranslations('common');
@@ -124,7 +133,12 @@ function TokenVolumeDialogContent({
           {state.status === 'loaded' && <TokenVolumeContent value={state.value} />}
         </div>
         <p className="mt-[7px] text-center text-xs leading-[23px] text-foreground/70">
-          {t('renewal-info', { days: getDaysUntilMonthRenewal(new Date()) })}
+          {t('renewal-info', {
+            days:
+              state.status === 'loaded'
+                ? state.value.renewal.daysUntilRenewal
+                : initialRenewal.daysUntilRenewal,
+          })}
         </p>
       </div>
       <DialogFooter className="mt-auto pt-[34px]">
@@ -163,23 +177,4 @@ function TokenVolumeContent({ value }: { value: TokenVolume | null }) {
       )}
     </div>
   );
-}
-
-/**
- * Budget periods are calendar months in Europe/Berlin, see getStartOfCurrentMonth.
- * Counts the calendar days from today until the 1st of next month.
- */
-export function getDaysUntilMonthRenewal(now: Date): number {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: RENEWAL_TIME_ZONE,
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-  }).formatToParts(now);
-  const year = Number(parts.find((part) => part.type === 'year')?.value);
-  const month = Number(parts.find((part) => part.type === 'month')?.value);
-  const day = Number(parts.find((part) => part.type === 'day')?.value);
-  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-
-  return daysInMonth - day + 1;
 }

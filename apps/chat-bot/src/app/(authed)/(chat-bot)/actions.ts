@@ -9,6 +9,7 @@ import { dbGetRelatedFiles } from '@shared/db/functions/files';
 import { dbUpdateUserTermsVersion } from '@shared/db/functions/user';
 import { UserSettings, userSettingsSchema } from '@shared/db/schema';
 import { trackInfoBannerView } from '@shared/info-banners/info-banner-service';
+import { getBudgetRenewal } from '@shared/users/user-budget-renewal';
 import {
   getMaxBudgetInCentByUser,
   getUsedBudgetInCentByUser,
@@ -103,6 +104,7 @@ export async function getTokenVolumeAction() {
     return {
       usedBudgetInCent: usedBudgetInCent ?? 0,
       maxBudgetInCent: maxBudgetInCent ?? 0,
+      renewal: getBudgetRenewal(),
     };
   })();
 }

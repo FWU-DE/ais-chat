@@ -86,8 +86,8 @@ export function getWeekNumber(date: Date, timeZone: string = 'Europe/Berlin'): n
   return 1 + Math.round(((nearestThursday.getTime() - firstThursday.getTime()) / 86400000 - 3) / 7);
 }
 
-export function getStartOfCurrentMonth(): Date {
-  const date = new Date();
+export function getStartOfCurrentMonth(now: Date = new Date()): Date {
+  const date = new Date(now);
   date.setDate(1);
   date.setHours(0, 0, 0, 0);
   return date;

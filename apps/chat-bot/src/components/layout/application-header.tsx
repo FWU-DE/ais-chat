@@ -1,5 +1,6 @@
 'use client';
 
+import type { BudgetRenewal } from '@shared/users/user-budget-renewal';
 import React, { Fragment, ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -28,7 +29,13 @@ export type HeaderActionConfig = {
   menuItem?: Omit<ApplicationHeaderMenuItem, 'id'>;
 };
 
-export function ApplicationHeader({ userAndContext }: { userAndContext?: UserAndContext }) {
+export function ApplicationHeader({
+  userAndContext,
+  tokenVolumeRenewal,
+}: {
+  userAndContext?: UserAndContext;
+  tokenVolumeRenewal: BudgetRenewal;
+}) {
   const { setHeaderMountNode, compactMenuItems } = useHeaderExtension();
   const { isBelow } = useBreakpoints();
   const isCompact = isBelow[reductionBreakpoint];
@@ -81,6 +88,7 @@ export function ApplicationHeader({ userAndContext }: { userAndContext?: UserAnd
             restoreFocusRef={settingsTriggerRef}
           />
           <TokenVolumeDialog
+            initialRenewal={tokenVolumeRenewal}
             open={isTokenVolumeOpen}
             onOpenChange={setIsTokenVolumeOpen}
             restoreFocusRef={settingsTriggerRef}

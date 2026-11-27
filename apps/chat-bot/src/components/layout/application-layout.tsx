@@ -1,6 +1,7 @@
 'use client';
 
 import type { InfoBanner } from '@shared/info-banners/info-banner';
+import type { BudgetRenewal } from '@shared/users/user-budget-renewal';
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
 import type { UserAndContext } from '@/auth/types';
@@ -14,10 +15,12 @@ export function ApplicationLayout({
   children,
   userAndContext,
   infoBanners,
+  tokenVolumeRenewal,
 }: {
   children: ReactNode;
   userAndContext?: UserAndContext;
   infoBanners?: InfoBanner[];
+  tokenVolumeRenewal: BudgetRenewal;
 }) {
   const pathname = useCustomPathname();
   const mainScrollContainerRef = useRef<HTMLElement | null>(null);
@@ -36,7 +39,10 @@ export function ApplicationLayout({
       <ChatOverlayRootContext value={overlayRoot}>
         <div className="relative flex flex-col h-dvh w-dvw overflow-hidden bg-background-2">
           {infoBanners !== undefined && <ActiveInfoBanners infoBanners={infoBanners} />}
-          <ApplicationHeader userAndContext={userAndContext} />
+          <ApplicationHeader
+            userAndContext={userAndContext}
+            tokenVolumeRenewal={tokenVolumeRenewal}
+          />
           <div className="relative min-h-0 flex-1">
             <main
               ref={mainScrollContainerRef}

@@ -7,6 +7,7 @@ import {
   getSpeechModelVoices,
 } from '@shared/llm-models/llm-model-service';
 import { logError } from '@shared/logging';
+import { getBudgetRenewal } from '@shared/users/user-budget-renewal';
 import { getUserSettings } from '@shared/users/user-settings-service';
 import { getTranslations } from 'next-intl/server';
 import React from 'react';
@@ -83,7 +84,11 @@ export default async function ChatLayout({ children }: { children: React.ReactNo
               defaultModelName={defaultModelName}
             >
               <AppSidebar user={user} federalState={federalState} />
-              <ApplicationLayout userAndContext={userAndContext} infoBanners={activeBanners}>
+              <ApplicationLayout
+                userAndContext={userAndContext}
+                infoBanners={activeBanners}
+                tokenVolumeRenewal={getBudgetRenewal()}
+              >
                 {children}
               </ApplicationLayout>
             </LlmModelsProvider>
