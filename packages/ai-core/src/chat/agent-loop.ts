@@ -179,10 +179,12 @@ export function runAgentLoop({
             }
 
             const isLastIteration = iteration === MAX_AGENTIC_ITERATIONS - 1;
-            const toolsEnabled = tools.length > 0 && !isLastIteration;
+            const hasTools = tools.length > 0;
+            // Tools and reminder stay in the request on the last iteration, and only tool_choice
+            // changes, so the provider's prompt cache prefix stays valid.
             const stream = generateAgenticStreamWithBilling(
               modelSelection,
-              toolsEnabled ? withToolCallReminder(loopMessages) : loopMessages,
+              hasTools ? withToolCallReminder(loopMessages) : loopMessages,
               apiKeyId,
               async ({ usage, priceInCents, modelId: usedModelId, provider, modelName }) => {
                 await modelSelection.onModelUsed?.(usedModelId);
@@ -198,7 +200,9 @@ export function runAgentLoop({
                   agentSpan.setAttribute('gen_ai.usage.estimated', true);
                 }
               },
-              toolsEnabled ? { tools, toolChoice: 'auto', abortSignal } : { abortSignal },
+              hasTools
+                ? { tools, toolChoice: isLastIteration ? 'none' : 'auto', abortSignal }
+                : { abortSignal },
             );
 
             let streamCompleted = false;
@@ -216,7 +220,7 @@ export function runAgentLoop({
                     arguments: unwrapTypedArguments(event.call.arguments),
                   };
                   if (pendingToolCalls.length < MAX_TOOL_CALLS_PER_ITERATION) {
-                    // On last iteration, tools are disabled but model might still emit tool calls
+                    // On last iteration, tool_choice is 'none' but the model might still emit tool calls
                     if (!isLastIteration) {
                       pendingToolCalls.push(call);
                     }

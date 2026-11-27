@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { runAgentLoop } from './agent-loop';
+import { MAX_AGENTIC_ITERATIONS, runAgentLoop } from './agent-loop';
 import type { Message, ModelUsage, StreamEvent, TokenUsage } from './types';
 
 // Mock the generateAgenticStreamWithBilling import
@@ -1328,6 +1328,54 @@ describe('agent-loop', () => {
       const { agentLoopMessages } = await run(toolRegistry);
 
       expect(JSON.stringify(agentLoopMessages)).not.toContain('<tool_use>');
+    });
+
+    it('keeps tools and reminder on the last iteration and only disables tool choice', async () => {
+      const onComplete = vi.fn();
+
+      mockGenerateAgenticStreamWithBilling.mockImplementation(async function* (
+        _selection: unknown,
+        _messages: unknown,
+        _apiKeyId: unknown,
+        _onFinish: unknown,
+        options: { toolChoice?: string },
+      ) {
+        if (options.toolChoice === 'none') {
+          yield { type: 'text', delta: 'Final answer.' } satisfies StreamEvent;
+        } else {
+          yield {
+            type: 'tool_call',
+            call: { id: 'call', name: 'test_tool', arguments: '{}' },
+          } satisfies StreamEvent;
+        }
+        yield { type: 'finish', usage } satisfies StreamEvent;
+      });
+
+      runAgentLoop({
+        modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+        apiKeyId: 'test-key',
+        messages: [{ role: 'user', content: 'Question' }],
+        toolRegistry,
+        agentName: 'Test Agent',
+        onTextChunk: vi.fn(),
+        onComplete,
+        onError: vi.fn(),
+      });
+
+      await vi.waitFor(() => {
+        expect(onComplete).toHaveBeenCalled();
+      });
+
+      const calls = mockGenerateAgenticStreamWithBilling.mock.calls;
+      expect(calls.length).toBe(MAX_AGENTIC_ITERATIONS);
+      const lastCall = calls[calls.length - 1];
+      const previousCall = calls[calls.length - 2];
+
+      expect(previousCall?.[4]).toMatchObject({ toolChoice: 'auto' });
+      expect(lastCall?.[4]).toMatchObject({ tools: previousCall?.[4].tools, toolChoice: 'none' });
+      expect((lastCall?.[1] as Message[])[0]?.content).toBe(
+        (previousCall?.[1] as Message[])[0]?.content,
+      );
     });
 
     it('does not add the reminder without tools', async () => {
