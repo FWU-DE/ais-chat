@@ -1,6 +1,6 @@
 import type { ModelSelection } from '@ais-chat/ai-core';
 import { checkTextInputSafety } from '@ais-chat/ai-core/chat/safety';
-import type { LlmModelSelectModel } from '@shared/db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
 
 import type { ChatMessage } from '@/types/chat';
 
@@ -22,7 +22,7 @@ export async function prepareAgentMessages({
 }: {
   messages: ChatMessage[];
   relatedFileEntities: FileWithConversationMessageId[];
-  model: LlmModelSelectModel;
+  model: LlmModel;
   modelSelection: ModelSelection;
   safetyModelName?: string;
   apiKeyId: string;

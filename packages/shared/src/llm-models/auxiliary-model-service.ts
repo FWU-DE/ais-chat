@@ -1,5 +1,5 @@
+import type { LlmModel } from '@ais-chat/api-database';
 import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
-import { LlmModelSelectModel } from '@shared/db/schema';
 import { logError } from '@shared/logging';
 
 import { findStaticModelByRoleAndFederalStateId } from './llm-model-service';
@@ -9,7 +9,7 @@ import { getFirstTextModel } from './llm-model-utils';
  * Get the auxiliary model for the federal state
  * @returns The auxiliary model for the federal state
  */
-export async function getAuxiliaryModel(federalStateId: string): Promise<LlmModelSelectModel> {
+export async function getAuxiliaryModel(federalStateId: string): Promise<LlmModel> {
   const [llmModels, configuredAuxiliaryModel, configuredFallbackModel] = await Promise.all([
     dbGetLlmModelsByFederalStateId({ federalStateId }),
     findStaticModelByRoleAndFederalStateId({ role: 'auxiliary', federalStateId }),
@@ -32,9 +32,7 @@ export async function getAuxiliaryModel(federalStateId: string): Promise<LlmMode
  * This model is more capable than the default auxiliary model but also more resource-intensive, so should be used wisely.
  * @returns The strong auxiliary model for the federal state
  */
-export async function getStrongAuxiliaryModel(
-  federalStateId: string,
-): Promise<LlmModelSelectModel> {
+export async function getStrongAuxiliaryModel(federalStateId: string): Promise<LlmModel> {
   const [llmModels, auxiliaryModel, configuredAuxiliaryModel, configuredFallbackModel] =
     await Promise.all([
       dbGetLlmModelsByFederalStateId({ federalStateId }),
@@ -63,9 +61,7 @@ export async function getStrongAuxiliaryModel(
  * Falls back to the strong auxiliary model if no speech auxiliary model is configured or available.
  * @returns The speech auxiliary model for the federal state
  */
-export async function getSpeechAuxiliaryModel(
-  federalStateId: string,
-): Promise<LlmModelSelectModel> {
+export async function getSpeechAuxiliaryModel(federalStateId: string): Promise<LlmModel> {
   const speechAuxiliaryModel = await findStaticModelByRoleAndFederalStateId({
     role: 'speech-auxiliary',
     federalStateId,

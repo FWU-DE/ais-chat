@@ -1,9 +1,9 @@
+import type { LlmModel } from '@ais-chat/api-database';
 import { dbGetFederalStateWithApiKeyIdWithResult } from '@shared/db/functions/federal-state';
 import {
   dbGetLlmModelsByFederalStateId,
   dbGetModelByIdAndFederalStateId,
 } from '@shared/db/functions/llm-model';
-import { LlmModelSelectModel } from '@shared/db/schema';
 import {
   getAuxiliaryModel,
   getStrongAuxiliaryModel,
@@ -32,7 +32,7 @@ async function getModelAndApiKey({
 }: {
   federalStateId: string;
   modelId: string;
-}): Promise<{ model: LlmModelSelectModel; apiKeyId: string }> {
+}): Promise<{ model: LlmModel; apiKeyId: string }> {
   const [error, federalStateObject] = await dbGetFederalStateWithApiKeyIdWithResult({
     federalStateId,
   });
@@ -63,7 +63,7 @@ async function getModelAndApiKey({
 }
 
 export function calculateCostsInCent(
-  model: LlmModelSelectModel,
+  model: LlmModel,
   usage: { promptTokens: number; completionTokens: number },
 ) {
   if (model.priceMetadata.type === 'text') {
@@ -81,7 +81,7 @@ export function calculateCostsInCent(
 }
 
 function calculateCostsInCentForTextModel(
-  model: LlmModelSelectModel,
+  model: LlmModel,
   usage: { promptTokens: number; completionTokens: number },
 ) {
   if (model.priceMetadata.type !== 'text') {
@@ -100,7 +100,7 @@ function calculateCostsInCentForTextModel(
 }
 
 function calculateCostsInCentForEmbeddingModel(
-  model: LlmModelSelectModel,
+  model: LlmModel,
   usage: { promptTokens: number; completionTokens: number },
 ) {
   if (model.priceMetadata.type !== 'embedding') {
@@ -149,7 +149,7 @@ export { getAuxiliaryModel, getSafetyModel, getStrongAuxiliaryModel };
  */
 export async function getDefaultModelByFederalStateId(
   federalStateId: string,
-): Promise<LlmModelSelectModel | undefined> {
+): Promise<LlmModel | undefined> {
   const models = await dbGetLlmModelsByFederalStateId({ federalStateId });
   return getDefaultModel({ federalStateId, models });
 }

@@ -1,6 +1,6 @@
+import type { LlmModel } from '@ais-chat/api-database';
 import { UserModel } from '@shared/auth/user-model';
 import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
-import { LlmModelSelectModel } from '@shared/db/schema';
 import { NotFoundError } from '@shared/error';
 import { FederalStateModel } from '@shared/federal-states/types';
 import { constructTokenBudgetExceededEvent, sendRabbitmqEvent } from '@shared/rabbitmq';
@@ -18,7 +18,7 @@ export const checkAccess = (
   return Promise.resolve(true);
 };
 
-export const getSpeechModel = async (): Promise<LlmModelSelectModel> => {
+export const getSpeechModel = async (): Promise<LlmModel> => {
   const model = await dbGetSpeechModel();
   if (model === undefined) throw new NotFoundError('Speech model not found');
   return model;

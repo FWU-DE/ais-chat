@@ -1,3 +1,4 @@
+import type { LlmModel } from '@ais-chat/api-database';
 import { dbGetConfiguration, dbUpsertConfiguration } from '@shared/db/functions/configuration';
 import {
   dbFindModelByIdAndFederalStateId,
@@ -8,7 +9,6 @@ import {
 import { InvalidArgumentError } from '@shared/error/invalid-argument-error';
 
 import {
-  type LlmModelSelectModel,
   type SpeechVoice,
   type StaticModelRole,
   type StaticModelsConfiguration,
@@ -113,8 +113,8 @@ export async function getDefaultModel({
   models,
 }: {
   federalStateId: string;
-  models: LlmModelSelectModel[];
-}): Promise<LlmModelSelectModel | undefined> {
+  models: LlmModel[];
+}): Promise<LlmModel | undefined> {
   return (
     (await findStaticModelByRoleAndFederalStateId({ role: 'default-chat', federalStateId })) ??
     getFirstTextModel(models)
@@ -131,7 +131,7 @@ async function getStaticModelsConfiguration() {
 
 export async function getDefaultModelNameByFederalStateId(
   federalStateId: string,
-  models: LlmModelSelectModel[],
+  models: LlmModel[],
 ) {
   const model = await getDefaultModel({ federalStateId, models });
   if (!model) {

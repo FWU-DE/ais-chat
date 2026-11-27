@@ -1,4 +1,4 @@
-import type { LlmModelSelectModel } from '@shared/db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type ChatMessage } from '@/types/chat';
@@ -15,7 +15,7 @@ vi.mock('./image-attachment-env', () => ({
   env: { imageAttachmentMode: 'url' },
 }));
 
-const anthropicModel: LlmModelSelectModel = {
+const anthropicModel: LlmModel = {
   id: 'model-1',
   name: 'anthropic/claude-3-5-sonnet-v2@20241022',
   displayName: 'Claude 3.5 Sonnet v2',
@@ -36,7 +36,7 @@ const anthropicModel: LlmModelSelectModel = {
   reasoning: null,
 };
 
-const openAiModel: LlmModelSelectModel = {
+const openAiModel: LlmModel = {
   id: 'model-2',
   name: 'gpt-4o',
   displayName: 'GPT-4o',

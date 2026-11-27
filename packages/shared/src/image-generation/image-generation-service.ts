@@ -1,5 +1,5 @@
+import type { LlmModel } from '@ais-chat/api-database';
 import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
-import { LlmModelSelectModel } from '@shared/db/schema';
 import { findStaticModelByRoleAndFederalStateId } from '@shared/llm-models/llm-model-service';
 
 /**
@@ -11,7 +11,7 @@ export async function getAvailableImageModelsForFederalState({
   federalStateId,
 }: {
   federalStateId: string;
-}): Promise<LlmModelSelectModel[]> {
+}): Promise<LlmModel[]> {
   const allModels = await dbGetLlmModelsByFederalStateId({ federalStateId });
 
   // Filter for image generation models
@@ -28,9 +28,9 @@ export async function getDefaultImageModel({
   imageModels,
   federalStateId,
 }: {
-  imageModels: LlmModelSelectModel[];
+  imageModels: LlmModel[];
   federalStateId: string;
-}): Promise<LlmModelSelectModel | undefined> {
+}): Promise<LlmModel | undefined> {
   return (
     (await findStaticModelByRoleAndFederalStateId({ role: 'default-image', federalStateId })) ??
     imageModels[0]

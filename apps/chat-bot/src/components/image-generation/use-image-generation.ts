@@ -1,6 +1,6 @@
 'use client';
 
-import { LlmModelSelectModel } from '@shared/db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
 import { ImageStyle } from '@shared/utils/chat';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
@@ -14,7 +14,7 @@ import { ImageAspectRatioPreset } from './image-generation-types';
 
 interface UseImageGenerationArgs {
   initialConversationId?: string;
-  selectedModel: LlmModelSelectModel | undefined;
+  selectedModel: LlmModel | undefined;
   selectedStyle: ImageStyle | undefined;
   aspectRatio: ImageAspectRatioPreset;
 }

@@ -1,4 +1,4 @@
-import type { LlmModelSelectModel } from '@shared/db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -19,7 +19,7 @@ vi.mock('@shared/logging', () => ({
   logError: mocks.logErrorMock,
 }));
 
-const baseModel: LlmModelSelectModel = {
+const baseModel: LlmModel = {
   id: 'model-1',
   provider: 'test',
   name: 'test-model',
@@ -36,19 +36,19 @@ const baseModel: LlmModelSelectModel = {
   reasoning: null,
 };
 
-const textModel = (overrides: Partial<LlmModelSelectModel> = {}): LlmModelSelectModel => ({
+const textModel = (overrides: Partial<LlmModel> = {}): LlmModel => ({
   ...baseModel,
   ...overrides,
 });
 
-const imageModel = (overrides: Partial<LlmModelSelectModel> = {}): LlmModelSelectModel =>
+const imageModel = (overrides: Partial<LlmModel> = {}): LlmModel =>
   textModel({
     id: 'image-1',
     priceMetadata: { type: 'image', pricePerImageInCent: 5 },
     ...overrides,
   });
 
-const modelOfType = (type: 'speech' | 'embedding' | 'safety'): LlmModelSelectModel => {
+const modelOfType = (type: 'speech' | 'embedding' | 'safety'): LlmModel => {
   const priceMetadata =
     type === 'speech'
       ? ({ type, priceInCentPer1MillionCharacters: 1 } as const)
@@ -154,7 +154,7 @@ describe('toAgentModelSummaries', () => {
     const model = {
       ...textModel(),
       setting: { apiKey: 'secret' },
-    } as LlmModelSelectModel;
+    } as LlmModel;
 
     const result = toAgentModelSummaries({ models: [model], defaultModel: model });
 

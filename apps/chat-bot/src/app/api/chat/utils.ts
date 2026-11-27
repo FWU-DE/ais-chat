@@ -3,7 +3,8 @@ import {
   isChatImageAttachment,
   type Message as AiCoreMessage,
 } from '@ais-chat/ai-core';
-import { type FileModel, LlmModelSelectModel } from '@shared/db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
+import { type FileModel } from '@shared/db/schema';
 import { UnexpectedError } from '@shared/error/unexpected-error';
 import { logError } from '@shared/logging';
 import { escape } from 'he';
@@ -264,11 +265,11 @@ const BASE64_ONLY_MODEL_NAME_PATTERNS = [/^anthropic\//i, /gemini/i];
  * base64 encoded data if required by the model.
  * Setting IMAGE_ATTACHMENT_MODE=base64 forces base64 for all models (e.g. when the S3 storage isn't publicly reachable by the LLM provider).
  */
-export function determineImageAttachmentTypeForModel(model: LlmModelSelectModel): 'url' | 'base64' {
+export function determineImageAttachmentTypeForModel(model: LlmModel): 'url' | 'base64' {
   if (imageAttachmentEnv.imageAttachmentMode === 'base64') {
     return 'base64';
   }
-  // we do not have settings on the LlmModelSelectModel to determine if the model needs image data,
+  // we do not have settings on the LlmModel to determine if the model needs image data,
   // so we will use the model name as a heuristic for now
   if (BASE64_ONLY_MODEL_NAME_PATTERNS.some((pattern) => pattern.test(model.name))) {
     return 'base64';

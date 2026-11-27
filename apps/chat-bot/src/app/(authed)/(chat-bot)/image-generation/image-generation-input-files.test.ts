@@ -1,6 +1,6 @@
 import { Readable } from 'node:stream';
 
-import { LlmModelSelectModel } from '@shared/db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
 import { NotFoundError } from '@shared/error';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -24,7 +24,7 @@ const imageModel = {
   name: 'image-model',
   provider: 'bifrost',
   supportedImageFormats: ['png', 'jpeg'],
-} as LlmModelSelectModel;
+} as LlmModel;
 
 const fileRecord = {
   id: 'file-1',

@@ -1,11 +1,12 @@
 import { generateTextWithBilling } from '@ais-chat/ai-core';
+import type { LlmModel } from '@ais-chat/api-database';
 import { dbGetCharacterById, dbUpdateCharacterFilterGroup } from '@shared/db/functions/character';
 import {
   dbGetLearningScenarioById,
   dbUpdateLearningScenarioFilterGroup,
 } from '@shared/db/functions/learning-scenario';
 import { dbGetFederalStateByUserId } from '@shared/db/functions/school';
-import type { FilterGroup, LlmModelSelectModel } from '@shared/db/schema';
+import type { FilterGroup } from '@shared/db/schema';
 import { cacheLife } from 'next/cache';
 
 import { constructCharacterLanguageSystemPrompt } from '@/app/api/character/system-prompt';
@@ -174,7 +175,7 @@ function getLocaleFromFilterLanguages(languages: string[] | undefined): string |
  * Results are cached for 30 days based on the systemPrompt content.
  */
 async function getLocale(
-  auxiliaryModelAndApiKey: { model: LlmModelSelectModel; apiKeyId: string },
+  auxiliaryModelAndApiKey: { model: LlmModel; apiKeyId: string },
   systemPrompt: string,
 ): Promise<string | null> {
   'use cache';

@@ -1,7 +1,7 @@
 import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
+import type { LlmModel } from '@ais-chat/api-database';
 import type { LlmModelPriceMetadata, ReasoningEffort } from '@ais-chat/api-database/types';
 import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
-import type { LlmModelSelectModel } from '@shared/db/schema';
 import { getCostFactor, roundCostFactor } from '@shared/llm-models/cost-factor';
 import { getDefaultModel } from '@shared/llm-models/llm-model-service';
 import { logError } from '@shared/logging';
@@ -31,11 +31,11 @@ export type AgentModelSummary = {
 
 type ListModelsToolResponse = { models: AgentModelSummary[] };
 
-type TextOrImageModel = LlmModelSelectModel & {
+type TextOrImageModel = LlmModel & {
   priceMetadata: Extract<LlmModelPriceMetadata, { type: 'text' | 'image' }>;
 };
 
-function isTextOrImageModel(model: LlmModelSelectModel): model is TextOrImageModel {
+function isTextOrImageModel(model: LlmModel): model is TextOrImageModel {
   return model.priceMetadata.type === 'text' || model.priceMetadata.type === 'image';
 }
 
@@ -43,8 +43,8 @@ export function toAgentModelSummaries({
   models,
   defaultModel,
 }: {
-  models: LlmModelSelectModel[];
-  defaultModel: LlmModelSelectModel | undefined;
+  models: LlmModel[];
+  defaultModel: LlmModel | undefined;
 }): AgentModelSummary[] {
   return models.filter(isTextOrImageModel).map((model) => ({
     id: model.id,

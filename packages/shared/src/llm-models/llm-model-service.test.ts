@@ -1,6 +1,5 @@
+import type { LlmModel } from '@ais-chat/api-database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-import type { LlmModelSelectModel } from '../db/schema';
 
 const { dbFindModelByIdAndFederalStateId, dbGetLlmModelById, dbGetConfiguration } = vi.hoisted(
   () => ({
@@ -24,7 +23,7 @@ vi.mock('@shared/db/functions/configuration', () => ({
 
 import { getDefaultModel, getSafetyModel } from './llm-model-service';
 
-const textModel = (id: string, name: string): LlmModelSelectModel => ({
+const textModel = (id: string, name: string): LlmModel => ({
   id,
   provider: 'test',
   name,

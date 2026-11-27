@@ -1,9 +1,9 @@
+import type { LlmModel } from '@ais-chat/api-database';
 import { describe, expect, it } from 'vitest';
 
-import type { LlmModelSelectModel } from '../db/schema';
 import { getCostFactor } from './cost-factor';
 
-const model = (completionTokenPrice: number): LlmModelSelectModel => ({
+const model = (completionTokenPrice: number): LlmModel => ({
   id: String(completionTokenPrice),
   provider: 'test',
   name: 'test',
@@ -23,7 +23,7 @@ const model = (completionTokenPrice: number): LlmModelSelectModel => ({
 const imageModel = {
   ...model(0),
   priceMetadata: { type: 'image', pricePerImageInCent: 1 },
-} as LlmModelSelectModel;
+} as LlmModel;
 
 const defaultModel = model(100);
 

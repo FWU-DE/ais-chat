@@ -1,5 +1,5 @@
 import { TokenPointsExceededError } from '@ais-chat/ai-core/errors';
-import type { LlmModelSelectModel } from '@shared/db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
 import { NotFoundError } from '@shared/error';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -105,7 +105,7 @@ const imageModel = {
   isDeleted: false,
   vendor: null,
   reasoning: null,
-} as LlmModelSelectModel;
+} as LlmModel;
 
 function prepareExistingConversation() {
   mocks.dbGetConversationAndMessages.mockResolvedValue({

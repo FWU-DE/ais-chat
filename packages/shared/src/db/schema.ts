@@ -1,5 +1,4 @@
 import { ToolCall } from '@ais-chat/ai-core/chat/types';
-import type { LlmModel } from '@ais-chat/api-database';
 import {
   type LlmModelPriceMetadata,
   llmModelPriceMetadataSchema,
@@ -768,9 +767,6 @@ export const userSettingsSelectSchema = createSelectSchema(userSettingsTable).ex
 });
 
 export type UserSettingsSelectModel = z.infer<typeof userSettingsSelectSchema>;
-
-// TODO(TD-1775): use `LlmModel` directly and remove this alias; the table above is the legacy app-DB copy
-export type LlmModelSelectModel = LlmModel;
 
 /** Generic project-wide JSON configuration object; services validate each key's value schema. */
 export type ConfigurationValue = Record<string, unknown>;

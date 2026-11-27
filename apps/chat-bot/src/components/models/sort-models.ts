@@ -1,5 +1,5 @@
+import type { LlmModel } from '@ais-chat/api-database';
 import { REASONING_EFFORTS } from '@ais-chat/api-database/types';
-import type { LlmModelSelectModel } from '@shared/db/schema';
 import { getCostFactor } from '@shared/llm-models/cost-factor';
 
 export type ModelSortKey = 'name' | 'reasoning' | 'cost';
@@ -8,14 +8,14 @@ export type ModelSort = { key: ModelSortKey; direction: SortDirection };
 
 export const INITIAL_MODEL_SORT: ModelSort = { key: 'name', direction: 'asc' };
 
-function getReasoningRank(model: LlmModelSelectModel): number {
+function getReasoningRank(model: LlmModel): number {
   const effort = model.reasoning?.effort;
   return effort ? REASONING_EFFORTS.indexOf(effort) : -1;
 }
 
 const comparators: Record<
   ModelSortKey,
-  (a: LlmModelSelectModel, b: LlmModelSelectModel, defaultModel?: LlmModelSelectModel) => number
+  (a: LlmModel, b: LlmModel, defaultModel?: LlmModel) => number
 > = {
   name: (a, b) => a.displayName.localeCompare(b.displayName, 'de', { sensitivity: 'base' }),
   reasoning: (a, b) => getReasoningRank(a) - getReasoningRank(b),
@@ -28,9 +28,9 @@ const comparators: Record<
  * The cost column sorts by the unrounded factor relative to the default model.
  */
 export function sortModels(
-  models: LlmModelSelectModel[],
+  models: LlmModel[],
   { key, direction }: ModelSort,
-  defaultModel?: LlmModelSelectModel,
+  defaultModel?: LlmModel,
 ) {
   const sign = direction === 'asc' ? 1 : -1;
   return [...models].sort((a, b) => sign * comparators[key](a, b, defaultModel));
