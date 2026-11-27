@@ -502,8 +502,8 @@ importers:
         specifier: 1.6.20
         version: 1.6.20
       docx:
-        specifier: 9.16.0
-        version: 9.16.0
+        specifier: 9.15.4
+        version: 9.15.4
       drizzle-orm:
         specifier: 0.45.4
         version: 0.45.4(@opentelemetry/api@1.10.0)(@types/pg@8.23.1)(pg@8.23.1)
@@ -598,8 +598,8 @@ importers:
         specifier: 10.0.1
         version: 10.0.1
       remark-docx:
-        specifier: 0.4.0
-        version: 0.4.0
+        specifier: 0.3.30
+        version: 0.3.30
       remark-gfm:
         specifier: 4.0.1
         version: 4.0.1(supports-color@7.2.0)
@@ -6340,8 +6340,8 @@ packages:
     resolution: {integrity: sha512-35mSku4ZXK0vfCuHEDAwt55dg2jNajHZ1odvF+8SSr82EsZY4QmXfuWso8oEd8zRhVObSN18aM0CjSdoBX7zIw==}
     engines: {node: '>=0.10.0'}
 
-  docx@9.16.0:
-    resolution: {integrity: sha512-fvAuqxV0705bEQ9OGPLt6onJqufGJTMS+b7PtRxNktea+iPWYgc1zO+OQBMW9ZmRLj9THTnOeiAoxTDz2ub0Fw==}
+  docx@9.15.4:
+    resolution: {integrity: sha512-5UUTdR+eE7KVeNroYYt6K0Ixi9yez18BBKnypz3XyQSR8FsVYTiZ4vqKZr83JHjYPAgO+Tw7T/+13KyITpkgFw==}
     engines: {node: '>=16'}
 
   dom-serializer@2.0.0:
@@ -9018,8 +9018,8 @@ packages:
   rehype-stringify@10.0.1:
     resolution: {integrity: sha512-k9ecfXHmIPuFVI61B9DeLPN0qFHfawM6RsuX48hoqlaKSF61RskNjSm1lI8PhBEM0MRdLxVVm4WmTqJQccH9mA==}
 
-  remark-docx@0.4.0:
-    resolution: {integrity: sha512-pNEk2uI7zkA+H8uLC7nO2oCkEBFwjFoybnxJhxUHA9JV1MUv9jKyU3ILuppfcudDaozVXpJZTHj03CToDU11cQ==}
+  remark-docx@0.3.30:
+    resolution: {integrity: sha512-Hztf3jw00vHbgma3GLtRi05U1qqUcBNKzZnkaJ6uniL7gkNaVvfphNtzjLiFSnBLizsUu2dKeJ7UA2Rr7ud2HA==}
 
   remark-gfm@4.0.1:
     resolution: {integrity: sha512-1quofZ2RQ9EWdeN34S79+KExV1764+wCUGop5CPL1WGdD0ocPpu91lzPGbwWMECpEpd42kJGQwzRfyov9j4yNg==}
@@ -15172,7 +15172,7 @@ snapshots:
     dependencies:
       esutils: 2.0.3
 
-  docx@9.16.0:
+  docx@9.15.4:
     dependencies:
       '@types/node': 26.6.6
       fflate: 0.8.3
@@ -18526,11 +18526,11 @@ snapshots:
       hast-util-to-html: 9.0.6
       unified: 11.0.5
 
-  remark-docx@0.4.0:
+  remark-docx@0.3.30:
     dependencies:
       '@mathjax/src': 4.1.3
       deepmerge: 4.3.1
-      docx: 9.16.0
+      docx: 9.15.4
       fast-xml-parser: 5.12.0
       hast-util-from-html: 2.0.3
       hast-util-to-mdast: 10.1.2
