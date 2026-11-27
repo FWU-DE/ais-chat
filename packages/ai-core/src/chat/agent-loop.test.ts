@@ -1160,6 +1160,93 @@ describe('agent-loop', () => {
     });
   });
 
+  describe('tool call reminder', () => {
+    const toolRegistry = {
+      test_tool: {
+        definition: { name: 'test_tool', description: 'Test', parameters: {} },
+        handler: async () => ({ value: 'tool result' }),
+      },
+    };
+
+    async function run(registry?: typeof toolRegistry) {
+      const messages: Message[] = [
+        { role: 'system', content: 'System prompt' },
+        { role: 'user', content: 'First question' },
+        { role: 'assistant', content: 'First answer' },
+        { role: 'user', content: 'Second question' },
+      ];
+      const onComplete = vi.fn();
+
+      mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+        yield { type: 'text', delta: 'Done.' } satisfies StreamEvent;
+        yield { type: 'finish', usage } satisfies StreamEvent;
+      });
+
+      runAgentLoop({
+        modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+        apiKeyId: 'test-key',
+        messages,
+        toolRegistry: registry,
+        agentName: 'Test Agent',
+        onTextChunk: vi.fn(),
+        onComplete,
+        onError: vi.fn(),
+      });
+
+      await vi.waitFor(() => {
+        expect(onComplete).toHaveBeenCalled();
+      });
+
+      return {
+        sentMessages: mockGenerateAgenticStreamWithBilling.mock.calls[0]?.[1] as Message[],
+        agentLoopMessages: onComplete.mock.calls[0]?.[0].agentLoopMessages as Message[],
+      };
+    }
+
+    it('appends the reminder to every user message sent to the provider, but not to others', async () => {
+      const { sentMessages } = await run(toolRegistry);
+
+      expect(sentMessages.map((message) => message.role)).toEqual([
+        'system',
+        'user',
+        'assistant',
+        'user',
+      ]);
+      expect(sentMessages[0]?.content).toBe('System prompt');
+      expect(sentMessages[2]?.content).toBe('First answer');
+      for (const message of sentMessages.filter(({ role }) => role === 'user')) {
+        expect(message.content).toMatch(
+          /^(First|Second) question\n\n<tool_use>Call tools, don't announce\.<\/tool_use>$/,
+        );
+      }
+    });
+
+    it('keeps earlier messages identical between requests so the prompt cache stays valid', async () => {
+      const first = await run(toolRegistry);
+      mockGenerateAgenticStreamWithBilling.mockClear();
+      const second = await run(toolRegistry);
+
+      expect(second.sentMessages).toEqual(first.sentMessages);
+    });
+
+    it('does not persist the reminder in the generated messages', async () => {
+      const { agentLoopMessages } = await run(toolRegistry);
+
+      expect(JSON.stringify(agentLoopMessages)).not.toContain('<tool_use>');
+    });
+
+    it('does not add the reminder without tools', async () => {
+      const { sentMessages } = await run();
+
+      expect(sentMessages.map((message) => message.content)).toEqual([
+        'System prompt',
+        'First question',
+        'First answer',
+        'Second question',
+      ]);
+    });
+  });
+
   describe('tool-reported usage', () => {
     it('aggregates usage a tool handler reports into modelUsages and the totals', async () => {
       const messages: Message[] = [{ role: 'user', content: 'Test query' }];

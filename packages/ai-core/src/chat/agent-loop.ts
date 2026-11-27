@@ -19,6 +19,20 @@ import type {
 export const MAX_AGENTIC_ITERATIONS = env.maxAgenticIterations;
 export const MAX_TOOL_CALLS_PER_ITERATION = env.maxToolCallsPerIteration;
 
+const TOOL_CALL_REMINDER = "<tool_use>Call tools, don't announce.</tool_use>";
+
+// Some models (e.g. Llama) otherwise announce a tool call in text instead of making it, because a
+// long system prompt outweighs the tool definitions. The reminder is appended to every user message
+// (not only the last one) so that earlier messages stay identical between requests and the
+// provider's prompt cache prefix remains valid.
+function withToolCallReminder(messages: AiCoreMessage[]): AiCoreMessage[] {
+  return messages.map((message) =>
+    message.role === 'user'
+      ? { ...message, content: `${message.content}\n\n${TOOL_CALL_REMINDER}` }
+      : message,
+  );
+}
+
 function logError(message: string, error: unknown) {
   console.error(message, error);
 }
@@ -164,9 +178,10 @@ export function runAgentLoop({
             }
 
             const isLastIteration = iteration === MAX_AGENTIC_ITERATIONS - 1;
+            const toolsEnabled = tools.length > 0 && !isLastIteration;
             const stream = generateAgenticStreamWithBilling(
               modelSelection,
-              loopMessages,
+              toolsEnabled ? withToolCallReminder(loopMessages) : loopMessages,
               apiKeyId,
               async ({ usage, priceInCents, modelId: usedModelId, provider, modelName }) => {
                 await modelSelection.onModelUsed?.(usedModelId);
@@ -182,9 +197,7 @@ export function runAgentLoop({
                   agentSpan.setAttribute('gen_ai.usage.estimated', true);
                 }
               },
-              tools.length > 0 && !isLastIteration
-                ? { tools, toolChoice: 'auto', abortSignal }
-                : { abortSignal },
+              toolsEnabled ? { tools, toolChoice: 'auto', abortSignal } : { abortSignal },
             );
 
             let streamCompleted = false;

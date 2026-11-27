@@ -35,6 +35,20 @@ type ToolCallAccumulator = {
   arguments: string;
 };
 
+function createToolCallAccumulator(): ToolCallAccumulator {
+  return { id: '', callId: '', name: '', arguments: '' };
+}
+
+function applyFunctionCallItem(
+  toolCall: ToolCallAccumulator,
+  item: OpenAI.Responses.ResponseFunctionToolCall,
+) {
+  toolCall.id = item.id ?? item.call_id;
+  toolCall.callId = item.call_id;
+  toolCall.name = item.name;
+  toolCall.arguments = item.arguments;
+}
+
 export async function* streamOpenAICompatibleAgenticResponse({
   client,
   messages,
@@ -70,6 +84,7 @@ export async function* streamOpenAICompatibleAgenticResponse({
   let content = '';
   let usage: TokenUsage | undefined;
   const toolCalls = new Map<number, ToolCallAccumulator>();
+  let completedFunctionCalls: OpenAI.Responses.ResponseFunctionToolCall[] = [];
 
   try {
     for await (const chunk of stream) {
@@ -83,52 +98,51 @@ export async function* streamOpenAICompatibleAgenticResponse({
           part: { itemId: chunk.item_id, summaryIndex: chunk.summary_index },
         };
       } else if (chunk.type === 'response.function_call_arguments.delta') {
-        const existingToolCall = toolCalls.get(chunk.output_index) ?? {
-          id: '',
-          callId: '',
-          name: '',
-          arguments: '',
-        };
+        const existingToolCall = toolCalls.get(chunk.output_index) ?? createToolCallAccumulator();
 
         existingToolCall.arguments += chunk.delta;
         toolCalls.set(chunk.output_index, existingToolCall);
       } else if (chunk.type === 'response.function_call_arguments.done') {
-        const existingToolCall = toolCalls.get(chunk.output_index) ?? {
-          id: '',
-          callId: '',
-          name: '',
-          arguments: '',
-        };
+        const existingToolCall = toolCalls.get(chunk.output_index) ?? createToolCallAccumulator();
 
         existingToolCall.arguments = chunk.arguments;
+        toolCalls.set(chunk.output_index, existingToolCall);
+      } else if (
+        chunk.type === 'response.output_item.added' &&
+        chunk.item.type === 'function_call'
+      ) {
+        // Calls without arguments (e.g. Llama) may never emit argument or done events.
+        const existingToolCall = toolCalls.get(chunk.output_index) ?? createToolCallAccumulator();
+        const streamedArguments = existingToolCall.arguments;
+
+        applyFunctionCallItem(existingToolCall, chunk.item);
+        existingToolCall.arguments = streamedArguments || chunk.item.arguments;
         toolCalls.set(chunk.output_index, existingToolCall);
       } else if (
         chunk.type === 'response.output_item.done' &&
         chunk.item.type === 'function_call'
       ) {
-        const existingToolCall = toolCalls.get(chunk.output_index) ?? {
-          id: '',
-          callId: '',
-          name: '',
-          arguments: '',
-        };
+        const existingToolCall = toolCalls.get(chunk.output_index) ?? createToolCallAccumulator();
 
-        existingToolCall.id = chunk.item.id ?? chunk.item.call_id;
-        existingToolCall.callId = chunk.item.call_id;
-        existingToolCall.name = chunk.item.name;
-        existingToolCall.arguments = chunk.item.arguments;
+        applyFunctionCallItem(existingToolCall, chunk.item);
         toolCalls.set(chunk.output_index, existingToolCall);
       } else if (
-        (chunk.type === 'response.completed' ||
-          chunk.type === 'response.incomplete' ||
-          chunk.type === 'response.failed') &&
-        chunk.response.usage
+        chunk.type === 'response.completed' ||
+        chunk.type === 'response.incomplete' ||
+        chunk.type === 'response.failed'
       ) {
-        usage = {
-          completionTokens: chunk.response.usage.output_tokens,
-          promptTokens: chunk.response.usage.input_tokens,
-          totalTokens: chunk.response.usage.total_tokens,
-        };
+        completedFunctionCalls = (chunk.response.output ?? []).filter(
+          (item): item is OpenAI.Responses.ResponseFunctionToolCall =>
+            item.type === 'function_call',
+        );
+
+        if (chunk.response.usage) {
+          usage = {
+            completionTokens: chunk.response.usage.output_tokens,
+            promptTokens: chunk.response.usage.input_tokens,
+            totalTokens: chunk.response.usage.total_tokens,
+          };
+        }
       }
     }
   } catch (error) {
@@ -145,6 +159,24 @@ export async function* streamOpenAICompatibleAgenticResponse({
       ...(usageInfo.modelName ? { modelName: usageInfo.modelName } : {}),
     };
     return;
+  }
+
+  // The completed response is the final state of every call. It updates calls already seen in
+  // item events and adds calls that were only reported there, without any item events.
+  for (const item of completedFunctionCalls) {
+    const knownToolCall = [...toolCalls.values()].find(
+      ({ id, callId }) =>
+        (id && (id === item.id || id === item.call_id)) ||
+        (callId && (callId === item.call_id || callId === item.id)),
+    );
+
+    if (knownToolCall) {
+      applyFunctionCallItem(knownToolCall, item);
+    } else {
+      const toolCall = createToolCallAccumulator();
+      applyFunctionCallItem(toolCall, item);
+      toolCalls.set(Math.max(-1, ...toolCalls.keys()) + 1, toolCall);
+    }
   }
 
   const resolvedToolCalls: ToolCall[] = [];
