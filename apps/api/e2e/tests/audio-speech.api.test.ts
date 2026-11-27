@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { authorizationHeader, getModel, getSpeechModel } from '../utils/api.js';
+import { withIsolatedSpeechApiKey } from '../utils/speech-usage.js';
 
 const mockSpeechRequest = {
   model: 'mock-speech',
@@ -10,7 +11,6 @@ const mockSpeechRequest = {
 
 type SpeechModel = {
   name: string;
-  provider?: string;
   priceMetadata?: {
     type?: string;
     priceInCentPer1MillionCharacters?: number;
@@ -21,8 +21,7 @@ type SpeechModel = {
 };
 
 async function getConfiguredSpeechModel(request: Parameters<typeof getSpeechModel>[0]) {
-  // The success tests need a real speech model: E2E_SPEECH_MODEL (optionally E2E_SPEECH_VOICE)
-  // or a Bifrost speech model assigned to the test key. Otherwise they are skipped.
+  // E2E_SPEECH_MODEL (optionally E2E_SPEECH_VOICE) overrides the default speech model selection.
   const configuredModelName = process.env['E2E_SPEECH_MODEL'];
 
   if (configuredModelName) {
@@ -32,12 +31,7 @@ async function getConfiguredSpeechModel(request: Parameters<typeof getSpeechMode
   const response = await request.get('/v1/models', { headers: authorizationHeader });
   const models = (await response.json()) as SpeechModel[];
 
-  return models.find(
-    (model) =>
-      model.priceMetadata?.type === 'speech' &&
-      model.name !== 'mock-speech' &&
-      model.provider === 'bifrost',
-  );
+  return models.find((model) => model.priceMetadata?.type === 'speech');
 }
 
 async function getSpeechRequest(request: Parameters<typeof getSpeechModel>[0]) {
@@ -140,7 +134,7 @@ test.describe('speech model success responses', () => {
   test('returns chunked MP3 audio', { tag: '@smoke' }, async ({ request }) => {
     const speechRequest = await getSpeechRequest(request);
 
-    test.skip(!speechRequest, 'No configured Bifrost speech model with a voice is available');
+    test.skip(!speechRequest, 'No configured speech model with a voice is available');
 
     const response = await request.post('/v1/audio/speech', {
       headers: authorizationHeader,
@@ -161,7 +155,7 @@ test.describe('speech model success responses', () => {
   test('streams audio and a completion event as SSE', { tag: '@smoke' }, async ({ request }) => {
     const speechRequest = await getSpeechRequest(request);
 
-    test.skip(!speechRequest, 'No configured Bifrost speech model with a voice is available');
+    test.skip(!speechRequest, 'No configured speech model with a voice is available');
 
     const response = await request.post('/v1/audio/speech', {
       headers: authorizationHeader,
@@ -185,31 +179,27 @@ test.describe('speech model success responses', () => {
     expect(events.at(-1)?.type).toBe('speech.audio.done');
   });
 
-  test('bills audio usage against the API key', { tag: '@smoke' }, async ({ request }) => {
+  test('records audio usage for the requesting API key', { tag: '@smoke' }, async ({ request }) => {
     const speechRequest = await getSpeechRequest(request);
 
-    test.skip(!speechRequest, 'No configured Bifrost speech model with a voice is available');
+    test.skip(!speechRequest, 'No configured speech model with a voice is available');
 
-    const model = await getModel(request, speechRequest!.model);
-    const beforeResponse = await request.get('/v1/usage', { headers: authorizationHeader });
-    const before = (await beforeResponse.json()) as {
-      remainingLimitInCent: number;
-      limitInCent: number;
-    };
+    await withIsolatedSpeechApiKey(
+      speechRequest!.model,
+      async ({ apiKeyId, modelId, headers, getUsage }) => {
+        expect(await getUsage()).toEqual([]);
 
-    const audioResponse = await request.post('/v1/audio/speech', {
-      headers: authorizationHeader,
-      data: speechRequest,
-    });
-    expect(audioResponse.status()).toBe(200);
+        const audioResponse = await request.post('/v1/audio/speech', {
+          headers,
+          data: speechRequest,
+        });
+        expect(audioResponse.status()).toBe(200);
 
-    const afterResponse = await request.get('/v1/usage', { headers: authorizationHeader });
-    const after = (await afterResponse.json()) as typeof before;
-    const beforeUsage = before.limitInCent - before.remainingLimitInCent;
-    const afterUsage = after.limitInCent - after.remainingLimitInCent;
-    const price = model.priceMetadata?.priceInCentPer1MillionCharacters ?? 0;
-
-    const expectedCost = (speechRequest!.input.length * price) / 1_000_000;
-    expect(afterUsage - beforeUsage).toBeCloseTo(expectedCost, 6);
+        // Exact price calculation is unit tested; this checks persistence and key attribution.
+        expect(await getUsage()).toEqual([
+          { apiKeyId, modelId, completionTokens: 0, promptTokens: 0, totalTokens: 0 },
+        ]);
+      },
+    );
   });
 });

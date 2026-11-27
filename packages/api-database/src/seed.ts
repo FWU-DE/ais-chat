@@ -69,18 +69,18 @@ const mockLlm: LlmInsertModel = {
 
 const mockSpeech: LlmInsertModel = {
   id: 'f53e4a77-1a3e-4d62-a3b6-6b74e7f4a1f0',
-  provider: 'google',
+  provider: 'bifrost',
   name: 'mock-speech',
   displayName: 'Mock Speech',
-  description: 'Mock speech model for e2e settings tests',
+  description: 'Mock speech model for e2e tests — returns silent MP3 audio',
   setting: {
-    provider: 'google',
-    projectId: googleProjectId ?? 'e2e-test-project',
-    location: googleLocation ?? 'e2e-test-location',
+    provider: 'openai',
+    apiKey: mockLlmApiKey,
+    baseUrl: mockLlmBaseUrl,
   },
   priceMetadata: {
     type: 'speech',
-    priceInCentPer1MillionCharacters: 0,
+    priceInCentPer1MillionCharacters: 1000,
   },
   modelConfig: {
     voices: [{ name: 'alloy', displayName: 'Alloy' }],
@@ -429,7 +429,7 @@ export async function seedDatabase() {
             isNew: model.isNew,
             isDeleted: model.isDeleted,
             safetyFilterEnabled: model.safetyFilterEnabled,
-            useBifrost: false,
+            useBifrost: true,
           },
         });
 
@@ -490,7 +490,9 @@ export async function seedDatabase() {
     }
 
     const seedModels =
-      llamaGuardModel === undefined ? DEFAULT_MODELS : [...DEFAULT_MODELS, llamaGuardModel];
+      llamaGuardModel === undefined
+        ? [...DEFAULT_MODELS, ...SPEECH_MODELS]
+        : [...DEFAULT_MODELS, ...SPEECH_MODELS, llamaGuardModel];
     await seedProviderKeysForModels(seedModels);
 
     if (llamaGuardModel !== undefined) {

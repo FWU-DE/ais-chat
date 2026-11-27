@@ -17,6 +17,9 @@
  *   Returns an OpenAI Embeddings API-compatible response with a static 1024-entry vector per
  *   input (ignoring the input text).
  *
+ * POST /v1/audio/speech
+ *   Returns silent MPEG-1 Layer III audio, either as an MP3 binary or streaming SSE audio events.
+ *
  * GET /health
  *   Returns {"status":"healthy"} for readiness checks.
  */
@@ -396,6 +399,65 @@ async function handleEmbeddings(req, res) {
   );
 }
 
+// --- Mock speech (OpenAI Audio API-compatible) ---
+
+const MOCK_MP3_FRAME_LENGTH = 417;
+const MOCK_MP3_FRAME_COUNT = 3;
+
+function createMockMp3() {
+  return Buffer.concat(
+    Array.from({ length: MOCK_MP3_FRAME_COUNT }, () => {
+      const frame = Buffer.alloc(MOCK_MP3_FRAME_LENGTH);
+      frame[0] = 0xff;
+      frame[1] = 0xfb;
+      frame[2] = 0x90;
+      frame[3] = 0x64;
+      return frame;
+    }),
+  );
+}
+
+async function handleSpeech(req, res) {
+  let data;
+  try {
+    data = JSON.parse(await readBody(req));
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Invalid JSON' }));
+    return;
+  }
+
+  const input = typeof data.input === 'string' ? data.input : '';
+  const audio = createMockMp3();
+
+  if (data.stream_format === 'sse') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'Transfer-Encoding': 'chunked',
+    });
+
+    for (let offset = 0; offset < audio.length; offset += MOCK_MP3_FRAME_LENGTH) {
+      writeSse(res, {
+        type: 'speech.audio.delta',
+        audio: audio.subarray(offset, offset + MOCK_MP3_FRAME_LENGTH).toString('base64'),
+      });
+      await sleep(CHUNK_INTERVAL_MS);
+    }
+
+    writeSse(res, {
+      type: 'speech.audio.done',
+      usage: { input_chars: input.length },
+    });
+    res.end();
+    return;
+  }
+
+  res.writeHead(200, { 'Content-Type': 'audio/mpeg' });
+  res.end(audio);
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && req.url === '/health') {
@@ -426,6 +488,11 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && pathname === '/v1/embeddings') {
       await handleEmbeddings(req, res);
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/audio/speech') {
+      await handleSpeech(req, res);
       return;
     }
 
