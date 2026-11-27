@@ -103,7 +103,7 @@ export async function getUserAndContextByUserId({
 
 function obscureFederalState(federalState: FederalStateSelectModel) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { encryptedApiKey, apiKeyId, ...rest } = federalState;
+  const { apiKeyId, ...rest } = federalState;
 
   return rest;
 }

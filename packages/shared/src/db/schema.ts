@@ -258,7 +258,6 @@ export const federalStateTable = pgTable('federal_state', {
   id: text('id').primaryKey(),
   teacherPriceLimit: integer('teacher_price_limit').notNull().default(500),
   studentPriceLimit: integer('student_price_limit').notNull().default(200),
-  encryptedApiKey: text('encrypted_api_key'), // This will stay until we have migrated all usages to apiKeyId
   apiKeyId: uuid('api_key_id'),
   createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   // vidis things
@@ -706,11 +705,8 @@ export type CharacterTemplateMappingInsertModel = z.infer<
 >;
 
 /**
- * Schema for table llm_model
+ * Schemas for LLM model configuration
  */
-export const llmModelTypeSchema = z.enum(['text', 'image', 'fc']);
-export const llmModelTypeEnum = pgEnum('llm_model_type', llmModelTypeSchema.enum);
-export type LlmModeType = z.infer<typeof llmModelTypeSchema>;
 export const staticModelRoleSchema = z.enum([
   'default-chat',
   'fallback',
@@ -773,42 +769,8 @@ export const userSettingsSelectSchema = createSelectSchema(userSettingsTable).ex
 
 export type UserSettingsSelectModel = z.infer<typeof userSettingsSelectSchema>;
 
-export const llmModelTable = pgTable(
-  'llm_model',
-  {
-    id: uuid('id').primaryKey(),
-    provider: text('owner').notNull(),
-    name: text('name').notNull(),
-    displayName: text('display_name').notNull(),
-    description: text('description').notNull().default(''),
-    priceMetadata: jsonb('price_metadata').$type<LlmModelPriceMetadata>().notNull(),
-    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-    supportedImageFormats: jsonb('supported_image_formats').$type<string[]>(),
-    imageGenerationConfig: jsonb('image_generation_config').$type<ImageGenerationConfig>(),
-    modelConfig: jsonb('model_config').$type<SpeechConfig>(),
-    isNew: boolean('is_new').notNull().default(false),
-    isDeleted: boolean('is_deleted').notNull().default(false),
-  },
-  (table) => [unique().on(table.provider, table.name)],
-);
-
-export const llmModelSelectSchema = createSelectSchema(llmModelTable).extend({
-  createdAt: z.coerce.date(),
-});
-export const llmModelInsertSchema = createInsertSchema(llmModelTable).omit({
-  id: true,
-  createdAt: true,
-});
-export const llmModelUpdateSchema = createUpdateSchema(llmModelTable)
-  .omit({ createdAt: true })
-  .extend({
-    id: z.string(),
-  });
-
 // TODO(TD-1775): use `LlmModel` directly and remove this alias; the table above is the legacy app-DB copy
 export type LlmModelSelectModel = LlmModel;
-export type LlmModelInsertModel = z.infer<typeof llmModelInsertSchema>;
-export type LlmModelUpdateModel = z.infer<typeof llmModelUpdateSchema>;
 
 /** Generic project-wide JSON configuration object; services validate each key's value schema. */
 export type ConfigurationValue = Record<string, unknown>;
@@ -817,60 +779,6 @@ export const configurationTable = pgTable('configuration', {
   value: jsonb('value').$type<ConfigurationValue>().notNull(),
 });
 export type Configuration = typeof configurationTable.$inferSelect;
-
-/**
- * Schema for table federal_state_llm_model_mapping
- */
-export const federalStateLlmModelMappingTable = pgTable(
-  'federal_state_llm_model_mapping',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    federalStateId: text('federal_state_id').notNull(),
-    llmModelId: uuid('llm_model_id')
-      .references(() => llmModelTable.id)
-      .notNull(),
-    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    foreignKey({
-      columns: [table.federalStateId],
-      foreignColumns: [federalStateTable.id],
-      // Set a custom name because the auto-generated name is too long and will be silently truncated to 63 characters
-      // The custom name can only be set with foreignKey() function
-      name: 'federal_state_llm_model_mapping_federal_state_id_fk',
-    }),
-    unique('federal_state_llm_model_mapping_federal_state_llm_model_unique').on(
-      table.federalStateId,
-      table.llmModelId,
-    ),
-  ],
-);
-
-export const federalStateLlmModelMappingSelectSchema = createSelectSchema(
-  federalStateLlmModelMappingTable,
-).extend({
-  createdAt: z.coerce.date(),
-});
-export const federalStateLlmModelMappingInsertSchema = createInsertSchema(
-  federalStateLlmModelMappingTable,
-).omit({ id: true, createdAt: true });
-export const federalStateLlmModelMappingUpdateSchema = createUpdateSchema(
-  federalStateLlmModelMappingTable,
-)
-  .omit({ createdAt: true })
-  .extend({
-    id: z.string(),
-  });
-
-export type FederalStateLlmModelMappingSelectModel = z.infer<
-  typeof federalStateLlmModelMappingSelectSchema
->;
-export type FederalStateLlmModelMappingInsertModel = z.infer<
-  typeof federalStateLlmModelMappingInsertSchema
->;
-export type FederalStateLlmModelMappingUpdateModel = z.infer<
-  typeof federalStateLlmModelMappingUpdateSchema
->;
 
 /**
  * Schema for table learning_scenario

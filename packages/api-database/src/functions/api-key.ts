@@ -13,17 +13,6 @@ import { cnanoid } from '../utils';
 import { type ApiKeyValidationResult, checkApiKeyUsable } from './api-key-validation';
 import { dbGetProjectById } from './projects';
 
-export async function dbLookupApiKeyByFullKey(fullApiKey: string) {
-  const [sk, keyId, _secretKey] = fullApiKey.split('_');
-
-  if (sk !== 'sk' || keyId === undefined || _secretKey === undefined) {
-    return { valid: false as const, reason: 'Malformed api key' };
-  }
-
-  const apiKey = (await db.select().from(apiKeyTable).where(eq(apiKeyTable.keyId, keyId)))[0];
-  return apiKey;
-}
-
 export async function dbCreateJustTheApiKey(
   apiKey: Omit<ApiKeyInsertModel, 'secretHash' | 'keyId'>,
 ) {

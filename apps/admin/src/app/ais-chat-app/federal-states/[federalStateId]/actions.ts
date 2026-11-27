@@ -30,7 +30,7 @@ export async function getApiKeyOptionsAction(federalStateId: string) {
 }
 
 export async function createFederalStateAction(
-  data: Omit<FederalStateInsertModel, 'createdAt' | 'featureToggles' | 'encryptedApiKey'>,
+  data: Omit<FederalStateInsertModel, 'createdAt' | 'featureToggles'>,
 ) {
   await requireAdminAuth();
 

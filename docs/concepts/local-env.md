@@ -2,7 +2,7 @@
 
 ## Where an env var goes
 
-- Working local default in `apps/<app>/.env.development` (tracked). Dummy secrets only; shared values like `API_KEY` and `ENCRYPTION_KEY` are identical across apps.
+- Working local default in `apps/<app>/.env.development` (tracked). Dummy secrets only; shared values like `API_KEY` are identical across apps.
 - Documented in `apps/<app>/.env.example`, including vars that also have a default.
 - Validated in the zod env module of the app or package and listed in `turbo.json` `globalEnv`.
 - Real secrets and personal overrides only in `apps/<app>/.env.local` (gitignored). Never put real secrets in git.

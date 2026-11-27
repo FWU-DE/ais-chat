@@ -21,7 +21,6 @@ import { getFederalStateById, updateFederalState } from './federal-state-service
 
 const federalState = {
   id: 'DE-TEST',
-  encryptedApiKey: 'legacy-encrypted-key',
   apiKeyId: null,
 };
 
@@ -41,7 +40,6 @@ describe('federal-state-service', () => {
       const result = await getFederalStateById('DE-TEST');
 
       expect(result.hasApiKeyAssigned).toBe(hasApiKeyAssigned);
-      expect(result).not.toHaveProperty('encryptedApiKey');
     },
   );
 

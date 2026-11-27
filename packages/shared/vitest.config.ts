@@ -21,7 +21,6 @@ export default defineConfig({
     env: {
       API_KEY: 'test-api-key',
       API_URL: 'https://test.api.url',
-      ENCRYPTION_KEY: 'test-encryption-key-32-characters',
       DATABASE_URL: 'not-needed-for-tests',
       OTC_ACCESS_KEY_ID: 'not-needed-for-tests',
       OTC_BUCKET_NAME: 'not-needed-for-tests',
