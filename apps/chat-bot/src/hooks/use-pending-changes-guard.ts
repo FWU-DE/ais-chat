@@ -1,33 +1,63 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
 
 type NavigationIntent = () => void;
 
 type UsePendingChangesGuardProps = {
   hasPendingChanges: boolean;
-  onBeforePageLeave: () => Promise<void>;
+  /** Resolves to `false` if the pending changes could not be saved. */
+  onBeforePageLeave: () => Promise<boolean>;
 };
 
-const HISTORY_GUARD_STATE_KEY = '__pendingChangesGuard';
+type LeaveSaveResult = 'saved' | 'failed' | 'timeout';
+
+const LEAVE_SAVE_TIMEOUT_MS = 3000;
+
+async function saveWithTimeout(save: () => Promise<boolean>): Promise<LeaveSaveResult> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<'timeout'>((resolve) => {
+    timer = setTimeout(() => resolve('timeout'), LEAVE_SAVE_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([
+      save().then((isSaved) => (isSaved ? ('saved' as const) : ('failed' as const))),
+      timeout,
+    ]);
+  } catch {
+    return 'failed';
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /**
  * A hook that guards against navigating away from a page with pending changes.
- * It listens for navigation events (including browser back button)
- * and calls the provided `onBeforePageLeave` callback before allowing navigation to proceed.
+ * In-app navigation goes through `guardNavigation`, which awaits `onBeforePageLeave` first.
+ * Browser back/forward is held back while there are pending changes and continues once they
+ * are saved. It stays on the page if saving fails and continues if saving takes too long.
+ * No history entries are written.
  */
 export function usePendingChangesGuard({
   hasPendingChanges,
   onBeforePageLeave,
 }: UsePendingChangesGuardProps) {
+  const queryClient = useQueryClient();
   const hasPendingChangesRef = useRef(hasPendingChanges);
   const pendingIntentRef = useRef<NavigationIntent | null>(null);
-  const bypassNextPopstateRef = useRef(false);
+  const onBeforePageLeaveRef = useRef(onBeforePageLeave);
   const isNavigatingRef = useRef(false);
+  const bypassNextTraverseRef = useRef(false);
 
   useEffect(() => {
     hasPendingChangesRef.current = hasPendingChanges;
   }, [hasPendingChanges]);
+
+  useEffect(() => {
+    onBeforePageLeaveRef.current = onBeforePageLeave;
+  }, [onBeforePageLeave]);
 
   const continueNavigation = useCallback(() => {
     const navigationIntent = pendingIntentRef.current;
@@ -44,12 +74,15 @@ export function usePendingChangesGuard({
       isNavigatingRef.current = true;
       pendingIntentRef.current = navigationIntent;
 
-      try {
-        await onBeforePageLeave();
-      } finally {
-        isNavigatingRef.current = false;
-        continueNavigation();
+      const result = await saveWithTimeout(onBeforePageLeave);
+      isNavigatingRef.current = false;
+
+      if (result === 'failed') {
+        pendingIntentRef.current = null;
+        return;
       }
+
+      continueNavigation();
     },
     [continueNavigation, onBeforePageLeave],
   );
@@ -67,36 +100,62 @@ export function usePendingChangesGuard({
   );
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    if (!('navigation' in window)) {
       return;
     }
 
-    if (!window.history.state?.[HISTORY_GUARD_STATE_KEY]) {
-      window.history.pushState({ [HISTORY_GUARD_STATE_KEY]: true }, '', window.location.href);
-    }
-
-    const onPopState = () => {
-      if (bypassNextPopstateRef.current) {
-        bypassNextPopstateRef.current = false;
+    const navigation = window.navigation;
+    const onNavigate = (event: NavigateEvent) => {
+      if (event.navigationType !== 'traverse') {
         return;
       }
 
-      if (!hasPendingChangesRef.current) {
+      if (bypassNextTraverseRef.current) {
+        bypassNextTraverseRef.current = false;
         return;
       }
 
-      window.history.pushState({ [HISTORY_GUARD_STATE_KEY]: true }, '', window.location.href);
-      void navigateWithPendingChanges(() => {
-        bypassNextPopstateRef.current = true;
-        window.history.back();
+      const destinationKey = event.destination.key;
+      if (
+        !event.cancelable ||
+        !destinationKey ||
+        !hasPendingChangesRef.current ||
+        isNavigatingRef.current
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      isNavigatingRef.current = true;
+      void saveWithTimeout(() => onBeforePageLeaveRef.current()).then((result) => {
+        isNavigatingRef.current = false;
+        if (result === 'failed') {
+          return;
+        }
+
+        bypassNextTraverseRef.current = true;
+        navigation.traverseTo(destinationKey);
       });
     };
 
-    window.addEventListener('popstate', onPopState);
+    navigation.addEventListener('navigate', onNavigate);
     return () => {
-      window.removeEventListener('popstate', onPopState);
+      navigation.removeEventListener('navigate', onNavigate);
     };
-  }, [navigateWithPendingChanges]);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      // Fallback for traversals that cannot be held back (e.g. a repeated back press, or
+      // browsers without the Navigation API, such as Safari before 26.2).
+      if (hasPendingChangesRef.current) {
+        // the overview may have loaded before the save finished
+        void onBeforePageLeaveRef
+          .current()
+          .finally(() => queryClient.invalidateQueries({ queryKey: ['entity-overview'] }));
+      }
+    };
+  }, [queryClient]);
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
