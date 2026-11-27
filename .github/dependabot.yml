@@ -28,6 +28,12 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
+      # Digest-only bumps have no semver type, so minor-and-patch rejects them
+      digests:
+        applies-to: version-updates
+        patterns:
+          - 'distroless/nodejs24-debian13'
+          - 'node'
 
   - package-ecosystem: 'docker-compose'
     directories:
