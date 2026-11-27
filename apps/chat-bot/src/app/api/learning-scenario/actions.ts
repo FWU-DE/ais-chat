@@ -4,7 +4,7 @@ import { runServerAction } from '@shared/actions/run-server-action';
 
 import { requireValidInviteCode } from '@/auth/requireValidInviteCode';
 import { SEND_LEARNING_SCENARIO_MESSAGE_ACTION_NAME } from '@/server-action-names';
-import { ChatMessage, createErrorResult } from '@/types/chat';
+import { ChatMessage } from '@/types/chat';
 
 import { sendLearningScenarioMessage } from './learning-scenario-chat-service';
 
@@ -27,7 +27,7 @@ export async function sendLearningScenarioMessageAction({
     try {
       await requireValidInviteCode(inviteCode);
     } catch {
-      return createErrorResult(new SharedChatExpiredError());
+      throw new SharedChatExpiredError();
     }
 
     return sendLearningScenarioMessage({

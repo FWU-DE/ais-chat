@@ -1,8 +1,13 @@
+import type { SeverityLevel } from '@sentry/core';
+
 /**
  * Base error class for AI generation errors.
  * Only use directly if no child error class fits the case.
  */
 export class AiGenerationError extends Error {
+  /** Level used when this error is logged by server action handlers. */
+  readonly logLevel: SeverityLevel = 'error';
+
   constructor(message: string) {
     super(message);
     this.name = 'AiGenerationError';
@@ -43,6 +48,8 @@ export class EmptyResponseError extends AiGenerationError {
  * Error thrown when AI content moderation flags content as inappropriate.
  */
 export class ResponsibleAIError extends AiGenerationError {
+  override readonly logLevel: SeverityLevel = 'info';
+
   constructor(message: string) {
     super(message);
     this.name = 'ResponsibleAIError';
@@ -60,6 +67,8 @@ export class ResponsibleAIError extends AiGenerationError {
  * Base class for rate limit errors. Throw one of its subclasses instead.
  */
 export abstract class RateLimitExceededError extends AiGenerationError {
+  override readonly logLevel: SeverityLevel = 'info';
+
   constructor(message: string) {
     super(message);
     this.name = 'RateLimitExceededError';
@@ -185,6 +194,8 @@ export class ApiKeyUnusableError extends AiGenerationError {
  * Error thrown when the user has exceeded their token points limit.
  */
 export class TokenPointsExceededError extends AiGenerationError {
+  override readonly logLevel: SeverityLevel = 'info';
+
   constructor(message: string = 'User has reached token points limit') {
     super(message);
     this.name = 'TokenPointsExceededError';
@@ -202,6 +213,8 @@ export class TokenPointsExceededError extends AiGenerationError {
  * Error thrown when the shared chat has expired.
  */
 export class SharedChatExpiredError extends AiGenerationError {
+  override readonly logLevel: SeverityLevel = 'info';
+
   constructor(message: string = 'Shared chat has expired') {
     super(message);
     this.name = 'SharedChatExpiredError';

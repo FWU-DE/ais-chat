@@ -1,7 +1,6 @@
 import {
   type Message as AiCoreMessage,
   type ModelUsage,
-  ResponsibleAIError,
   runAgentLoop,
   TokenPointsExceededError,
   type TokenUsage,
@@ -49,7 +48,7 @@ import {
 import { userHasReachedTokenPointsLimit } from '@shared/users/usage';
 
 import { UserAndContext } from '@/auth/types';
-import { ChatMessage, createErrorResult, SendMessageResult } from '@/types/chat';
+import { ChatMessage, SendMessageResult } from '@/types/chat';
 import { convertMessageModelToMessage } from '@/utils/chat/messages';
 import { deepEqual } from '@/utils/object';
 import { createTextStream } from '@/utils/streaming';
@@ -317,7 +316,7 @@ export async function sendChatMessage({
   // Check budget limit after we have the conversation for proper event tracking
   if (await userHasReachedTokenPointsLimit({ user })) {
     await sendRabbitmqEvent(constructTokenBudgetExceededEvent({ user }));
-    return createErrorResult(new TokenPointsExceededError());
+    throw new TokenPointsExceededError();
   }
 
   // Get the user message (last message should be from user)
@@ -404,22 +403,14 @@ export async function sendChatMessage({
     annotateMessageAttachmentNames(fullMessages, relatedFileEntities),
   );
 
-  let messagesWithImages: ChatMessage[];
-  try {
-    messagesWithImages = await prepareAgentMessages({
-      messages: prunedMessages,
-      relatedFileEntities,
-      model: definedModel,
-      modelSelection,
-      safetyModelName: safetyModel?.name,
-      apiKeyId,
-    });
-  } catch (error) {
-    if (ResponsibleAIError.is(error)) {
-      return createErrorResult(error);
-    }
-    throw error;
-  }
+  const messagesWithImages = await prepareAgentMessages({
+    messages: prunedMessages,
+    relatedFileEntities,
+    model: definedModel,
+    modelSelection,
+    safetyModelName: safetyModel?.name,
+    apiKeyId,
+  });
 
   const { stream, signal: generationSignal, update, done, error: streamError } = createTextStream();
 

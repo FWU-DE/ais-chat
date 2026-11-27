@@ -1,12 +1,11 @@
 'use server';
 
 import { runServerAction } from '@shared/actions/run-server-action';
-import { NotFoundError } from '@shared/error';
 
 import { requireAuth } from '@/auth/requireAuth';
 import { userHasCompletedTraining } from '@/auth/utils';
 import { SEND_CHAT_MESSAGE_ACTION_NAME } from '@/server-action-names';
-import { ChatMessage, createErrorResult } from '@/types/chat';
+import { ChatMessage } from '@/types/chat';
 import { checkProductAccess } from '@/utils/vidis/access';
 
 import { sendChatMessage } from './chat-service';
@@ -44,23 +43,16 @@ export async function sendChatMessageAction({
     throw new Error(productAccess.errorType);
   }
 
-  return runServerAction(SEND_CHAT_MESSAGE_ACTION_NAME, async () => {
-    try {
-      return await sendChatMessage({
-        conversationId,
-        messages,
-        modelId,
-        characterId,
-        learningScenarioId,
-        assistantId,
-        fileIds,
-        user: userAndContext,
-      });
-    } catch (error) {
-      if (error instanceof NotFoundError) {
-        return createErrorResult(error);
-      }
-      throw error;
-    }
-  })();
+  return runServerAction(SEND_CHAT_MESSAGE_ACTION_NAME, () =>
+    sendChatMessage({
+      conversationId,
+      messages,
+      modelId,
+      characterId,
+      learningScenarioId,
+      assistantId,
+      fileIds,
+      user: userAndContext,
+    }),
+  )();
 }

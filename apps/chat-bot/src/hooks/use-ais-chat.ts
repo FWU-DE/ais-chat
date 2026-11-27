@@ -144,9 +144,6 @@ export function useAisChat({
         }
 
         const result = actionResult.value;
-        if (result.error) {
-          throw deserializeError(result.error);
-        }
 
         // We need to handle the first chunk separately to avoid missing content
         let firstChunk = true;

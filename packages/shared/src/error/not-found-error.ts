@@ -1,6 +1,10 @@
+import type { SeverityLevel } from '@sentry/nextjs';
+
 import { BusinessError } from './business-error';
 
 export class NotFoundError extends BusinessError {
+  override readonly logLevel: SeverityLevel = 'info';
+
   constructor(message = 'Not Found') {
     super(message, 404);
     this.name = 'NotFoundError';

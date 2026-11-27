@@ -1,10 +1,4 @@
 import { CONVERSATION_ROLES } from '@ais-chat/ai-core/chat/types';
-import type {
-  ResponsibleAIError,
-  SharedChatExpiredError,
-  TokenPointsExceededError,
-} from '@ais-chat/ai-core/errors';
-import type { NotFoundError } from '@shared/error';
 import { isToolRelatedMessage } from '@shared/utils/tool-related-message';
 import z from 'zod';
 
@@ -47,30 +41,13 @@ export type ChatMessage = z.infer<typeof chatMessageSchema>;
 
 /**
  * Result returned when sending a chat message.
- * The error field handles pre-streaming errors as a serialized plain object.
+ * Errors before streaming come back through the server action result, errors during streaming
+ * arrive as error events in the stream.
  */
 export type SendMessageResult = {
   stream: ReadableStream<string>;
   messageId: string;
-  error?: SerializedError;
 };
-
-/**
- * Creates a SendMessageResult with a serialized error.
- */
-export function createErrorResult(
-  error: TokenPointsExceededError | SharedChatExpiredError | ResponsibleAIError | NotFoundError,
-): SendMessageResult {
-  return {
-    stream: new ReadableStream<string>({
-      start(controller) {
-        controller.close(); // already closed stream
-      },
-    }),
-    messageId: crypto.randomUUID(),
-    error: { name: error.name, message: error.message },
-  };
-}
 
 /**
  * Reconstructs an Error from a serialized error object.
