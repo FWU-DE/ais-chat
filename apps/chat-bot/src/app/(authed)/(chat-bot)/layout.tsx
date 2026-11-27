@@ -87,7 +87,7 @@ export default async function ChatLayout({ children }: { children: React.ReactNo
               <ApplicationLayout
                 userAndContext={userAndContext}
                 infoBanners={activeBanners}
-                tokenVolumeRenewal={getBudgetRenewal()}
+                initialDaysUntilRenewal={getBudgetRenewal().daysUntilRenewal}
               >
                 {children}
               </ApplicationLayout>

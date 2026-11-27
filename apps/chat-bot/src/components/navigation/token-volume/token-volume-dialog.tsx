@@ -1,6 +1,5 @@
 'use client';
 
-import type { BudgetRenewal } from '@shared/users/user-budget-renewal';
 import { Button } from '@ui/components/button';
 import {
   Dialog,
@@ -21,7 +20,7 @@ import TokenPointsProgressBar from '@/components/token-points-progress-bar';
 type TokenVolume = {
   usedBudgetInCent: number;
   maxBudgetInCent: number;
-  renewal: BudgetRenewal;
+  daysUntilRenewal: number;
 };
 
 type TokenVolumeState =
@@ -31,19 +30,19 @@ export function TokenVolumeDialog({
   open,
   onOpenChange,
   restoreFocusRef,
-  initialRenewal,
+  initialDaysUntilRenewal,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   restoreFocusRef?: React.RefObject<HTMLElement | null>;
-  initialRenewal: BudgetRenewal;
+  initialDaysUntilRenewal: number;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {open && (
         <TokenVolumeDialogContent
           restoreFocusRef={restoreFocusRef}
-          initialRenewal={initialRenewal}
+          initialDaysUntilRenewal={initialDaysUntilRenewal}
         />
       )}
     </Dialog>
@@ -52,10 +51,10 @@ export function TokenVolumeDialog({
 
 function TokenVolumeDialogContent({
   restoreFocusRef,
-  initialRenewal,
+  initialDaysUntilRenewal,
 }: {
   restoreFocusRef?: React.RefObject<HTMLElement | null>;
-  initialRenewal: BudgetRenewal;
+  initialDaysUntilRenewal: number;
 }) {
   const t = useTranslations('token-volume');
   const tCommon = useTranslations('common');
@@ -135,9 +134,7 @@ function TokenVolumeDialogContent({
         <p className="mt-[7px] text-center text-xs leading-[23px] text-foreground/70">
           {t('renewal-info', {
             days:
-              state.status === 'loaded'
-                ? state.value.renewal.daysUntilRenewal
-                : initialRenewal.daysUntilRenewal,
+              state.status === 'loaded' ? state.value.daysUntilRenewal : initialDaysUntilRenewal,
           })}
         </p>
       </div>
@@ -158,7 +155,9 @@ function TokenVolumeContent({ value }: { value: TokenVolume | null }) {
     value !== null && value.maxBudgetInCent > 0
       ? 100 - (value.usedBudgetInCent / value.maxBudgetInCent) * 100
       : 0;
-  const displayedPercentage = Math.max(Math.floor(remainingPercentage), 0);
+  const displayedPercentage = Number.isFinite(remainingPercentage)
+    ? Math.min(Math.max(Math.floor(remainingPercentage), 0), 100)
+    : 0;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -173,7 +172,7 @@ function TokenVolumeContent({ value }: { value: TokenVolume | null }) {
       {value === null ? (
         <Skeleton className="h-[9px] w-full rounded-[2px]" aria-hidden="true" />
       ) : (
-        <TokenPointsProgressBar percentage={remainingPercentage} ariaLabel={t('remaining')} />
+        <TokenPointsProgressBar percentage={displayedPercentage} ariaLabel={t('remaining')} />
       )}
     </div>
   );

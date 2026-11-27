@@ -104,7 +104,7 @@ export async function getTokenVolumeAction() {
     return {
       usedBudgetInCent: usedBudgetInCent ?? 0,
       maxBudgetInCent: maxBudgetInCent ?? 0,
-      renewal: getBudgetRenewal(),
+      daysUntilRenewal: getBudgetRenewal().daysUntilRenewal,
     };
   })();
 }

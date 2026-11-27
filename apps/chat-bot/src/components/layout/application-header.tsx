@@ -1,6 +1,5 @@
 'use client';
 
-import type { BudgetRenewal } from '@shared/users/user-budget-renewal';
 import React, { Fragment, ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -31,16 +30,16 @@ export type HeaderActionConfig = {
 
 export function ApplicationHeader({
   userAndContext,
-  tokenVolumeRenewal,
+  initialDaysUntilRenewal,
 }: {
   userAndContext?: UserAndContext;
-  tokenVolumeRenewal: BudgetRenewal;
+  initialDaysUntilRenewal: number;
 }) {
   const { setHeaderMountNode, compactMenuItems } = useHeaderExtension();
   const { isBelow } = useBreakpoints();
   const isCompact = isBelow[reductionBreakpoint];
   const headerMountNodeRef = useRef<HTMLDivElement | null>(null);
-  const settingsTriggerRef = useRef<HTMLButtonElement>(null);
+  const profileMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const [isTokenVolumeOpen, setIsTokenVolumeOpen] = React.useState(false);
 
@@ -70,14 +69,14 @@ export function ApplicationHeader({
           userAndContext={userAndContext}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenTokenVolume={() => setIsTokenVolumeOpen(true)}
-          triggerRef={settingsTriggerRef}
+          triggerRef={profileMenuTriggerRef}
         />
       ) : (
         <ProfileMenu
           userAndContext={userAndContext}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenTokenVolume={() => setIsTokenVolumeOpen(true)}
-          triggerRef={settingsTriggerRef}
+          triggerRef={profileMenuTriggerRef}
         />
       )}
       {userAndContext !== undefined && (
@@ -85,13 +84,13 @@ export function ApplicationHeader({
           <SettingsDialog
             open={isSettingsOpen}
             onOpenChange={setIsSettingsOpen}
-            restoreFocusRef={settingsTriggerRef}
+            restoreFocusRef={profileMenuTriggerRef}
           />
           <TokenVolumeDialog
-            initialRenewal={tokenVolumeRenewal}
+            initialDaysUntilRenewal={initialDaysUntilRenewal}
             open={isTokenVolumeOpen}
             onOpenChange={setIsTokenVolumeOpen}
-            restoreFocusRef={settingsTriggerRef}
+            restoreFocusRef={profileMenuTriggerRef}
           />
         </>
       )}
