@@ -1,6 +1,6 @@
 'use client';
 
-import type { SensitiveLlmModel } from '@ais-chat/api-database';
+import type { LlmModelWithSecrets } from '@ais-chat/api-database';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
 import { Checkbox } from '@ui/components/checkbox';
 
@@ -8,7 +8,7 @@ import { sortableHeader } from '@/components/common/SortableHeader';
 
 import { type ModelColumn, nameColumn, typeColumn } from './model-columns';
 
-type Col = ModelColumn<SensitiveLlmModel>;
+type Col = ModelColumn<LlmModelWithSecrets>;
 
 const booleanColumn = (key: 'useBifrost' | 'isNew' | 'isDeleted', label: string): Col => ({
   accessorKey: key,

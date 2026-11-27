@@ -1,4 +1,4 @@
-import type { SensitiveLlmModel } from '@ais-chat/api-database';
+import type { LlmModelWithSecrets } from '@ais-chat/api-database';
 
 export type Usage = {
   input_text_tokens: number;
@@ -38,4 +38,4 @@ export type ImageGenerationFn = (args: {
 }) => Promise<ImageResponse>;
 
 // TODO: Just an alias for now, since the llmModel table needs renaming (it has image and embedding models too)
-export type AiModel = SensitiveLlmModel;
+export type AiModel = LlmModelWithSecrets;

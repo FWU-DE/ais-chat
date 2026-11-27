@@ -1,15 +1,15 @@
 'use client';
 
-import type { SensitiveLlmModel } from '@ais-chat/api-database';
+import type { LlmModelWithSecrets } from '@ais-chat/api-database';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Chip } from '@ui/components/chip';
 import type { DataTableFeatures } from '@ui/components/data-table';
 
 import { sortableHeader } from '@/components/common/SortableHeader';
 
-export type ModelColumn<T extends SensitiveLlmModel> = ColumnDef<DataTableFeatures, T>;
+export type ModelColumn<T extends LlmModelWithSecrets> = ColumnDef<DataTableFeatures, T>;
 
-export const nameColumn = <T extends SensitiveLlmModel>(): ModelColumn<T> => ({
+export const nameColumn = <T extends LlmModelWithSecrets>(): ModelColumn<T> => ({
   id: 'name',
   accessorFn: (model) => model.displayName || model.name,
   header: sortableHeader('Name'),
@@ -26,7 +26,7 @@ export const nameColumn = <T extends SensitiveLlmModel>(): ModelColumn<T> => ({
   },
 });
 
-export const typeColumn = <T extends SensitiveLlmModel>(): ModelColumn<T> => ({
+export const typeColumn = <T extends LlmModelWithSecrets>(): ModelColumn<T> => ({
   id: 'type',
   accessorFn: (model) => model.priceMetadata.type,
   header: sortableHeader('Typ'),

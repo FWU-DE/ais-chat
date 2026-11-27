@@ -1,7 +1,7 @@
 import { and, eq, inArray } from 'drizzle-orm';
 
 import { db } from '../db';
-import type { LlmInsertModel, LlmModel, SensitiveLlmModel } from '../schema';
+import type { LlmInsertModel, LlmModel, LlmModelWithSecrets } from '../schema';
 import {
   llmModelApiKeyMappingTable,
   llmModelProviderKeyMappingTable,
@@ -146,7 +146,7 @@ export async function dbCreateLlmModel(llmModel: LlmInsertModel) {
   return modelCreated[0];
 }
 
-export async function dbUpdateLlmModel(id: string, llmModel: Partial<SensitiveLlmModel>) {
+export async function dbUpdateLlmModel(id: string, llmModel: Partial<LlmModelWithSecrets>) {
   const updatedModel = (
     await db
       .update(llmModelTable)
@@ -203,7 +203,7 @@ export async function dbCreateModelWithApiKeyLinks({
       error: string;
     }
   | {
-      model: SensitiveLlmModel;
+      model: LlmModelWithSecrets;
       linkedApiKeys: { id: string; name: string }[];
     }
 > {

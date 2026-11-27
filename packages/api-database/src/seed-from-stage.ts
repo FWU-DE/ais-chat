@@ -10,11 +10,11 @@ import {
   LlmModelProviderKeyMappingModel,
   llmModelProviderKeyMappingTable,
   llmModelTable,
+  LlmModelWithSecrets,
   LlmProviderKeyModel,
   llmProviderKeyTable,
   ProjectModel,
   projectTable,
-  SensitiveLlmModel,
 } from './schema';
 import { normalizeSeedModelsForBifrost, syncSeedModelsToBifrost } from './seed-bifrost';
 
@@ -41,7 +41,7 @@ async function getApiKeys(): Promise<ApiKeyModel[]> {
   return await stageDb.select().from(apiKeyTable);
 }
 
-async function getModels(): Promise<SensitiveLlmModel[]> {
+async function getModels(): Promise<LlmModelWithSecrets[]> {
   return await stageDb.select().from(llmModelTable);
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import type { SensitiveLlmModel } from '@ais-chat/api-database';
+import type { LlmModelWithSecrets } from '@ais-chat/api-database';
 import { isBifrostProviderSyncError } from '@ais-chat/api-database/bifrost-provider-sync/error';
 import { logError } from '@shared/logging';
 import { formatDateToGermanTimestamp } from '@shared/utils/date';
@@ -28,7 +28,7 @@ import {
   saveModelMappingsAction,
 } from './actions';
 
-type ModelRow = SensitiveLlmModel & { isAssigned: boolean; assignedAt: Date | null };
+type ModelRow = LlmModelWithSecrets & { isAssigned: boolean; assignedAt: Date | null };
 
 type Col = ModelColumn<ModelRow>;
 
@@ -75,7 +75,7 @@ export function ModelApiKeyMappingListView({
   projectId,
   apiKeyId,
 }: ModelApiKeyMappingListViewProps) {
-  const [availableModels, setAvailableModels] = useState<SensitiveLlmModel[]>([]);
+  const [availableModels, setAvailableModels] = useState<LlmModelWithSecrets[]>([]);
   const [modelApiKeyMappings, setModelApiKeyMappings] = useState<ModelApiKeyMapping[]>([]);
   const [assignedModelIds, setAssignedModelIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);

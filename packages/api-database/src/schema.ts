@@ -61,9 +61,9 @@ export const llmUpdateModelSchema = createUpdateSchema(llmModelTable).omit({
 });
 export type LlmInsertModel = typeof llmModelTable.$inferInsert;
 // Contains provider credentials and parameters; must never be exposed to ais-chat-app.
-export type SensitiveLlmModel = typeof llmModelTable.$inferSelect;
+export type LlmModelWithSecrets = typeof llmModelTable.$inferSelect;
 export type LlmModel = Omit<
-  SensitiveLlmModel,
+  LlmModelWithSecrets,
   'setting' | 'useBifrost' | 'additionalParameters' | 'safetyFilterEnabled'
 >;
 

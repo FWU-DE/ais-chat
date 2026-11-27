@@ -1,6 +1,6 @@
 'use client';
 
-import type { SensitiveLlmModel } from '@ais-chat/api-database';
+import type { LlmModelWithSecrets } from '@ais-chat/api-database';
 import {
   imageGenerationConfigSchema,
   REASONING_EFFORTS,
@@ -152,7 +152,7 @@ function createLlmFormSchema(providerKeys: ProviderKey[]) {
 }
 
 export type LargeLanguageModelDetailViewProps = {
-  model?: SensitiveLlmModel;
+  model?: LlmModelWithSecrets;
   mode: 'create' | 'edit';
   providerKeys: ProviderKey[];
 };

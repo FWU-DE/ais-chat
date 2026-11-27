@@ -5,14 +5,14 @@ import { db } from '../db';
 import {
   llmModelProviderKeyMappingTable,
   llmModelTable,
+  type LlmModelWithSecrets,
   type LlmProviderKeyInsertModel,
   type LlmProviderKeyModel,
   llmProviderKeyTable,
-  type SensitiveLlmModel,
 } from '../schema';
 
 export type LlmProviderKeyWithModels = LlmProviderKeyModel & {
-  models: Array<{ model: SensitiveLlmModel; upstreamModelName: string }>;
+  models: Array<{ model: LlmModelWithSecrets; upstreamModelName: string }>;
 };
 
 export async function dbGetAllProviderKeysWithModels(): Promise<LlmProviderKeyWithModels[]> {
