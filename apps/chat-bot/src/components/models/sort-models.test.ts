@@ -1,5 +1,5 @@
+import type { LlmModel } from '@ais-chat/api-database';
 import type { ReasoningEffort } from '@ais-chat/api-database/types';
-import type { LlmModelSelectModel } from '@shared/db/schema';
 import { describe, expect, it } from 'vitest';
 
 import { sortModels, toggleModelSort } from './sort-models';
@@ -8,7 +8,7 @@ const model = (
   displayName: string,
   reasoningEffort: ReasoningEffort | null = null,
   completionTokenPrice = 0,
-): LlmModelSelectModel => ({
+): LlmModel => ({
   id: displayName,
   provider: 'test',
   name: displayName,
@@ -25,7 +25,7 @@ const model = (
   reasoning: reasoningEffort ? { effort: reasoningEffort } : null,
 });
 
-const names = (models: LlmModelSelectModel[]) => models.map((m) => m.displayName);
+const names = (models: LlmModel[]) => models.map((m) => m.displayName);
 
 describe('sortModels', () => {
   it('sorts by name in both directions, ignoring case', () => {

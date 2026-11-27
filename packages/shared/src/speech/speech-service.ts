@@ -4,12 +4,12 @@ import {
   MP3_MIME_TYPE,
   type SpeechMimeType,
 } from '@ais-chat/ai-core';
+import type { LlmModel } from '@ais-chat/api-database';
 import { UserModel } from '@shared/auth/user-model';
 import { getConversation } from '@shared/conversation/conversation-service';
 import { dbGetFederalState } from '@shared/db/functions/federal-state';
 import { dbGetSpeechModel } from '@shared/db/functions/llm-model';
 import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
-import { LlmModelSelectModel } from '@shared/db/schema';
 import { ConversationModel } from '@shared/db/types';
 import { FederalStateModel } from '@shared/federal-states/types';
 import { constructNewMessageEvent, sendRabbitmqEvent } from '@shared/rabbitmq';
@@ -71,7 +71,7 @@ export async function generateChatSpeechStream({
       storeUsage: async (
         _params: SpeechStreamingPipelineParams,
         context: SpeechContext,
-        model: LlmModelSelectModel,
+        model: LlmModel,
         result: ChatSpeechStreamResult,
       ) => {
         const costsInCent = await result.costsInCent;
@@ -130,7 +130,7 @@ export async function generateChatSpeechStream({
       reportUsage: async (
         _params: SpeechStreamingPipelineParams,
         context: SpeechContext,
-        model: LlmModelSelectModel,
+        model: LlmModel,
         result: ChatSpeechStreamResult,
       ) => {
         if (context.conversation) {

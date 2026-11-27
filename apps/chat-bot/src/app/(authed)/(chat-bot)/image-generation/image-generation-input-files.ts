@@ -1,6 +1,6 @@
 import { ImageGenerationInputImage } from '@ais-chat/ai-core/images/types';
+import type { LlmModel } from '@ais-chat/api-database';
 import { dbGetFilesInIds } from '@shared/db/functions/files';
-import { LlmModelSelectModel } from '@shared/db/schema';
 import { NotFoundError } from '@shared/error';
 import { getFileFromS3 } from '@shared/s3';
 
@@ -11,7 +11,7 @@ export function validateInputFiles({
   model,
   inputFileIds,
 }: {
-  model: LlmModelSelectModel;
+  model: LlmModel;
   inputFileIds: string[];
 }) {
   const modelSupportsImageInput = (model.supportedImageFormats?.length ?? 0) > 0;

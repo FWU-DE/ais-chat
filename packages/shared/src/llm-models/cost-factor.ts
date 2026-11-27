@@ -1,6 +1,6 @@
-import type { LlmModelSelectModel } from '../db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
 
-function getCompletionTokenPrice(model: LlmModelSelectModel | undefined): number {
+function getCompletionTokenPrice(model: LlmModel | undefined): number {
   return model?.priceMetadata.type === 'text' ? model.priceMetadata.completionTokenPrice : 0;
 }
 
@@ -12,8 +12,8 @@ export function getCostFactor({
   model,
   defaultModel,
 }: {
-  model: LlmModelSelectModel;
-  defaultModel: LlmModelSelectModel | undefined;
+  model: LlmModel;
+  defaultModel: LlmModel | undefined;
 }): number {
   const price = getCompletionTokenPrice(model);
   const defaultPrice = getCompletionTokenPrice(defaultModel);

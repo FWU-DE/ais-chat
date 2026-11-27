@@ -1,10 +1,7 @@
 'use client';
 
-import type {
-  LlmModelSelectModel,
-  StaticModelRole,
-  StaticModelsConfiguration,
-} from '@shared/db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
+import type { StaticModelRole, StaticModelsConfiguration } from '@shared/db/schema';
 import { Button } from '@ui/components/button';
 import {
   Card,
@@ -57,7 +54,7 @@ const roles: {
 ];
 
 type Props = {
-  models: LlmModelSelectModel[];
+  models: LlmModel[];
   configuration: StaticModelsConfiguration | undefined;
 };
 

@@ -1,11 +1,11 @@
 'use client';
 
-import { LlmModelSelectModel } from '@shared/db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
 import { getFirstTextModel } from '@shared/llm-models/llm-model-utils';
 import React, { useState } from 'react';
 
 type LlmModelsProviderProps = {
-  models: LlmModelSelectModel[];
+  models: LlmModel[];
   initialModelName: string;
   defaultModelName: string;
   initialDownloadConversationEnabled?: boolean;
@@ -13,10 +13,10 @@ type LlmModelsProviderProps = {
 };
 
 type LlmModelsContextProps = {
-  models: LlmModelSelectModel[];
-  defaultModel: LlmModelSelectModel | undefined;
-  selectedModel: LlmModelSelectModel | undefined;
-  setSelectedModel: (model: LlmModelSelectModel) => Promise<void>;
+  models: LlmModel[];
+  defaultModel: LlmModel | undefined;
+  selectedModel: LlmModel | undefined;
+  setSelectedModel: (model: LlmModel) => Promise<void>;
   downloadConversationEnabled: boolean;
   setDownloadConversationEnabled: (value: boolean) => void;
 };
@@ -31,7 +31,7 @@ export function LlmModelsProvider({
   initialDownloadConversationEnabled = false,
 }: LlmModelsProviderProps) {
   const defaultModel = models.find((model) => model.name === defaultModelName);
-  const [selectedModel, setSelectedModelState] = useState<LlmModelSelectModel | undefined>(
+  const [selectedModel, setSelectedModelState] = useState<LlmModel | undefined>(
     () =>
       models.find((model) => model.name === initialModelName) ??
       defaultModel ??
@@ -41,7 +41,7 @@ export function LlmModelsProvider({
     initialDownloadConversationEnabled,
   );
 
-  async function setSelectedModel(model: LlmModelSelectModel) {
+  async function setSelectedModel(model: LlmModel) {
     // optimistically update selected model
     const previousModel = selectedModel;
     setSelectedModelState(model);

@@ -6,7 +6,6 @@ import {
   type LlmModel,
 } from '@ais-chat/ai-core/models/llm-models';
 
-import { LlmModelSelectModel } from '../schema';
 import { dbGetFederalStateById } from './federal-state';
 
 async function getModelsByFederalStateId(federalStateId: string): Promise<LlmModel[]> {
@@ -19,16 +18,16 @@ export async function dbGetLlmModelById({
   modelId,
 }: {
   modelId: string | undefined;
-}): Promise<LlmModelSelectModel | undefined> {
+}): Promise<LlmModel | undefined> {
   if (modelId === undefined) return undefined;
   return getLlmModelById(modelId);
 }
 
-export async function dbGetModelByName(name: string): Promise<LlmModelSelectModel | undefined> {
+export async function dbGetModelByName(name: string): Promise<LlmModel | undefined> {
   return getLlmModelByName(name);
 }
 
-export async function dbGetAllLlmModels(): Promise<LlmModelSelectModel[]> {
+export async function dbGetAllLlmModels(): Promise<LlmModel[]> {
   return getAllLlmModels();
 }
 
@@ -42,7 +41,7 @@ export async function dbGetLlmModelsByFederalStateId({
   federalStateId,
 }: {
   federalStateId: string;
-}): Promise<LlmModelSelectModel[]> {
+}): Promise<LlmModel[]> {
   const models = await getModelsByFederalStateId(federalStateId);
   return models.filter((model) => !model.isDeleted);
 }
@@ -54,7 +53,7 @@ export async function dbFindModelByIdAndFederalStateId({
 }: {
   modelId: string;
   federalStateId: string;
-}): Promise<LlmModelSelectModel | undefined> {
+}): Promise<LlmModel | undefined> {
   const models = await dbGetLlmModelsByFederalStateId({ federalStateId });
   return models.find((model) => model.id === modelId);
 }
@@ -66,7 +65,7 @@ export async function dbGetModelByIdAndFederalStateId({
 }: {
   modelId: string;
   federalStateId: string;
-}): Promise<LlmModelSelectModel | undefined> {
+}): Promise<LlmModel | undefined> {
   const models = await getModelsByFederalStateId(federalStateId);
   return models.find((model) => model.id === modelId);
 }

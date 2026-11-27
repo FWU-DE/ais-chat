@@ -1,23 +1,23 @@
 'use client';
 
-import { LlmModelSelectModel } from '@shared/db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
 import React from 'react';
 
 type ImageModelsProviderProps = {
-  models: LlmModelSelectModel[];
-  defaultImageModel: LlmModelSelectModel | undefined;
+  models: LlmModel[];
+  defaultImageModel: LlmModel | undefined;
   children: React.ReactNode;
 };
 
 type ImageModelsContextProps = {
-  models: LlmModelSelectModel[];
-  selectedModel: LlmModelSelectModel | undefined;
-  setSelectedModel: (model: LlmModelSelectModel) => void;
+  models: LlmModel[];
+  selectedModel: LlmModel | undefined;
+  setSelectedModel: (model: LlmModel) => void;
 };
 
 const ImageModelsContext = React.createContext<ImageModelsContextProps | undefined>(undefined);
 
-function getFirstImageModel(models: LlmModelSelectModel[]): LlmModelSelectModel | undefined {
+function getFirstImageModel(models: LlmModel[]): LlmModel | undefined {
   return models.find((model) => model.priceMetadata.type === 'image');
 }
 
@@ -26,7 +26,7 @@ export function ImageModelsProvider({
   children,
   defaultImageModel,
 }: ImageModelsProviderProps) {
-  const [selectedModel, setSelectedModel] = React.useState<LlmModelSelectModel | undefined>(
+  const [selectedModel, setSelectedModel] = React.useState<LlmModel | undefined>(
     defaultImageModel ?? getFirstImageModel(models),
   );
 

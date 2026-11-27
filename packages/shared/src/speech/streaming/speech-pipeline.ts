@@ -1,6 +1,6 @@
 import { AiGenerationError, TokenPointsExceededError } from '@ais-chat/ai-core';
+import type { LlmModel } from '@ais-chat/api-database';
 import { UserModel } from '@shared/auth/user-model';
-import { LlmModelSelectModel } from '@shared/db/schema';
 import { ForbiddenError, NotFoundError } from '@shared/error';
 import { FederalStateModel } from '@shared/federal-states/types';
 import { logWarning } from '@shared/logging/logging';
@@ -46,7 +46,7 @@ export type SpeechStreamingPipelineStrategy<TContext extends { user: { id: strin
   storeUsage(
     params: SpeechStreamingPipelineParams,
     context: TContext,
-    model: LlmModelSelectModel,
+    model: LlmModel,
     result: ChatSpeechStreamResult,
   ): Promise<void>;
   /**
@@ -62,7 +62,7 @@ export type SpeechStreamingPipelineStrategy<TContext extends { user: { id: strin
   reportUsage(
     params: SpeechStreamingPipelineParams,
     context: TContext,
-    model: LlmModelSelectModel,
+    model: LlmModel,
     result: ChatSpeechStreamResult,
   ): Promise<void>;
 };

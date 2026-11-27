@@ -1,5 +1,6 @@
 import { generateImageWithBilling, TokenPointsExceededError } from '@ais-chat/ai-core';
 import { ImageGenerationRequestOptions } from '@ais-chat/ai-core/images/types';
+import type { LlmModel } from '@ais-chat/api-database';
 import {
   dbDeleteRegeneratedConversationMessage,
   dbGetConversationAndMessages,
@@ -15,7 +16,6 @@ import {
   linkFilesToConversation,
 } from '@shared/db/functions/files';
 import { dbInsertConversationUsage } from '@shared/db/functions/token-usage';
-import { LlmModelSelectModel } from '@shared/db/schema';
 import { NotFoundError } from '@shared/error';
 import { getAvailableImageModelsForFederalState } from '@shared/image-generation/image-generation-service';
 import { logError } from '@shared/logging';
@@ -39,7 +39,7 @@ import { fetchInputImages, validateInputFiles } from './image-generation-input-f
 
 export interface ImageGenerationParams {
   prompt: string;
-  model: LlmModelSelectModel;
+  model: LlmModel;
   conversationId: string;
   options: ImageGenerationRequestOptions;
 }

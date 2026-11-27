@@ -1,4 +1,4 @@
-import type { LlmModelSelectModel } from '@shared/db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -26,7 +26,7 @@ const speechModel = {
   name: 'speech-model',
   priceMetadata: { type: 'speech', priceInCentPer1MillionCharacters: 1 },
   modelConfig: { voices: [{ name: 'alloy' }, { name: 'nova' }] },
-} as unknown as LlmModelSelectModel;
+} as unknown as LlmModel;
 
 const mp3Buffer = Buffer.from('mp3-data');
 

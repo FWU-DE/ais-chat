@@ -1,7 +1,7 @@
 'use client';
 
+import type { LlmModel } from '@ais-chat/api-database';
 import { ArrowDownIcon, ArrowsDownUpIcon, ArrowUpIcon } from '@phosphor-icons/react';
-import type { LlmModelSelectModel } from '@shared/db/schema';
 import { getCostFactor } from '@shared/llm-models/cost-factor';
 import { getTextModels } from '@shared/llm-models/llm-model-utils';
 import { Chip } from '@ui/components/chip';
@@ -145,8 +145,8 @@ function ModelRow({
   defaultModel,
   onSelect,
 }: {
-  model: LlmModelSelectModel;
-  defaultModel: LlmModelSelectModel | undefined;
+  model: LlmModel;
+  defaultModel: LlmModel | undefined;
   onSelect: (modelName: string) => void;
 }) {
   const t = useTranslations('models');

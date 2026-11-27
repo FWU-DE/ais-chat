@@ -1,6 +1,6 @@
 'use client';
 
-import { type LlmModelSelectModel } from '@shared/db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
 import { Separator } from '@ui/components/separator';
 import { useSearchParams } from 'next/navigation';
 import React, { startTransition } from 'react';
@@ -14,9 +14,9 @@ import { HeaderMenuItem } from '../layout/header-menu-item';
 import { NewBadge } from './new-badge';
 
 type ModelSelectProps = {
-  models: LlmModelSelectModel[];
-  selectedModel: LlmModelSelectModel | undefined;
-  onModelChange: (model: LlmModelSelectModel) => void;
+  models: LlmModel[];
+  selectedModel: LlmModel | undefined;
+  onModelChange: (model: LlmModel) => void;
   modelType: 'text' | 'image';
   label: string;
   noModelsLabel: string;
@@ -35,7 +35,7 @@ export default function ModelSelect({
   const pathname = useCustomPathname();
   const searchParams = useSearchParams();
 
-  async function handleSelectModel(model: LlmModelSelectModel) {
+  async function handleSelectModel(model: LlmModel) {
     startTransition(async () => {
       setOptimisticModelId(model.name);
     });
@@ -95,17 +95,11 @@ export default function ModelSelect({
   );
 }
 
-function isGreenModel({ model }: { model: LlmModelSelectModel }) {
+function isGreenModel({ model }: { model: LlmModel }) {
   return model.priceMetadata.type === 'text' && model.priceMetadata.promptTokenPrice < 150; // in tenth of a cent
 }
 
-function ModelSpan({
-  model,
-  modelType,
-}: {
-  model: LlmModelSelectModel;
-  modelType: 'text' | 'image';
-}) {
+function ModelSpan({ model, modelType }: { model: LlmModel; modelType: 'text' | 'image' }) {
   return (
     <div className="flex flex-col">
       <div className="flex gap-2 items-center">

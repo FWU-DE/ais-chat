@@ -1,6 +1,6 @@
 'use client';
 
-import { LlmModelSelectModel } from '@shared/db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
 import { getTextModels } from '@shared/llm-models/llm-model-utils';
 import {
   Select,
@@ -12,7 +12,7 @@ import {
 import { useTranslations } from 'next-intl';
 
 type CustomChatModelSelectProps = {
-  models: LlmModelSelectModel[];
+  models: LlmModel[];
   selectedModelId: string | undefined;
   onValueChange: (value: string) => void;
   disabled?: boolean;

@@ -1,4 +1,4 @@
-import type { SensitiveLlmModel } from '@ais-chat/api-database';
+import type { LlmModelWithSecrets } from '@ais-chat/api-database';
 import { z } from 'zod';
 
 export const CONVERSATION_ROLES = ['system', 'user', 'assistant', 'tool'] as const;
@@ -168,4 +168,4 @@ export type TextStreamFn = (
 export type AgenticStreamFn = (args: TextGenerationArgs) => AsyncGenerator<StreamEvent>;
 
 // TODO: Just an alias for now, since the llmModel table needs renaming (it has image and embedding models too)
-export type AiModel = SensitiveLlmModel;
+export type AiModel = LlmModelWithSecrets;

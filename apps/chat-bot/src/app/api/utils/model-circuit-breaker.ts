@@ -1,5 +1,5 @@
 import type { ModelSelection } from '@ais-chat/ai-core';
-import type { LlmModelSelectModel } from '@shared/db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
 import { findStaticModelByRoleAndFederalStateId } from '@shared/llm-models/llm-model-service';
 import { logError } from '@shared/logging';
 import { valkey } from '@shared/valkey';
@@ -30,7 +30,7 @@ export async function getChatModelSelection({
   model,
   federalStateId,
 }: {
-  model: LlmModelSelectModel;
+  model: LlmModel;
   federalStateId: string;
 }): Promise<ModelSelection> {
   if (model.provider !== 'bifrost') {

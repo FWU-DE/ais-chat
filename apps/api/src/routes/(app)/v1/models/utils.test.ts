@@ -1,9 +1,9 @@
-import type { SensitiveLlmModel } from '@ais-chat/api-database';
+import type { LlmModelWithSecrets } from '@ais-chat/api-database';
 import { describe, expect, it } from 'vitest';
 
 import { obscureModels } from './utils';
 
-const baseModel: SensitiveLlmModel = {
+const baseModel: LlmModelWithSecrets = {
   id: 'model-1',
   provider: 'openai',
   name: 'gpt-4',
@@ -53,7 +53,7 @@ describe('obscureModels', () => {
         voices: [{ name: 'alloy', displayName: 'Alloy' }],
         useAzureSpeechEndpoint: true,
       },
-    } as SensitiveLlmModel;
+    } as LlmModelWithSecrets;
 
     expect(obscureModels([speechModel])[0]?.modelConfig).toEqual({
       voices: [{ name: 'alloy', displayName: 'Alloy' }],

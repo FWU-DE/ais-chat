@@ -1,5 +1,5 @@
 import { streamSpeechById, streamSsmlSpeechById } from '@ais-chat/ai-core';
-import { LlmModelSelectModel } from '@shared/db/schema';
+import type { LlmModel } from '@ais-chat/api-database';
 
 import { ChatSpeechStreamResult } from '../types';
 import { calculateSpeechCostsInCent, resolveSpeechVoice } from '../utils';
@@ -7,7 +7,7 @@ import type { SpeechStreamingPipelineParams } from './speech-pipeline';
 
 export const startStream = async (
   params: SpeechStreamingPipelineParams,
-  model: LlmModelSelectModel,
+  model: LlmModel,
   /** When set, the SSML body is synthesized instead of the plain text input. */
   ssmlBody: string | undefined,
   onStreamFinished: (result: ChatSpeechStreamResult) => Promise<void>,

@@ -1,8 +1,8 @@
+import type { LlmModel } from '@ais-chat/api-database';
 import {
   CharacterSelectModel,
   ConversationUsageTrackingSelectModel,
   LearningScenarioSelectModel,
-  LlmModelSelectModel,
   SharedCharacterChatUsageTrackingSelectModel,
   SharedLearningScenarioUsageTrackingSelectModel,
 } from '@shared/db/schema';
@@ -49,7 +49,7 @@ export const mockUserAndContext = (): UserAndContext => {
   };
 };
 
-export const mockLlmModel = (): LlmModelSelectModel => {
+export const mockLlmModel = (): LlmModel => {
   return {
     id: generateUUID(),
     name: generateRandomString(10),
