@@ -46,7 +46,6 @@ jobs:
       API_URL: http://localhost:3002
       API_KEY: ApiKeyForAISChatApiAdminApi
       CHAT_BOT_BASE_URL: http://localhost:3000
-      ENCRYPTION_KEY: EncryptionKeyForEncryptedApiKeysToAISChatApi
       # Auth.js secret
       AUTH_SECRET: 'yN1a0lQ77RgeEQam5DvGaddbdUDQoxswK+21FmEqBPs='
       # S3 Storage (local RustFS, started via docker-compose.local.yml)

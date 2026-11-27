@@ -27,14 +27,10 @@ export async function getFederalStateById(federalStateId: string): Promise<Feder
   return transformToModel(federalState);
 }
 
-const updateSchema = federalStateUpdateSchema.omit({
-  encryptedApiKey: true,
-});
-
 export async function updateFederalState(
-  federalState: Omit<FederalStateUpdateModel, 'encryptedApiKey' | 'createdAt'>,
+  federalState: Omit<FederalStateUpdateModel, 'createdAt'>,
 ): Promise<FederalStateModel> {
-  const values = updateSchema.parse(federalState);
+  const values = federalStateUpdateSchema.parse(federalState);
   if (values.apiKeyId && !(await apiKeyExists(values.apiKeyId))) {
     throw new NotFoundError(`API key ${values.apiKeyId} not found`);
   }
@@ -61,11 +57,8 @@ export async function deleteFederalState(federalStateId: string): Promise<void> 
 }
 
 function transformToModel(federalState: FederalStateSelectModel): FederalStateModel {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { encryptedApiKey, ...federalStateWithoutApiKey } = federalState;
-
   return {
-    ...federalStateWithoutApiKey,
+    ...federalState,
     hasApiKeyAssigned: !!federalState.apiKeyId,
   };
 }

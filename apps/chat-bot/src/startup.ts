@@ -1,9 +1,5 @@
-import { lookupApiKeys } from '@ais-chat/ai-core/api-keys/lookup';
-import { env as aiEnv } from '@ais-chat/ai-core/env';
 import { runDatabaseMigration, shutdownDatabase } from '@shared/db';
-import { decrypt } from '@shared/db/crypto';
 import { dbGetFederalStates, dbUpdateFederalState } from '@shared/db/functions/federal-state';
-import { env } from '@shared/env';
 import { logError, logInfo } from '@shared/logging';
 import { shutdownRabbitMQ } from '@shared/rabbitmq';
 import { listFilesFromS3 } from '@shared/s3';
@@ -25,71 +21,11 @@ export async function startup() {
  * Performs post-migration operations after database migrations have been executed.
  */
 async function postMigration() {
-  await tempAddApiKeyIdsToFederalStates();
   await tempAddPictureUrlsToFederalStates();
   // run fix in the background
   void tempFixInvalidPictureIds().catch((error) =>
     logError('Failed to run picture id migration', error),
   );
-}
-
-/**
- * Temporary migration function that adds API key IDs to federal states.
- *
- * @AsamMax
- * TODO: delete after executing in production once
- *
- * @returns A promise that resolves when all federal states have been processed
- */
-async function tempAddApiKeyIdsToFederalStates() {
-  if (!aiEnv.apiDatabaseUrl) {
-    return;
-  }
-  // Get all federal states
-  const federalStates = await dbGetFederalStates();
-
-  // Filter states that have encrypted API key but no apiKeyId
-  const statesToUpdate = federalStates.filter((state) => state.encryptedApiKey && !state.apiKeyId);
-
-  if (statesToUpdate.length === 0) {
-    logInfo('No federal states need API key ID updates');
-    return;
-  }
-
-  // Decrypt API keys and create lookup dictionary
-  const apiKeysByState: Record<string, string> = {};
-  for (const state of statesToUpdate) {
-    try {
-      apiKeysByState[state.id] = decrypt({
-        data: state.encryptedApiKey!,
-        plainEncryptionKey: env.encryptionKey,
-      });
-    } catch (error) {
-      logError(`Failed to decrypt API key for federal state ${state.id}`, error);
-    }
-  }
-
-  // Lookup API key IDs
-  const apiKeyIdsByState = await lookupApiKeys(apiKeysByState);
-
-  // Update federal states with their API key IDs
-  for (const state of statesToUpdate) {
-    if (apiKeyIdsByState[state.id]) {
-      try {
-        await dbUpdateFederalState({
-          id: state.id,
-          apiKeyId: apiKeyIdsByState[state.id],
-        });
-        logInfo(`Updated federal state ${state.id} with API key ID ${apiKeyIdsByState[state.id]}`);
-      } catch (error) {
-        logError(`Failed to update federal state ${state.id}`, error);
-      }
-    } else {
-      logInfo(`No API key ID found for federal state ${state.id}`);
-    }
-  }
-
-  logInfo(`Completed API key ID updates for ${statesToUpdate.length} federal states`);
 }
 
 /**

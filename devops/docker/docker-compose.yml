@@ -303,8 +303,6 @@ services:
       OTC_BUCKET_NAME: ais-chat
       IMAGE_ATTACHMENT_MODE: base64
 
-      # Encryption key for sensitive data (IMPORTANT: Change in production!)
-      ENCRYPTION_KEY: default-encryption-key-change-in-production
       # Logging
       LOG_TO_STDOUT: true
       NEXT_PUBLIC_SENTRY_LOG_LEVEL: debug
@@ -366,7 +364,6 @@ services:
 
       # AIS.chat app
       DATABASE_URL: postgresql://admin:test1234@postgres:5432/app_db
-      ENCRYPTION_KEY: default-encryption-key-change-in-production
 
       # AIS.chat api
       API_DATABASE_URL: postgresql://admin:test1234@postgres:5432/api_db

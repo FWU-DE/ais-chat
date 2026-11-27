@@ -785,6 +785,13 @@
       "when": 1795691139559,
       "tag": "0111_jsonb_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1795775906719,
+      "tag": "0112_drop_legacy_llm_model_tables",
+      "breakpoints": true
     }
   ]
 }

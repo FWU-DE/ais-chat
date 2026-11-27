@@ -4,7 +4,6 @@ import { z } from 'zod';
 
 const obscuredFederalStateSchema = federalStateSelectSchema
   .omit({
-    encryptedApiKey: true,
     apiKeyId: true,
   })
   .extend({
