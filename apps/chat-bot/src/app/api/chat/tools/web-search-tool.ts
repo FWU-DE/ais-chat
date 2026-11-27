@@ -1,3 +1,4 @@
+import { toolParameters } from '@ais-chat/ai-core/chat/tool-parameters';
 import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { z } from 'zod';
 
@@ -80,18 +81,13 @@ export function buildWebSearchTool({
   const definition: ToolDefinition = {
     name: TOOL_NAMES.webSearch,
     description,
-    parameters: {
-      type: 'object',
-      properties: {
-        query: {
-          type: 'string',
-          description:
-            'A concise search query (max 10 words) that captures the key information need. Write it in the same language as the user.',
-        },
+    parameters: toolParameters({
+      query: {
+        type: 'string',
+        description:
+          'A concise search query (max 10 words) that captures the key information need. Write it in the same language as the user.',
       },
-      required: ['query'],
-      additionalProperties: false,
-    },
+    }),
   };
 
   const handler = async (args: Record<string, unknown>): ToolOutcome<WebSearchToolResponse> => {

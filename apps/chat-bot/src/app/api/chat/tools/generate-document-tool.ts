@@ -1,3 +1,4 @@
+import { toolParameters } from '@ais-chat/ai-core/chat/tool-parameters';
 import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { z } from 'zod';
 
@@ -64,31 +65,26 @@ export function buildGenerateDocumentTool(): ToolRegistration<GenerateDocumentTo
   const definition: ToolDefinition = {
     name: TOOL_NAMES.generateDocument,
     description: `Creates a downloadable ${GENERATED_DOCUMENT_FORMATS.join(', ')} file from Markdown or a complete HTML document. Supports tables, LaTeX formulas, uploaded images and jsxgraph-json plots.`,
-    parameters: {
-      type: 'object',
-      properties: {
-        format: {
-          type: 'string',
-          enum: [...GENERATED_DOCUMENT_FORMATS],
-          description: 'The file format the user asked for',
-        },
-        title: {
-          type: 'string',
-          description: 'A meaningful title; it becomes the file name.',
-          minLength: 1,
-          maxLength: MAX_FILE_NAME_LENGTH,
-        },
-        content: {
-          type: 'string',
-          description:
-            'For docx and pdf, provide the complete document as Markdown. For html, provide a complete HTML document starting with <!doctype html>, including an <html> root element and inline JavaScript where needed.',
-          minLength: 1,
-          maxLength: MAX_DOCUMENT_CONTENT_LENGTH,
-        },
+    parameters: toolParameters({
+      format: {
+        type: 'string',
+        enum: [...GENERATED_DOCUMENT_FORMATS],
+        description: 'The file format the user asked for',
       },
-      required: ['format', 'title', 'content'],
-      additionalProperties: false,
-    },
+      title: {
+        type: 'string',
+        description: 'A meaningful title; it becomes the file name.',
+        minLength: 1,
+        maxLength: MAX_FILE_NAME_LENGTH,
+      },
+      content: {
+        type: 'string',
+        description:
+          'For docx and pdf, provide the complete document as Markdown. For html, provide a complete HTML document starting with <!doctype html>, including an <html> root element and inline JavaScript where needed.',
+        minLength: 1,
+        maxLength: MAX_DOCUMENT_CONTENT_LENGTH,
+      },
+    }),
   };
 
   const handler = async (

@@ -1,3 +1,4 @@
+import { toolParameters } from '@ais-chat/ai-core/chat/tool-parameters';
 import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { dbGetAllChunks } from '@shared/db/functions/files';
 import { z } from 'zod';
@@ -96,18 +97,13 @@ export function buildRetrieveTextChunksTool({
       'Use this tool when you need exact passages from the files or linked web pages or want to inspect a specific topic inside the available sources. ' +
       "Call this tool BEFORE answering or claiming you don't know something, whenever the question could relate to the sources' topic. " +
       `Returns up to ${VECTOR_SEARCH_LIMIT} chunks per call. Call it with a short, specific search string in the same language as the user.`,
-    parameters: {
-      type: 'object',
-      properties: {
-        search: {
-          type: 'string',
-          description:
-            'A concise search string that captures the exact topic or passage you want to retrieve.',
-        },
+    parameters: toolParameters({
+      search: {
+        type: 'string',
+        description:
+          'A concise search string that captures the exact topic or passage you want to retrieve.',
       },
-      required: ['search'],
-      additionalProperties: false,
-    },
+    }),
   };
 
   const handler = async (

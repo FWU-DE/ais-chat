@@ -1,3 +1,4 @@
+import { toolParameters } from '@ais-chat/ai-core/chat/tool-parameters';
 import type { FileModel } from '@shared/db/schema';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -83,7 +84,7 @@ beforeEach(() => {
     definition: {
       name: 'web_search',
       description: 'Search the web',
-      parameters: { type: 'object', properties: {} },
+      parameters: toolParameters({}),
     },
     handler: vi.fn(),
     activity: createActivity(),
@@ -93,7 +94,7 @@ beforeEach(() => {
     definition: {
       name: 'web_scraper',
       description: 'Scrape web pages',
-      parameters: { type: 'object', properties: {} },
+      parameters: toolParameters({}),
     },
     handler: vi.fn(),
     activity: createActivity(),
@@ -103,7 +104,7 @@ beforeEach(() => {
     definition: {
       name: 'retrieve_entire_file',
       description: 'Retrieve entire file',
-      parameters: { type: 'object', properties: {} },
+      parameters: toolParameters({}),
     },
     handler: vi.fn(),
     activity: createActivity(),
@@ -113,7 +114,7 @@ beforeEach(() => {
     definition: {
       name: 'retrieve_text_chunks',
       description: 'Retrieve text chunks',
-      parameters: { type: 'object', properties: {} },
+      parameters: toolParameters({}),
     },
     handler: vi.fn(),
     activity: createActivity(),
@@ -123,7 +124,7 @@ beforeEach(() => {
     definition: {
       name: 'mundo_search',
       description: 'Search MUNDO',
-      parameters: { type: 'object', properties: {} },
+      parameters: toolParameters({}),
     },
     handler: vi.fn(),
     activity: createActivity(),
@@ -133,7 +134,7 @@ beforeEach(() => {
     definition: {
       name: 'math_calculate',
       description: 'Calculate',
-      parameters: { type: 'object' },
+      parameters: toolParameters({}),
     },
     handler: vi.fn(),
     activity: createActivity(),
@@ -143,7 +144,7 @@ beforeEach(() => {
     definition: {
       name: 'list_models',
       description: 'List models',
-      parameters: { type: 'object', properties: {} },
+      parameters: toolParameters({}),
     },
     handler: vi.fn(),
     activity: createActivity(),
@@ -153,7 +154,7 @@ beforeEach(() => {
     definition: {
       name: 'create_plot',
       description: 'Create a plot',
-      parameters: { type: 'object' },
+      parameters: toolParameters({}),
     },
     handler: vi.fn(),
   });
