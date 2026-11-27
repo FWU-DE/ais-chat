@@ -10,6 +10,7 @@ import ProfileMenu from '@/components/navigation/profile-menu';
 import { ToggleSidebarButton } from '@/components/navigation/sidebar/collapsible-sidebar';
 import { ThemeToggleButton } from '@/components/navigation/theme-toggle-button';
 import { ThreeDotsProfileMenu } from '@/components/navigation/three-dots-profile-menu';
+import { TokenVolumeDialog } from '@/components/navigation/token-volume/token-volume-dialog';
 import { SettingsDialog } from '@/components/settings/settings-dialog';
 import { reductionBreakpoint } from '@/utils/tailwind/layout';
 
@@ -34,6 +35,7 @@ export function ApplicationHeader({ userAndContext }: { userAndContext?: UserAnd
   const headerMountNodeRef = useRef<HTMLDivElement | null>(null);
   const settingsTriggerRef = useRef<HTMLButtonElement>(null);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const [isTokenVolumeOpen, setIsTokenVolumeOpen] = React.useState(false);
 
   const headerMountRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -60,21 +62,30 @@ export function ApplicationHeader({ userAndContext }: { userAndContext?: UserAnd
           customItems={compactMenuItems}
           userAndContext={userAndContext}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenTokenVolume={() => setIsTokenVolumeOpen(true)}
           triggerRef={settingsTriggerRef}
         />
       ) : (
         <ProfileMenu
           userAndContext={userAndContext}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenTokenVolume={() => setIsTokenVolumeOpen(true)}
           triggerRef={settingsTriggerRef}
         />
       )}
       {userAndContext !== undefined && (
-        <SettingsDialog
-          open={isSettingsOpen}
-          onOpenChange={setIsSettingsOpen}
-          restoreFocusRef={settingsTriggerRef}
-        />
+        <>
+          <SettingsDialog
+            open={isSettingsOpen}
+            onOpenChange={setIsSettingsOpen}
+            restoreFocusRef={settingsTriggerRef}
+          />
+          <TokenVolumeDialog
+            open={isTokenVolumeOpen}
+            onOpenChange={setIsTokenVolumeOpen}
+            restoreFocusRef={settingsTriggerRef}
+          />
+        </>
       )}
     </header>
   );

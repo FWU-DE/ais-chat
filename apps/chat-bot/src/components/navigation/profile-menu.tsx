@@ -18,10 +18,12 @@ import { ProfileMenuContent } from './profile-menu-content';
 export default function ProfileMenu({
   userAndContext,
   onOpenSettings,
+  onOpenTokenVolume,
   triggerRef,
 }: {
   userAndContext?: UserAndContext;
   onOpenSettings?: () => void;
+  onOpenTokenVolume?: () => void;
   triggerRef?: RefObject<HTMLButtonElement | null>;
 }) {
   const t = useTranslations('common');
@@ -47,7 +49,11 @@ export default function ProfileMenu({
         sideOffset={10}
         className="z-300 flex flex-col gap-2 py-2 w-[256px] rounded-enterprise-md mb-4 bg-white shadow-dropdown"
       >
-        <ProfileMenuContent userAndContext={userAndContext} onOpenSettings={onOpenSettings} />
+        <ProfileMenuContent
+          userAndContext={userAndContext}
+          onOpenSettings={onOpenSettings}
+          onOpenTokenVolume={onOpenTokenVolume}
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   );

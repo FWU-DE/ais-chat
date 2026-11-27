@@ -23,11 +23,13 @@ export function ThreeDotsProfileMenu({
   customItems,
   userAndContext,
   onOpenSettings,
+  onOpenTokenVolume,
   triggerRef,
 }: {
   customItems?: ThreeDotsProfileMenuItem[];
   userAndContext?: UserAndContext;
   onOpenSettings?: () => void;
+  onOpenTokenVolume?: () => void;
   triggerRef?: RefObject<HTMLButtonElement | null>;
 }) {
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
@@ -66,7 +68,11 @@ export function ThreeDotsProfileMenu({
         {(customItems?.length ?? 0) > 0 && (
           <DropdownMenuSeparator className="border-gray-200 mx-2" />
         )}
-        <ProfileMenuContent userAndContext={userAndContext} onOpenSettings={onOpenSettings} />
+        <ProfileMenuContent
+          userAndContext={userAndContext}
+          onOpenSettings={onOpenSettings}
+          onOpenTokenVolume={onOpenTokenVolume}
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -9,6 +9,10 @@ import { dbGetRelatedFiles } from '@shared/db/functions/files';
 import { dbUpdateUserTermsVersion } from '@shared/db/functions/user';
 import { UserSettings, userSettingsSchema } from '@shared/db/schema';
 import { trackInfoBannerView } from '@shared/info-banners/info-banner-service';
+import {
+  getMaxBudgetInCentByUser,
+  getUsedBudgetInCentByUser,
+} from '@shared/users/user-budget-service';
 import { updateUserSettings } from '@shared/users/user-settings-service';
 
 import { requireAuth } from '@/auth/requireAuth';
@@ -84,5 +88,21 @@ export async function updateUserSettingsAction({ settings }: { settings: UserSet
   return runServerAction('updateUserSettingsAction', async () => {
     const parsedSettings = userSettingsSchema.parse(settings);
     return updateUserSettings({ userId: user.id, settings: parsedSettings });
+  })();
+}
+
+export async function getTokenVolumeAction() {
+  const { user, federalState } = await requireAuth();
+
+  return runServerAction('getTokenVolumeAction', async () => {
+    const [usedBudgetInCent, maxBudgetInCent] = await Promise.all([
+      getUsedBudgetInCentByUser({ user }),
+      getMaxBudgetInCentByUser({ user, federalState }),
+    ]);
+
+    return {
+      usedBudgetInCent: usedBudgetInCent ?? 0,
+      maxBudgetInCent: maxBudgetInCent ?? 0,
+    };
   })();
 }
