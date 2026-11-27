@@ -26,6 +26,17 @@ import { GenerateSpeechStreamFn } from './speech/types';
 // Re-export for consumers
 export type { MessageFileModel };
 
+// Chromium lets a triple-click selection of the last paragraph leak into the following nodes, e.g.
+// the AI activity toggle after a user message or the action buttons below an assistant message.
+// The line break stops the selection at the end of the paragraph.
+function SelectionBarrier() {
+  return (
+    <div aria-hidden="true" className="-mt-2 h-0 overflow-hidden opacity-0">
+      <br />
+    </div>
+  );
+}
+
 export function ChatBox({
   assistantIcon,
   message,
@@ -238,6 +249,7 @@ export function ChatBox({
   const messageContent = (
     <PlotStreamingContext.Provider value={status === 'streaming' && isLastNonUser}>
       <MarkdownDisplay>{message.content}</MarkdownDisplay>
+      <SelectionBarrier />
     </PlotStreamingContext.Provider>
   );
 

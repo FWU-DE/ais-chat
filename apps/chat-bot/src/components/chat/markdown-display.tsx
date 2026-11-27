@@ -264,7 +264,7 @@ export default function MarkdownDisplay({
             return (
               <p
                 className={cn(
-                  'pt-1 pb-3 first:pt-0 last:pb-0 whitespace-pre-wrap',
+                  'pt-1 pb-3 first:pt-0 last:pb-0 whitespace-pre-wrap inline-block w-full align-top',
                   elementClassName?.p,
                   className,
                 )}
