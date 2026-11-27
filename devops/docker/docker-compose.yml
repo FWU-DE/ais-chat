@@ -226,7 +226,7 @@ services:
 
   # Gotenberg renders generated PDF documents, only reachable inside the compose network
   gotenberg:
-    image: gotenberg/gotenberg:9.5.1-chromium
+    image: gotenberg/gotenberg:9.9.3-chromium
     command:
       - gotenberg
       - --api-port=8002
