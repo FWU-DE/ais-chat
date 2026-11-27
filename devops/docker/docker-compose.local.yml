@@ -22,7 +22,7 @@ services:
       start_period: 30s
 
   valkey:
-    image: ghcr.io/valkey-io/valkey:9.2.0-alpine
+    image: ghcr.io/valkey-io/valkey:9.2.1-alpine
     restart: unless-stopped
     volumes:
       - valkey_data:/data
