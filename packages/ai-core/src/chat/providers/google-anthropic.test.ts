@@ -3,6 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AiGenerationError, RateLimitExceededError } from '../../errors';
+import { toolParameters } from '../tool-parameters';
 import type { AiModel, Message } from '../types';
 import {
   constructGoogleAnthropicAgenticStreamFn,
@@ -650,7 +651,7 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
         {
           name: 'get_weather',
           description: 'Get weather',
-          parameters: { properties: { city: { type: 'string' } }, required: ['city'] },
+          parameters: toolParameters({ city: { type: 'string' } }),
         },
       ],
     })) {
@@ -717,7 +718,7 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
         {
           name: 'get_weather',
           description: 'Get weather',
-          parameters: { properties: { city: { type: 'string' } }, required: ['city'] },
+          parameters: toolParameters({ city: { type: 'string' } }),
         },
       ],
     })) {
@@ -792,7 +793,7 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
         {
           name: 'get_weather',
           description: 'Get weather',
-          parameters: { properties: { city: { type: 'string' } }, required: ['city'] },
+          parameters: toolParameters({ city: { type: 'string' } }),
         },
       ],
     })) {
@@ -859,7 +860,7 @@ describe('constructGoogleAnthropicAgenticStreamFn', () => {
         {
           name: 'get_weather',
           description: 'Get weather',
-          parameters: { properties: { city: { type: 'string' } }, required: ['city'] },
+          parameters: toolParameters({ city: { type: 'string' } }),
         },
       ],
     })) {

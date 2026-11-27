@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { runAgentLoop } from './agent-loop';
+import { toolParameters } from './tool-parameters';
 import type { Message, ModelUsage, StreamEvent, TokenUsage } from './types';
 
 // Mock the generateAgenticStreamWithBilling import
@@ -68,7 +69,7 @@ describe('agent-loop', () => {
 
     const toolRegistry = {
       test_tool: {
-        definition: { name: 'test_tool', description: 'Test', parameters: {} },
+        definition: { name: 'test_tool', description: 'Test', parameters: toolParameters({}) },
         handler: async () => ({ value: 'tool result' }),
       },
     };
@@ -176,7 +177,7 @@ describe('agent-loop', () => {
       messages,
       toolRegistry: {
         cyclic_tool: {
-          definition: { name: 'cyclic_tool', description: 'Test', parameters: {} },
+          definition: { name: 'cyclic_tool', description: 'Test', parameters: toolParameters({}) },
           handler: async () => cyclicResult,
         },
       },
@@ -302,7 +303,7 @@ describe('agent-loop', () => {
 
     const toolRegistry = {
       test_tool: {
-        definition: { name: 'test_tool', description: 'Test', parameters: {} },
+        definition: { name: 'test_tool', description: 'Test', parameters: toolParameters({}) },
         handler: async () => ({ value: 'tool result' }),
       },
     };
@@ -363,7 +364,7 @@ describe('agent-loop', () => {
 
     const toolRegistry = {
       test_tool: {
-        definition: { name: 'test_tool', description: 'Test', parameters: {} },
+        definition: { name: 'test_tool', description: 'Test', parameters: toolParameters({}) },
         handler: async () => ({ value: 'tool result' }),
       },
     };
@@ -427,7 +428,7 @@ describe('agent-loop', () => {
 
     const toolRegistry = {
       test_tool: {
-        definition: { name: 'test_tool', description: 'Test', parameters: {} },
+        definition: { name: 'test_tool', description: 'Test', parameters: toolParameters({}) },
         handler: async () => ({ value: 'tool result' }),
       },
     };
@@ -484,7 +485,7 @@ describe('agent-loop', () => {
       messages: [{ role: 'user', content: 'Test query' }],
       toolRegistry: {
         test_tool: {
-          definition: { name: 'test_tool', description: 'Test', parameters: {} },
+          definition: { name: 'test_tool', description: 'Test', parameters: toolParameters({}) },
           handler,
         },
       },
@@ -536,7 +537,11 @@ describe('agent-loop', () => {
         return [
           `tool${toolNumber}`,
           {
-            definition: { name: `tool${toolNumber}`, description: '', parameters: {} },
+            definition: {
+              name: `tool${toolNumber}`,
+              description: '',
+              parameters: toolParameters({}),
+            },
             handler: async () => ({ value: `result${toolNumber}` }),
           },
         ];
@@ -632,7 +637,7 @@ describe('agent-loop', () => {
 
       const toolRegistry = {
         test_tool: {
-          definition: { name: 'test_tool', description: 'Test', parameters: {} },
+          definition: { name: 'test_tool', description: 'Test', parameters: toolParameters({}) },
           handler: async () => ({ value: 'result' }),
         },
       };
@@ -684,11 +689,11 @@ describe('agent-loop', () => {
 
       const toolRegistry = {
         tool1: {
-          definition: { name: 'tool1', description: '', parameters: {} },
+          definition: { name: 'tool1', description: '', parameters: toolParameters({}) },
           handler: async () => ({ value: 'r1' }),
         },
         tool2: {
-          definition: { name: 'tool2', description: '', parameters: {} },
+          definition: { name: 'tool2', description: '', parameters: toolParameters({}) },
           handler: async () => ({ value: 'r2' }),
         },
       };
@@ -735,7 +740,7 @@ describe('agent-loop', () => {
 
       const toolRegistry = {
         test_tool: {
-          definition: { name: 'test_tool', description: 'Test', parameters: {} },
+          definition: { name: 'test_tool', description: 'Test', parameters: toolParameters({}) },
           handler: async () => ({ value: 'tool result' }),
         },
       };
@@ -821,7 +826,7 @@ describe('agent-loop', () => {
         messages,
         toolRegistry: {
           test_tool: {
-            definition: { name: 'test_tool', description: 'Test', parameters: {} },
+            definition: { name: 'test_tool', description: 'Test', parameters: toolParameters({}) },
             handler,
           },
         },
@@ -860,7 +865,7 @@ describe('agent-loop', () => {
 
       const toolRegistry = {
         test_tool: {
-          definition: { name: 'test_tool', description: 'Test', parameters: {} },
+          definition: { name: 'test_tool', description: 'Test', parameters: toolParameters({}) },
           handler: async () => {
             abortController.abort();
             return { value: 'tool result' };
@@ -953,7 +958,7 @@ describe('agent-loop', () => {
         messages,
         toolRegistry: {
           test_tool: {
-            definition: { name: 'test_tool', description: 'Test', parameters: {} },
+            definition: { name: 'test_tool', description: 'Test', parameters: toolParameters({}) },
             handler,
           },
         },
@@ -1129,7 +1134,7 @@ describe('agent-loop', () => {
 
       const toolRegistry = {
         test_tool: {
-          definition: { name: 'test_tool', description: 'Test', parameters: {} },
+          definition: { name: 'test_tool', description: 'Test', parameters: toolParameters({}) },
           handler: async () => ({ value: 'tool result' }),
         },
       };
@@ -1183,7 +1188,7 @@ describe('agent-loop', () => {
 
       const toolRegistry = {
         test_tool: {
-          definition: { name: 'test_tool', description: 'Test', parameters: {} },
+          definition: { name: 'test_tool', description: 'Test', parameters: toolParameters({}) },
           handler: async (
             _args: Record<string, unknown>,
             options?: {

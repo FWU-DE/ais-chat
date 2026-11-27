@@ -1,3 +1,4 @@
+import { toolParameters } from '@ais-chat/ai-core/chat/tool-parameters';
 import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { dbGetExtractedFileContent } from '@shared/db/functions/files';
 import type { FileModel } from '@shared/db/schema';
@@ -91,17 +92,12 @@ export function buildRetrieveEntireFileTool({
   const definition: ToolDefinition = {
     name: TOOL_NAMES.retrieveEntireFile,
     description: `Retrieve the full content of one attached file by name. Available files right now: ${attachedFileDescriptions.join(', ') || 'none'}. Use this tool when you need the full text of a specific attached file instead of only relevant excerpts. The returned content is capped at ${RETRIEVE_ENTIRE_FILE_CHARACTER_LIMIT} characters.`,
-    parameters: {
-      type: 'object',
-      properties: {
-        fileName: {
-          type: 'string',
-          description: 'The exact name of the attached file to retrieve.',
-        },
+    parameters: toolParameters({
+      fileName: {
+        type: 'string',
+        description: 'The exact name of the attached file to retrieve.',
       },
-      required: ['fileName'],
-      additionalProperties: false,
-    },
+    }),
   };
 
   const handler = async (

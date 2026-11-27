@@ -8,6 +8,8 @@ import { generateText, generateTextStream } from './providers';
 import type { GenerationOptions, Message, ModelSelection, TokenUsage } from './types';
 export { MAX_AGENTIC_ITERATIONS, MAX_TOOL_CALLS_PER_ITERATION, runAgentLoop } from './agent-loop';
 export { generateAgenticStreamWithBilling } from './agentic-stream';
+export type { ToolParameters, ToolProperty } from './tool-parameters';
+export { toolParameters } from './tool-parameters';
 export { countTokens } from './utils';
 
 // Re-export types for external consumers

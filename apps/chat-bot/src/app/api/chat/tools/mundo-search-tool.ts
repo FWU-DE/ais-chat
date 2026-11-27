@@ -1,3 +1,4 @@
+import { toolParameters } from '@ais-chat/ai-core/chat/tool-parameters';
 import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import { z } from 'zod';
 
@@ -51,30 +52,23 @@ export function buildMundoSearchTool(): ToolRegistration<MundoSearchToolResponse
   const definition: ToolDefinition = {
     name: TOOL_NAMES.mundoSearch,
     description: `Search the public MUNDO educational media library (mundo.schule) for teaching materials, e.g. videos or worksheets. Use this tool when the user asks for lesson materials or media suggestions for a specific topic. Returns up to ${MUNDO_SEARCH_RESULTS_LIMIT} matching MUNDO media entries. If a search with filters returns nothing, filters are automatically dropped and the search is retried. When the response has "retriedWithoutFilters": true, do not retry with different filters — instead retry with a broader, simpler or alternative query, without any filters.`,
-    parameters: {
-      type: 'object',
-      properties: {
-        query: {
-          type: 'string',
-          description:
-            'A concise search query in German describing the topic (max 2 words). Examples: "Photosynthese", "Bruchrechnung", "Weimarer Republik".',
-        },
-        // anyOf instead of `type: ['string', 'null']` + enum: Anthropic rejects enums on a
-        // multi-type field, while anyOf is accepted by both OpenAI and Anthropic.
-        classLevel: {
-          description:
-            'Optional class level range to filter results. Only set this when the teacher explicitly mentioned the class. Pick the single range that best matches. If the teacher did not specify a target class, pass null so no filter is applied.',
-          anyOf: [{ type: 'string', enum: [...MUNDO_CLASS_LEVELS] }, { type: 'null' }],
-        },
-        subject: {
-          description:
-            'Optional school subject to filter results. Pick exactly one subject that best matches the topic of the query. If no subject clearly fits, pass null so no filter is applied.',
-          anyOf: [{ type: 'string', enum: [...MUNDO_SUBJECTS] }, { type: 'null' }],
-        },
+    parameters: toolParameters({
+      query: {
+        type: 'string',
+        description:
+          'A concise search query in German describing the topic (max 2 words). Examples: "Photosynthese", "Bruchrechnung", "Weimarer Republik".',
       },
-      required: ['query', 'classLevel', 'subject'],
-      additionalProperties: false,
-    },
+      classLevel: {
+        description:
+          'Optional class level range to filter results. Only set this when the teacher explicitly mentioned the class. Pick the single range that best matches. If the teacher did not specify a target class, pass null so no filter is applied.',
+        anyOf: [{ type: 'string', enum: [...MUNDO_CLASS_LEVELS] }, { type: 'null' }],
+      },
+      subject: {
+        description:
+          'Optional school subject to filter results. Pick exactly one subject that best matches the topic of the query. If no subject clearly fits, pass null so no filter is applied.',
+        anyOf: [{ type: 'string', enum: [...MUNDO_SUBJECTS] }, { type: 'null' }],
+      },
+    }),
   };
 
   const handler = async (args: Record<string, unknown>): ToolOutcome<MundoSearchToolResponse> => {

@@ -1,5 +1,6 @@
 import { isIP } from 'node:net';
 
+import { toolParameters } from '@ais-chat/ai-core/chat/tool-parameters';
 import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import type { WebSource } from '@shared/db/types';
 import { z } from 'zod';
@@ -103,23 +104,18 @@ export function buildWebScraperTool({
       (attachedSourceUrls.length > 0
         ? `\n\nThe following URLs were pinned for this conversation and are likely relevant — consider scraping them when appropriate:\n${attachedSourceUrls.map((link) => `- ${link}`).join('\n')}`
         : ''),
-    parameters: {
-      type: 'object',
-      properties: {
-        urls: {
-          type: 'array',
-          description:
-            'Array of URLs to scrape. Each must be a valid http or https URL. Only domain hosts are allowed (no localhost, .local, or IP addresses).',
-          items: {
-            type: 'string',
-          },
-          minItems: 1,
-          maxItems: MAX_WEB_SCRAPER_URLS,
+    parameters: toolParameters({
+      urls: {
+        type: 'array',
+        description:
+          'Array of URLs to scrape. Each must be a valid http or https URL. Only domain hosts are allowed (no localhost, .local, or IP addresses).',
+        items: {
+          type: 'string',
         },
+        minItems: 1,
+        maxItems: MAX_WEB_SCRAPER_URLS,
       },
-      required: ['urls'],
-      additionalProperties: false,
-    },
+    }),
   };
 
   const handler = async (args: Record<string, unknown>): ToolOutcome<WebScraperToolResult[]> => {

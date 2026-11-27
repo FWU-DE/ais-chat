@@ -139,7 +139,8 @@ function toGoogleFunctionDeclarations(
   return tools.map((tool) => ({
     name: tool.name,
     description: tool.description,
-    parameters: tool.parameters,
+    // Legacy provider: our strict-mode schema is a valid subset, but the SDK's Schema type is wider.
+    parameters: tool.parameters as unknown as FunctionDeclaration['parameters'],
   }));
 }
 

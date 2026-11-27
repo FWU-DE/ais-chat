@@ -1,3 +1,4 @@
+import { toolParameters } from '@ais-chat/ai-core/chat/tool-parameters';
 import type { ToolCall, ToolOutcome } from '@ais-chat/ai-core/chat/types';
 import type { LlmModelPriceMetadata, ReasoningEffort } from '@ais-chat/api-database/types';
 import { dbGetLlmModelsByFederalStateId } from '@shared/db/functions/llm-model';
@@ -81,11 +82,7 @@ export function buildListModelsTool({
     name: TOOL_NAMES.listModels,
     description:
       'Lists the AI models available to the user. Call this tool whenever the user asks which models exist, which model fits a use case, or how models differ. Base comparisons on each model\'s "description". "type" is "text" or "image". "costFactor" is the completion token price relative to the default model (1 = same as the default, 0 = free, null = not comparable, then do not state a cost). "supportedImageFormats" depends on "type": for a text model an empty list means it cannot read uploaded images; for an image model a non-empty list means it can edit an uploaded image, an empty list means text-to-image only. Mention image support when it is relevant to the user\'s use case.',
-    parameters: {
-      type: 'object',
-      properties: {},
-      additionalProperties: false,
-    },
+    parameters: toolParameters({}),
   };
 
   const handler = async (): ToolOutcome<ListModelsToolResponse> => {
