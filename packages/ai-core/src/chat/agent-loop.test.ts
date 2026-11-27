@@ -458,6 +458,55 @@ describe('agent-loop', () => {
     });
   });
 
+  it('unwraps arguments the model sent as typed objects before running the tool', async () => {
+    const onComplete = vi.fn();
+    const handler = vi.fn(async () => ({ value: 'ok' }));
+
+    let callCount = 0;
+    mockGenerateAgenticStreamWithBilling.mockImplementation(async function* () {
+      callCount++;
+      if (callCount === 1) {
+        yield {
+          type: 'tool_call',
+          call: {
+            id: 'call_1',
+            name: 'test_tool',
+            arguments: '{"input": {"type": "string", "value": "value"}}',
+          },
+        } satisfies StreamEvent;
+        yield { type: 'finish', usage } satisfies StreamEvent;
+      } else {
+        yield { type: 'text', delta: 'Done.' } satisfies StreamEvent;
+        yield { type: 'finish', usage } satisfies StreamEvent;
+      }
+    });
+
+    runAgentLoop({
+      modelSelection: { modelIds: ['test-model'], modelName: 'Test Model' },
+      apiKeyId: 'test-key',
+      messages: [{ role: 'user', content: 'Test query' }],
+      toolRegistry: {
+        test_tool: {
+          definition: { name: 'test_tool', description: 'Test', parameters: {} },
+          handler,
+        },
+      },
+      agentName: 'Test Agent',
+      onTextChunk: vi.fn(),
+      onComplete,
+      onError: vi.fn(),
+    });
+
+    await vi.waitFor(() => {
+      expect(onComplete).toHaveBeenCalled();
+    });
+
+    expect(handler).toHaveBeenCalledWith({ input: 'value' }, expect.anything());
+    expect(onComplete.mock.calls[0]?.[0].agentLoopMessages[0]?.toolCalls?.[0]?.arguments).toBe(
+      '{"input":"value"}',
+    );
+  });
+
   it('runs a tool called with an empty arguments string', async () => {
     const onComplete = vi.fn();
     const onError = vi.fn();

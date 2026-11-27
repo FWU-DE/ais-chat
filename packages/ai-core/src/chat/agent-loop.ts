@@ -5,6 +5,7 @@ import { EmptyResponseError } from '../errors';
 import { generateAgenticStreamWithBilling } from './agentic-stream';
 import { recordGenerationRssDelta } from './metrics/generation-rss-delta';
 import { recordToolCallDuration } from './metrics/tool-call-duration';
+import { unwrapTypedArguments } from './tool-arguments';
 import type {
   Message as AiCoreMessage,
   ModelSelection,
@@ -213,7 +214,10 @@ export function runAgentLoop({
                   if (pendingToolCalls.length < MAX_TOOL_CALLS_PER_ITERATION) {
                     // On last iteration, tools are disabled but model might still emit tool calls
                     if (!isLastIteration) {
-                      pendingToolCalls.push(event.call);
+                      pendingToolCalls.push({
+                        ...event.call,
+                        arguments: unwrapTypedArguments(event.call.arguments),
+                      });
                     }
                   } else {
                     overBudgetToolCalls.push(event.call);
