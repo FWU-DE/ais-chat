@@ -1008,6 +1008,7 @@
     "sort-by": "Nach {column} sortieren",
     "select-model": "{model} auswählen",
     "select-tooltip": "Für neue Chats verwenden",
+    "selected-toast": "Das ausgewählte Modell wird in neuen Chats verwendet.",
     "default-tag": "Standard",
     "default-tooltip": "Das voreingestellte Standardmodell, das über ein gutes Preis-Leistungs-Verhältnis verfügt",
     "reasoning-tooltip": "Durch Reasoning erfolgt zunächst eine schrittweise Analyse. Höheres Reasoning eignet sich für anspruchsvolle Aufgaben, kann aber mehr Zeit und Kosten verursachen.",
