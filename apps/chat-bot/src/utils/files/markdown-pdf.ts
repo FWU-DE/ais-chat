@@ -1,63 +1,14 @@
 import type { Root } from 'mdast';
 import remarkParse from 'remark-parse';
 import { unified } from 'unified';
-import { visit } from 'unist-util-visit';
-
-import { activateLivePlots } from '@/components/chat/plot/live-plots';
-import { getPlotKey } from '@/components/chat/plot/rendered-plots';
-import { PLOT_LANGUAGE } from '@/utils/code-blocks';
-import { getValidPlotSpec, type PlotSpec } from '@/utils/plot/plot-spec';
 
 import {
   arrayBufferToBase64,
   type DocumentImageReferences,
   loadDocumentImage,
 } from './document-images';
+import { getReferencedImageSources, renderDocumentPlots } from './document-markdown';
 import type { SharedChatDocumentRequest } from './generated-document';
-import { renderPlotImage, waitForPlotActivation } from './plot-image';
-
-const MAX_PLOTS = 10;
-
-// Renders each distinct, valid jsxgraph-json block to a base64 PNG keyed by its code;
-// plots can only be drawn in the browser, so the server receives them as images.
-async function renderPlots(root: Root) {
-  const specs = new Map<string, PlotSpec>();
-  visit(root, 'code', (node) => {
-    const spec = node.lang === PLOT_LANGUAGE ? getValidPlotSpec(node.value) : undefined;
-    if (spec !== undefined && specs.size < MAX_PLOTS) {
-      specs.set(node.value, spec);
-    }
-  });
-  if (specs.size === 0) {
-    return [];
-  }
-
-  const restoreLivePlots = activateLivePlots(new Set([...specs.values()].map(getPlotKey)));
-  try {
-    await waitForPlotActivation();
-    const plots = await Promise.all(
-      [...specs].map(async ([code, spec]) => {
-        const image = await renderPlotImage(spec);
-        return image === undefined ? undefined : { code, data: arrayBufferToBase64(image.data) };
-      }),
-    );
-    return plots.filter((plot) => plot !== undefined);
-  } finally {
-    restoreLivePlots();
-  }
-}
-
-// Get all image targets used in the Markdown, so only those uploads are loaded and sent to the server.
-function getReferencedImageSources(root: Root) {
-  const sources = new Set<string>();
-  visit(root, 'image', (node) => {
-    sources.add(node.url);
-  });
-  visit(root, 'definition', (node) => {
-    sources.add(node.url);
-  });
-  return sources;
-}
 
 export async function markdownToPdfBlob(
   markdown: string,
@@ -79,7 +30,10 @@ export async function markdownToPdfBlob(
         };
       }),
   );
-  const plots = await renderPlots(root);
+  const plots = [...(await renderDocumentPlots(root))].map(([code, image]) => ({
+    code,
+    data: arrayBufferToBase64(image.data),
+  }));
   const response = await fetch(
     sharedChat === undefined
       ? '/api/generate-document/pdf'

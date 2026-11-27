@@ -1,4 +1,9 @@
-export const GENERATED_DOCUMENT_FORMATS = ['docx', 'pdf', 'html'] as const;
+export const GENERATED_DOCUMENT_FORMATS = ['docx', 'pdf', 'html', 'pptx'] as const;
+
+export const PPTX_DESIGNS = ['classic', 'dark', 'ais', 'minimal'] as const;
+export const DEFAULT_PPTX_DESIGN = 'classic';
+
+export type PptxDesign = (typeof PPTX_DESIGNS)[number];
 
 export type GeneratedDocumentFormat = (typeof GENERATED_DOCUMENT_FORMATS)[number];
 

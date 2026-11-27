@@ -28,6 +28,15 @@ describe('generateDocumentArgsSchema', () => {
     expect(generateDocumentArgsSchema.safeParse(args).success).toBe(false);
   });
 
+  it('accepts a null or missing design and rejects unknown designs', () => {
+    const args = { format: 'pptx', title: 'a', content: '# b' };
+
+    expect(generateDocumentArgsSchema.safeParse({ ...args, design: null }).success).toBe(true);
+    expect(generateDocumentArgsSchema.safeParse({ ...args, design: 'dark' }).success).toBe(true);
+    expect(generateDocumentArgsSchema.safeParse(args).success).toBe(true);
+    expect(generateDocumentArgsSchema.safeParse({ ...args, design: 'neon' }).success).toBe(false);
+  });
+
   it('accepts a complete HTML document for html output', () => {
     expect(
       generateDocumentArgsSchema.safeParse({
@@ -46,10 +55,16 @@ describe('buildGenerateDocumentTool', () => {
     expect(definition.name).toBe('generate_document');
     expect(definition.description).toContain('docx');
     expect(definition.parameters).toMatchObject({
-      required: ['format', 'title', 'content'],
+      required: ['format', 'title', 'content', 'design'],
       additionalProperties: false,
       properties: {
-        format: { enum: ['docx', 'pdf', 'html'] },
+        format: { enum: ['docx', 'pdf', 'html', 'pptx'] },
+        design: {
+          anyOf: [
+            { type: 'string', enum: ['classic', 'dark', 'ais', 'minimal'] },
+            { type: 'null' },
+          ],
+        },
         title: { minLength: 1, maxLength: 80 },
         content: { minLength: 1, maxLength: 100_000 },
       },
@@ -105,6 +120,22 @@ describe('generateDocumentActivity', () => {
       detail: 'Bericht.docx',
       document: { fileName: 'Bericht.docx', title: 'Bericht', format: 'docx', content: '# Hallo' },
     });
+  });
+
+  it('keeps the design only for pptx documents', () => {
+    const createStep = (format: string, design: string | null) =>
+      generateDocumentActivity.createStep({
+        id: 'call-3',
+        name: 'generate_document',
+        arguments: JSON.stringify({ format, title: 'Folien', content: '# Hallo', design }),
+      });
+
+    expect(createStep('pptx', 'dark')).toMatchObject({ document: { design: 'dark' } });
+    expect(createStep('pptx', null)).toMatchObject({
+      document: { fileName: 'Folien.pptx', format: 'pptx' },
+    });
+    expect(createStep('pptx', null)).not.toHaveProperty('document.design');
+    expect(createStep('docx', 'dark')).not.toHaveProperty('document.design');
   });
 
   it.each(['{"format":"docx"}', 'not json', ''])(

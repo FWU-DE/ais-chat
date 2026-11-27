@@ -94,6 +94,8 @@ describe('loadDocumentImage', () => {
     await expect(loadDocumentImage('/img/1')).resolves.toMatchObject({
       data: await blob.arrayBuffer(),
       mimeType: 'image/png',
+      width: 100,
+      height: 100,
     });
     expect(bitmap.close).toHaveBeenCalledOnce();
     vi.unstubAllGlobals();
@@ -122,6 +124,8 @@ describe('loadDocumentImage', () => {
     await expect(loadDocumentImage('/img/1')).resolves.toMatchObject({
       data: await png.arrayBuffer(),
       mimeType: 'image/png',
+      width: 240,
+      height: 120,
     });
     expect(canvas.width).toBe(240);
     expect(canvas.height).toBe(120);
@@ -264,6 +268,8 @@ describe('loadDocumentImage', () => {
     await expect(loadDocumentImage('/img/1')).resolves.toEqual({
       data: await blob.arrayBuffer(),
       mimeType: 'image/png',
+      width: 100,
+      height: 100,
     });
     expect(bitmap.close).toHaveBeenCalledOnce();
     vi.unstubAllGlobals();
@@ -292,6 +298,8 @@ describe('loadDocumentImage', () => {
     await expect(loadDocumentImage('/img/1')).resolves.toEqual({
       data: await png.arrayBuffer(),
       mimeType: 'image/png',
+      width: 240,
+      height: 120,
     });
     expect(canvas.width).toBe(240);
     expect(canvas.height).toBe(120);

@@ -7,6 +7,8 @@ import {
 import { SUPPORTED_DOCUMENTS_EXTENSIONS, SUPPORTED_IMAGE_EXTENSIONS } from '@/const';
 import { TOOL_NAMES, type ToolName } from '@/types/tool-names';
 
+import { constructGenerateDocumentGuidelines } from './generate-document-guidelines';
+
 export const LANGUAGE_GUIDELINES = `
 ## Sprachliche Richtlinien
 - Verwende eine Sprache, Tonalität und Inhalte, die für den Einsatz in der Schule geeignet sind.
@@ -74,16 +76,7 @@ export function constructToolGuidelines(activeTools: ToolDefinition[]) {
   }
 
   if (hasTool(activeTools, TOOL_NAMES.generateDocument)) {
-    const plotHint =
-      ' Du kannst Zeichnungen einbetten: Rufe zuerst `' +
-      TOOL_NAMES.createPlot +
-      '` auf und füge das Ergebnis unverändert als Codeblock ```jsxgraph-json title="Kurzer Titel" ... ``` in den Inhalt ein, statt Werte nur als Tabelle zu beschreiben.';
-    sections.push(
-      `- Du kannst **Dokumente als Word-Datei (DOCX), PDF oder HTML-Datei** bereitstellen, zum Beispiel Arbeitsblätter, Zusammenfassungen oder Unterrichtsmaterial. Wenn die Nutzerin oder der Nutzer eine Datei möchte, kläre bei unklarem Inhalt oder Format zuerst nach und rufe dann \`${TOOL_NAMES.generateDocument}\` mit Format, aussagekräftigem Titel und dem passenden vollständigen Inhalt auf.
-- Für **DOCX und PDF**: Verwende vollständiges Markdown als Inhalt. Verwende LaTeX für mathematische Formeln in Markdown: Inline-Formeln zwischen \`$...$\` und abgesetzte Formeln zwischen \`$$...$$\`. Für PDF keine Trennlinien (\`---\`) oder Linien direkt vor Überschriften verwenden.${plotHint}
-- Für **HTML**: Verwende ein vollständiges HTML-Dokument, das mit \`<!doctype html>\` beginnt und ein \`<html>\`-Element enthält. Verwende Inline-JavaScript, wenn Interaktivität benötigt wird.   Weise in deiner Antwort nach dem Erstellen immer kurz darauf hin, dass HTML-Dateien mit JavaScript schädlichen Code enthalten können und nur mit Vorsicht geöffnet werden sollten.
-- Verwende für hochgeladene Bilder exakt die Referenz aus dem jeweiligen \`<attachment ref="...">\`-Attribut: für DOCX und PDF als Markdown-Bildziel, z. B. \`![Beschreibung](attachment://...)\`, und für HTML als \`src\` eines \`<img>\`-Elements, z. B. \`<img src="attachment://..." alt="Beschreibung">\`; verwende nicht den Dateinamen als Bildziel. Das Ergebnis des Tools enthält den Dateinamen der erstellten Datei. Der Download-Button wird in der Oberfläche automatisch direkt unter deiner Antwort angezeigt. Erzeuge daher KEINEN Download-Link und keinen Platzhalter-Link in deiner Antwort; verweise höchstens kurz auf die bereitgestellte Datei unter Nennung des Dateinamens. Schlägt der Aufruf fehl, korrigiere die Eingabe oder erkläre kurz, was nicht geklappt hat. Erwähne die Technik dahinter niemals. Andere Dateiformate (Excel, PowerPoint, Bilder etc.) kannst du nicht erstellen und bietest sie nicht an.`,
-    );
+    sections.push(constructGenerateDocumentGuidelines());
   }
 
   if (activeTools.length > 0) {

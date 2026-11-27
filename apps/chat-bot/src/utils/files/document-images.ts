@@ -18,10 +18,15 @@ export function arrayBufferToBase64(data: ArrayBuffer) {
 export type LoadedDocumentImage = {
   data: ArrayBuffer;
   mimeType: 'image/png' | 'image/jpeg';
+  width: number;
+  height: number;
 };
 
 // Scales images down to the page width and converts formats the document libraries can't embed.
-export async function loadDocumentImage(url: string): Promise<LoadedDocumentImage> {
+export async function loadDocumentImage(
+  url: string,
+  maxSize = MAX_DOCUMENT_IMAGE_SIZE,
+): Promise<LoadedDocumentImage> {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to load image: ${response.status}`);
@@ -29,17 +34,19 @@ export async function loadDocumentImage(url: string): Promise<LoadedDocumentImag
 
   const blob = await response.blob();
   const bitmap = await createImageBitmap(blob);
-  const scale = Math.min(
-    1,
-    MAX_DOCUMENT_IMAGE_SIZE / bitmap.width,
-    MAX_DOCUMENT_IMAGE_SIZE / bitmap.height,
-  );
+  const scale = Math.min(1, maxSize / bitmap.width, maxSize / bitmap.height);
   const mimeType = blob.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
   const isEmbeddable = blob.type === 'image/png' || blob.type === 'image/jpeg';
 
   if (scale === 1 && isEmbeddable) {
+    const result: LoadedDocumentImage = {
+      data: await blob.arrayBuffer(),
+      mimeType,
+      width: bitmap.width,
+      height: bitmap.height,
+    };
     bitmap.close();
-    return { data: await blob.arrayBuffer(), mimeType };
+    return result;
   }
 
   const canvas = document.createElement('canvas');
@@ -59,5 +66,10 @@ export async function loadDocumentImage(url: string): Promise<LoadedDocumentImag
       'image/png',
     );
   });
-  return { data: await png.arrayBuffer(), mimeType: 'image/png' };
+  return {
+    data: await png.arrayBuffer(),
+    mimeType: 'image/png',
+    width: canvas.width,
+    height: canvas.height,
+  };
 }

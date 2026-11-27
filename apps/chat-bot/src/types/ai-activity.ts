@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { GENERATED_DOCUMENT_FORMATS } from '@/utils/files/generated-document-format';
+import { GENERATED_DOCUMENT_FORMATS, PPTX_DESIGNS } from '@/utils/files/generated-document-format';
 
 import { TOOL_NAMES } from './tool-names';
 
@@ -32,6 +32,7 @@ const aiActivityDocumentSchema = z.object({
   title: z.string(),
   format: z.enum(GENERATED_DOCUMENT_FORMATS),
   content: z.string(),
+  design: z.enum(PPTX_DESIGNS).optional(),
 });
 
 export const aiActivityStepSchema = z.discriminatedUnion('kind', [

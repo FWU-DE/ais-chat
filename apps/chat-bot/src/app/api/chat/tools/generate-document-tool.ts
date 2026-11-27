@@ -8,6 +8,7 @@ import {
   GENERATED_DOCUMENT_FORMATS,
   type GeneratedDocumentFormat,
   MAX_FILE_NAME_LENGTH,
+  PPTX_DESIGNS,
 } from '@/utils/files/generated-document-format';
 
 import { parseGenericPersistedToolResult } from './parse-persisted-tool-result';
@@ -23,6 +24,7 @@ export const generateDocumentArgsSchema = z
     format: z.enum(GENERATED_DOCUMENT_FORMATS),
     title: z.string().trim().min(1).max(MAX_FILE_NAME_LENGTH),
     content: z.string().trim().min(1).max(MAX_DOCUMENT_CONTENT_LENGTH),
+    design: z.enum(PPTX_DESIGNS).nullish(),
   })
   .superRefine(({ format, content }, context) => {
     if (format === 'html' && !COMPLETE_HTML_DOCUMENT_PATTERN.test(content)) {
@@ -47,14 +49,20 @@ export const generateDocumentActivity: ToolActivity<GenerateDocumentToolResult> 
       return { kind: 'tool', id: toolCall.id, tool: TOOL_NAMES.generateDocument };
     }
 
-    const { format, title, content } = parsed.data;
+    const { format, title, content, design } = parsed.data;
     const fileName = createGeneratedDocumentFileName(title, format, FALLBACK_FILE_NAME);
     return {
       kind: 'tool',
       id: toolCall.id,
       tool: TOOL_NAMES.generateDocument,
       detail: fileName,
-      document: { fileName, title, format, content },
+      document: {
+        fileName,
+        title,
+        format,
+        content,
+        ...(format === 'pptx' && design ? { design } : {}),
+      },
     };
   },
   parsePersistedResult: (raw) => parseGenericPersistedToolResult<GenerateDocumentToolResult>(raw),
@@ -81,12 +89,18 @@ export function buildGenerateDocumentTool(): ToolRegistration<GenerateDocumentTo
         content: {
           type: 'string',
           description:
-            'For docx and pdf, provide the complete document as Markdown. For html, provide a complete HTML document starting with <!doctype html>, including an <html> root element and inline JavaScript where needed.',
+            'For docx and pdf, provide the complete document as Markdown. For pptx, provide the slides as Markdown: each `#` or `##` heading and each `---` starts a new slide, and a heading becomes the slide title. For html, provide a complete HTML document starting with <!doctype html>, including an <html> root element and inline JavaScript where needed.',
           minLength: 1,
           maxLength: MAX_DOCUMENT_CONTENT_LENGTH,
         },
+        // anyOf instead of `type: ['string', 'null']` + enum: Anthropic rejects enums on a multi-type field.
+        design: {
+          description:
+            'Only for pptx: the visual design of the presentation. Pick the one that fits the request: classic (blue, business), dark, ais (AIS.chat brand: violet and mint), minimal (plain black and white). Pass null if nothing fits, and always pass null for other formats.',
+          anyOf: [{ type: 'string', enum: [...PPTX_DESIGNS] }, { type: 'null' }],
+        },
       },
-      required: ['format', 'title', 'content'],
+      required: ['format', 'title', 'content', 'design'],
       additionalProperties: false,
     },
   };

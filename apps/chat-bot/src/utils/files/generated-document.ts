@@ -1,8 +1,9 @@
 import type { DocumentImageReferences } from './document-images';
-import type { GeneratedDocumentFormat } from './generated-document-format';
+import type { GeneratedDocumentFormat, PptxDesign } from './generated-document-format';
 import { htmlToBlob } from './html-document';
 import { markdownToDocxBlob } from './markdown-docx';
 import { markdownToPdfBlob } from './markdown-pdf';
+import { markdownToPptxBlob } from './markdown-pptx';
 
 export type SharedChatDocumentContext = {
   inviteCode: string;
@@ -18,7 +19,11 @@ export async function createGeneratedDocumentBlob(
   content: string,
   format: GeneratedDocumentFormat,
   imageReferences?: DocumentImageReferences,
-  { title, sharedChat }: { title?: string; sharedChat?: SharedChatDocumentRequest } = {},
+  {
+    title,
+    sharedChat,
+    design,
+  }: { title?: string; sharedChat?: SharedChatDocumentRequest; design?: PptxDesign } = {},
 ): Promise<Blob> {
   if (format === 'pdf') {
     return markdownToPdfBlob(content, imageReferences, title, sharedChat);
@@ -26,6 +31,10 @@ export async function createGeneratedDocumentBlob(
 
   if (format === 'html') {
     return htmlToBlob(content, imageReferences);
+  }
+
+  if (format === 'pptx') {
+    return markdownToPptxBlob(content, imageReferences, title, design);
   }
 
   return markdownToDocxBlob({ markdownBlocks: [{ markdown: content }] }, { imageReferences });

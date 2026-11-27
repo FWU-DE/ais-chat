@@ -25,7 +25,12 @@ type DocumentImageFile = {
   localUrl?: string;
 };
 
+// Slides show images much larger than pages do, so they need a higher resolution.
+const PPTX_IMAGE_SIZE = 1000;
+const DEFAULT_IMAGE_SIZE = 240;
+
 function createImageReferences(
+  size: number,
   fileMapping?: ReadonlyMap<string, readonly DocumentImageFile[]>,
   messageFileMapping?: ReadonlyMap<string, readonly DocumentImageFile[]>,
 ): DocumentImageReferences {
@@ -38,7 +43,7 @@ function createImageReferences(
         }
         imageReferences.set(
           getDocumentAttachmentReference(file.id),
-          file.localUrl ?? `/api/files/${file.id}/scaled-image?width=240&height=240`,
+          file.localUrl ?? `/api/files/${file.id}/scaled-image?width=${size}&height=${size}`,
         );
       }
     }
@@ -71,9 +76,14 @@ export function GeneratedDocumentAttachment({
         await createGeneratedDocumentBlob(
           document.content,
           document.format,
-          createImageReferences(fileMapping, messageFileMapping),
+          createImageReferences(
+            document.format === 'pptx' ? PPTX_IMAGE_SIZE : DEFAULT_IMAGE_SIZE,
+            fileMapping,
+            messageFileMapping,
+          ),
           {
             title: document.title,
+            design: document.design,
             sharedChat: sharedChat && { ...sharedChat, toolCallId },
           },
         ),
